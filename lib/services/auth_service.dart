@@ -1,11 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'firebase_web_safe.dart';
 import 'package:web/web.dart' as web;
 import '../utils/debug_logger.dart';
+import '../providers.dart';
+import '../navigator_key.dart';
 
 class AuthService {
   FirebaseAuth? get _auth {
@@ -24,23 +25,15 @@ class AuthService {
       _auth?.authStateChanges() ?? Stream.value(null);
   User? get currentUser => _auth?.currentUser;
 
+  /// Internal flag to prevent race conditions during logout
+  bool isSignOutInProgress = false;
+
   // 1. Google Sign In
-  Future<AuthResponse> signInWithGoogle() async {
+  Future<AuthResponse> signInWithGoogle(dynamic ref) async {
     // Lazy Initialization: Try to init Firebase if it failed on startup (offline)
     if (_auth == null) {
       try {
-        await Firebase.initializeApp(
-            // Reuse options from main.dart explicitly would be better, but for now relying on default
-            // Ideally we replicate the logic from main.dart or better, make this service accept the app instance.
-            // However, calling initializeApp without name uses default app which is what we want.
-            // But we need the Options.
-            // Since we can't easily access the options from here without importing keys,
-            // we will rely on Firebase.initializeApp() finding the options if configured,
-            // OR we accept that this lazy init might only work if the platform auto-configures (like Web).
-            // For Flutter, we usually need options.
-            // Let's assume we can get them or just try.
-            // Actually, we can import the options files like main.dart
-            );
+        await Firebase.initializeApp();
       } catch (e) {
         return AuthResponse(
             status: AuthStatus.error,
@@ -71,14 +64,14 @@ class AuthService {
         }
 
         // Otherwise (e.g. 'user-disabled'), BLOCK.
-        await signOut();
+        await signOut(ref);
         return AuthResponse(
             status: AuthStatus.error,
             message:
                 "Session expired or account disabled. Please sign in again.");
       } catch (e) {
         // Unknown error -> Block for safety
-        await signOut();
+        await signOut(ref);
         return AuthResponse(
             status: AuthStatus.error, message: "Session validation failed: $e");
       }
@@ -142,35 +135,66 @@ class AuthService {
     }
   }
 
-  Future<void> signOut() async {
-    debugPrint("AuthService: SignOut initiated.");
-    // 1. Clear the optimistic flag first to ensure UI reacts immediately
+  Future<void> signOut(dynamic ref) async {
+    if (isSignOutInProgress) return;
+
     try {
+      // 1. SNAP UI TO LOGIN IMMEDIATELY
+      DebugLogger().log("AuthService: Instant Logout initiated.");
+
+      // Clear the optimistic flag synchronously.
+      // This triggers AuthWrapper to rebuild and show the Login screen instantly.
       if (Hive.isBoxOpen('settings')) {
-        await Hive.box('settings').put('isLoggedIn', false);
+        Hive.box('settings').put('isLoggedIn', false);
+      }
+
+      // Toggle reactive state to force Streams to null
+      if (ref != null) {
+        ref.read(logoutRequestedProvider.notifier).value = true;
+      }
+
+      // Clear all routes (Settings, etc.) to return to root
+      navigatorKey.currentState?.popUntil((route) => route.isFirst);
+
+      // 2. BACKGROUND CLEANUP
+      isSignOutInProgress = true;
+
+      // Small delay to allow Navigator and Hive events to propagate
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final auth = _auth;
+      if (auth != null) {
+        try {
+          DebugLogger().log("AuthService: Destroying Firebase Session (BG)...");
+          // Short timeout for background destruction
+          await auth.signOut().timeout(const Duration(seconds: 3));
+        } catch (e) {
+          DebugLogger()
+              .log("AuthService: Firebase BG SignOut Cleanup Error: $e");
+        }
       }
     } catch (e) {
-      debugPrint("AuthService: Failed to clear Hive flag: $e");
-    }
-
-    // 2. Clear Firebase Session
-    final auth = _auth;
-    if (auth != null) {
-      try {
-        await auth.signOut();
-      } catch (e) {
-        debugPrint("AuthService: Firebase SignOut error: $e");
+      DebugLogger().log("AuthService: SignOut Error: $e");
+    } finally {
+      isSignOutInProgress = false;
+      if (ref != null) {
+        ref.read(logoutRequestedProvider.notifier).value = false;
       }
+      DebugLogger().log("AuthService: Logout Flow Finalized.");
     }
   }
 
-  Future<void> reloadUser() async {
+  Future<void> reloadUser(dynamic ref) async {
+    if (isSignOutInProgress) return;
+    if (ref != null && ref.read(logoutRequestedProvider)) return;
     await _auth?.currentUser?.reload();
   }
 
   /// Finalizes the auth state after a web redirect.
   /// Should be called during app initialization.
-  Future<void> handleRedirectResult() async {
+  Future<void> handleRedirectResult(dynamic ref) async {
+    if (isSignOutInProgress) return;
+    if (ref != null && ref.read(logoutRequestedProvider)) return;
     final auth = _auth;
     if (auth != null && kIsWeb) {
       // Small delay to allow JS SDK to settle after reload
@@ -183,8 +207,7 @@ class AuthService {
       try {
         final result = await auth.getRedirectResult();
         if (result.user != null) {
-          DebugLogger()
-              .log("AuthService: Redirect Success for ${result.user!.email}");
+          DebugLogger().log("AuthService: Redirect Success");
           if (Hive.isBoxOpen('settings')) {
             await Hive.box('settings').put('isLoggedIn', true);
           }

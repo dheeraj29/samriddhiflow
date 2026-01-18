@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:web/web.dart' as web;
 import 'services/storage_service.dart';
 import 'utils/network_utils.dart';
 import 'utils/debug_logger.dart';
@@ -19,6 +21,31 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'firebase_options.dart' as prod;
 import 'firebase_options_debug.dart' as dev;
+
+final isOfflineProvider =
+    NotifierProvider<IsOfflineNotifier, bool>(IsOfflineNotifier.new);
+
+class IsOfflineNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    bool initial = false;
+    if (kIsWeb) {
+      initial = !web.window.navigator.onLine;
+    }
+
+    // Continuous Monitoring
+    final subscription = Connectivity().onConnectivityChanged.listen((results) {
+      state = !results.any((r) =>
+          r == ConnectivityResult.mobile ||
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.ethernet);
+    });
+
+    ref.onDispose(() => subscription.cancel());
+
+    return initial;
+  }
+}
 
 class LocalModeNotifier extends Notifier<bool> {
   @override
@@ -78,21 +105,38 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
+class LogoutRequestedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  set value(bool v) => state = v;
+}
+
+final logoutRequestedProvider = NotifierProvider<LogoutRequestedNotifier, bool>(
+    LogoutRequestedNotifier.new);
+
 final authStreamProvider = StreamProvider<User?>((ref) {
-  // Dependency: Wait for Firebase Init to complete
+  // Dependency: Wait for Firebase Init to settle
+  // By watching the future value, we ensure we only react when init transitions
   final init = ref.watch(firebaseInitializerProvider);
 
   return init.when(
     data: (_) {
       final authService = ref.watch(authServiceProvider);
+      final isLoggingOut = ref.watch(logoutRequestedProvider);
+
+      // FORCE NULL if logout is explicitly requested (Synchronous Snap)
+      if (isLoggingOut) {
+        return Stream.value(null);
+      }
+
       return authService.authStateChanges;
     },
+    // If we are still initializing (loading), return a safe null user stream
+    // to allow the UI to show the Login screen or "Finalizing" state instantly.
     loading: () => Stream.value(null),
-    error: (_, __) {
-      // If init failed (Offline), DO NOT instantiate AuthService (it crashes without Firebase).
-      // Return null user stream. The UI will handle "Offline Login" or "Local Mode".
-      DebugLogger().log(
-          "AuthStream: Firebase Init failed (Offline?). Returning null stream.");
+    error: (e, __) {
+      DebugLogger()
+          .log("AuthStream: Firebase Init Error ($e). Falling back to null.");
       return Stream.value(null);
     },
   );
@@ -108,7 +152,8 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
   if (await NetworkUtils.isOffline()) {
     DebugLogger().log("FirebaseInit: Offline Detected. Skipping Init.");
     debugPrint("Offline: Skipping Firebase Init (Lazy Load)");
-    throw Exception("Offline Mode");
+    // DO NOT throw. Returning void allows dependant providers to proceed safely.
+    return;
   }
 
   // CRITICAL: iOS PWA Offline Safety Check
@@ -134,7 +179,7 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
 
     // Finalize Redirect session if applicable
     DebugLogger().log("FirebaseInit: Handling Redirect Result...");
-    await ref.read(authServiceProvider).handleRedirectResult();
+    await ref.read(authServiceProvider).handleRedirectResult(ref);
 
     DebugLogger().log("FirebaseInit: Initialization Complete.");
   } catch (e) {
@@ -235,11 +280,19 @@ final currencyProvider =
 class IsLoggedInNotifier extends Notifier<bool> {
   @override
   bool build() {
-    final init = ref.watch(storageInitializerProvider);
-    if (!init.hasValue) return false;
+    // Watch the low-level Hive stream
+    final hiveStatus = ref.watch(isLoggedInHiveStreamProvider);
 
-    final storage = ref.watch(storageServiceProvider);
-    return storage.getAuthFlag();
+    return hiveStatus.maybeWhen(
+      data: (val) => val,
+      orElse: () {
+        // Fallback to direct read if stream hasn't emitted yet but Hive is ready
+        final init = ref.watch(storageInitializerProvider);
+        if (!init.hasValue) return false;
+        final storage = ref.watch(storageServiceProvider);
+        return storage.getAuthFlag();
+      },
+    );
   }
 
   Future<void> setLoggedIn(bool value) async {
@@ -248,6 +301,22 @@ class IsLoggedInNotifier extends Notifier<bool> {
     state = value;
   }
 }
+
+/// Reactive stream that monitors the Hive 'isLoggedIn' key directly.
+final isLoggedInHiveStreamProvider = StreamProvider<bool>((ref) async* {
+  // Wait for Hive to be initialized
+  await ref.watch(storageInitializerProvider.future);
+
+  final box = Hive.box('settings');
+
+  // 1. Yield initial value
+  yield box.get('isLoggedIn', defaultValue: false) as bool;
+
+  // 2. Yield changes
+  yield* box
+      .watch(key: 'isLoggedIn')
+      .map((event) => (event.value as bool?) ?? false);
+});
 
 final isLoggedInProvider =
     NotifierProvider<IsLoggedInNotifier, bool>(IsLoggedInNotifier.new);

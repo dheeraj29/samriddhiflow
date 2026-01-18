@@ -11,36 +11,12 @@ class AppTheme {
   static const Color error = Color(0xFFFF5252);
   static const Color success = Color(0xFF4CAF50);
 
-  // Safe font style for critical offline UI elements (avoids FOIT)
   static const TextStyle offlineSafeTextStyle = TextStyle(
-    fontFamily: 'system-ui', // Native OS font (SF Pro on iOS)
-    fontFamilyFallback: [
-      '.SF Pro Text',
-      '.SF UI Text',
-      'SF Compact',
-      'Google Sans Flex',
-      'Google Sans',
-      'Roboto',
-      'Segoe UI',
-      'Arial',
-      'Verdana',
-      'sans-serif'
-    ],
+    fontFamily: 'AppFont', // Bundled Asset (Roboto)
+    fontFamilyFallback: ['sans-serif'],
   );
 
-  static const List<String> globalFontFallbacks = [
-    'system-ui',
-    '.SF Pro Text',
-    '.SF UI Text',
-    'SF Compact',
-    'Google Sans Flex',
-    'Google Sans',
-    'Roboto',
-    'Segoe UI',
-    'Arial',
-    'Verdana',
-    'sans-serif'
-  ];
+  static const List<String> globalFontFallbacks = ['sans-serif'];
 
   static ThemeData lightTheme() {
     return ThemeData(
@@ -68,18 +44,16 @@ class AppTheme {
           foregroundColor: Colors.white,
           textStyle: const TextStyle(
             fontWeight: FontWeight.bold,
+            fontFamily: 'AppFont',
             fontFamilyFallback: globalFontFallbacks,
           ),
         ),
       ),
-      // textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
-      // Fallback to system font for offline safety (unless we bundle Outfit locally)
-      typography: Typography.material2021(platform: TargetPlatform.android),
       textTheme: ThemeData.light().textTheme.apply(
-            fontFamily: null,
+            fontFamily: 'AppFont',
             fontFamilyFallback: globalFontFallbacks,
           ),
-      fontFamily: null,
+      fontFamily: 'AppFont',
     );
   }
 
@@ -109,17 +83,16 @@ class AppTheme {
           foregroundColor: Colors.white,
           textStyle: const TextStyle(
             fontWeight: FontWeight.bold,
+            fontFamily: 'AppFont',
             fontFamilyFallback: globalFontFallbacks,
           ),
         ),
       ),
-      // textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-      typography: Typography.material2021(platform: TargetPlatform.android),
       textTheme: ThemeData.dark().textTheme.apply(
-            fontFamily: null,
+            fontFamily: 'AppFont',
             fontFamilyFallback: globalFontFallbacks,
           ),
-      fontFamily: null,
+      fontFamily: 'AppFont',
     );
   }
 }

@@ -61,3 +61,6 @@ flutter:
     - family: MaterialSymbolsOutlined
       fonts:
         - asset: assets/fonts/MaterialSymbolsOutlined.ttf
+    - family: AppFont
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf

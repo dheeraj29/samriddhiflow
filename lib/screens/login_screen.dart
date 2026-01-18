@@ -121,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
 
-    final response = await ref.read(authServiceProvider).signInWithGoogle();
+    final response = await ref.read(authServiceProvider).signInWithGoogle(ref);
 
     if (response.status == AuthStatus.success) {
       if (mounted) {
@@ -155,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _autoRestore() async {
     try {
-      if (await ref.read(authServiceProvider).currentUser != null) {
+      if (ref.read(authServiceProvider).currentUser != null) {
         // SAFETY CHECK: Only auto-restore if local data is empty
         final storage = ref.read(storageServiceProvider);
         final hasData = storage.getAllAccounts().isNotEmpty ||

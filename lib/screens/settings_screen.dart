@@ -249,9 +249,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => _showBackupThresholdDialog(context, ref),
               ),
 
-              const Divider(),
-              _buildSectionHeader(context, 'Authentication'),
-              if (user != null) ...[
+              // --- AUTHENTICATION ---
+              // Only show logout if ONLINE
+              if (user != null && !ref.watch(isOfflineProvider)) ...[
+                const Divider(),
+                _buildSectionHeader(context, 'Authentication'),
                 ListTile(
                   title: const Text('Logout'),
                   leading: PureIcons.logout(color: Colors.red),
@@ -277,10 +279,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     );
                     if (confirm == true) {
-                      await ref
-                          .read(isLoggedInProvider.notifier)
-                          .setLoggedIn(false);
-                      await ref.read(authServiceProvider).signOut();
+                      // Fire and forget logout to avoid resuming in unmounted widget
+                      ref.read(authServiceProvider).signOut(ref);
                     }
                   },
                 ),
@@ -379,7 +379,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
 
-              if (user != null) ...[
+              if (user != null && !ref.watch(isOfflineProvider)) ...[
                 const Divider(),
                 _buildSectionHeader(context, 'Danger Zone', color: Colors.red),
                 ListTile(
@@ -857,7 +857,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final authService = ref.read(authServiceProvider);
 
       // A. Re-authenticate first to ensure session is fresh (Google Auth handles it or we call signIn)
-      final response = await authService.signInWithGoogle();
+      final response = await authService.signInWithGoogle(ref);
       if (response.status != AuthStatus.success) {
         throw Exception("Re-authentication Failed: ${response.message}");
       }
@@ -923,7 +923,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       // Re-authenticate first
       final authService = ref.read(authServiceProvider);
-      final response = await authService.signInWithGoogle();
+      final response = await authService.signInWithGoogle(ref);
       if (response.status != AuthStatus.success) {
         throw Exception("Authentication Failed: ${response.message}");
       }

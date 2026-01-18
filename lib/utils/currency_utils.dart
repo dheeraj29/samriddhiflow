@@ -4,9 +4,9 @@ class CurrencyUtils {
   static NumberFormat getFormatter(String? locale, {bool compact = false}) {
     // Force specific symbols to ensure offline/font compatibility
     String? symbol;
-    if (locale == 'en_IN')
+    if (locale == 'en_IN') {
       symbol = '₹';
-    else if (locale == 'en_US')
+    } else if (locale == 'en_US')
       symbol = '\$';
     else if (locale == 'en_GB')
       symbol = '£';

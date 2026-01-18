@@ -5,6 +5,7 @@ import 'add_transaction_screen.dart';
 import 'loans_screen.dart';
 import 'accounts_screen.dart';
 import 'settings_screen.dart';
+import '../utils/debug_logger.dart';
 import 'transactions_screen.dart';
 import 'reports_screen.dart';
 import 'reminders_screen.dart';
@@ -57,13 +58,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    // Hide Calculator when leaving Dashboard
-    // Using a microtask to avoid "setState() or markNeedsBuild() called during build"
-    Future.microtask(() {
-      if (ref.exists(calculatorVisibleProvider)) {
-        ref.read(calculatorVisibleProvider.notifier).value = false;
-      }
-    });
+    DebugLogger().log("DashboardScreen: Disposing...");
+    // Hide Calculator when leaving Dashboard via regular navigation
+    // On logout, GlobalOverlay handles this reactively
     super.dispose();
   }
 
@@ -99,9 +96,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             tooltip: 'Reminders',
           ),
           // Show logout if logged in (Stream value) OR local offline login flag
-          // Using ref.read to avoid rebuild loop if simple check, but watch is safer for state changes
-          if (ref.watch(authStreamProvider).value != null ||
-              ref.watch(isLoggedInProvider))
+          // But only if ONLINE (logout requires connectivity).
+          if ((ref.watch(authStreamProvider).value != null ||
+                  ref.watch(isLoggedInProvider)) &&
+              !ref.watch(isOfflineProvider))
             IconButton(
               onPressed: () async {
                 final confirm = await showDialog<bool>(
@@ -125,8 +123,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 );
                 if (confirm == true) {
-                  // Centralized Logout Logic
-                  await ref.read(authServiceProvider).signOut();
+                  // Fire and forget logout to avoid resuming in unmounted widget
+                  ref.read(authServiceProvider).signOut(ref);
                 }
               },
               icon: PureIcons.logout(),
