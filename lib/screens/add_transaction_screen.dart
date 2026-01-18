@@ -1,0 +1,627 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import '../providers.dart';
+import '../utils/currency_utils.dart';
+import '../models/transaction.dart';
+import '../models/recurring_transaction.dart';
+import '../models/category.dart';
+import '../models/account.dart';
+import '../widgets/pure_icons.dart';
+import '../theme/app_theme.dart';
+
+class AddTransactionScreen extends ConsumerStatefulWidget {
+  final TransactionType initialType;
+  final Transaction? transactionToEdit;
+  final String? recurringId;
+  const AddTransactionScreen({
+    super.key,
+    this.initialType = TransactionType.expense,
+    this.transactionToEdit,
+    this.recurringId,
+  });
+
+  @override
+  ConsumerState<AddTransactionScreen> createState() =>
+      _AddTransactionScreenState();
+}
+
+class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  late TransactionType _type;
+  double _amount = 0;
+  String _title = '';
+  String? _category;
+  DateTime _date = DateTime.now();
+  TimeOfDay _time = TimeOfDay.now();
+
+  String? _selectedAccountId;
+  String? _toAccountId; // For transfers
+
+  bool _isRecurring = false;
+  Frequency _frequency = Frequency.monthly;
+  ScheduleType _scheduleType = ScheduleType.fixedDate;
+  int? _selectedWeekday;
+  bool _adjustForHolidays = false;
+  int? _holdingTenureMonths;
+  double? _gainAmount;
+
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final FocusNode _titleFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.transactionToEdit != null) {
+      final t = widget.transactionToEdit!;
+      _type = t.type;
+      _amount = t.amount;
+      _title = t.title;
+      _category = t.category;
+      _date = t.date;
+      _time = TimeOfDay.fromDateTime(t.date);
+      _selectedAccountId = t.accountId;
+      _toAccountId = t.toAccountId;
+      _titleController.text = t.title;
+      _amountController.text = t.amount.toStringAsFixed(2);
+      _holdingTenureMonths = t.holdingTenureMonths;
+      _gainAmount = t.gainAmount;
+    } else {
+      _type = widget.initialType;
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    _titleFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
+    final categories = ref.watch(categoriesProvider);
+
+    final filteredCategories = categories.where((c) {
+      if (_type == TransactionType.income) {
+        return c.usage == CategoryUsage.income || c.usage == CategoryUsage.both;
+      } else if (_type == TransactionType.expense) {
+        return c.usage == CategoryUsage.expense ||
+            c.usage == CategoryUsage.both;
+      }
+      return true; // Transfer or other
+    }).toList();
+
+    if (_category == null && filteredCategories.isNotEmpty) {
+      _category = filteredCategories.first.name;
+    } else if (_category != null &&
+        !filteredCategories.any((c) => c.name == _category)) {
+      // If type changed and current category is no longer valid, reset to first valid
+      _category =
+          filteredCategories.isNotEmpty ? filteredCategories.first.name : null;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+          title: Text(widget.transactionToEdit == null
+              ? 'Add Transaction'
+              : 'Edit Transaction')),
+      body: accountsAsync.when(
+        data: (accounts) {
+          // Allow Proceeding even without accounts
+          // No longer forcing a selection. null means 'No Account'
+          return Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Type Selector
+                SegmentedButton<TransactionType>(
+                  segments: [
+                    ButtonSegment(
+                        value: TransactionType.expense,
+                        label: const Text('Expense'),
+                        icon: PureIcons.expense()),
+                    ButtonSegment(
+                        value: TransactionType.income,
+                        label: const Text('Income'),
+                        icon: PureIcons.income()),
+                    ButtonSegment(
+                        value: TransactionType.transfer,
+                        label: const Text('Transfer'),
+                        icon: PureIcons.transfer()),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (Set<TransactionType> newSelection) {
+                    setState(() {
+                      _type = newSelection.first;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Amount
+                TextFormField(
+                  controller: _amountController,
+                  decoration: InputDecoration(
+                    labelText: 'Amount',
+                    prefixText:
+                        '${CurrencyUtils.getSymbol(_selectedAccountId == null || accounts.isEmpty ? "en_IN" : accounts.firstWhere((a) => a.id == _selectedAccountId, orElse: () => accounts.first).currency)} ',
+                    prefixStyle: AppTheme.offlineSafeTextStyle,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                  ],
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+                      ? 'Invalid Amount'
+                      : null,
+                  onSaved: (v) => _amount =
+                      CurrencyUtils.roundTo2Decimals(double.parse(v!)),
+                ),
+                const SizedBox(height: 16),
+
+                // Gain Amount (Sub-field)
+                if (filteredCategories.any((c) =>
+                    c.name == _category &&
+                    c.tag == CategoryTag.capitalGain)) ...[
+                  TextFormField(
+                    initialValue: _gainAmount?.toString(),
+                    decoration: InputDecoration(
+                      labelText: 'Gain / Profit Amount',
+                      border: const OutlineInputBorder(),
+                      prefixText:
+                          '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
+                      prefixStyle: AppTheme.offlineSafeTextStyle,
+                      helperText: _amount > 0 && (_gainAmount ?? 0) != 0
+                          ? '${(_gainAmount ?? 0) > 0 ? "Profit" : "Loss"}: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_gainAmount!.abs())}'
+                              ' (Purchase Cost: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_amount - (_gainAmount ?? 0))})'
+                          : 'Enter the profit (positive) or loss (negative)',
+                      helperStyle: TextStyle(
+                        color: (_gainAmount ?? 0) > 0
+                            ? Colors.greenAccent
+                            : (_gainAmount ?? 0) < 0
+                                ? Colors.redAccent
+                                : null,
+                      ),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      // Allow minus sign for loss, and max 2 decimals
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^-?\d*\.?\d{0,2}')),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _gainAmount = double.tryParse(v)),
+                    onSaved: (v) => _gainAmount = v == null || v.isEmpty
+                        ? null
+                        : CurrencyUtils.roundTo2Decimals(double.parse(v)),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Category (If not transfer)
+                if (_type != TransactionType.transfer) ...[
+                  DropdownButtonFormField<String?>(
+                    initialValue: _category,
+                    decoration: const InputDecoration(
+                        labelText: 'Category', border: OutlineInputBorder()),
+                    items: filteredCategories
+                        .map((c) => DropdownMenuItem<String?>(
+                            value: c.name,
+                            child: Row(
+                              children: [
+                                if (c.iconCode != 0) ...[
+                                  PureIcons.categoryIcon(c.iconCode,
+                                      size: 18, color: Colors.blueGrey),
+                                  const SizedBox(width: 8),
+                                ],
+                                Text(c.name),
+                                if (c.tag != CategoryTag.none) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueGrey.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _getTagLabel(c.tag),
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blueGrey),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            )))
+                        .toList(),
+                    onChanged: (v) => setState(() => _category = v!),
+                  ),
+                  const SizedBox(height: 16),
+                  if (filteredCategories.any((c) =>
+                      c.name == _category &&
+                      c.tag == CategoryTag.capitalGain)) ...[
+                    TextFormField(
+                      initialValue: _holdingTenureMonths?.toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Holding Tenure (Months)',
+                        hintText: 'e.g., 12',
+                        border: OutlineInputBorder(),
+                        helperText:
+                            'Enter months held (Long-term: 12+ months for stocks)',
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (v) => _holdingTenureMonths = int.tryParse(v),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedAccountId,
+                  decoration: InputDecoration(
+                    labelText: _type == TransactionType.transfer
+                        ? 'From Account'
+                        : 'Account',
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('No Account (Manual)')),
+                    ...accounts.map((a) => DropdownMenuItem<String?>(
+                          value: a.id,
+                          child:
+                              Text('${a.name} (${_formatAccountBalance(a)})'),
+                        )),
+                  ],
+                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                ),
+
+                if (_type == TransactionType.transfer) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _toAccountId,
+                    decoration: const InputDecoration(
+                      labelText: 'To Account',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: <DropdownMenuItem<String?>>[
+                      if (_toAccountId == null)
+                        const DropdownMenuItem<String?>(
+                            value: null, child: Text('Select Recipient')),
+                      ...accounts
+                          .where((a) => a.id != _selectedAccountId)
+                          .map((a) => DropdownMenuItem<String?>(
+                                value: a.id,
+                                child: Text(
+                                    '${a.name} (${_formatAccountBalance(a)})'),
+                              )),
+                    ],
+                    onChanged: (v) => setState(() => _toAccountId = v),
+                    validator: (v) => v == null ? 'Required' : null,
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Title (Auto-complete / Description)
+                RawAutocomplete<String>(
+                  textEditingController: _titleController,
+                  focusNode: _titleFocusNode,
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    final txns = transactionsAsync.asData?.value ?? [];
+                    final filteredTxns = txns.where((t) =>
+                        _type == TransactionType.transfer ||
+                        t.category == _category);
+
+                    if (textEditingValue.text.isEmpty) {
+                      return filteredTxns.map((t) => t.title).toSet().take(
+                          5); // Show top 5 recent titles for this category
+                    }
+
+                    final suggestions = filteredTxns
+                        .map((t) => t.title)
+                        .toSet()
+                        .where((title) => title
+                            .toLowerCase()
+                            .contains(textEditingValue.text.toLowerCase()))
+                        .toList();
+                    return suggestions;
+                  },
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) {
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      onSaved: (v) => _title = v!,
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width - 32,
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final String option = options.elementAt(index);
+                              return ListTile(
+                                title: Text(option),
+                                onTap: () => onSelected(option),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Date & Time
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: PureIcons.calendar(),
+                        label: Text(DateFormat('yyyy-MM-dd').format(_date)),
+                        onPressed: () async {
+                          final d = await showDatePicker(
+                              context: context,
+                              initialDate: _date,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030));
+                          if (d != null) setState(() => _date = d);
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: PureIcons.timer(),
+                        label: Text(_time.format(context)),
+                        onPressed: () async {
+                          final t = await showTimePicker(
+                              context: context, initialTime: _time);
+                          if (t != null) setState(() => _time = t);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (widget.transactionToEdit == null) ...[
+                  const Divider(),
+                  SwitchListTile(
+                    title: const Text('Make Recurring'),
+                    subtitle:
+                        const Text('Repeat this transaction automatically'),
+                    value: _isRecurring,
+                    onChanged: (v) => setState(() => _isRecurring = v),
+                  ),
+                ],
+                if (_isRecurring) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<Frequency>(
+                          initialValue: _frequency,
+                          decoration: const InputDecoration(
+                              labelText: 'Frequency',
+                              border: OutlineInputBorder()),
+                          items: Frequency.values
+                              .map((f) => DropdownMenuItem(
+                                    value: f,
+                                    child: Text(f.name.toUpperCase()),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _frequency = v!),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<ScheduleType>(
+                          initialValue: _scheduleType,
+                          decoration: const InputDecoration(
+                              labelText: 'Schedule Type',
+                              border: OutlineInputBorder()),
+                          items: ScheduleType.values
+                              .map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(_getScheduleLabel(s)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _scheduleType = v!),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          title: const Text('Adjust for Holidays'),
+                          subtitle: const Text(
+                              'Schedule a day earlier if it lands on a holiday/weekend'),
+                          value: _adjustForHolidays,
+                          onChanged: (v) =>
+                              setState(() => _adjustForHolidays = v),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        if (_scheduleType == ScheduleType.specificWeekday) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedWeekday ?? 1,
+                            decoration: const InputDecoration(
+                                labelText: 'Select Weekday',
+                                border: OutlineInputBorder()),
+                            items: const [
+                              DropdownMenuItem(value: 1, child: Text('Monday')),
+                              DropdownMenuItem(
+                                  value: 2, child: Text('Tuesday')),
+                              DropdownMenuItem(
+                                  value: 3, child: Text('Wednesday')),
+                              DropdownMenuItem(
+                                  value: 4, child: Text('Thursday')),
+                              DropdownMenuItem(value: 5, child: Text('Friday')),
+                              DropdownMenuItem(
+                                  value: 6, child: Text('Saturday')),
+                              DropdownMenuItem(value: 7, child: Text('Sunday')),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _selectedWeekday = v),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: Text(
+                      widget.transactionToEdit == null
+                          ? 'Save Transaction'
+                          : 'Update Transaction',
+                      style: const TextStyle(fontSize: 18)),
+                ),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  void _save() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      final dateTime = DateTime(
+          _date.year, _date.month, _date.day, _time.hour, _time.minute);
+
+      // Save logic
+      final storage = ref.read(storageServiceProvider);
+
+      // Create/Update Transaction Record
+      final selectedCat = storage.getCategories().firstWhere(
+          (c) => c.name == _category,
+          orElse: () => Category(id: '', name: '', usage: CategoryUsage.both));
+
+      final profileId = ref.read(activeProfileIdProvider);
+      final txn = Transaction(
+        id: widget.transactionToEdit?.id ?? const Uuid().v4(),
+        title: _title,
+        amount: _amount,
+        date: dateTime,
+        type: _type,
+        category: _type == TransactionType.transfer ? 'Transfer' : _category!,
+        accountId: _selectedAccountId,
+        toAccountId: _toAccountId,
+        profileId: profileId,
+        holdingTenureMonths: selectedCat.tag == CategoryTag.capitalGain
+            ? _holdingTenureMonths
+            : null,
+        gainAmount:
+            selectedCat.tag == CategoryTag.capitalGain ? _gainAmount : null,
+      );
+
+      await storage.saveTransaction(txn);
+
+      if (widget.recurringId != null) {
+        await storage.advanceRecurringTransactionDate(widget.recurringId!);
+        final _ = ref.refresh(recurringTransactionsProvider);
+      }
+
+      ref.read(txnsSinceBackupProvider.notifier).refresh();
+
+      // If recurring, create the template
+      if (_isRecurring) {
+        final recurring = RecurringTransaction.create(
+          title: _title,
+          amount: _amount,
+          category: _type == TransactionType.transfer ? 'Transfer' : _category!,
+          accountId: _selectedAccountId,
+          frequency: _frequency,
+          startDate: dateTime,
+          scheduleType: _scheduleType,
+          selectedWeekday: _selectedWeekday,
+          adjustForHolidays: _adjustForHolidays,
+          profileId: profileId,
+        );
+        await storage.saveRecurringTransaction(recurring);
+      }
+
+      final _ = ref.refresh(transactionsProvider);
+      final __ = ref.refresh(accountsProvider);
+      final ___ = ref.refresh(recurringTransactionsProvider);
+
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  String _getScheduleLabel(ScheduleType type) {
+    switch (type) {
+      case ScheduleType.fixedDate:
+        return 'Exact Date Each Month';
+      case ScheduleType.everyWeekend:
+        return 'Every Weekend (Sat or Sun)';
+      case ScheduleType.lastWeekend:
+        return 'Last Weekend of Month';
+      case ScheduleType.specificWeekday:
+        return 'Specific Weekday';
+      case ScheduleType.lastDayOfMonth:
+        return 'Last Day of Month';
+      case ScheduleType.lastWorkingDay:
+        return 'Last Working Day of Month';
+    }
+  }
+
+  String _getTagLabel(CategoryTag tag) {
+    switch (tag) {
+      case CategoryTag.none:
+        return '';
+      case CategoryTag.capitalGain:
+        return 'Capital Gain';
+      case CategoryTag.directTax:
+        return 'Direct Tax';
+      case CategoryTag.budgetFree:
+        return 'Budget Free';
+      case CategoryTag.taxFree:
+        return 'Tax Free';
+    }
+  }
+
+  String _formatAccountBalance(Account a) {
+    if (a.type == AccountType.creditCard && a.creditLimit != null) {
+      final avail = a.creditLimit! - a.balance;
+      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
+    }
+    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
+  }
+}

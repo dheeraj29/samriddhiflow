@@ -1,0 +1,37 @@
+{
+    "hosting": {
+        "public": "build/web",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ],
+        "rewrites": [
+            {
+                "source": "**",
+                "destination": "/index.html"
+            }
+        ]
+    },
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "samriddhiflow",
+                    "appId": "1:36853289802:android:47e2dce1397e89eac027b3",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "samriddhiflow",
+                    "configurations": {
+                        "android": "1:36853289802:android:47e2dce1397e89eac027b3",
+                        "web": "1:36853289802:web:b49171c09b4114c2c027b3",
+                        "windows": "1:36853289802:web:dd3bf3b583b1dfa2c027b3"
+                    }
+                }
+            }
+        }
+    }
+}

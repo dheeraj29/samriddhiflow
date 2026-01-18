@@ -1,0 +1,63 @@
+name: samriddhi_flow
+description: Samriddhi Flow - Premium personal finance and smart budgeting PWA.
+publish_to: 'none'
+version: 1.0.0+45
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^3.1.0
+  
+  # Local Storage
+  
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.2.2
+  # google_fonts: ^7.0.2 # Removed (Bundled Outfit)
+  path_provider: ^2.1.2
+  permission_handler: ^12.0.1
+  # path_provider: ^2.1.2 # Often included in flutter sdk or via hive_flutter implicitly, but good to have explicit if needed for non-web logic
+  
+  # Data Handling
+  excel: ^4.0.0
+  file_picker: ^10.3.8
+  web: ^1.1.1
+  
+  # Firebase
+  firebase_core: ^4.3.0
+  firebase_auth: ^6.1.3
+  firebase_storage: ^13.0.5
+  # google_sign_in: ^6.2.2
+  
+  # Auth Utils
+  
+  
+  # UI/Charts
+  fl_chart: ^1.1.1
+  hive_ce: ^2.17.0
+  hive_ce_flutter: ^2.3.4
+  cloud_firestore: ^6.1.1
+  connectivity_plus: ^7.0.0
+  cupertino_icons: ^1.0.8
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.8
+  hive_ce_generator: ^1.10.0
+  http: ^1.6.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: MaterialSymbolsOutlined
+      fonts:
+        - asset: assets/fonts/MaterialSymbolsOutlined.ttf

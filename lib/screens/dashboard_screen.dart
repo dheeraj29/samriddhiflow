@@ -1,0 +1,859 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'add_transaction_screen.dart';
+import 'loans_screen.dart';
+import 'accounts_screen.dart';
+import 'settings_screen.dart';
+import 'transactions_screen.dart';
+import 'reports_screen.dart';
+import 'reminders_screen.dart';
+import '../models/transaction.dart';
+import '../models/account.dart';
+import '../models/category.dart';
+import '../providers.dart';
+import '../feature_providers.dart';
+import '../widgets/smart_currency_text.dart';
+import '../widgets/pure_icons.dart';
+
+class DashboardScreen extends ConsumerStatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 1. Show Calculator strictly on Dashboard
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(calculatorVisibleProvider.notifier).value = true;
+    });
+
+    // 2. Check for notifications/nudges after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final service = ref.read(notificationServiceProvider);
+      // Initialize native (no-op on web)
+      await service.init();
+
+      // Check nudges
+      final nudges = await service.checkNudges();
+      if (nudges.isNotEmpty && mounted) {
+        for (final nudge in nudges) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(nudge),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+            behavior: SnackBarBehavior.floating,
+          ));
+          // Slight delay so they don't all stack instantly if multiple
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Hide Calculator when leaving Dashboard
+    // Using a microtask to avoid "setState() or markNeedsBuild() called during build"
+    Future.microtask(() {
+      if (ref.exists(calculatorVisibleProvider)) {
+        ref.read(calculatorVisibleProvider.notifier).value = false;
+      }
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
+    final txnsSinceBackup = ref.watch(txnsSinceBackupProvider);
+    final backupThreshold = ref.watch(backupThresholdProvider);
+    final theme = Theme.of(context);
+    final activeProfile = ref.watch(activeProfileProvider);
+    final title = (activeProfile == null || activeProfile.id == 'default')
+        ? 'My Samriddh'
+        : '${activeProfile.name} Budget';
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          _buildProfileSwitcher(context, ref),
+          IconButton(
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const RemindersScreen())),
+            icon: PureIcons.notifications(),
+            tooltip: 'Reminders',
+          ),
+          // Show logout if logged in (Stream value) OR local offline login flag
+          // Using ref.read to avoid rebuild loop if simple check, but watch is safer for state changes
+          if (ref.watch(authStreamProvider).value != null ||
+              ref.watch(isLoggedInProvider))
+            IconButton(
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Logout"),
+                    content: const Text("Do you really want to logout?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text("CANCEL"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(
+                            foregroundColor:
+                                Theme.of(context).colorScheme.error),
+                        child: const Text("LOGOUT"),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  // Centralized Logout Logic
+                  await ref.read(authServiceProvider).signOut();
+                }
+              },
+              icon: PureIcons.logout(),
+              tooltip: 'Logout',
+            ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (txnsSinceBackup >= backupThreshold)
+                  _buildBackupReminder(context, ref, txnsSinceBackup),
+                _buildNetWorthCard(context, accountsAsync),
+                const SizedBox(height: 16),
+                _buildMonthlySummary(context, transactionsAsync),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text('Quick Actions',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 12),
+                _buildQuickActions(context),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Recent Transactions',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                      TextButton(
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const TransactionsScreen())),
+                          child: const Text('View All')),
+                    ],
+                  ),
+                ),
+                _buildRecentTransactions(context, transactionsAsync),
+              ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+                icon: PureIcons.home(), tooltip: 'Home', onPressed: () {}),
+            IconButton(
+              icon: PureIcons.accounts(),
+              tooltip: 'Accounts',
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AccountsScreen())),
+            ),
+            IconButton(
+              icon: PureIcons.reports(),
+              tooltip: 'Reports',
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ReportsScreen())),
+            ),
+            IconButton(
+              icon: PureIcons.settings(),
+              tooltip: 'Settings',
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNetWorthCard(
+      BuildContext context, AsyncValue<List<Account>> accountsAsync) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final currencyLocale = ref.watch(currencyProvider);
+        final loansAsync = ref.watch(loansProvider);
+
+        return accountsAsync.when(
+          data: (accounts) {
+            return loansAsync.when(
+              data: (loans) {
+                double netWorth = 0;
+                double assets = 0;
+                double debt = 0;
+
+                for (var acc in accounts) {
+                  if (acc.type == AccountType.creditCard) {
+                    // For Credit Cards, positive balance is Debt
+                    if (acc.balance > 0) {
+                      debt += acc.balance;
+                    }
+                    // CC Balance reduces Net Worth (assuming positive balance = owed)
+                    netWorth -= acc.balance;
+                  } else {
+                    // For other accounts (Savings, Cash), balance is Asset
+                    // Negative balance reduces Net Worth but is NOT counted in 'Debt' pill
+                    // per user request (e.g. overdraft or loan payment from savings)
+                    netWorth += acc.balance;
+
+                    if (acc.balance >= 0) {
+                      assets += acc.balance;
+                    }
+                    // If negative, it reduces Net Worth (handled above) but doesn't add to 'Assets'
+                  }
+                }
+
+                double totalLoanLiability = 0;
+                for (var loan in loans) {
+                  totalLoanLiability += loan.remainingPrincipal;
+                }
+
+                return Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6C63FF), Color(0xFF8B85FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6C63FF).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Total Net Worth',
+                              style: TextStyle(color: Colors.white70)),
+                          const SizedBox(height: 8),
+                          SmartCurrencyText(
+                            value: netWorth,
+                            locale: currencyLocale,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _buildStatPill('Assets', assets, currencyLocale,
+                                  color: Colors.greenAccent),
+                              const SizedBox(width: 12),
+                              _buildStatPill('Debt', debt, currencyLocale,
+                                  color: Colors.redAccent),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                    if (totalLoanLiability > 0) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            PureIcons.loan(color: Colors.orange),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text('Total Loan Liability',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w500)),
+                            ),
+                            SmartCurrencyText(
+                              value: totalLoanLiability,
+                              locale: currencyLocale,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.orange),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Text('Error: $err'),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Text('Error: $err'),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatPill(String label, double value, String locale,
+      {required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PureIcons.income(color: color, size: 16),
+          const SizedBox(width: 4),
+          Text('$label: ',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
+          SmartCurrencyText(
+            value: value,
+            locale: locale,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlySummary(
+      BuildContext context, AsyncValue<List<Transaction>> transactionsAsync) {
+    return Consumer(builder: (context, ref, child) {
+      final currencyLocale = ref.watch(currencyProvider);
+      return transactionsAsync.when(
+        data: (transactions) {
+          double income = 0;
+          double expense = 0;
+          final now = DateTime.now();
+
+          final categories = ref.watch(categoriesProvider);
+          final catMap = {for (var c in categories) c.name: c};
+
+          for (var t in transactions) {
+            if (t.date.year == now.year && t.date.month == now.month) {
+              if (t.type == TransactionType.income) income += t.amount;
+              if (t.type == TransactionType.expense) {
+                // Check for budgetFree tag
+                final cat = catMap[t.category];
+                if (cat?.tag != CategoryTag.budgetFree) {
+                  expense += t.amount; // Only count if not budgetFree
+                }
+              }
+            }
+          }
+
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Income (This Month)',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          SmartCurrencyText(
+                            value: income,
+                            locale: currencyLocale,
+                            style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.withOpacity(0.2)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Expense (Budgeted)',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          SmartCurrencyText(
+                            value: expense,
+                            locale: currencyLocale,
+                            style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (ref.watch(monthlyBudgetProvider) > 0) ...[
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Monthly Budget Progress',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                              '${((expense / ref.watch(monthlyBudgetProvider)) * 100).toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      expense > ref.watch(monthlyBudgetProvider)
+                                          ? Colors.redAccent
+                                          : Colors.blueGrey)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: (expense / ref.watch(monthlyBudgetProvider))
+                            .clamp(0, 1),
+                        backgroundColor: Colors.grey.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            expense > ref.watch(monthlyBudgetProvider)
+                                ? Colors.redAccent
+                                : Colors.green),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('Spent: ',
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.grey)),
+                              SmartCurrencyText(
+                                value: expense,
+                                locale: currencyLocale,
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              const Text('Remaining: ',
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.grey)),
+                              SmartCurrencyText(
+                                value:
+                                    ref.watch(monthlyBudgetProvider) - expense,
+                                locale: currencyLocale,
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    ],
+                  )
+                ]
+              ],
+            ),
+          );
+        },
+        loading: () => const SizedBox(),
+        error: (e, s) => const SizedBox(),
+      );
+    });
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddTransactionScreen(
+                        initialType: TransactionType.income))),
+            child: _buildActionItem(
+                context, Icons.add_circle_outline, 'Income', Colors.green),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddTransactionScreen(
+                        initialType: TransactionType.transfer))),
+            child: _buildActionItem(
+                context, Icons.swap_horiz, 'Transfer', Colors.blue),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddTransactionScreen(
+                        initialType: TransactionType.expense))),
+            child: _buildActionItem(
+                context, Icons.payment, 'Pay Bill', Colors.orange),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LoansScreen())),
+            child: _buildActionItem(
+                context, Icons.account_balance, 'Loans', Colors.purple),
+          ),
+          const SizedBox(width: 16),
+          _buildActionItem(
+              context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionItem(
+      BuildContext context, IconData icon, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          height: 60,
+          width: 60,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(icon, color: color, size: 28),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildRecentTransactions(
+      BuildContext context, AsyncValue<List<Transaction>> transactionsAsync) {
+    return Consumer(builder: (context, ref, child) {
+      final currencyLocale = ref.watch(currencyProvider);
+      final accountsAsync = ref.watch(accountsProvider);
+
+      return transactionsAsync.when(
+        data: (transactions) {
+          if (transactions.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(child: Text('No transactions yet.')),
+            );
+          }
+
+          return accountsAsync.maybeWhen(
+            data: (accounts) {
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: transactions.length > 5 ? 5 : transactions.length,
+                itemBuilder: (context, index) {
+                  final txn = transactions[index];
+                  final accName = accounts.any((a) => a.id == txn.accountId)
+                      ? accounts.firstWhere((a) => a.id == txn.accountId).name
+                      : "Deleted Account";
+
+                  final categories = ref.watch(categoriesProvider);
+                  final catObj = categories.firstWhere(
+                      (c) => c.name == txn.category,
+                      orElse: () => categories.first);
+                  final isCapitalGain = catObj.tag == CategoryTag.capitalGain;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: txn.type == TransactionType.income
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.redAccent.withOpacity(0.1),
+                      child: txn.type == TransactionType.income
+                          ? PureIcons.income(size: 18)
+                          : PureIcons.expense(size: 18),
+                    ),
+                    title: Text(txn.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • $accName',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (isCapitalGain &&
+                            (txn.gainAmount != null ||
+                                txn.holdingTenureMonths != null))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2.0),
+                            child: Row(
+                              children: [
+                                if (txn.gainAmount != null) ...[
+                                  Text(
+                                    '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: txn.gainAmount! >= 0
+                                          ? Colors.green
+                                          : Colors.redAccent,
+                                    ),
+                                  ),
+                                  SmartCurrencyText(
+                                    value: txn.gainAmount!.abs(),
+                                    locale: currencyLocale,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: txn.gainAmount! >= 0
+                                          ? Colors.green
+                                          : Colors.redAccent,
+                                    ),
+                                  ),
+                                ] else if (isCapitalGain) ...[
+                                  const Text(
+                                    'Profit: ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  SmartCurrencyText(
+                                    value: 0,
+                                    locale: currencyLocale,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                                if (txn.gainAmount != null &&
+                                    txn.holdingTenureMonths != null)
+                                  const Text(' • ',
+                                      style: TextStyle(fontSize: 11)),
+                                if (txn.holdingTenureMonths != null)
+                                  Text(
+                                    'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    trailing: SmartCurrencyText(
+                      value: txn.amount,
+                      locale: currencyLocale,
+                      prefix: txn.type == TransactionType.income ? "+" : "-",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: txn.type == TransactionType.income
+                            ? Colors.green
+                            : Colors.redAccent,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            orElse: () => const LinearProgressIndicator(),
+          );
+        },
+        loading: () => const Center(child: LinearProgressIndicator()),
+        error: (e, s) => const SizedBox(),
+      );
+    });
+  }
+
+  Widget _buildBackupReminder(BuildContext context, WidgetRef ref, int count) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(
+            Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              PureIcons.sync(color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Unsaved Data: $count transactions recorded since last backup.',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.amber[200]
+                          : Colors.orange[800]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, '/settings'),
+                child: const Text('Go to Backup'),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () =>
+                    ref.read(txnsSinceBackupProvider.notifier).reset(),
+                child:
+                    const Text('Dismiss', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileSwitcher(BuildContext context, WidgetRef ref) {
+    final profilesAsync = ref.watch(profilesProvider);
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+
+    return profilesAsync.when(
+      data: (profiles) {
+        if (profiles.length <= 1) return const SizedBox.shrink();
+        final activeProfile = profiles.firstWhere(
+            (p) => p.id == activeProfileId,
+            orElse: () => profiles.first);
+
+        return PopupMenuButton<String>(
+          initialValue: activeProfileId,
+          icon: PureIcons.person(),
+          tooltip: 'Switch Profile (${activeProfile.name})',
+          onSelected: (id) async {
+            await ref.read(activeProfileIdProvider.notifier).setProfile(id);
+            // Providers watching activeProfileIdProvider will react
+            ref.invalidate(accountsProvider);
+            ref.invalidate(transactionsProvider);
+            ref.invalidate(loansProvider);
+            ref.invalidate(recurringTransactionsProvider);
+            ref.invalidate(categoriesProvider);
+            ref.invalidate(monthlyBudgetProvider);
+            ref.invalidate(currencyProvider);
+          },
+          itemBuilder: (context) => profiles
+              .map((p) => PopupMenuItem(
+                    value: p.id,
+                    child: Row(
+                      children: [
+                        if (p.id == activeProfileId) PureIcons.check(size: 18),
+                        const SizedBox(width: 8),
+                        Text(p.name,
+                            style: TextStyle(
+                                fontWeight: p.id == activeProfileId
+                                    ? FontWeight.bold
+                                    : FontWeight.normal)),
+                      ],
+                    ),
+                  ))
+              .toList(),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  String _formatTenure(int months) {
+    if (months < 12) return '$months mos';
+    final years = months ~/ 12;
+    final remainingMonths = months % 12;
+    if (remainingMonths == 0) return '$years ${years == 1 ? "yr" : "yrs"}';
+    return '$years ${years == 1 ? "yr" : "yrs"} $remainingMonths ${remainingMonths == 1 ? "mo" : "mos"}';
+  }
+}

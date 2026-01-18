@@ -1,0 +1,77 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+*.txt
+.DS_Store
+.firebase/
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch.json and tasks.json which are
+# Useful for team settings. However, for a generic project, it's often ignored.
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/podhelper.rb
+**/ios/GeneratedPluginRegistrant.h
+**/ios/GeneratedPluginRegistrant.m
+**/otaupdate/
+**/pubspec-override.yaml
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/.dart_tool/
+build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place separate folders for each module
+.gradle/
+**/android/local.properties
+**/android/**/generated/
+**/android/app/debug/
+**/android/app/release/
+
+# Sensitive/Firebase Files (Requested)
+lib/firebase_options.dart
+firebase_options.dart
+firebase_cors.json
+*.secret
+*.pem
+*.key
+.env*
+.env
+google-services.json
+GoogleService-Info.plist
+
+# Tooling
+.agent/
+.gemini/
+.cursorrules
+AI.md
+
+# Web related
+.web_assets/
+node_modules/
+package-lock.json
