@@ -636,12 +636,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!updateFound) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("You are already on the latest version."),
-            backgroundColor: Colors.green,
+        final wantReload = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Up to Date'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'You are consistent with the latest version (${AppConstants.appVersion}).'),
+                SizedBox(height: 16),
+                Text(
+                    'If you don\'t see expected changes, you can force a reload.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('OK')),
+              ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                  child: const Text('Force Reload')),
+            ],
           ),
         );
+
+        if (wantReload == true && kIsWeb) {
+          try {
+            // Clear all caches
+            final caches = web.window.caches;
+            final keysArray = await caches.keys().toDart;
+            final keys = keysArray.toDart; // List<JSString>
+            for (final key in keys) {
+              await caches.delete(key.toDart).toDart;
+            }
+            // Reload
+            web.window.location.reload();
+          } catch (e) {
+            debugPrint("Failed to clear cache: $e");
+            web.window.location.reload();
+          }
+        }
       }
       return;
     }

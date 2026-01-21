@@ -662,10 +662,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               leading: CircleAvatar(
                 backgroundColor: txn.type == TransactionType.income
                     ? Colors.green.withOpacity(0.1)
-                    : Colors.redAccent.withOpacity(0.1),
+                    : txn.type == TransactionType.transfer
+                        ? Colors.blue.withOpacity(0.1)
+                        : Colors.redAccent.withOpacity(0.1),
                 child: txn.type == TransactionType.income
                     ? PureIcons.income(size: 18)
-                    : PureIcons.expense(size: 18),
+                    : txn.type == TransactionType.transfer
+                        ? PureIcons.transfer(size: 18)
+                        : PureIcons.expense(size: 18),
               ),
               title: Text(txn.title,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
