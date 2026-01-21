@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../providers.dart';
+import '../navigator_key.dart';
 import '../screens/login_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
@@ -24,6 +25,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   StreamSubscription? _connectivitySubscription;
   bool _isRedirectingLocal = false;
   bool _bootGracePeriodFinished = false;
+  bool _hasVerificationTimedOut = false;
+  bool _isSlowConnection = false;
+  Timer? _verificationSafetyTimer;
+  Timer? _slowConnectionTimer;
 
   @override
   void initState() {
@@ -35,8 +40,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             web.window.sessionStorage.getItem('auth_redirect_pending');
         if (pending == 'true') {
           _isRedirectingLocal = true;
-          // Safety timeout: If Firebase fails to sign us in within 10s, release the screen
-          Future.delayed(const Duration(seconds: 10), () {
+          // Safety timeout: If Firebase fails to sign us in within 120s, release the screen
+          Future.delayed(const Duration(seconds: 120), () {
             if (mounted && _isRedirectingLocal) {
               DebugLogger().log("AuthWrapper: Redirect Timeout reached.");
               setState(() => _isRedirectingLocal = false);
@@ -60,6 +65,31 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSafeListeners();
     });
+
+    // 4. Session Verification Safety Timeout
+    _verificationSafetyTimer = Timer(const Duration(seconds: 120), () {
+      if (mounted && !_hasVerificationTimedOut) {
+        setState(() => _hasVerificationTimedOut = true);
+        DebugLogger()
+            .log("AuthWrapper: Session Verification Timeout triggered.");
+      }
+    });
+
+    // 5. Slow Connection Detector
+    _slowConnectionTimer = Timer(const Duration(seconds: 25), () {
+      if (mounted && !_isSlowConnection) {
+        setState(() => _isSlowConnection = true);
+        DebugLogger().log("AuthWrapper: Slow Connection detected.");
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    _verificationSafetyTimer?.cancel();
+    _slowConnectionTimer?.cancel();
+    super.dispose();
   }
 
   void _initSafeListeners() {
@@ -116,16 +146,79 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   @override
-  void dispose() {
-    _connectivitySubscription?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final storageInit = ref.watch(storageInitializerProvider);
 
-    // BACKGROUND VERIFICATION:
+    // 1. RE-INITIALIZE ON NETWORK RECOVERY
+    ref.listen(isOfflineProvider, (previous, next) async {
+      if (!_bootGracePeriodFinished) return; // Ignore startup noise
+
+      final wasOffline = previous ?? false;
+      final isOnline = !next;
+      if (wasOffline && isOnline) {
+        // Wait a small moment for DNS/Interface to settle
+        await Future.delayed(const Duration(seconds: 2));
+
+        // ACTUAL reachability check
+        final hasActualInternet = await NetworkUtils.hasActualInternet();
+        if (!hasActualInternet) {
+          DebugLogger().log(
+              "AuthWrapper: Network event Online but ACTUAL reachability failed. Staying in failover.");
+          return;
+        }
+
+        DebugLogger().log("AuthWrapper: Network Restored. Re-triggering Init.");
+        ref.invalidate(firebaseInitializerProvider);
+
+        // Wait for Firebase to settle then revalidate
+        try {
+          await ref
+              .read(firebaseInitializerProvider.future)
+              .timeout(const Duration(seconds: 10));
+          await _revalidateSession();
+        } catch (e) {
+          DebugLogger().log("AuthWrapper: Restoration revalidate failed: $e");
+        }
+      }
+    });
+
+    // 1.0 GLOBAL LOGOUT NAVIGATION
+    ref.listen(logoutRequestedProvider, (previous, next) {
+      if (next == true) {
+        DebugLogger()
+            .log("AuthWrapper: Logout requested. Clearing navigator stack.");
+        navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      }
+    });
+
+    // 1.1 AUTO-HEAL: Background Reachability Retry
+    // If we are currently "Timed Out" (Offline Failover Mode), but the interface
+    // says we are Online, we should periodically check if ACTUAL internet
+    // has finally arrived (DNS settled).
+    if (_hasVerificationTimedOut && !ref.watch(isOfflineProvider)) {
+      Future.delayed(const Duration(seconds: 15), () async {
+        if (mounted &&
+            _hasVerificationTimedOut &&
+            !ref.read(isOfflineProvider)) {
+          final hasInternet = await NetworkUtils.hasActualInternet();
+          if (hasInternet && mounted) {
+            DebugLogger().log(
+                "AuthWrapper: Background Reachability Detected. Auto-healing...");
+            // We set it back to data-path WITHOUT blocking UI
+            // because firebaseInitializerProvider is now invalid and will re-fetch.
+            // But we only clear _hasVerificationTimedOut AFTER success elsewhere
+            // or we do it here and trust the next logic to handle it.
+            // Actually, once it succeeds, the Data path of build() will take over.
+
+            // To prevent blocking UI, we don't clear the flag here yet.
+            // We just trigger the re-init.
+            ref.invalidate(firebaseInitializerProvider);
+          }
+        }
+      });
+    }
+
+    // 2. BACKGROUND VERIFICATION:
     ref.listen(authStreamProvider, (previous, next) async {
       try {
         if (!storageInit.hasValue) return;
@@ -137,8 +230,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           setState(() => _isRedirectingLocal = false);
         }
 
+        final firebaseInit = ref.read(firebaseInitializerProvider);
         if (!_bootGracePeriodFinished ||
             _isRedirectingLocal ||
+            firebaseInit
+                .isLoading || // Strict Guard: Wait for initialization to finish
+            firebaseInit
+                .isRefreshing || // Strict Guard: Wait for re-initialization to finish
+            !firebaseInit.hasValue ||
             authService.isSignOutInProgress ||
             ref.read(logoutRequestedProvider)) {
           return;
@@ -148,10 +247,28 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final isLoggedIn = ref.read(isLoggedInProvider);
         final user = next.value;
 
+        // 3. GHOST SESSION DETECTION (Prompt User instead of Force Logout)
         if (next.hasValue && user == null && !isOffline && isLoggedIn) {
-          DebugLogger()
-              .log("AuthWrapper: Ghost Session detected. Cleaning up.");
-          await authService.signOut(ref);
+          // Extra Guard: Wait for 30s before flagging it
+          await Future.delayed(const Duration(seconds: 30));
+          final stillOffline = await NetworkUtils.isOffline();
+
+          if (!stillOffline && mounted) {
+            DebugLogger()
+                .log("AuthWrapper: Ghost Session confirmed. Prompting user.");
+            // Only show if not already showing a dialog or snackbar loop
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    const Text("Session verification failed. Sync paused."),
+                duration: const Duration(seconds: 10),
+                action: SnackBarAction(
+                  label: "FIX",
+                  onPressed: () => _showSessionFixDialog(context, ref),
+                ),
+              ),
+            );
+          }
         }
       } catch (e) {
         DebugLogger()
@@ -206,38 +323,26 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         ),
       ),
       data: (_) {
-        // 1. FAST PATH: Connectivity (Synchronous initial check on Web)
         final isOffline = ref.watch(isOfflineProvider);
         final isPersistentLogin = ref.watch(isLoggedInProvider);
 
-        if (isOffline) {
-          // Check for actual value, not AsyncValue state
-          if (isPersistentLogin) {
-            DebugLogger()
-                .log("AuthWrapper: Persistent + Offline. Entry Granted.");
-            return const DashboardScreen();
-          }
+        // 2. OFFLINE FAILOVER (User choice or auto-mode)
+        if (isPersistentLogin && (isOffline || _hasVerificationTimedOut)) {
+          return const DashboardScreen();
+        }
 
+        // 3. REGULAR OFFLINE GUARD (For guests/logged-out)
+        if (isOffline && !isPersistentLogin) {
           return _buildErrorScreen(
             context,
             title: "Connection Required",
             message:
                 "You are currently offline. Please connect to the internet to sign in.",
-            icon: Icons.wifi_off_rounded,
-            onRetry: () async {
-              // Manual retry just refreshes the providers
-              // ignore: unused_result
-              ref.refresh(isOfflineProvider);
-              if (ref.read(isOfflineProvider) == false) {
-                // Check for actual value
-                // ignore: unused_result
-                ref.refresh(firebaseInitializerProvider);
-              }
-            },
+            icon: Icons.wifi_off,
+            showOfflineBypass: false,
           );
         }
 
-        // 2. ONLINE PATH
         // Pre-fetch Firebase status in background if we think we are logged in
         if (isPersistentLogin) {
           // ignore: unused_result
@@ -248,7 +353,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
         return firebaseInit.when(
           loading: () => _buildLoadingScreen(
-              _isRedirectingLocal ? "Finalizing Account..." : "Connecting..."),
+            _isRedirectingLocal
+                ? (_isSlowConnection
+                    ? "Slow link. Finalizing Account..."
+                    : "Finalizing Account...")
+                : (_isSlowConnection
+                    ? "Slow link. Connecting..."
+                    : "Connecting..."),
+            showOfflineBypass: isPersistentLogin && !_isRedirectingLocal,
+          ),
           error: (e, s) {
             DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
             final isTimeout = e.toString().toLowerCase().contains("timeout");
@@ -258,11 +371,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               message: isTimeout
                   ? "Connection reached a timeout. Please try again."
                   : "You are currently offline. Please connect to the internet to sign in.",
-              icon: isTimeout ? Icons.timer_outlined : Icons.wifi_off_rounded,
-              onRetry: () async {
-                // ignore: unused_result
-                ref.refresh(firebaseInitializerProvider);
-              },
+              icon: isTimeout ? Icons.timer : Icons.wifi_off,
+              showOfflineBypass: isPersistentLogin,
             );
           },
           data: (_) => _buildAuthStream(context, isPersistentLogin),
@@ -271,7 +381,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     );
   }
 
-  Widget _buildLoadingScreen(String message) {
+  Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
@@ -287,6 +397,20 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             Text(AppConstants.appVersion,
                 style: AppTheme.offlineSafeTextStyle
                     .copyWith(color: Colors.grey[400], fontSize: 10)),
+            if (_isSlowConnection && showOfflineBypass) ...[
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _hasVerificationTimedOut = true);
+                },
+                icon: const Icon(Icons.cloud_off_rounded),
+                label: const Text("Continue Offline"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.grey[700],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -308,12 +432,30 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           return _buildLoadingScreen("Finalizing Account...");
         }
 
+        // --- PERSISTENT SESSION GUARD ---
+        if (isPersistentLogin) {
+          if (!_hasVerificationTimedOut) {
+            return _buildLoadingScreen(
+              _isSlowConnection
+                  ? "Slow link. Verifying Session..."
+                  : "Verifying Session...",
+              showOfflineBypass: true, // Allow bypass for logged-in users
+            );
+          } else {
+            // Safety/Manual Timeout: Grant entry to local data
+            DebugLogger()
+                .log("AuthWrapper: Entering Dashboard via Offline Failover.");
+            return const DashboardScreen();
+          }
+        }
+
         // If we reached here, user is null.
         // We already checked for offline at the top level of build(),
         // so we can assume we are online here.
         return const LoginScreen();
       },
-      loading: () => _buildLoadingScreen("Verifying Session..."),
+      loading: () => _buildLoadingScreen("Verifying Session...",
+          showOfflineBypass: isPersistentLogin),
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Auth Stream Error: $e");
         return const LoginScreen();
@@ -326,7 +468,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     required String title,
     required String message,
     required IconData icon,
-    required VoidCallback onRetry,
+    bool showOfflineBypass = false,
   }) {
     return Scaffold(
       body: Center(
@@ -335,7 +477,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 64, color: AppTheme.primary.withOpacity(0.8)),
+              Icon(icon,
+                  size: 64, color: AppTheme.primary.withValues(alpha: 0.8)),
               const SizedBox(height: 24),
               Text(
                 title,
@@ -354,33 +497,60 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text("RETRY CONNECTION"),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.invalidate(firebaseInitializerProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text("Retry Connection"),
               ),
-              if (kDebugMode) ...[
-                const SizedBox(height: 16),
-                TextButton(
+              if (showOfflineBypass) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
                   onPressed: () {
-                    // ignore: unused_result
-                    ref.read(localModeProvider.notifier).value = true;
+                    setState(() => _hasVerificationTimedOut = true);
                   },
-                  child: const Text("Continue in Local Mode (Debug Only)"),
+                  icon: const Icon(Icons.cloud_off_rounded),
+                  label: const Text("Continue Offline"),
                 ),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _showSessionFixDialog(
+      BuildContext context, WidgetRef ref) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Session Issue"),
+        content: const Text(
+            "Your secure cloud session could not be restored. You can continue offline, try to reconnect, or login again."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Continue Offline"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.invalidate(firebaseInitializerProvider);
+            },
+            child: const Text("Retry"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(authServiceProvider).signOut(ref);
+            },
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text("Login Again"),
+          ),
+        ],
       ),
     );
   }

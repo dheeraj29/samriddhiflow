@@ -34,35 +34,61 @@ class PureIcons {
   // BEGIN GENERATED CODE - DO NOT EDIT MANUALLY
   // Edit tool/category_icons.txt and run "dart run tool/generate_icons.dart"
   static const Map<int, IconData> _categoryIcons = {
-    0xe332: IconData(0xe332, fontFamily: 'MaterialSymbolsOutlined'),
-    0xea68: IconData(0xea68, fontFamily: 'MaterialSymbolsOutlined'),
-    0xea14: IconData(0xea14, fontFamily: 'MaterialSymbolsOutlined'),
-    0xef92: IconData(0xef92, fontFamily: 'MaterialSymbolsOutlined'),
-    0xef97: IconData(0xef97, fontFamily: 'MaterialSymbolsOutlined'),
-    0xef63: IconData(0xef63, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe6ca: IconData(0xe6ca, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe1d5: IconData(0xe1d5, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe546: IconData(0xe546, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe8b0: IconData(0xe8b0, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe550: IconData(0xe550, fontFamily: 'MaterialSymbolsOutlined'),
-    0xf0ff: IconData(0xf0ff, fontFamily: 'MaterialSymbolsOutlined'),
-    0xeb41: IconData(0xeb41, fontFamily: 'MaterialSymbolsOutlined'), // pets
-    0xe869: IconData(0xe869, fontFamily: 'MaterialSymbolsOutlined'), // gift
-    0xe2a8: IconData(0xe2a8, fontFamily: 'MaterialSymbolsOutlined'), // beauty
-    0xe110: IconData(0xe110, fontFamily: 'MaterialSymbolsOutlined'), // home
-    0xe842: IconData(0xe842, fontFamily: 'MaterialSymbolsOutlined'), // shopping
+    0xe332: IconData(0xe332, fontFamily: 'MaterialSymbolsOutlined'), // toys
+    0xea68: IconData(0xea68,
+        fontFamily: 'MaterialSymbolsOutlined'), // festival/entertainment
+    0xea14: IconData(0xea14, fontFamily: 'MaterialSymbolsOutlined'), // others
+    0xef92: IconData(0xef92,
+        fontFamily: 'MaterialSymbolsOutlined'), // stock market/investment
+    0xef97: IconData(0xef97,
+        fontFamily: 'MaterialSymbolsOutlined'), // groceries/vegetables
+    0xef63: IconData(0xef63, fontFamily: 'MaterialSymbolsOutlined'), // rent
+    0xe6ca: IconData(0xe6ca, fontFamily: 'MaterialSymbolsOutlined'), // travel
+    0xe1d5: IconData(0xe1d5, fontFamily: 'MaterialSymbolsOutlined'), // health
+    0xe546: IconData(0xe546, fontFamily: 'MaterialSymbolsOutlined'), // gas
+    0xe8b0:
+        IconData(0xe8b0, fontFamily: 'MaterialSymbolsOutlined'), // utility bill
+    0xe550: IconData(0xe550, fontFamily: 'MaterialSymbolsOutlined'), // pharmacy
+    0xf0ff: IconData(0xf0ff, fontFamily: 'MaterialSymbolsOutlined'), // maid
+    0xeb41:
+        IconData(0xeb41, fontFamily: 'MaterialSymbolsOutlined'), // care taker
+    0xe869: IconData(0xe869, fontFamily: 'MaterialSymbolsOutlined'), // repairs
+    0xe2a8: IconData(0xe2a8, fontFamily: 'MaterialSymbolsOutlined'), // laundry
+    0xe110: IconData(0xe110, fontFamily: 'MaterialSymbolsOutlined'), // fruits
+    0xe842: IconData(0xe842, fontFamily: 'MaterialSymbolsOutlined'), // meat
     0xe02c: IconData(0xe02c, fontFamily: 'MaterialSymbolsOutlined'), // movies
-    0xe8b1: IconData(0xe8b1, fontFamily: 'MaterialSymbolsOutlined'), // family/handshake
+    0xe8b1: IconData(0xe8b1,
+        fontFamily: 'MaterialSymbolsOutlined'), // Gift/Family Gift
     0xe5c7: IconData(0xe5c7, fontFamily: 'MaterialSymbolsOutlined'), // add
-    0xe548: IconData(0xe548, fontFamily: 'MaterialSymbolsOutlined'),
-    0xeb6f: IconData(0xeb6f, fontFamily: 'MaterialSymbolsOutlined'),
-    0xf8eb: IconData(0xf8eb, fontFamily: 'MaterialSymbolsOutlined'),
-    0xf3ee: IconData(0xf3ee, fontFamily: 'MaterialSymbolsOutlined'),
-    0xe2eb: IconData(0xe2eb, fontFamily: 'MaterialSymbolsOutlined'),
+    0xe548: IconData(0xe548, fontFamily: 'MaterialSymbolsOutlined'), // Hospital
+    0xeb6f: IconData(0xeb6f,
+        fontFamily: 'MaterialSymbolsOutlined'), // Salary/Bank loan
+    0xf8eb: IconData(0xf8eb,
+        fontFamily: 'MaterialSymbolsOutlined'), // Property Rental
+    0xf3ee: IconData(0xf3ee,
+        fontFamily: 'MaterialSymbolsOutlined'), // Divestment/Dividend
+    0xe2eb: IconData(0xe2eb,
+        fontFamily: 'MaterialSymbolsOutlined'), // Saving Interest
     0xef9d: IconData(0xef9d, fontFamily: 'MaterialSymbolsOutlined'), // salon
     0xe80c: IconData(0xe80c, fontFamily: 'MaterialSymbolsOutlined'), // school
-    0xe064: IconData(0xe064, fontFamily: 'MaterialSymbolsOutlined'), // subscriptions
+    0xe064: IconData(0xe064,
+        fontFamily: 'MaterialSymbolsOutlined'), // subscriptions
     0xe86a: IconData(0xe86a, fontFamily: 'MaterialSymbolsOutlined'), // services
+    // Updated codepoints with verified Material Symbols:
+    0xe1b1: IconData(0xe1b1,
+        fontFamily: 'MaterialSymbolsOutlined'), // Gadgets/Devices
+    0xf19e: IconData(0xf19e,
+        fontFamily: 'MaterialSymbolsOutlined'), // Clothes/Checkroom
+    0xf19d: IconData(0xf19d,
+        fontFamily: 'MaterialSymbolsOutlined'), // Insurance/Policy
+    0xea61: IconData(0xea61,
+        fontFamily: 'MaterialSymbolsOutlined'), // Cashback/Paid
+    0xe57a: IconData(0xe57a,
+        fontFamily: 'MaterialSymbolsOutlined'), // Snacks/Fastfood
+    0xeb4c:
+        IconData(0xeb4c, fontFamily: 'MaterialSymbolsOutlined'), // Beauty/Spa
+    0xe56c: IconData(0xe56c,
+        fontFamily: 'MaterialSymbolsOutlined'), // Food/Restaurant
   };
   // END GENERATED CODE
 

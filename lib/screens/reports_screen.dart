@@ -161,16 +161,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                   // Capital Gains Aggregation
                   final categories = ref.watch(categoriesProvider);
+                  final catMap = <String, Category>{};
+                  for (var c in categories) {
+                    catMap[c.name] = c;
+                  }
                   double totalGains = 0;
                   Map<String, double> gainsByCategory = {};
 
                   // Filter gains based on report type
                   final gainTxns = filtered.where((t) {
-                    final catObj = categories.firstWhere(
-                        (c) => c.name == t.category,
-                        orElse: () => categories.first);
+                    final catObj = catMap[t.category];
 
-                    if (catObj.tag != CategoryTag.capitalGain) return false;
+                    if (catObj?.tag != CategoryTag.capitalGain) return false;
 
                     // Match report type
                     if (_type == ReportType.spending) {
@@ -573,10 +575,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                   final isTouched = index == touchedIndex;
                                   final fontSize = isTouched ? 16.0 : 12.0;
                                   final radius = isTouched ? 90.0 : 80.0;
-                                  final percentage = (e.value / total) * 100;
+                                  final percentage =
+                                      total == 0 ? 0 : (e.value / total) * 100;
 
                                   return PieChartSectionData(
-                                    value: e.value,
+                                    value: e.value == 0
+                                        ? 0.01
+                                        : e.value, // Prevent zero value crash
                                     title: isTouched
                                         ? '${e.key}\n${CurrencyUtils.getSmartFormat(e.value, currencyLocale)}'
                                         : '${percentage.toStringAsFixed(0)}%',

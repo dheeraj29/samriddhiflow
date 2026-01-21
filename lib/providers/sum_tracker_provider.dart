@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import '../providers.dart';
 
 class SumEntry {
   final String id;
@@ -105,9 +106,12 @@ class SumTrackerState {
 
   SumTrackerState({required this.profiles, this.activeProfileId});
 
-  SumProfile? get activeProfile => activeProfileId == null
-      ? null
-      : profiles.firstWhere((p) => p.id == activeProfileId);
+  SumProfile? get activeProfile {
+    if (activeProfileId == null) return null;
+    final matches = profiles.where((p) => p.id == activeProfileId);
+    if (matches.isNotEmpty) return matches.first;
+    return profiles.isNotEmpty ? profiles.first : null;
+  }
 
   SumTrackerState copyWith(
       {List<SumProfile>? profiles, String? activeProfileId}) {
@@ -123,6 +127,11 @@ class SumTrackerNotifier extends Notifier<SumTrackerState> {
 
   @override
   SumTrackerState build() {
+    final init = ref.watch(storageInitializerProvider);
+    if (!init.hasValue) {
+      return SumTrackerState(profiles: [], activeProfileId: null);
+    }
+
     _box = Hive.box(
         'sum_tracker'); // Box is already opened by storageInitializerProvider
 

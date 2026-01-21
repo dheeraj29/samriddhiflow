@@ -81,16 +81,17 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
             width: targetWidth,
             height: targetHeight,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
+              color:
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
               ],
-              border: Border.all(color: Colors.white.withOpacity(0.5)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(30),

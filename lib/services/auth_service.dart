@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -6,7 +7,8 @@ import 'firebase_web_safe.dart';
 import 'package:web/web.dart' as web;
 import '../utils/debug_logger.dart';
 import '../providers.dart';
-import '../navigator_key.dart';
+import '../firebase_options.dart' as prod;
+import '../firebase_options_debug.dart' as dev;
 
 class AuthService {
   FirebaseAuth? get _auth {
@@ -33,21 +35,27 @@ class AuthService {
     // Lazy Initialization: Try to init Firebase if it failed on startup (offline)
     if (_auth == null) {
       try {
-        await Firebase.initializeApp();
+        DebugLogger().log("AuthService: Lazy Initializing Firebase...");
+        await Firebase.initializeApp(
+          options: kDebugMode
+              ? dev.DefaultFirebaseOptions.currentPlatform
+              : prod.DefaultFirebaseOptions.currentPlatform,
+        ).timeout(const Duration(seconds: 10));
       } catch (e) {
+        DebugLogger().log("AuthService: Lazy Init Failed: $e");
         return AuthResponse(
             status: AuthStatus.error,
-            message: "Connection failed: Unable to reach Google services.");
+            message:
+                "Connection failed: Unable to reach Google services. Please check your internet and try again.");
       }
     }
 
     final auth = _auth;
     if (auth == null) {
-      // If still null after retry
       return AuthResponse(
           status: AuthStatus.error,
           message:
-              "Service unavailable. Please check your internet connection.");
+              "Firebase Services are not available. Please check your internet connection.");
     }
 
     // Check if user is ALREADY logged in (persistence restored)
@@ -129,6 +137,11 @@ class AuthService {
         }
       } catch (_) {}
 
+      // Reset logout flag
+      if (ref != null) {
+        ref.read(logoutRequestedProvider.notifier).value = false;
+      }
+
       return AuthResponse(status: AuthStatus.success);
     } catch (e) {
       return AuthResponse(status: AuthStatus.error, message: e.toString());
@@ -139,48 +152,33 @@ class AuthService {
     if (isSignOutInProgress) return;
 
     try {
-      // 1. SNAP UI TO LOGIN IMMEDIATELY
       DebugLogger().log("AuthService: Instant Logout initiated.");
 
-      // Clear the optimistic flag synchronously.
-      // This triggers AuthWrapper to rebuild and show the Login screen instantly.
-      if (Hive.isBoxOpen('settings')) {
-        Hive.box('settings').put('isLoggedIn', false);
-      }
-
-      // Toggle reactive state to force Streams to null
-      if (ref != null) {
-        ref.read(logoutRequestedProvider.notifier).value = true;
-      }
-
-      // Clear all routes (Settings, etc.) to return to root
-      navigatorKey.currentState?.popUntil((route) => route.isFirst);
-
-      // 2. BACKGROUND CLEANUP
+      // 1. Snap UI shut immediately
       isSignOutInProgress = true;
+      ref.read(logoutRequestedProvider.notifier).value = true;
 
-      // Small delay to allow Navigator and Hive events to propagate
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 2. Clear local session flag instantly
+      if (Hive.isBoxOpen('settings')) {
+        await Hive.box('settings').put('isLoggedIn', false);
+      }
 
-      final auth = _auth;
-      if (auth != null) {
+      // 3. Fully Decoupled Background Cleanup
+      unawaited(Future(() async {
         try {
           DebugLogger().log("AuthService: Destroying Firebase Session (BG)...");
-          // Short timeout for background destruction
-          await auth.signOut().timeout(const Duration(seconds: 3));
+          await _auth?.signOut();
+          DebugLogger().log("AuthService: Firebase SignOut Success.");
         } catch (e) {
           DebugLogger()
-              .log("AuthService: Firebase BG SignOut Cleanup Error: $e");
+              .log("AuthService: Firebase SignOut suppressed error: $e");
+        } finally {
+          isSignOutInProgress = false;
         }
-      }
+      }));
     } catch (e) {
       DebugLogger().log("AuthService: SignOut Error: $e");
-    } finally {
       isSignOutInProgress = false;
-      if (ref != null) {
-        ref.read(logoutRequestedProvider.notifier).value = false;
-      }
-      DebugLogger().log("AuthService: Logout Flow Finalized.");
     }
   }
 
@@ -211,11 +209,17 @@ class AuthService {
           if (Hive.isBoxOpen('settings')) {
             await Hive.box('settings').put('isLoggedIn', true);
           }
+          if (ref != null) {
+            ref.read(logoutRequestedProvider.notifier).value = false;
+          }
         } else if (auth.currentUser != null) {
           DebugLogger().log(
               "AuthService: User already restored in currentUser fallback.");
           if (Hive.isBoxOpen('settings')) {
             await Hive.box('settings').put('isLoggedIn', true);
+          }
+          if (ref != null) {
+            ref.read(logoutRequestedProvider.notifier).value = false;
           }
         } else {
           DebugLogger()

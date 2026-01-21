@@ -65,11 +65,12 @@ class TransactionFilter extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-
               // Category Dropdown
               Expanded(
                 child: DropdownButtonFormField<String?>(
-                  initialValue: selectedCategory,
+                  initialValue: categories.contains(selectedCategory)
+                      ? selectedCategory
+                      : null,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
                     border: OutlineInputBorder(),
@@ -92,7 +93,10 @@ class TransactionFilter extends StatelessWidget {
               // Account Dropdown
               Expanded(
                 child: DropdownButtonFormField<String?>(
-                  initialValue: selectedAccountId,
+                  initialValue: accountItems
+                          .any((item) => item.value == selectedAccountId)
+                      ? selectedAccountId
+                      : null,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
                     border: OutlineInputBorder(),

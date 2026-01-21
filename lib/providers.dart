@@ -22,6 +22,8 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'firebase_options.dart' as prod;
 import 'firebase_options_debug.dart' as dev;
 
+import 'dart:js_interop';
+
 final isOfflineProvider =
     NotifierProvider<IsOfflineNotifier, bool>(IsOfflineNotifier.new);
 
@@ -31,14 +33,37 @@ class IsOfflineNotifier extends Notifier<bool> {
     bool initial = false;
     if (kIsWeb) {
       initial = !web.window.navigator.onLine;
+
+      // Web Native Listeners (Fastest response)
+      final onlineHandler = (web.Event _) {
+        state = false;
+      }.toJS;
+      final offlineHandler = (web.Event _) {
+        state = true;
+      }.toJS;
+
+      web.window.addEventListener('online', onlineHandler);
+      web.window.addEventListener('offline', offlineHandler);
+
+      ref.onDispose(() {
+        web.window.removeEventListener('online', onlineHandler);
+        web.window.removeEventListener('offline', offlineHandler);
+      });
     }
 
-    // Continuous Monitoring
+    // Continuous Monitoring via Plugin (Platform agnostic fallback)
     final subscription = Connectivity().onConnectivityChanged.listen((results) {
-      state = !results.any((r) =>
+      // On Web, plugin helps catch edge cases or specific interface changes.
+      // We combine it with navigator.onLine for maximum accuracy.
+      bool reportOffline = !results.any((r) =>
           r == ConnectivityResult.mobile ||
           r == ConnectivityResult.wifi ||
           r == ConnectivityResult.ethernet);
+
+      if (kIsWeb) {
+        reportOffline = reportOffline || !web.window.navigator.onLine;
+      }
+      state = reportOffline;
     });
 
     ref.onDispose(() => subscription.cancel());
@@ -131,13 +156,12 @@ final authStreamProvider = StreamProvider<User?>((ref) {
 
       return authService.authStateChanges;
     },
-    // If we are still initializing (loading), return a safe null user stream
-    // to allow the UI to show the Login screen or "Finalizing" state instantly.
-    loading: () => Stream.value(null),
+    // If we are still initializing (loading), return an empty stream
+    // to prevent the UI from prematurely deciding there is no user.
+    loading: () => const Stream.empty(),
     error: (e, __) {
-      DebugLogger()
-          .log("AuthStream: Firebase Init Error ($e). Falling back to null.");
-      return Stream.value(null);
+      DebugLogger().log("AuthStream: Firebase Init Error ($e). Staying idle.");
+      return const Stream.empty();
     },
   );
 });
@@ -147,45 +171,75 @@ final fileServiceProvider = Provider<FileService>((ref) {
 });
 
 final firebaseInitializerProvider = FutureProvider<void>((ref) async {
-  // Check connectivity first to avoid hanging on init if offline (Lazy Load)
+  // 1. Connectivity Check
   DebugLogger().log("FirebaseInit: Checking Connectivity...");
   if (await NetworkUtils.isOffline()) {
     DebugLogger().log("FirebaseInit: Offline Detected. Skipping Init.");
-    debugPrint("Offline: Skipping Firebase Init (Lazy Load)");
-    // DO NOT throw. Returning void allows dependant providers to proceed safely.
     return;
   }
 
-  // CRITICAL: iOS PWA Offline Safety Check
-  // Even if NetworkUtils says we are online (or fails to detect offline),
-  // if the actual JS scripts failed to load (404), calling initializeApp will CRASH.
-  if (kIsWeb) {
-    // Import manually or use dynamic if import cycle, but we have the file.
-    if (!FirebaseWebSafe.isFirebaseJsAvailable) {
-      DebugLogger()
-          .log("FirebaseInit: JS SDK Missing. Aborting Init (iOS Safety).");
-      throw Exception("Firebase JS SDK Missing (Offline Safe Mode)");
+  // 2. Reachability Check (DNS/iOS Transition safety)
+  // We try up to 3 times to see if DNS has settled.
+  bool reachable = false;
+  for (int i = 0; i < 3; i++) {
+    if (await NetworkUtils.hasActualInternet()) {
+      reachable = true;
+      break;
     }
+    DebugLogger().log(
+        "FirebaseInit: Reachability attempt ${i + 1} failed. DNS settling?");
+    await Future.delayed(Duration(seconds: 1 + i));
   }
 
-  DebugLogger().log("FirebaseInit: Starting Firebase.initializeApp...");
-  try {
-    await Firebase.initializeApp(
-      options: kDebugMode
-          ? dev.DefaultFirebaseOptions.currentPlatform
-          : prod.DefaultFirebaseOptions.currentPlatform,
-    ).timeout(
-        const Duration(seconds: 10)); // Increased to 10s for better reliability
+  if (!reachable) {
+    DebugLogger().log("FirebaseInit: Actual internet not reachable. Aborting.");
+    throw Exception("Internet reached a timeout (DNS/Reachability issue).");
+  }
 
-    // Finalize Redirect session if applicable
-    DebugLogger().log("FirebaseInit: Handling Redirect Result...");
-    await ref.read(authServiceProvider).handleRedirectResult(ref);
+  // 3. iOS PWA Offline Safety Check
+  if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) {
+    DebugLogger().log("FirebaseInit: JS SDK Missing. Aborting Init.");
+    throw Exception("Firebase JS SDK Missing (Offline Safe Mode)");
+  }
 
-    DebugLogger().log("FirebaseInit: Initialization Complete.");
-  } catch (e) {
-    DebugLogger().log("FirebaseInit Error: $e");
-    debugPrint("Firebase Init Failed: $e");
-    rethrow;
+  // 4. Initialization with Retry Loop
+  int attempts = 0;
+  const maxAttempts = 3;
+
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      DebugLogger().log(
+          "FirebaseInit: Starting Firebase.initializeApp (Attempt $attempts)...");
+
+      // We use a progressive timeout: 20s, 40s, 60s
+      await Firebase.initializeApp(
+        options: kDebugMode
+            ? dev.DefaultFirebaseOptions.currentPlatform
+            : prod.DefaultFirebaseOptions.currentPlatform,
+      ).timeout(Duration(seconds: 20 * attempts));
+
+      // Handling Redirect Result
+      DebugLogger().log("FirebaseInit: Handling Redirect Result...");
+      await ref.read(authServiceProvider).handleRedirectResult(ref);
+
+      DebugLogger().log("FirebaseInit: Initialization Complete.");
+      return;
+    } catch (e) {
+      final isTimeout = e.toString().toLowerCase().contains("timeout");
+      DebugLogger().log("FirebaseInit: Attempt $attempts failed ($e).");
+
+      if (attempts >= maxAttempts) {
+        if (isTimeout) {
+          throw Exception(
+              "Firebase initialization timed out after $maxAttempts attempts.");
+        }
+        rethrow;
+      }
+
+      // Wait before next attempt (Exponential-ish backoff)
+      await Future.delayed(Duration(seconds: 2 * attempts));
+    }
   }
 });
 
@@ -194,11 +248,18 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
 class ProfileNotifier extends Notifier<String> {
   @override
   String build() {
-    final init = ref.watch(storageInitializerProvider);
-    if (!init.hasValue) return 'default'; // Safe default until Hive is ready
+    // Watch the profile ID from settings box reactively
+    final profileIdStream = ref.watch(activeProfileIdHiveStreamProvider);
 
-    final storage = ref.watch(storageServiceProvider);
-    return storage.getActiveProfileId();
+    return profileIdStream.maybeWhen(
+      data: (id) => id,
+      orElse: () {
+        final init = ref.watch(storageInitializerProvider);
+        if (!init.hasValue) return 'default';
+        final storage = ref.watch(storageServiceProvider);
+        return storage.getActiveProfileId();
+      },
+    );
   }
 
   Future<void> setProfile(String id) async {
@@ -207,6 +268,16 @@ class ProfileNotifier extends Notifier<String> {
     state = id;
   }
 }
+
+/// Reactive stream that monitors the Hive 'activeProfileId' key directly.
+final activeProfileIdHiveStreamProvider = StreamProvider<String>((ref) async* {
+  await ref.watch(storageInitializerProvider.future);
+  final box = Hive.box('settings');
+  yield box.get('activeProfileId', defaultValue: 'default') as String;
+  yield* box
+      .watch(key: 'activeProfileId')
+      .map((event) => (event.value as String?) ?? 'default');
+});
 
 final activeProfileIdProvider =
     NotifierProvider<ProfileNotifier, String>(ProfileNotifier.new);
@@ -225,34 +296,59 @@ final activeProfileProvider = Provider<Profile?>((ref) {
   return profiles.isNotEmpty ? profiles.first : null;
 });
 
-// --- Data Providers (Profile Aware) ---
+// --- Data Providers (Profile Aware - Reactive) ---
 
-final accountsProvider = FutureProvider<List<Account>>((ref) async {
-  // CRITICAL: Decouple from Firebase Init. Use storageInitializerProvider (Hive) only.
-  ref.watch(storageInitializerProvider);
+final accountsProvider = StreamProvider<List<Account>>((ref) async* {
+  // Wait for Hive
+  await ref.watch(storageInitializerProvider.future);
   ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
-  return storage.getAccounts();
+
+  final box = Hive.box<Account>('accounts');
+
+  // Initial fetch
+  yield storage.getAccounts();
+
+  // Watch for any changes in the accounts box
+  yield* box
+      .watch()
+      .map((_) => storage.getAccounts().whereType<Account>().toList());
 });
 
-final transactionsProvider = FutureProvider<List<Transaction>>((ref) async {
-  ref.watch(storageInitializerProvider);
+final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
+  // Wait for Hive
+  await ref.watch(storageInitializerProvider.future);
   ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
-  return storage.getTransactions();
+
+  final box = Hive.box<Transaction>('transactions');
+
+  // Initial fetch
+  yield storage.getTransactions();
+
+  // Watch for any changes in the transactions box
+  yield* box
+      .watch()
+      .map((_) => storage.getTransactions().whereType<Transaction>().toList());
 });
 
-final loansProvider = FutureProvider<List<Loan>>((ref) async {
-  ref.watch(activeProfileIdProvider);
+final loansProvider = StreamProvider<List<Loan>>((ref) async* {
+  await ref.watch(storageInitializerProvider.future);
   final storage = ref.watch(storageServiceProvider);
-  return storage.getLoans();
+  final box = Hive.box<Loan>('loans');
+
+  yield storage.getLoans();
+  yield* box.watch().map((_) => storage.getLoans());
 });
 
 final recurringTransactionsProvider =
-    FutureProvider<List<RecurringTransaction>>((ref) async {
-  ref.watch(activeProfileIdProvider);
+    StreamProvider<List<RecurringTransaction>>((ref) async* {
+  await ref.watch(storageInitializerProvider.future);
   final storage = ref.watch(storageServiceProvider);
-  return storage.getRecurring();
+  final box = Hive.box<RecurringTransaction>('recurring');
+
+  yield storage.getRecurring();
+  yield* box.watch().map((_) => storage.getRecurring());
 });
 
 // --- Settings Providers (Profile Aware) ---
@@ -344,6 +440,8 @@ final monthlyBudgetProvider =
 class CategoriesNotifier extends Notifier<List<Category>> {
   @override
   List<Category> build() {
+    // Watch activeProfileId to ensure we refresh when switching profiles
+    ref.watch(activeProfileIdProvider);
     final init = ref.watch(storageInitializerProvider);
     if (!init.hasValue) return [];
 

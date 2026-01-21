@@ -6,6 +6,7 @@ import '../models/loan.dart';
 import '../models/recurring_transaction.dart';
 import '../models/category.dart';
 import '../models/profile.dart';
+import '../utils/debug_logger.dart';
 import '../utils/currency_utils.dart';
 
 class StorageService {
@@ -82,8 +83,19 @@ class StorageService {
     await box.put('isLoggedIn', value);
   }
 
+  // --- Smart Calculator Preference ---
+  bool isSmartCalculatorEnabled() {
+    final box = Hive.box(boxSettings);
+    return box.get('smartCalculatorEnabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setSmartCalculatorEnabled(bool value) async {
+    final box = Hive.box(boxSettings);
+    await box.put('smartCalculatorEnabled', value);
+  }
+
   List<Profile> getProfiles() {
-    return Hive.box<Profile>(boxProfiles).values.toList();
+    return Hive.box<Profile>(boxProfiles).values.whereType<Profile>().toList();
   }
 
   Future<void> saveProfile(Profile profile) async {
@@ -151,12 +163,13 @@ class StorageService {
     final profileId = getActiveProfileId();
     return Hive.box<Account>(boxAccounts)
         .values
+        .whereType<Account>()
         .where((a) => a.profileId == profileId)
         .toList();
   }
 
   List<Account> getAllAccounts() {
-    return Hive.box<Account>(boxAccounts).values.toList();
+    return Hive.box<Account>(boxAccounts).values.whereType<Account>().toList();
   }
 
   Future<void> saveAccount(Account account) async {
@@ -185,6 +198,7 @@ class StorageService {
     final profileId = getActiveProfileId();
     final box = Hive.box<Transaction>(boxTransactions);
     final list = box.values
+        .whereType<Transaction>()
         .where((t) => !t.isDeleted && t.profileId == profileId)
         .toList();
     list.sort((a, b) => b.date.compareTo(a.date));
@@ -192,13 +206,17 @@ class StorageService {
   }
 
   List<Transaction> getAllTransactions() {
-    return Hive.box<Transaction>(boxTransactions).values.toList();
+    return Hive.box<Transaction>(boxTransactions)
+        .values
+        .whereType<Transaction>()
+        .toList();
   }
 
   List<Transaction> getDeletedTransactions() {
     final profileId = getActiveProfileId();
     final box = Hive.box<Transaction>(boxTransactions);
     return box.values
+        .whereType<Transaction>()
         .where((t) => t.isDeleted && t.profileId == profileId)
         .toList();
   }
@@ -379,19 +397,25 @@ class StorageService {
   }
 
   Future<void> deleteTransaction(String id) async {
-    final box = Hive.box<Transaction>(boxTransactions);
-    final txn = box.get(id);
-    if (txn != null && !txn.isDeleted) {
+    try {
+      final box = Hive.box<Transaction>(boxTransactions);
+      final txn = box.get(id);
+      if (txn == null || txn.isDeleted) return;
+
+      // 1. Mark as deleted immediately for UI reactivity
       txn.isDeleted = true;
       await txn.save();
 
-      final accountsBox = Hive.box<Account>(boxAccounts);
-      final accFrom =
-          txn.accountId != null ? accountsBox.get(txn.accountId) : null;
+      // 2. Apply reverses if account-linked
+      if (txn.accountId != null) {
+        final accountsBox = Hive.box<Account>(boxAccounts);
+        final accFrom = accountsBox.get(txn.accountId);
 
-      if (accFrom != null) {
-        _applyTransactionImpact(accFrom, txn, isReversal: true, isSource: true);
-        await accFrom.save();
+        if (accFrom != null) {
+          _applyTransactionImpact(accFrom, txn,
+              isReversal: true, isSource: true);
+          await accFrom.save();
+        }
 
         if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
           final accTo = accountsBox.get(txn.toAccountId);
@@ -402,6 +426,8 @@ class StorageService {
           }
         }
       }
+    } catch (e) {
+      DebugLogger().log("StorageService: deleteTransaction error: $e");
     }
   }
 
@@ -448,7 +474,7 @@ class StorageService {
   }
 
   List<Loan> getAllLoans() {
-    return Hive.box<Loan>(boxLoans).values.toList();
+    return Hive.box<Loan>(boxLoans).values.whereType<Loan>().toList();
   }
 
   Future<void> saveLoan(Loan loan) async {
@@ -470,7 +496,10 @@ class StorageService {
   }
 
   List<RecurringTransaction> getAllRecurring() {
-    return Hive.box<RecurringTransaction>(boxRecurring).values.toList();
+    return Hive.box<RecurringTransaction>(boxRecurring)
+        .values
+        .whereType<RecurringTransaction>()
+        .toList();
   }
 
   Future<void> saveRecurringTransaction(RecurringTransaction rt) async {
@@ -514,7 +543,10 @@ class StorageService {
   }
 
   List<Category> getAllCategories() {
-    return Hive.box<Category>(boxCategories).values.toList();
+    return Hive.box<Category>(boxCategories)
+        .values
+        .whereType<Category>()
+        .toList();
   }
 
   Future<void> addCategory(Category category) async {
@@ -610,6 +642,56 @@ class StorageService {
           profileId: profileId),
 
       // Expense
+      Category.create(
+          name: 'Gadgets',
+          usage: CategoryUsage.expense,
+          iconCode: 0xe1b1, // Devices
+          profileId: profileId),
+      Category.create(
+          name: 'Clothes',
+          usage: CategoryUsage.expense,
+          iconCode: 0xf19e, // Checkroom
+          profileId: profileId),
+      Category.create(
+          name: 'Bank loan',
+          usage: CategoryUsage.expense,
+          iconCode: 0xeb6f,
+          profileId: profileId),
+      Category.create(
+          name: 'Insurance',
+          usage: CategoryUsage.expense,
+          iconCode: 0xf19d, // Policy
+          profileId: profileId),
+      Category.create(
+          name: 'Cashback',
+          usage: CategoryUsage.income,
+          iconCode: 0xea61, // Paid
+          profileId: profileId),
+      Category.create(
+          name: 'Festival',
+          usage: CategoryUsage.expense,
+          iconCode: 0xea68,
+          profileId: profileId),
+      Category.create(
+          name: 'Snacks',
+          usage: CategoryUsage.expense,
+          iconCode: 0xe57a, // Fastfood
+          profileId: profileId),
+      Category.create(
+          name: 'Beauty',
+          usage: CategoryUsage.expense,
+          iconCode: 0xeb4c, // Spa / Beauty
+          profileId: profileId),
+      Category.create(
+          name: 'Service Charges',
+          usage: CategoryUsage.expense,
+          iconCode: 0xef63,
+          profileId: profileId),
+      Category.create(
+          name: 'Food',
+          usage: CategoryUsage.expense,
+          iconCode: 0xe56c, // Restaurant
+          profileId: profileId),
       Category.create(
           name: 'Toys',
           usage: CategoryUsage.expense,
@@ -858,6 +940,17 @@ class StorageService {
   Future<void> setAppPin(String pin) async {
     final box = Hive.box(boxSettings);
     await box.put('appPin', pin);
+  }
+
+  // --- Theme Mode ---
+  String getThemeMode() {
+    final box = Hive.box(boxSettings);
+    return box.get('themeMode', defaultValue: 'system') as String;
+  }
+
+  Future<void> setThemeMode(String mode) async {
+    final box = Hive.box(boxSettings);
+    await box.put('themeMode', mode);
   }
 
   Future<void> clearAllData() async {

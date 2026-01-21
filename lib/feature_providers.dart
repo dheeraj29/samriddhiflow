@@ -33,20 +33,61 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
-  ThemeMode build() => ThemeMode.system;
+  ThemeMode build() {
+    final init = ref.watch(storageInitializerProvider);
+    if (!init.hasValue) return ThemeMode.system;
 
-  void setThemeMode(ThemeMode mode) {
+    final storage = ref.watch(storageServiceProvider);
+    final saved = storage.getThemeMode();
+    return ThemeMode.values.firstWhere(
+      (m) => m.name == saved,
+      orElse: () => ThemeMode.system,
+    );
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
+    final storage = ref.read(storageServiceProvider);
+    await storage.setThemeMode(mode.name);
   }
 }
 
 final themeModeProvider =
     NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
+class SmartCalculatorEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final init = ref.watch(storageInitializerProvider);
+    if (!init.hasValue) return true; // Default while loading
+
+    return ref.watch(storageServiceProvider).isSmartCalculatorEnabled();
+  }
+
+  Future<void> toggle() async {
+    final newValue = !state;
+    state = newValue;
+    await ref.read(storageServiceProvider).setSmartCalculatorEnabled(newValue);
+  }
+}
+
+final smartCalculatorEnabledProvider =
+    NotifierProvider<SmartCalculatorEnabledNotifier, bool>(
+        SmartCalculatorEnabledNotifier.new);
+
 class CalculatorVisibleNotifier extends Notifier<bool> {
   @override
-  bool build() => false;
-  set value(bool v) => state = v;
+  bool build() {
+    // Watch enabled state: if disabled, visibility must be false
+    final enabled = ref.watch(smartCalculatorEnabledProvider);
+    if (!enabled) return false;
+    return false;
+  }
+
+  set value(bool v) {
+    if (!ref.read(smartCalculatorEnabledProvider)) return;
+    state = v;
+  }
 }
 
 final calculatorVisibleProvider =

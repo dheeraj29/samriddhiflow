@@ -45,6 +45,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsProvider);
     final accountsAsync = ref.watch(accountsProvider);
+    final allCategories = ref.watch(categoriesProvider);
+    final currencyLocale = ref.watch(currencyProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -165,15 +167,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ),
       body: transactionsAsync.when(
         data: (transactions) {
+          final categories =
+              transactions.map((t) => t.category).toSet().toList()..sort();
+
           return accountsAsync.when(
             data: (accounts) {
-              if (transactions.isEmpty) {
-                return const Center(child: Text('No transactions found.'));
+              final catMap = <String, Category>{};
+              for (var c in allCategories) {
+                catMap[c.name] = c;
               }
-
-              // Unique categories for filter
-              final categories =
-                  transactions.map((t) => t.category).toSet().toList()..sort();
 
               // Filter Logic
               var filtered = transactions.toList();
@@ -182,9 +184,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     filtered.where((t) => t.category == _category).toList();
               }
               if (_selectedAccountId != null) {
-                filtered = filtered
-                    .where((t) => t.accountId == _selectedAccountId)
-                    .toList();
+                if (_selectedAccountId == 'none') {
+                  filtered =
+                      filtered.where((t) => t.accountId == null).toList();
+                } else {
+                  filtered = filtered
+                      .where((t) => t.accountId == _selectedAccountId)
+                      .toList();
+                }
               }
 
               final now = DateTime.now();
@@ -243,179 +250,184 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           : null,
                     ),
                   ],
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final txn = filtered[index];
-                        final isSelected = _selectedIds.contains(txn.id);
+                  if (transactions.isEmpty)
+                    const Expanded(
+                        child: Center(child: Text('No transactions found.')))
+                  else if (filtered.isEmpty)
+                    const Expanded(
+                        child:
+                            Center(child: Text('No matches for this filter.')))
+                  else
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final txn = filtered[index];
+                          final isSelected = _selectedIds.contains(txn.id);
 
-                        final categories = ref.watch(categoriesProvider);
-                        final catObj = categories.firstWhere(
-                            (c) => c.name == txn.category,
-                            orElse: () => categories.first);
-                        final isCapitalGain =
-                            catObj.tag == CategoryTag.capitalGain;
+                          final catObj = catMap[txn.category];
+                          final isCapitalGain =
+                              catObj?.tag == CategoryTag.capitalGain;
 
-                        return ListTile(
-                          selected: isSelected,
-                          onTap: () {
-                            if (_isSelectionMode) {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedIds.remove(txn.id);
-                                  if (_selectedIds.isEmpty) {
-                                    _isSelectionMode = false;
+                          return ListTile(
+                            selected: isSelected,
+                            onTap: () {
+                              if (_isSelectionMode) {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedIds.remove(txn.id);
+                                    if (_selectedIds.isEmpty) {
+                                      _isSelectionMode = false;
+                                    }
+                                  } else {
+                                    _selectedIds.add(txn.id);
                                   }
-                                } else {
+                                });
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AddTransactionScreen(
+                                        transactionToEdit: txn),
+                                  ),
+                                );
+                              }
+                            },
+                            onLongPress: () {
+                              if (!_isSelectionMode) {
+                                setState(() {
+                                  _isSelectionMode = true;
                                   _selectedIds.add(txn.id);
-                                }
-                              });
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AddTransactionScreen(
-                                      transactionToEdit: txn),
+                                });
+                              }
+                            },
+                            leading: _isSelectionMode
+                                ? Checkbox(
+                                    value: _selectedIds.contains(txn.id),
+                                    onChanged: (v) => _toggleSelection(txn.id),
+                                  )
+                                : CircleAvatar(
+                                    backgroundColor: txn.type ==
+                                            TransactionType.income
+                                        ? Colors.green.withOpacity(0.1)
+                                        : (txn.type == TransactionType.transfer
+                                            ? Colors.blue.withOpacity(0.1)
+                                            : Colors.red.withOpacity(0.1)),
+                                    child: txn.type == TransactionType.income
+                                        ? PureIcons.income(size: 18)
+                                        : (txn.type == TransactionType.transfer
+                                            ? PureIcons.transfer(size: 18)
+                                            : PureIcons.expense(size: 18)),
+                                  ),
+                            title: Text(txn.title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${txn.category}${txn.accountId == null ? ' • Manual' : ''}',
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-                              );
-                            }
-                          },
-                          onLongPress: () {
-                            if (!_isSelectionMode) {
-                              setState(() {
-                                _isSelectionMode = true;
-                                _selectedIds.add(txn.id);
-                              });
-                            }
-                          },
-                          leading: _isSelectionMode
-                              ? Checkbox(
-                                  value: _selectedIds.contains(txn.id),
-                                  onChanged: (v) => _toggleSelection(txn.id),
-                                )
-                              : CircleAvatar(
-                                  backgroundColor: txn.type ==
-                                          TransactionType.income
-                                      ? Colors.green.withOpacity(0.1)
-                                      : (txn.type == TransactionType.transfer
-                                          ? Colors.blue.withOpacity(0.1)
-                                          : Colors.red.withOpacity(0.1)),
-                                  child: txn.type == TransactionType.income
-                                      ? PureIcons.income(size: 18)
-                                      : (txn.type == TransactionType.transfer
-                                          ? PureIcons.transfer(size: 18)
-                                          : PureIcons.expense(size: 18)),
-                                ),
-                          title: Text(txn.title,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${txn.category}${txn.accountId == null ? ' • Manual' : ''}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              if (isCapitalGain &&
-                                  (txn.gainAmount != null ||
-                                      txn.holdingTenureMonths != null))
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2.0),
-                                  child: Row(
-                                    children: [
-                                      if (txn.gainAmount != null) ...[
-                                        Text(
-                                          '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: txn.gainAmount! >= 0
-                                                ? Colors.green
-                                                : Colors.redAccent,
+                                if (isCapitalGain &&
+                                    (txn.gainAmount != null ||
+                                        txn.holdingTenureMonths != null))
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2.0),
+                                    child: Row(
+                                      children: [
+                                        if (txn.gainAmount != null) ...[
+                                          Text(
+                                            '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: txn.gainAmount! >= 0
+                                                  ? Colors.green
+                                                  : Colors.redAccent,
+                                            ),
                                           ),
-                                        ),
-                                        SmartCurrencyText(
-                                          value: txn.gainAmount!.abs(),
-                                          locale: ref.read(currencyProvider),
-                                          initialCompact: _compactView,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: txn.gainAmount! >= 0
-                                                ? Colors.green
-                                                : Colors.redAccent,
+                                          SmartCurrencyText(
+                                            value: txn.gainAmount!.abs(),
+                                            locale: currencyLocale,
+                                            initialCompact: _compactView,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: txn.gainAmount! >= 0
+                                                  ? Colors.green
+                                                  : Colors.redAccent,
+                                            ),
                                           ),
-                                        ),
-                                      ] else if (isCapitalGain) ...[
-                                        const Text(
-                                          'Profit: ',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey,
+                                        ] else if (isCapitalGain) ...[
+                                          const Text(
+                                            'Profit: ',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
                                           ),
-                                        ),
-                                        SmartCurrencyText(
-                                          value: 0,
-                                          locale: ref.read(currencyProvider),
-                                          initialCompact: _compactView,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey,
+                                          SmartCurrencyText(
+                                            value: 0,
+                                            locale: currencyLocale,
+                                            initialCompact: _compactView,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
                                           ),
-                                        ),
+                                        ],
+                                        if (txn.gainAmount != null &&
+                                            txn.holdingTenureMonths != null)
+                                          const Text(' • ',
+                                              style: TextStyle(fontSize: 11)),
+                                        if (txn.holdingTenureMonths != null)
+                                          Text(
+                                            'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                                       ],
-                                      if (txn.gainAmount != null &&
-                                          txn.holdingTenureMonths != null)
-                                        const Text(' • ',
-                                            style: TextStyle(fontSize: 11)),
-                                      if (txn.holdingTenureMonths != null)
-                                        Text(
-                                          'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                    ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SmartCurrencyText(
+                                  value: txn.amount,
+                                  locale: currencyLocale,
+                                  initialCompact: _compactView,
+                                  prefix: txn.type == TransactionType.income
+                                      ? "+"
+                                      : "-",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: txn.type == TransactionType.income
+                                        ? Colors.green
+                                        : Colors.red,
                                   ),
                                 ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SmartCurrencyText(
-                                value: txn.amount,
-                                locale: ref.watch(currencyProvider),
-                                initialCompact: _compactView,
-                                prefix: txn.type == TransactionType.income
-                                    ? "+"
-                                    : "-",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: txn.type == TransactionType.income
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              ),
-                              if (!_isSelectionMode) ...[
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: PureIcons.deleteOutlined(
-                                      size: 20, color: Colors.grey),
-                                  onPressed: () =>
-                                      _confirmSingleDelete(context, txn),
-                                ),
+                                if (!_isSelectionMode) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: PureIcons.deleteOutlined(
+                                        size: 20, color: Colors.grey),
+                                    onPressed: () =>
+                                        _confirmSingleDelete(context, txn),
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                        );
-                      },
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
                 ],
               );
             },
@@ -452,15 +464,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         await storage.deleteTransaction(id);
       }
 
-      setState(() {
-        _isSelectionMode = false;
-        _selectedIds.clear();
-        final _ = ref.refresh(transactionsProvider);
-        final __ = ref.refresh(accountsProvider);
-      });
+      if (context.mounted) {
+        setState(() {
+          _isSelectionMode = false;
+          _selectedIds.clear();
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transactions moved to Recycle Bin')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Transactions moved to Recycle Bin')));
+      }
     }
   }
 
@@ -484,10 +496,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (confirm == true) {
       final storage = ref.read(storageServiceProvider);
       await storage.deleteTransaction(txn.id);
-      final _ = ref.refresh(transactionsProvider);
-      final __ = ref.refresh(accountsProvider);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Moved to Recycle Bin')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Moved to Recycle Bin')));
+      }
     }
   }
 

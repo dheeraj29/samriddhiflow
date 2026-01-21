@@ -72,6 +72,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final backupThreshold = ref.watch(backupThresholdProvider);
     final theme = Theme.of(context);
     final activeProfile = ref.watch(activeProfileProvider);
+    final categories = ref.watch(categoriesProvider);
+    final currencyLocale = ref.watch(currencyProvider);
+
+    // 3. Calculator Reactivity: Ensure overlay reappears if toggled ON
+    ref.listen(smartCalculatorEnabledProvider, (previous, enabled) {
+      if (enabled) {
+        // Slight delay to allow overlay to rebuild
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(calculatorVisibleProvider.notifier).value = true;
+          }
+        });
+      }
+    });
+
     final title = (activeProfile == null || activeProfile.id == 'default')
         ? 'My Samriddh'
         : '${activeProfile.name} Budget';
@@ -142,9 +157,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 if (txnsSinceBackup >= backupThreshold)
                   _buildBackupReminder(context, ref, txnsSinceBackup),
-                _buildNetWorthCard(context, accountsAsync),
+                _buildNetWorthCard(context, accountsAsync, currencyLocale, ref),
                 const SizedBox(height: 16),
-                _buildMonthlySummary(context, transactionsAsync),
+                _buildMonthlySummary(context, transactionsAsync, categories,
+                    currencyLocale, ref),
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -172,7 +188,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                 ),
-                _buildRecentTransactions(context, transactionsAsync),
+                _buildRecentTransactions(
+                    context, transactionsAsync, currencyLocale, categories),
               ],
             ),
           ),
@@ -209,138 +226,134 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildNetWorthCard(
-      BuildContext context, AsyncValue<List<Account>> accountsAsync) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final currencyLocale = ref.watch(currencyProvider);
-        final loansAsync = ref.watch(loansProvider);
+      BuildContext context,
+      AsyncValue<List<Account>> accountsAsync,
+      String currencyLocale,
+      WidgetRef ref) {
+    final loansAsync = ref.watch(loansProvider);
 
-        return accountsAsync.when(
-          data: (accounts) {
-            return loansAsync.when(
-              data: (loans) {
-                double netWorth = 0;
-                double assets = 0;
-                double debt = 0;
+    return accountsAsync.when(
+      data: (accounts) {
+        return loansAsync.when(
+          data: (loans) {
+            double netWorth = 0;
+            double assets = 0;
+            double debt = 0;
 
-                for (var acc in accounts) {
-                  if (acc.type == AccountType.creditCard) {
-                    // For Credit Cards, positive balance is Debt
-                    if (acc.balance > 0) {
-                      debt += acc.balance;
-                    }
-                    // CC Balance reduces Net Worth (assuming positive balance = owed)
-                    netWorth -= acc.balance;
-                  } else {
-                    // For other accounts (Savings, Cash), balance is Asset
-                    // Negative balance reduces Net Worth but is NOT counted in 'Debt' pill
-                    // per user request (e.g. overdraft or loan payment from savings)
-                    netWorth += acc.balance;
-
-                    if (acc.balance >= 0) {
-                      assets += acc.balance;
-                    }
-                    // If negative, it reduces Net Worth (handled above) but doesn't add to 'Assets'
-                  }
+            for (var acc in accounts) {
+              if (acc.type == AccountType.creditCard) {
+                // For Credit Cards, positive balance is Debt
+                if (acc.balance > 0) {
+                  debt += acc.balance;
                 }
+                // CC Balance reduces Net Worth (assuming positive balance = owed)
+                netWorth -= acc.balance;
+              } else {
+                // For other accounts (Savings, Cash), balance is Asset
+                // Negative balance reduces Net Worth but is NOT counted in 'Debt' pill
+                // per user request (e.g. overdraft or loan payment from savings)
+                netWorth += acc.balance;
 
-                double totalLoanLiability = 0;
-                for (var loan in loans) {
-                  totalLoanLiability += loan.remainingPrincipal;
+                if (acc.balance >= 0) {
+                  assets += acc.balance;
                 }
+                // If negative, it reduces Net Worth (handled above) but doesn't add to 'Assets'
+              }
+            }
 
-                return Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6C63FF), Color(0xFF8B85FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C63FF).withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Total Net Worth',
-                              style: TextStyle(color: Colors.white70)),
-                          const SizedBox(height: 8),
-                          SmartCurrencyText(
-                            value: netWorth,
-                            locale: currencyLocale,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              _buildStatPill('Assets', assets, currencyLocale,
-                                  color: Colors.greenAccent),
-                              const SizedBox(width: 12),
-                              _buildStatPill('Debt', debt, currencyLocale,
-                                  color: Colors.redAccent),
-                            ],
-                          )
-                        ],
-                      ),
+            double totalLoanLiability = 0;
+            for (var loan in loans) {
+              totalLoanLiability += loan.remainingPrincipal;
+            }
+
+            return Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C63FF), Color(0xFF8B85FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    if (totalLoanLiability > 0) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: Colors.orange.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            PureIcons.loan(color: Colors.orange),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text('Total Loan Liability',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w500)),
-                            ),
-                            SmartCurrencyText(
-                              value: totalLoanLiability,
-                              locale: currencyLocale,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.orange),
-                            ),
-                          ],
-                        ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       ),
                     ],
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Text('Error: $err'),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Total Net Worth',
+                          style: TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 8),
+                      SmartCurrencyText(
+                        value: netWorth,
+                        locale: currencyLocale,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _buildStatPill('Assets', assets, currencyLocale,
+                              color: Colors.greenAccent),
+                          const SizedBox(width: 12),
+                          _buildStatPill('Debt', debt, currencyLocale,
+                              color: Colors.redAccent),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+                if (totalLoanLiability > 0) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        PureIcons.loan(color: Colors.orange),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text('Total Loan Liability',
+                              style: TextStyle(fontWeight: FontWeight.w500)),
+                        ),
+                        SmartCurrencyText(
+                          value: totalLoanLiability,
+                          locale: currencyLocale,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.orange),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Text('Error: $err'),
+          loading: () => const SizedBox(),
+          error: (e, s) => const SizedBox(),
         );
       },
+      loading: () => const SizedBox(),
+      error: (e, s) => const SizedBox(),
     );
   }
 
@@ -374,169 +387,173 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildMonthlySummary(
-      BuildContext context, AsyncValue<List<Transaction>> transactionsAsync) {
-    return Consumer(builder: (context, ref, child) {
-      final currencyLocale = ref.watch(currencyProvider);
-      return transactionsAsync.when(
-        data: (transactions) {
-          double income = 0;
-          double expense = 0;
-          final now = DateTime.now();
+      BuildContext context,
+      AsyncValue<List<Transaction>> transactionsAsync,
+      List<Category> categories,
+      String currencyLocale,
+      WidgetRef ref) {
+    return transactionsAsync.when(
+      data: (transactions) {
+        double income = 0;
+        double expense = 0;
+        final now = DateTime.now();
 
-          final categories = ref.watch(categoriesProvider);
-          final catMap = {for (var c in categories) c.name: c};
+        final categories = ref.watch(categoriesProvider);
+        final catMap = <String, Category>{};
+        for (var c in categories) {
+          catMap[c.name] = c; // Last one wins, preventing crash on duplicates
+        }
 
-          for (var t in transactions) {
-            if (t.date.year == now.year && t.date.month == now.month) {
-              if (t.type == TransactionType.income) income += t.amount;
-              if (t.type == TransactionType.expense) {
-                // Check for budgetFree tag
-                final cat = catMap[t.category];
-                if (cat?.tag != CategoryTag.budgetFree) {
-                  expense += t.amount; // Only count if not budgetFree
-                }
+        for (var t in transactions) {
+          if (t.date.year == now.year && t.date.month == now.month) {
+            if (t.type == TransactionType.income) income += t.amount;
+            if (t.type == TransactionType.expense) {
+              // Check for budgetFree tag
+              final cat = catMap[t.category];
+              if (cat?.tag != CategoryTag.budgetFree) {
+                expense += t.amount; // Only count if not budgetFree
               }
             }
           }
+        }
 
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Income (This Month)',
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const SizedBox(height: 4),
+                        SmartCurrencyText(
+                          value: income,
+                          locale: currencyLocale,
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.grey.withOpacity(0.2)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text('Expense (Budgeted)',
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const SizedBox(height: 4),
+                        SmartCurrencyText(
+                          value: expense,
+                          locale: currencyLocale,
+                          style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (ref.watch(monthlyBudgetProvider) > 0) ...[
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Income (This Month)',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(height: 4),
-                          SmartCurrencyText(
-                            value: income,
-                            locale: currencyLocale,
-                            style: const TextStyle(
-                                color: Colors.green,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Monthly Budget Progress',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text(
+                            (ref.watch(monthlyBudgetProvider) == 0)
+                                ? '0%'
+                                : '${((expense / ref.watch(monthlyBudgetProvider)) * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18),
-                          ),
-                        ],
-                      ),
+                                color:
+                                    expense > ref.watch(monthlyBudgetProvider)
+                                        ? Colors.redAccent
+                                        : Colors.blueGrey)),
+                      ],
                     ),
-                    Container(
-                        width: 1,
-                        height: 40,
-                        color: Colors.grey.withOpacity(0.2)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('Expense (Budgeted)',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(height: 4),
-                          SmartCurrencyText(
-                            value: expense,
-                            locale: currencyLocale,
-                            style: const TextStyle(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: (ref.watch(monthlyBudgetProvider) == 0)
+                          ? 0
+                          : (expense / ref.watch(monthlyBudgetProvider))
+                              .clamp(0, 1),
+                      backgroundColor: Colors.grey.withOpacity(0.1),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          expense > ref.watch(monthlyBudgetProvider)
+                              ? Colors.redAccent
+                              : Colors.green),
+                      borderRadius: BorderRadius.circular(4),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Spent: ',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey)),
+                            SmartCurrencyText(
+                              value: expense,
+                              locale: currencyLocale,
+                              style: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Text('Remaining: ',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey)),
+                            SmartCurrencyText(
+                              value: ref.watch(monthlyBudgetProvider) - expense,
+                              locale: currencyLocale,
+                              style: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
                   ],
-                ),
-                if (ref.watch(monthlyBudgetProvider) > 0) ...[
-                  const SizedBox(height: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Monthly Budget Progress',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                          Text(
-                              '${((expense / ref.watch(monthlyBudgetProvider)) * 100).toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      expense > ref.watch(monthlyBudgetProvider)
-                                          ? Colors.redAccent
-                                          : Colors.blueGrey)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
-                        value: (expense / ref.watch(monthlyBudgetProvider))
-                            .clamp(0, 1),
-                        backgroundColor: Colors.grey.withOpacity(0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            expense > ref.watch(monthlyBudgetProvider)
-                                ? Colors.redAccent
-                                : Colors.green),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Text('Spent: ',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                              SmartCurrencyText(
-                                value: expense,
-                                locale: currencyLocale,
-                                style: const TextStyle(
-                                    fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Text('Remaining: ',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                              SmartCurrencyText(
-                                value:
-                                    ref.watch(monthlyBudgetProvider) - expense,
-                                locale: currencyLocale,
-                                style: const TextStyle(
-                                    fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    ],
-                  )
-                ]
-              ],
-            ),
-          );
-        },
-        loading: () => const SizedBox(),
-        error: (e, s) => const SizedBox(),
-      );
-    });
+                )
+              ]
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox(),
+      error: (e, s) => const SizedBox(),
+    );
   }
 
   Widget _buildQuickActions(BuildContext context) {
@@ -609,143 +626,138 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildRecentTransactions(
-      BuildContext context, AsyncValue<List<Transaction>> transactionsAsync) {
-    return Consumer(builder: (context, ref, child) {
-      final currencyLocale = ref.watch(currencyProvider);
-      final accountsAsync = ref.watch(accountsProvider);
+      BuildContext context,
+      AsyncValue<List<Transaction>> transactionsAsync,
+      String currencyLocale,
+      List<Category> categories) {
+    return transactionsAsync.when(
+      data: (transactions) {
+        if (transactions.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Center(child: Text('No transactions yet.')),
+          );
+        }
 
-      return transactionsAsync.when(
-        data: (transactions) {
-          if (transactions.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(child: Text('No transactions yet.')),
-            );
-          }
+        final accounts = ref.watch(accountsProvider).value ?? [];
 
-          return accountsAsync.maybeWhen(
-            data: (accounts) {
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: transactions.length > 5 ? 5 : transactions.length,
-                itemBuilder: (context, index) {
-                  final txn = transactions[index];
-                  final accName = accounts.any((a) => a.id == txn.accountId)
-                      ? accounts.firstWhere((a) => a.id == txn.accountId).name
-                      : "Deleted Account";
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: transactions.length > 5 ? 5 : transactions.length,
+          itemBuilder: (context, index) {
+            final txn = transactions[index];
+            final accName = txn.accountId == null
+                ? "Manual"
+                : accounts.any((a) => a.id == txn.accountId)
+                    ? accounts.firstWhere((a) => a.id == txn.accountId).name
+                    : "Deleted Account";
 
-                  final categories = ref.watch(categoriesProvider);
-                  final catObj = categories.firstWhere(
-                      (c) => c.name == txn.category,
-                      orElse: () => categories.first);
-                  final isCapitalGain = catObj.tag == CategoryTag.capitalGain;
+            final catObj = categories.cast<Category?>().firstWhere(
+                (c) => c?.name == txn.category,
+                orElse: () => categories.isNotEmpty ? categories.first : null);
+            final isCapitalGain = catObj?.tag == CategoryTag.capitalGain;
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: txn.type == TransactionType.income
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.redAccent.withOpacity(0.1),
-                      child: txn.type == TransactionType.income
-                          ? PureIcons.income(size: 18)
-                          : PureIcons.expense(size: 18),
-                    ),
-                    title: Text(txn.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • $accName',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        if (isCapitalGain &&
-                            (txn.gainAmount != null ||
-                                txn.holdingTenureMonths != null))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2.0),
-                            child: Row(
-                              children: [
-                                if (txn.gainAmount != null) ...[
-                                  Text(
-                                    '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: txn.gainAmount! >= 0
-                                          ? Colors.green
-                                          : Colors.redAccent,
-                                    ),
-                                  ),
-                                  SmartCurrencyText(
-                                    value: txn.gainAmount!.abs(),
-                                    locale: currencyLocale,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: txn.gainAmount! >= 0
-                                          ? Colors.green
-                                          : Colors.redAccent,
-                                    ),
-                                  ),
-                                ] else if (isCapitalGain) ...[
-                                  const Text(
-                                    'Profit: ',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  SmartCurrencyText(
-                                    value: 0,
-                                    locale: currencyLocale,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                                if (txn.gainAmount != null &&
-                                    txn.holdingTenureMonths != null)
-                                  const Text(' • ',
-                                      style: TextStyle(fontSize: 11)),
-                                if (txn.holdingTenureMonths != null)
-                                  Text(
-                                    'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                              ],
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: txn.type == TransactionType.income
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.redAccent.withOpacity(0.1),
+                child: txn.type == TransactionType.income
+                    ? PureIcons.income(size: 18)
+                    : PureIcons.expense(size: 18),
+              ),
+              title: Text(txn.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • $accName',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  if (isCapitalGain &&
+                      (txn.gainAmount != null ||
+                          txn.holdingTenureMonths != null))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2.0),
+                      child: Row(
+                        children: [
+                          if (txn.gainAmount != null) ...[
+                            Text(
+                              '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: txn.gainAmount! >= 0
+                                    ? Colors.green
+                                    : Colors.redAccent,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    trailing: SmartCurrencyText(
-                      value: txn.amount,
-                      locale: currencyLocale,
-                      prefix: txn.type == TransactionType.income ? "+" : "-",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: txn.type == TransactionType.income
-                            ? Colors.green
-                            : Colors.redAccent,
+                            SmartCurrencyText(
+                              value: txn.gainAmount!.abs(),
+                              locale: currencyLocale,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: txn.gainAmount! >= 0
+                                    ? Colors.green
+                                    : Colors.redAccent,
+                              ),
+                            ),
+                          ] else if (isCapitalGain) ...[
+                            const Text(
+                              'Profit: ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SmartCurrencyText(
+                              value: 0,
+                              locale: currencyLocale,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                          if (txn.gainAmount != null &&
+                              txn.holdingTenureMonths != null)
+                            const Text(' • ', style: TextStyle(fontSize: 11)),
+                          if (txn.holdingTenureMonths != null)
+                            Text(
+                              'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              );
-            },
-            orElse: () => const LinearProgressIndicator(),
-          );
-        },
-        loading: () => const Center(child: LinearProgressIndicator()),
-        error: (e, s) => const SizedBox(),
-      );
-    });
+                ],
+              ),
+              trailing: SmartCurrencyText(
+                value: txn.amount,
+                locale: currencyLocale,
+                prefix: txn.type == TransactionType.income ? "+" : "-",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: txn.type == TransactionType.income
+                      ? Colors.green
+                      : Colors.redAccent,
+                ),
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const SizedBox(),
+      error: (e, s) => const SizedBox(),
+    );
   }
 
   Widget _buildBackupReminder(BuildContext context, WidgetRef ref, int count) {

@@ -1,6 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 import 'debug_logger.dart';
 
 class NetworkUtils {
@@ -61,5 +62,26 @@ class NetworkUtils {
 
     // Default: Assume Online if check fails (Fail Open)
     return false;
+  }
+
+  /// Extra check for actual internet reachability (beyond just interface status).
+  /// This helps detect DNS resolution delays or captive portals on iOS.
+  static Future<bool> hasActualInternet() async {
+    if (kIsWeb) {
+      if (!web.window.navigator.onLine) return false;
+      try {
+        final response = await web.window
+            .fetch(
+                'https://www.google.com/generate_204?pb=${DateTime.now().millisecondsSinceEpoch}'
+                    .toJS,
+                web.RequestInit(method: 'HEAD', mode: 'no-cors'))
+            .toDart;
+        return response.type != 'error';
+      } catch (_) {
+        return false;
+      }
+    }
+    // For non-web, standard connectivity is usually enough or we'd use a package.
+    return true;
   }
 }

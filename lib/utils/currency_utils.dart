@@ -6,11 +6,13 @@ class CurrencyUtils {
     String? symbol;
     if (locale == 'en_IN') {
       symbol = '₹';
-    } else if (locale == 'en_US')
+    } else if (locale == 'en_US') {
       symbol = '\$';
-    else if (locale == 'en_GB')
+    } else if (locale == 'en_GB') {
       symbol = '£';
-    else if (locale == 'en_EU') symbol = '€';
+    } else if (locale == 'en_EU') {
+      symbol = '€';
+    }
 
     try {
       if (compact) {
@@ -32,6 +34,7 @@ class CurrencyUtils {
   }
 
   static String getSmartFormat(double value, String locale) {
+    if (value.isNaN || value.isInfinite) return "0";
     final absValue = value.abs();
     final sign = value < 0 ? '-' : '';
     final symbol = getSymbol(locale);

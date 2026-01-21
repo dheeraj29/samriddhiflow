@@ -113,7 +113,8 @@ class AccountCard extends ConsumerWidget {
   Widget _buildCreditUtilization(Account account) {
     double limit = account.creditLimit!;
     double used = account.balance;
-    double percent = (used / limit).clamp(0.0, 1.0);
+    // Safety check for NaN (limit = 0)
+    double percent = (limit == 0) ? 0.0 : (used / limit).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +144,7 @@ class AccountCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4)),
       child: Text(
         '$label: ${CurrencyUtils.getFormatter(currency).format(val)}',

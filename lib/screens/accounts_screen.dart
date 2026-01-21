@@ -333,8 +333,15 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
             TextFormField(
               initialValue: _name,
               decoration: const InputDecoration(labelText: 'Account Name'),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-              onSaved: (v) => _name = v!,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Required';
+                final nameLower = v.trim().toLowerCase();
+                if (nameLower == 'manual' || nameLower == 'deleted account') {
+                  return 'Reserved name';
+                }
+                return null;
+              },
+              onSaved: (v) => _name = v!.trim(),
             ),
             const SizedBox(height: 16),
             // Disable Type change for existing accounts to avoid logic break
