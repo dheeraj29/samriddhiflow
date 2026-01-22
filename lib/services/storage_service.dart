@@ -86,7 +86,7 @@ class StorageService {
   // --- Smart Calculator Preference ---
   bool isSmartCalculatorEnabled() {
     final box = Hive.box(boxSettings);
-    return box.get('smartCalculatorEnabled', defaultValue: true) as bool;
+    return box.get('smartCalculatorEnabled', defaultValue: false) as bool;
   }
 
   Future<void> setSmartCalculatorEnabled(bool value) async {
