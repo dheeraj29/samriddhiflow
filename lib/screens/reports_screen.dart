@@ -192,6 +192,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                   total = data.values.fold(0, (sum, val) => sum + val);
 
+                  // --- CHART DATA PREPARATION (Top 9 + Others) ---
+                  // 1. Convert to List and Sort
+                  final sortedEntries = data.entries.toList()
+                    ..sort((a, b) => b.value.compareTo(a.value));
+
+                  List<MapEntry<String, double>> chartEntries = [];
+                  if (sortedEntries.length <= 10) {
+                    chartEntries = sortedEntries;
+                  } else {
+                    // Take Top 9
+                    chartEntries = sortedEntries.take(9).toList();
+
+                    // Sum the rest
+                    final rest = sortedEntries.skip(9);
+                    double othersSum = rest.fold(0, (sum, e) => sum + e.value);
+
+                    // Check if "Others" already exists in Top 9
+                    final existingOthersIndex =
+                        chartEntries.indexWhere((e) => e.key == 'Others');
+                    if (existingOthersIndex != -1) {
+                      // Merge into existing proper "Others"
+                      final existing = chartEntries[existingOthersIndex];
+                      chartEntries[existingOthersIndex] =
+                          MapEntry(existing.key, existing.value + othersSum);
+                    } else {
+                      // Add new "Others" entry
+                      if (othersSum > 0) {
+                        chartEntries.add(MapEntry('Others', othersSum));
+                      }
+                    }
+                  }
+                  // --------------------------------------------------
+
                   return ListView(
                     children: [
                       // Filters Area
@@ -569,29 +602,40 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                     });
                                   },
                                 ),
-                                sections: data.entries.indexed.map((entry) {
+                                sections: chartEntries.indexed.map((entry) {
                                   final index = entry.$1;
                                   final e = entry.$2;
                                   final isTouched = index == touchedIndex;
+                                  // Use dedicated color for Others if it is the "Others" entry
+                                  final isOthers = e.key == 'Others';
+
                                   final fontSize = isTouched ? 16.0 : 12.0;
                                   final radius = isTouched ? 90.0 : 80.0;
                                   final percentage =
                                       total == 0 ? 0 : (e.value / total) * 100;
 
+                                  // Hide label if < 5% and not touched
+                                  final showLabel =
+                                      isTouched || percentage >= 5;
+
                                   return PieChartSectionData(
                                     value: e.value == 0
                                         ? 0.01
                                         : e.value, // Prevent zero value crash
-                                    title: isTouched
-                                        ? '${e.key}\n${CurrencyUtils.getSmartFormat(e.value, currencyLocale)}'
-                                        : '${percentage.toStringAsFixed(0)}%',
+                                    title: showLabel
+                                        ? (isTouched
+                                            ? '${e.key}\n${CurrencyUtils.getSmartFormat(e.value, currencyLocale)}'
+                                            : '${percentage.toStringAsFixed(0)}%')
+                                        : '',
                                     radius: radius,
                                     titleStyle: AppTheme.offlineSafeTextStyle
                                         .copyWith(
                                             fontSize: fontSize,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white),
-                                    color: _getChartColor(index),
+                                    color: isOthers
+                                        ? Colors.grey
+                                        : _getChartColor(index),
                                   );
                                 }).toList(),
                               ),
@@ -601,12 +645,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: data.length,
+                            itemCount: sortedEntries.length,
                             itemBuilder: (context, index) {
-                              final e = data.entries.elementAt(index);
+                              final e = sortedEntries[index];
                               return ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: _getChartColor(index),
+                                  // Use standard palette color if it's in Top 9, else Grey
+                                  backgroundColor: index < 9
+                                      ? _getChartColor(index)
+                                      : Colors.grey,
                                   radius: 8,
                                 ),
                                 title: Text(e.key),
