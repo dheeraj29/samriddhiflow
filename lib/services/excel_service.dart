@@ -657,9 +657,26 @@ class ExcelService {
                 }
               }
 
-              final toAccountId = findColumn(headerRow, ['toaccountid']) != -1
+              // Handle To Account (for Transfers)
+              String? toAccountId = findColumn(headerRow, ['toaccountid']) != -1
                   ? _getVal(row[findColumn(headerRow, ['toaccountid'])])
                   : null;
+
+              // If ID is invalid/missing, try finding by Name from a hypothetical column or fix logic?
+              // Assuming Excel keeps ID. If ID is present but not in DB?
+              // Maybe user edited ID to be a Name?
+              if (toAccountId != null &&
+                  toAccountId.isNotEmpty &&
+                  !accounts.any((a) => a.id == toAccountId)) {
+                // Check if this "ID" is actually a name
+                if (accounts.any((a) =>
+                    a.name.toLowerCase() == toAccountId!.toLowerCase())) {
+                  toAccountId = accounts
+                      .firstWhere((a) =>
+                          a.name.toLowerCase() == toAccountId!.toLowerCase())
+                      .id;
+                }
+              }
               final loanId = findColumn(headerRow, ['loanid']) != -1
                   ? _getVal(row[findColumn(headerRow, ['loanid'])])
                   : null;
@@ -694,7 +711,9 @@ class ExcelService {
                 date: date,
                 type: typeStr.contains('income')
                     ? TransactionType.income
-                    : TransactionType.expense,
+                    : typeStr.contains('transfer')
+                        ? TransactionType.transfer
+                        : TransactionType.expense,
                 category: category,
                 accountId: finalAccountId,
                 toAccountId: toAccountId,

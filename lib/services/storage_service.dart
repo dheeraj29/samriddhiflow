@@ -222,56 +222,69 @@ class StorageService {
   }
 
   // --- Rollover Logic ---
+  static bool _isCheckingRollover = false;
+
   Future<void> checkCreditCardRollovers() async {
-    final accounts = getAccounts(); // Already filtered by profile
-    final settingsBox = Hive.box(boxSettings);
-    final now = DateTime.now();
+    if (_isCheckingRollover) return;
+    _isCheckingRollover = true;
 
-    for (var acc in accounts) {
-      if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
-        final key = 'last_rollover_${acc.id}';
-        final lastRolloverMillis = settingsBox.get(key);
+    try {
+      final accounts = getAccounts(); // Already filtered by profile
+      final settingsBox = Hive.box(boxSettings);
+      final now = DateTime.now();
 
-        DateTime lastRollover;
-        final currentCycleStart =
-            BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+      for (var acc in accounts) {
+        if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+          final key = 'last_rollover_${acc.id}';
+          final lastRolloverMillis = settingsBox.get(key);
 
-        if (lastRolloverMillis == null) {
-          await settingsBox.put(key, currentCycleStart.millisecondsSinceEpoch);
-          continue;
-        } else {
-          lastRollover =
-              DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
-        }
+          DateTime lastRollover;
+          final currentCycleStart =
+              BillingHelper.getCycleStart(now, acc.billingCycleDay!);
 
-        if (currentCycleStart.isAfter(lastRollover)) {
-          final box = Hive.box<Transaction>(boxTransactions);
-          final txns = box.values
-              .where((t) =>
-                  !t.isDeleted &&
-                  t.accountId == acc.id &&
-                  t.date.isAfter(lastRollover) &&
-                  t.date.isBefore(currentCycleStart) &&
-                  (t.date.isAtSameMomentAs(lastRollover) ||
-                      t.date.isAfter(lastRollover)))
-              .toList();
-
-          double adhocAmount = 0;
-          for (var t in txns) {
-            if (t.type == TransactionType.expense) adhocAmount += t.amount;
-            if (t.type == TransactionType.income) adhocAmount -= t.amount;
-            if (t.type == TransactionType.transfer) adhocAmount += t.amount;
+          if (lastRolloverMillis == null) {
+            await settingsBox.put(
+                key, currentCycleStart.millisecondsSinceEpoch);
+            continue;
+          } else {
+            lastRollover =
+                DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
           }
 
-          if (adhocAmount != 0) {
-            acc.balance =
-                CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
-            await acc.save();
-          }
+          if (currentCycleStart.isAfter(lastRollover)) {
+            // CRITICAL: Mark as processed BEFORE saving account changes to prevent
+            // infinite loop if the listener fires immediately.
+            await settingsBox.put(
+                key, currentCycleStart.millisecondsSinceEpoch);
 
-          await settingsBox.put(key, currentCycleStart.millisecondsSinceEpoch);
+            final box = Hive.box<Transaction>(boxTransactions);
+            final txns = box.values
+                .where((t) =>
+                    !t.isDeleted &&
+                    t.accountId == acc.id &&
+                    t.date.isAfter(lastRollover) &&
+                    t.date.isBefore(currentCycleStart) &&
+                    (t.date.isAtSameMomentAs(lastRollover) ||
+                        t.date.isAfter(lastRollover)))
+                .toList();
+
+            double adhocAmount = 0;
+            for (var t in txns) {
+              if (t.type == TransactionType.expense) adhocAmount += t.amount;
+              if (t.type == TransactionType.income) adhocAmount -= t.amount;
+              if (t.type == TransactionType.transfer) adhocAmount += t.amount;
+            }
+
+            if (adhocAmount != 0) {
+              acc.balance =
+                  CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
+              await acc.save();
+            }
+          }
         }
       }
+    } finally {
+      _isCheckingRollover = false;
     }
   }
 
