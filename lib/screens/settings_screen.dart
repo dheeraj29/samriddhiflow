@@ -903,9 +903,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("⚠️ Critical Warning"),
-        content: const Text("Use Cloud Restore?\n\n"
-            "This will PERMANENTLY WIPE all local data and replace it with your cloud data.\n\n"
-            "Do you want to download a safety backup (Excel) of your CURRENT data first?"),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Use Cloud Restore?",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text(
+                "This will PERMANENTLY WIPE all local data and replace it with your cloud data."),
+            SizedBox(height: 16),
+            Text(
+                "Do you want to download a safety backup (Excel) of your CURRENT data first?"),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'CANCEL'),
@@ -976,10 +987,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("⚠️ Deactivate Cloud Account?"),
-        content: const Text(
-            "This will PERMANENTLY WIPE all your data from the cloud and delete your online account.\n\n"
-            "Your LOCAL data will remain intact, but you will return to Local-Only mode.\n\n"
-            "Do you want to proceed?"),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                "This will PERMANENTLY WIPE all your data from the cloud and delete your online account."),
+            SizedBox(height: 16),
+            Text(
+                "Your LOCAL data will remain intact, but you will return to Local-Only mode."),
+            SizedBox(height: 16),
+            Text("Do you want to proceed?"),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1043,11 +1063,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("⚠️ Clear Cloud Data?"),
-        content: const Text(
-            "This will PERMANENTLY DELETE all your data from the cloud server.\n\n"
-            "Your Local Data will be SAFE.\n"
-            "Your Account will remain ACTIVE.\n\n"
-            "Proceed?"),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                "This will PERMANENTLY DELETE all your data from the cloud server."),
+            SizedBox(height: 8),
+            Text("Your Local Data will be SAFE."),
+            Text("Your Account will remain ACTIVE."),
+            SizedBox(height: 16),
+            Text("Proceed?"),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
