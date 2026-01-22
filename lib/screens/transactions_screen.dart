@@ -189,7 +189,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       filtered.where((t) => t.accountId == null).toList();
                 } else {
                   filtered = filtered
-                      .where((t) => t.accountId == _selectedAccountId)
+                      .where((t) =>
+                          t.accountId == _selectedAccountId ||
+                          t.toAccountId == _selectedAccountId)
                       .toList();
                 }
               }
@@ -269,6 +271,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           final isCapitalGain =
                               catObj?.tag == CategoryTag.capitalGain;
 
+                          final isIncomingTransfer =
+                              _selectedAccountId != null &&
+                                  txn.type == TransactionType.transfer &&
+                                  txn.toAccountId == _selectedAccountId &&
+                                  txn.accountId != txn.toAccountId;
+
                           return ListTile(
                             selected: isSelected,
                             onTap: () {
@@ -308,12 +316,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   )
                                 : CircleAvatar(
                                     backgroundColor: txn.type ==
-                                            TransactionType.income
+                                                TransactionType.income ||
+                                            isIncomingTransfer
                                         ? Colors.green.withOpacity(0.1)
                                         : (txn.type == TransactionType.transfer
                                             ? Colors.blue.withOpacity(0.1)
                                             : Colors.red.withOpacity(0.1)),
-                                    child: txn.type == TransactionType.income
+                                    child: txn.type == TransactionType.income ||
+                                            isIncomingTransfer
                                         ? PureIcons.income(size: 18)
                                         : (txn.type == TransactionType.transfer
                                             ? PureIcons.transfer(size: 18)
@@ -403,12 +413,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   value: txn.amount,
                                   locale: currencyLocale,
                                   initialCompact: _compactView,
-                                  prefix: txn.type == TransactionType.income
+                                  prefix: txn.type == TransactionType.income ||
+                                          isIncomingTransfer
                                       ? "+"
                                       : "-",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: txn.type == TransactionType.income
+                                    color: txn.type == TransactionType.income ||
+                                            isIncomingTransfer
                                         ? Colors.green
                                         : Colors.red,
                                   ),

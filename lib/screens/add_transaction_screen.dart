@@ -290,7 +290,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               Text('${a.name} (${_formatAccountBalance(a)})'),
                         )),
                   ],
-                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                  onChanged: (v) {
+                    setState(() {
+                      _selectedAccountId = v;
+                      if (_selectedAccountId == _toAccountId) {
+                        _toAccountId = null;
+                      }
+                    });
+                  },
                 ),
 
                 if (_type == TransactionType.transfer) ...[
@@ -521,6 +528,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void _save() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      // Validation: Prevent Transfer to Self
+      if (_type == TransactionType.transfer &&
+          _selectedAccountId != null &&
+          _selectedAccountId == _toAccountId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Source and Target accounts cannot be the same.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       final dateTime = DateTime(
           _date.year, _date.month, _date.day, _time.hour, _time.minute);
