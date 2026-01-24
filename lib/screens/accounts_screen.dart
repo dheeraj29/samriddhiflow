@@ -6,7 +6,6 @@ import '../utils/currency_utils.dart'; // Keep this for CurrencyUtils
 import '../providers.dart'; // Keep this for currencyProvider
 import '../models/account.dart';
 import '../widgets/account_card.dart';
-import 'cc_payment_dialog.dart';
 import '../screens/transactions_screen.dart'; // Added for navigation
 import '../utils/billing_helper.dart';
 import '../models/transaction.dart';
@@ -77,7 +76,8 @@ class AccountsScreen extends ConsumerWidget {
 
             final utilization =
                 totalLimit > 0 ? (totalUsage / totalLimit) * 100 : 0.0;
-            final available = totalLimit > totalUsage ? totalLimit - totalUsage : 0.0;
+            final available =
+                totalLimit > totalUsage ? totalLimit - totalUsage : 0.0;
 
             summaryWidget = Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -173,7 +173,7 @@ class AccountsScreen extends ConsumerWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                           const SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'Total Limit',
                             style: TextStyle(
@@ -185,29 +185,29 @@ class AccountsScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                   const SizedBox(height: 12),
-                   // Progress Bar
-                   ClipRRect(
-                     borderRadius: BorderRadius.circular(4),
-                     child: LinearProgressIndicator(
-                       value: totalLimit > 0 ? (totalUsage / totalLimit).clamp(0.0, 1.0) : 0,
-                       backgroundColor: Colors.white.withOpacity(0.2),
-                       valueColor: AlwaysStoppedAnimation<Color>(
-                         utilization > 80 ? Colors.redAccent : Colors.white
-                       ),
-                       minHeight: 6,
-                     ),
-                   ),
-                   if (available > 0)
+                  const SizedBox(height: 12),
+                  // Progress Bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: totalLimit > 0
+                          ? (totalUsage / totalLimit).clamp(0.0, 1.0)
+                          : 0,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          utilization > 80 ? Colors.redAccent : Colors.white),
+                      minHeight: 6,
+                    ),
+                  ),
+                  if (available > 0)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'Available: ${CurrencyUtils.formatCurrency(available)}',
-                         style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic
-                            ),
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic),
                       ),
                     )
                 ],
@@ -237,16 +237,16 @@ class AccountsScreen extends ConsumerWidget {
                     // The original code returned GridView directly.
                     // I am replacing the START of the `data:` block.
                     // I need to ensure I don't break the closure.
-                    
+
                     // Original code:
                     // return GridView.builder(
                     //   padding: ...
-                    
+
                     // New code:
                     // return Column(children: [..., Expanded(child: GridView.builder(...))]);
-                    
+
                     // The `itemBuilder` Logic follows.
-                    
+
                     // I'll execute the replacement carefully.
                     // The TargetContent should match exactly lines 60-69 of original.
                     return _buildAccountItem(context, ref, accounts[index]);
@@ -256,172 +256,41 @@ class AccountsScreen extends ConsumerWidget {
             ],
           );
         },
-
-              // Calculate Unbilled for Credit Cards
-              double unbilled = 0;
-              final acc = accounts[index];
-              if (acc.type == AccountType.creditCard &&
-                  acc.billingCycleDay != null) {
-                final now = DateTime.now();
-                final cycleStart =
-                    BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-
-                final allTxns = ref.watch(transactionsProvider).value ?? [];
-                final relevantTxns = allTxns.where((t) =>
-                    !t.isDeleted &&
-                    t.accountId ==
-                        acc
-                            .id && // Only Transactions FROM this account (Expenses)
-                    // What about transfers TO this account (Payments)? Payments reduce billed usually.
-                    // Our unbilled logic: Expenses in current cycle.
-                    // Transfers FROM this account (Cash Advance) also unbilled?
-                    DateTime(t.date.year, t.date.month, t.date.day)
-                        .isAfter(cycleStart));
-
-                for (var t in relevantTxns) {
-                  if (t.type == TransactionType.expense) unbilled += t.amount;
-                  if (t.type == TransactionType.income) unbilled -= t.amount;
-                  if (t.type == TransactionType.transfer &&
-                      t.accountId == acc.id) {
-                    unbilled += t.amount; // Transfer OUT
-                  }
-                  // Transfer TO (Payment) is usually applied to Billed balance.
-                  // Unless user makes payment for unbilled?
-                  // StorageService logic applies Payment to Balance. So we ignore it here.
-                }
-              }
-
-              return AccountCard(
-                  account: accounts[index],
-                  unbilledAmount: unbilled,
-                  onTap: () {
-                    // Show Details Dialog
-                    final acc = accounts[index];
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                              title: Text(acc.name),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Type: ${acc.type.name.toUpperCase()}'),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                      'Balance: ${CurrencyUtils.getFormatter(acc.currency).format(acc.balance)}'),
-                                  if (acc.type == AccountType.creditCard) ...[
-                                    const Divider(),
-                                    Text(
-                                        'Credit Limit: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(acc.creditLimit)}'),
-                                    Text(
-                                        'Bill Generation: Day ${acc.billingCycleDay}'),
-                                    Text(
-                                        'Grace Period: ${acc.paymentDueDateDay} days'),
-                                    // Calculate approximate next due date
-                                    Builder(builder: (context) {
-                                      final today = DateTime.now();
-                                      // Simplified logic for display
-                                      return Text(
-                                          'Next Est. Due Date: ${acc.billingCycleDay != null ? DateFormat("MMM dd").format(DateTime(today.year, today.month, acc.billingCycleDay!).add(Duration(days: acc.paymentDueDateDay ?? 0))) : "N/A"}',
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey));
-                                    })
-                                  ],
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context); // Close dialog
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => TransactionsScreen(
-                                            initialAccountId: acc.id),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('View Transactions'),
-                                ),
-                                if (acc.type == AccountType.creditCard)
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context); // Close details
-                                      showDialog(
-                                          context: context,
-                                          builder: (_) => RecordCCPaymentDialog(
-                                              creditCardAccount: acc));
-                                    },
-                                    child: const Text('Pay Bill',
-                                        style: TextStyle(color: Colors.green)),
-                                  ),
-                                TextButton(
-                                  onPressed: () async {
-                                    // Delete Logic
-                                    final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                                title: const Text(
-                                                    'Delete Account?'),
-                                                content: const Text(
-                                                    'This will remove the account. Existing transactions associated with this account will be kept for your records. This cannot be undone.'),
-                                                actions: [
-                                                  TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                              ctx, false),
-                                                      child:
-                                                          const Text('Cancel')),
-                                                  TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                              ctx, true),
-                                                      child: const Text(
-                                                          'Delete',
-                                                          style: TextStyle(
-                                                              color:
-                                                                  Colors.red))),
-                                                ]));
-                                    if (confirm == true) {
-                                      final storage =
-                                          ref.read(storageServiceProvider);
-                                      // Delete transactions first?
-                                      // StorageService currently only has deleteAccount.
-                                      // We need to implement deleteAccount with cascade or notify user.
-                                      // For now, let's just delete the account reference.
-                                      await storage.deleteAccount(acc.id);
-                                      final _ = ref.refresh(accountsProvider);
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  child: const Text('Delete',
-                                      style: TextStyle(color: Colors.red)),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context); // Close dialog
-                                    showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        builder: (_) =>
-                                            AddAccountSheet(account: acc));
-                                  },
-                                  child: const Text('Edit'),
-                                ),
-                                TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Close')),
-                              ],
-                            ));
-                  });
-            },
-          );
-        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
+    double unbilled = 0;
+    if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+      final now = DateTime.now();
+      final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+
+      final allTxns = ref.watch(transactionsProvider).value ?? [];
+      final relevantTxns = allTxns.where((t) =>
+          !t.isDeleted &&
+          t.accountId == acc.id &&
+          DateTime(t.date.year, t.date.month, t.date.day).isAfter(cycleStart));
+
+      for (var t in relevantTxns) {
+        if (t.type == TransactionType.expense) unbilled += t.amount;
+        if (t.type == TransactionType.income) unbilled -= t.amount;
+        if (t.type == TransactionType.transfer && t.accountId == acc.id) {
+          unbilled += t.amount;
+        }
+      }
+    }
+
+    return AccountCard(
+      account: acc,
+      unbilledAmount: unbilled,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TransactionsScreen(initialAccountId: acc.id),
+        ),
       ),
     );
   }
@@ -720,38 +589,5 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
 
       if (mounted) Navigator.pop(context);
     }
-  }
-
-  Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
-    double unbilled = 0;
-    if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
-      final now = DateTime.now();
-      final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-
-      final allTxns = ref.watch(transactionsProvider).value ?? [];
-      final relevantTxns = allTxns.where((t) =>
-          !t.isDeleted &&
-          t.accountId == acc.id &&
-          DateTime(t.date.year, t.date.month, t.date.day).isAfter(cycleStart));
-
-      for (var t in relevantTxns) {
-        if (t.type == TransactionType.expense) unbilled += t.amount;
-        if (t.type == TransactionType.income) unbilled -= t.amount;
-        if (t.type == TransactionType.transfer && t.accountId == acc.id) {
-          unbilled += t.amount;
-        }
-      }
-    }
-
-    return AccountCard(
-      account: acc,
-      unbilledAmount: unbilled,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TransactionsScreen(accountId: acc.id),
-        ),
-      ),
-    );
   }
 }
