@@ -89,6 +89,7 @@ class PureIcons {
         IconData(0xeb4c, fontFamily: 'MaterialSymbolsOutlined'), // Beauty/Spa
     0xe56c: IconData(0xe56c,
         fontFamily: 'MaterialSymbolsOutlined'), // Food/Restaurant
+    0xf1cc: IconData(0xf1cc, fontFamily: 'MaterialSymbolsOutlined'), // Shopping
   };
   // END GENERATED CODE
 

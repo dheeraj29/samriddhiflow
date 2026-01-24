@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../models/transaction.dart';
+import '../models/account.dart';
 import '../models/category.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/transaction_filter.dart';
@@ -13,11 +14,13 @@ class TransactionsScreen extends ConsumerStatefulWidget {
   final String? initialCategory;
   final TimeRange? initialRange;
   final String? initialAccountId;
+  final TransactionType? initialType;
   const TransactionsScreen(
       {super.key,
       this.initialCategory,
       this.initialRange,
-      this.initialAccountId});
+      this.initialAccountId,
+      this.initialType});
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -27,6 +30,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   late TimeRange _range;
   late String? _category;
   String? _selectedAccountId;
+  TransactionType? _typeFilter;
   DateTimeRange? _customRange;
 
   bool _isSelectionMode = false;
@@ -39,6 +43,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     _range = widget.initialRange ?? TimeRange.all;
     _category = widget.initialCategory;
     _selectedAccountId = widget.initialAccountId;
+    _typeFilter = widget.initialType;
   }
 
   @override
@@ -66,6 +71,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     transactionsAsync.whenData((transactions) {
                       accountsAsync.whenData((accounts) {
                         var filtered = transactions.toList();
+                        if (_typeFilter != null) {
+                          filtered = filtered
+                              .where((t) => t.type == _typeFilter)
+                              .toList();
+                        }
                         if (_category != null) {
                           filtered = filtered
                               .where((t) => t.category == _category)
@@ -179,6 +189,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
               // Filter Logic
               var filtered = transactions.toList();
+              if (_typeFilter != null) {
+                filtered =
+                    filtered.where((t) => t.type == _typeFilter).toList();
+              }
               if (_category != null) {
                 filtered =
                     filtered.where((t) => t.category == _category).toList();
@@ -232,6 +246,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       selectedRange: _range,
                       selectedCategory: _category,
                       selectedAccountId: _selectedAccountId,
+                      selectedType: _typeFilter,
                       categories: categories,
                       accountItems: [
                         const DropdownMenuItem<String?>(
@@ -246,6 +261,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       onCategoryChanged: (v) => setState(() => _category = v),
                       onAccountChanged: (v) =>
                           setState(() => _selectedAccountId = v),
+                      onTypeChanged: (v) => setState(() => _typeFilter = v),
                       onCustomRangeTap: () => _selectCustomRange(context),
                       customRangeLabel: _customRange != null
                           ? '${DateFormat('MMM dd').format(_customRange!.start)} - ${DateFormat('MMM dd').format(_customRange!.end)}'
@@ -322,8 +338,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                         : (txn.type == TransactionType.transfer
                                             ? Colors.blue.withOpacity(0.1)
                                             : Colors.red.withOpacity(0.1)),
-                                    child: txn.type == TransactionType.income ||
-                                            isIncomingTransfer
+                                    child: txn.type == TransactionType.income
                                         ? PureIcons.income(size: 18)
                                         : (txn.type == TransactionType.transfer
                                             ? PureIcons.transfer(size: 18)
@@ -335,10 +350,36 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${txn.category}${txn.accountId == null ? ' • Manual' : ''}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                Builder(builder: (context) {
+                                  // Helper to get account name
+                                  String getAccName(String? id) {
+                                    if (id == null) return 'Manual';
+                                    return accountsAsync.value
+                                            ?.firstWhere((a) => a.id == id,
+                                                orElse: () => Account(
+                                                    id: 'del',
+                                                    name: 'Deleted',
+                                                    type: AccountType.savings,
+                                                    balance: 0,
+                                                    profileId: ''))
+                                            .name ??
+                                        'Manual';
+                                  }
+
+                                  String subtitleText;
+                                  if (txn.type == TransactionType.transfer) {
+                                    subtitleText =
+                                        '${getAccName(txn.accountId)} -> ${getAccName(txn.toAccountId)}';
+                                  } else {
+                                    subtitleText =
+                                        '${txn.category} • ${getAccName(txn.accountId)}';
+                                  }
+
+                                  return Text(
+                                    '${DateFormat('MMM dd, hh:mm a').format(txn.date)} • $subtitleText',
+                                    style: const TextStyle(fontSize: 12),
+                                  );
+                                }),
                                 if (isCapitalGain &&
                                     (txn.gainAmount != null ||
                                         txn.holdingTenureMonths != null))

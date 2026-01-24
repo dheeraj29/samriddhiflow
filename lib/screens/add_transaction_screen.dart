@@ -548,6 +548,44 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       // Save logic
       final storage = ref.read(storageServiceProvider);
 
+      // Bulk Update Check (Only in Edit Mode and if Category Changed)
+      if (widget.transactionToEdit != null &&
+          _category != null &&
+          widget.transactionToEdit!.category != _category &&
+          widget.transactionToEdit!.title.trim().toLowerCase() ==
+              _title.trim().toLowerCase()) {
+        final oldCount = await storage.getSimilarTransactionCount(_title,
+            widget.transactionToEdit!.category, widget.transactionToEdit!.id);
+
+        if (oldCount > 0) {
+          // ignore: use_build_context_synchronously
+          final shouldUpdate = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Update Similar Transactions?'),
+              content: Text(
+                  'Found $oldCount other transactions with title "$_title" and category "${widget.transactionToEdit!.category}". Do you want to update their category to "$_category" as well?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('NO, Just this one'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('YES, Update All'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldUpdate == true) {
+            await storage.bulkUpdateCategory(
+                _title, widget.transactionToEdit!.category, _category!);
+            // Note: Current transaction is updated by saveTransaction below
+          }
+        }
+      }
+
       // Create/Update Transaction Record
       final selectedCat = storage.getCategories().firstWhere(
           (c) => c.name == _category,

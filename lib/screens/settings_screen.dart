@@ -285,8 +285,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 );
                 if (confirm == true) {
-                  // Fire and forget logout to avoid resuming in unmounted widget
-                  ref.read(authServiceProvider).signOut(ref);
+                  // Await logout to ensure state clearing
+                  await ref.read(authServiceProvider).signOut(ref);
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
                 }
               },
             ),
@@ -814,10 +820,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (status == 1) {
         // Success
-        ref.invalidate(accountsProvider);
-        ref.invalidate(transactionsProvider);
-        ref.invalidate(loansProvider);
-        ref.invalidate(recurringTransactionsProvider);
+        ref.refresh(accountsProvider);
+        ref.refresh(transactionsProvider);
+        ref.refresh(loansProvider);
+        ref.refresh(recurringTransactionsProvider);
 
         String msg = 'Imported: ';
         List<String> parts = [];
@@ -832,7 +838,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           parts.add('${results['categories']} categories');
         }
         if ((results['transactions'] ?? 0) > 0) {
-          parts.add('${results['transactions']} transactions');
+          String txnDetails = '${results['transactions']} transactions';
+
+          List<String> types = [];
+          if ((results['type_income'] ?? 0) > 0)
+            types.add('In: ${results['type_income']}');
+          if ((results['type_expense'] ?? 0) > 0)
+            types.add('Ex: ${results['type_expense']}');
+          if ((results['type_transfer'] ?? 0) > 0)
+            types.add('Tr: ${results['type_transfer']}');
+
+          if (types.isNotEmpty) {
+            txnDetails += ' (${types.join(', ')})';
+          }
+          if ((results['skipped_error'] ?? 0) > 0) {
+            txnDetails += ' [Skipped Errors: ${results['skipped_error']}]';
+          }
+          if ((results['skipped_selftransfer'] ?? 0) > 0) {
+            txnDetails +=
+                ' [Skipped Self-Transfers: ${results['skipped_selftransfer']}]';
+          }
+
+          parts.add(txnDetails);
         }
         if ((results['loanTransactions'] ?? 0) > 0) {
           parts.add('${results['loanTransactions']} loan transactions');
@@ -958,6 +985,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       });
 
       if (mounted) {
+        // Force refresh providers
+        ref.refresh(accountsProvider);
+        ref.refresh(transactionsProvider);
+        ref.refresh(loansProvider);
+        ref.refresh(recurringTransactionsProvider);
+
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Restore Complete! Reloading...")));
         Navigator.pushAndRemoveUntil(

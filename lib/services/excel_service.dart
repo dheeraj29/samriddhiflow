@@ -265,6 +265,7 @@ class ExcelService {
 
     // Mapping helper
     int findColumn(List<Data?> headerRow, List<String> possibleNames) {
+      // Pass 1: Exact Match (High Priority)
       for (var name in possibleNames) {
         final target = name
             .toLowerCase()
@@ -280,6 +281,24 @@ class ExcelService {
               .replaceAll('_', '')
               .replaceAll('-', '');
           if (header == target) return i;
+        }
+      }
+
+      // Pass 2: Partial Match (Fallback)
+      for (var name in possibleNames) {
+        final target = name
+            .toLowerCase()
+            .replaceAll(' ', '')
+            .replaceAll('_', '')
+            .replaceAll('-', '');
+        for (int i = 0; i < headerRow.length; i++) {
+          final cell = headerRow[i];
+          if (cell == null) continue;
+          final header = _getVal(cell)
+              .toLowerCase()
+              .replaceAll(' ', '')
+              .replaceAll('_', '')
+              .replaceAll('-', '');
           if (header.contains(target) || target.contains(header)) {
             if (header.length > 2 || target == header) return i;
           }
@@ -591,47 +610,73 @@ class ExcelService {
         }
       } else if (sheetName.contains('TRANSACTION')) {
         final accounts = _storage.getAccounts();
+
+        // 1. Resolve Column Indices ONCE (Performance & Safety Refactor)
         final titleIdx = findColumn(
             headerRow, ['title', 'description', 'narration', 'payee']);
         final amountIdx = findColumn(headerRow, ['amount', 'sum', 'value']);
 
+        final idIdx = findColumn(headerRow, ['id']);
+        final dateIdx = findColumn(headerRow, ['date', 'datetime', 'time']);
+        final typeIdx =
+            findColumn(headerRow, ['type', 'transactiontype', 'txntype']);
+        final catIdx = findColumn(headerRow, ['category', 'cat']);
+        final accIdIdx = findColumn(headerRow, ['accountid', 'accid']);
+        final accNameIdx = findColumn(headerRow, ['accountname', 'account']);
+        final toAccIdx = findColumn(headerRow, ['toaccountid', 'toaccount']);
+        final loanIdIdx = findColumn(headerRow, ['loanid']);
+        final recurIdx = findColumn(
+            headerRow, ['isrecurring', 'isrecurringinstance', 'recurring']);
+        final delIdx = findColumn(headerRow, ['isdeleted', 'deleted']);
+        final gainIdx = findColumn(headerRow, ['gainamount', 'gain']);
+        final tenureIdx = findColumn(headerRow,
+            ['holdingtenuremonths', 'holdingtenure', 'tenuremonths', 'tenure']);
+        final profileIdx = findColumn(headerRow, ['profileid']);
+
         if (titleIdx != -1 && amountIdx != -1) {
           foundAnyValidSection = true;
+          final List<Transaction> transactionsToSave = [];
           for (var row in rows) {
             try {
-              if (row.length <= math.max(titleIdx, amountIdx)) continue;
+              // Basic Length Check
+              if (row.length <= titleIdx || row.length <= amountIdx) continue;
 
-              final id = findColumn(headerRow, ['id']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['id'])])
-                  : const Uuid().v4();
-              final date = findColumn(headerRow, ['date']) != -1
-                  ? DateTime.tryParse(
-                          _getVal(row[findColumn(headerRow, ['date'])])) ??
-                      DateTime.now()
-                  : DateTime.now();
               final title = _getVal(row[titleIdx]);
               if (title.isEmpty) continue;
 
               final amount = CurrencyUtils.roundTo2Decimals(double.tryParse(
                       _getVal(row[amountIdx]).replaceAll(',', '')) ??
                   0.0);
-              final typeStr = findColumn(headerRow, ['type']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['type'])]).toLowerCase()
-                  : 'expense';
 
-              final category = findColumn(headerRow, ['category']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['category'])])
+              // Safe extractions
+              final id = (idIdx != -1 && idIdx < row.length)
+                  ? _getVal(row[idIdx])
+                  : const Uuid().v4();
+
+              final dateStr = (dateIdx != -1 && dateIdx < row.length)
+                  ? _getVal(row[dateIdx])
+                  : null;
+              final date = (dateStr != null && dateStr.isNotEmpty)
+                  ? (DateTime.tryParse(dateStr) ?? DateTime.now())
+                  : DateTime.now();
+
+              final typeStr = (typeIdx != -1 && typeIdx < row.length)
+                  ? _getVal(row[typeIdx]).toLowerCase()
+                  : 'expense'; // Default
+
+              final category = (catIdx != -1 && catIdx < row.length)
+                  ? _getVal(row[catIdx])
                   : 'Miscellaneous';
-              final accountId = findColumn(headerRow, ['accountid']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['accountid'])])
+
+              final accountId = (accIdIdx != -1 && accIdIdx < row.length)
+                  ? _getVal(row[accIdIdx])
                   : '';
-              final accountName = findColumn(
-                          headerRow, ['accountname', 'account']) !=
-                      -1
-                  ? _getVal(
-                      row[findColumn(headerRow, ['accountname', 'account'])])
+
+              final accountName = (accNameIdx != -1 && accNameIdx < row.length)
+                  ? _getVal(row[accNameIdx])
                   : 'Default Account';
 
+              // Account Resolution
               String finalAccountId = accountId;
               if (finalAccountId.isEmpty ||
                   finalAccountId.toLowerCase() == 'manual' ||
@@ -657,83 +702,89 @@ class ExcelService {
                 }
               }
 
-              // Handle To Account (for Transfers)
-              String? toAccountId = findColumn(headerRow, ['toaccountid']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['toaccountid'])])
+              final toAccountId = (toAccIdx != -1 && toAccIdx < row.length)
+                  ? _getVal(row[toAccIdx])
                   : null;
 
-              // If ID is invalid/missing, try finding by Name from a hypothetical column or fix logic?
-              // Assuming Excel keeps ID. If ID is present but not in DB?
-              // Maybe user edited ID to be a Name?
-              if (toAccountId != null &&
-                  toAccountId.isNotEmpty &&
-                  !accounts.any((a) => a.id == toAccountId)) {
-                // Check if this "ID" is actually a name
-                if (accounts.any((a) =>
-                    a.name.toLowerCase() == toAccountId!.toLowerCase())) {
-                  toAccountId = accounts
-                      .firstWhere((a) =>
-                          a.name.toLowerCase() == toAccountId!.toLowerCase())
-                      .id;
-                }
-              }
-              final loanId = findColumn(headerRow, ['loanid']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['loanid'])])
+              final loanId = (loanIdIdx != -1 && loanIdIdx < row.length)
+                  ? _getVal(row[loanIdIdx])
                   : null;
-              final isRecurringInstance = findColumn(
-                          headerRow, ['isrecurringinstance']) !=
-                      -1
-                  ? _getVal(row[findColumn(headerRow, ['isrecurringinstance'])])
-                          .toLowerCase() ==
-                      'true'
-                  : false;
-              final isDeleted = findColumn(headerRow, ['isdeleted']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['isdeleted'])])
-                          .toLowerCase() ==
-                      'true'
+
+              final isRecurring = (recurIdx != -1 && recurIdx < row.length)
+                  ? _getVal(row[recurIdx]).toLowerCase() == 'true'
                   : false;
 
-              final gainAmount =
-                  findColumn(headerRow, ['gainamount', 'gain']) != -1
-                      ? double.tryParse(_getVal(
-                          row[findColumn(headerRow, ['gainamount', 'gain'])]))
-                      : null;
-              final holdingTenure =
-                  findColumn(headerRow, ['holdingtenure', 'tenuremonths']) != -1
-                      ? int.tryParse(_getVal(row[findColumn(
-                          headerRow, ['holdingtenure', 'tenuremonths'])]))
-                      : null;
+              final isDeleted = (delIdx != -1 && delIdx < row.length)
+                  ? _getVal(row[delIdx]).toLowerCase() == 'true'
+                  : false;
+
+              final gainAmount = (gainIdx != -1 && gainIdx < row.length)
+                  ? double.tryParse(_getVal(row[gainIdx]))
+                  : null;
+
+              final holdingTenure = (tenureIdx != -1 && tenureIdx < row.length)
+                  ? int.tryParse(_getVal(row[tenureIdx]))
+                  : null;
+
+              // Type Logic & Icon Fix
+              final isTransferAuto = typeStr.contains('transfer') ||
+                  (toAccountId != null && toAccountId.isNotEmpty);
+              final finalType = typeStr.contains('income')
+                  ? TransactionType.income
+                  : isTransferAuto
+                      ? TransactionType.transfer
+                      : TransactionType.expense;
+
+              // Debug Counters
+              if (finalType == TransactionType.income)
+                resultCounts['type_income'] =
+                    (resultCounts['type_income'] ?? 0) + 1;
+              if (finalType == TransactionType.expense)
+                resultCounts['type_expense'] =
+                    (resultCounts['type_expense'] ?? 0) + 1;
+              if (finalType == TransactionType.transfer)
+                resultCounts['type_transfer'] =
+                    (resultCounts['type_transfer'] ?? 0) + 1;
 
               final txn = Transaction(
                 id: id.isEmpty ? const Uuid().v4() : id,
                 title: title,
                 amount: amount.abs(),
                 date: date,
-                type: typeStr.contains('income')
-                    ? TransactionType.income
-                    : typeStr.contains('transfer')
-                        ? TransactionType.transfer
-                        : TransactionType.expense,
+                type: finalType,
                 category: category,
                 accountId: finalAccountId,
-                toAccountId: toAccountId,
-                loanId: loanId,
-                isRecurringInstance: isRecurringInstance,
+                toAccountId: toAccountId?.isEmpty == true
+                    ? null
+                    : toAccountId, // Clean up empty strings
+                loanId: loanId?.isEmpty == true ? null : loanId,
+                isRecurringInstance: isRecurring,
                 isDeleted: isDeleted,
                 gainAmount: gainAmount,
                 holdingTenureMonths: holdingTenure,
-                profileId: findColumn(headerRow, ['profileid']) != -1 &&
-                        findColumn(headerRow, ['profileid']) < row.length
-                    ? _getVal(row[findColumn(headerRow, ['profileid'])])
+                profileId: (profileIdx != -1 && profileIdx < row.length)
+                    ? _getVal(row[profileIdx])
                     : activeProfileId,
               );
-              if (txn.toAccountId?.isEmpty ?? false) txn.toAccountId = null;
-              if (txn.loanId?.isEmpty ?? false) txn.loanId = null;
 
-              await _storage.saveTransaction(txn);
+              // Skip Self-Transfers
+              if (txn.type == TransactionType.transfer &&
+                  txn.accountId != null &&
+                  txn.accountId == txn.toAccountId) {
+                resultCounts['skipped_selftransfer'] =
+                    (resultCounts['skipped_selftransfer'] ?? 0) + 1;
+                continue;
+              }
+
+              transactionsToSave.add(txn);
               resultCounts['transactions'] = resultCounts['transactions']! + 1;
-            } catch (_) {}
+            } catch (e) {
+              resultCounts['skipped_error'] =
+                  (resultCounts['skipped_error'] ?? 0) + 1;
+            }
           }
+          await _storage.saveTransactions(transactionsToSave,
+              applyImpact: false);
         }
       }
     }

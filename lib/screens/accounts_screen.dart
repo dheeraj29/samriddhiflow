@@ -89,8 +89,8 @@ class AccountsScreen extends ConsumerWidget {
                     // What about transfers TO this account (Payments)? Payments reduce billed usually.
                     // Our unbilled logic: Expenses in current cycle.
                     // Transfers FROM this account (Cash Advance) also unbilled?
-                    (t.date.isAtSameMomentAs(cycleStart) ||
-                        t.date.isAfter(cycleStart)));
+                    DateTime(t.date.year, t.date.month, t.date.day)
+                        .isAfter(cycleStart));
 
                 for (var t in relevantTxns) {
                   if (t.type == TransactionType.expense) unbilled += t.amount;

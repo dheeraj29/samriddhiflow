@@ -8,6 +8,7 @@ import 'settings_screen.dart';
 import '../utils/debug_logger.dart';
 import 'transactions_screen.dart';
 import 'reports_screen.dart';
+import 'login_screen.dart';
 import 'reminders_screen.dart';
 import '../models/transaction.dart';
 import '../models/account.dart';
@@ -138,8 +139,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 );
                 if (confirm == true) {
-                  // Fire and forget logout to avoid resuming in unmounted widget
-                  ref.read(authServiceProvider).signOut(ref);
+                  // Await logout to ensure state clearing
+                  await ref.read(authServiceProvider).signOut(ref);
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
                 }
               },
               icon: PureIcons.logout(),

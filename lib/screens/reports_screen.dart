@@ -8,7 +8,7 @@ import '../models/transaction.dart';
 import '../models/loan.dart';
 import '../widgets/transaction_filter.dart';
 import '../widgets/smart_currency_text.dart';
-import '../utils/currency_utils.dart';
+
 import 'transactions_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -192,35 +192,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                   total = data.values.fold(0, (sum, val) => sum + val);
 
-                  // --- CHART DATA PREPARATION (Top 9 + Others) ---
-                  // 1. Convert to List and Sort
+                  // --- CHART DATA PREPARATION (Top 6 + Others) ---
+                  // 1. Exclude Transfers from Chart Data
+                  // Note: 'data' map is built from 'filtered' transactions.
+                  // If we are in Spending mode, we show Expenses.
+                  // If Income mode, Income.
+                  // We should ensure Transfer type is explicitly excluded if it somehow got in.
+
+                  // 2. Convert to List and Sort
                   final sortedEntries = data.entries.toList()
                     ..sort((a, b) => b.value.compareTo(a.value));
 
                   List<MapEntry<String, double>> chartEntries = [];
-                  if (sortedEntries.length <= 10) {
+                  if (sortedEntries.length <= 6) {
                     chartEntries = sortedEntries;
                   } else {
-                    // Take Top 9
-                    chartEntries = sortedEntries.take(9).toList();
+                    // Take Top 6
+                    chartEntries = sortedEntries.take(6).toList();
 
                     // Sum the rest
-                    final rest = sortedEntries.skip(9);
+                    final rest = sortedEntries.skip(6);
                     double othersSum = rest.fold(0, (sum, e) => sum + e.value);
 
-                    // Check if "Others" already exists in Top 9
-                    final existingOthersIndex =
-                        chartEntries.indexWhere((e) => e.key == 'Others');
-                    if (existingOthersIndex != -1) {
-                      // Merge into existing proper "Others"
-                      final existing = chartEntries[existingOthersIndex];
-                      chartEntries[existingOthersIndex] =
-                          MapEntry(existing.key, existing.value + othersSum);
-                    } else {
-                      // Add new "Others" entry
-                      if (othersSum > 0) {
-                        chartEntries.add(MapEntry('Others', othersSum));
-                      }
+                    // Add "Others" entry
+                    if (othersSum > 0) {
+                      chartEntries.add(MapEntry('Others', othersSum));
                     }
                   }
                   // --------------------------------------------------
@@ -606,33 +602,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                   final index = entry.$1;
                                   final e = entry.$2;
                                   final isTouched = index == touchedIndex;
-                                  // Use dedicated color for Others if it is the "Others" entry
                                   final isOthers = e.key == 'Others';
 
                                   final fontSize = isTouched ? 16.0 : 12.0;
-                                  final radius = isTouched ? 90.0 : 80.0;
+                                  final radius = isTouched
+                                      ? 60.0
+                                      : 50.0; // Smaller radius to make room for external labels
                                   final percentage =
                                       total == 0 ? 0 : (e.value / total) * 100;
 
-                                  // Hide label if < 5% and not touched
-                                  final showLabel =
-                                      isTouched || percentage >= 5;
+                                  // Determine visibility: Touched OR > 10% OR (Top 6 AND > 5%)
+                                  final isTopSlice = chartEntries.length <= 6 ||
+                                      index <
+                                          6; // Entries are sorted by value desc
+
+                                  final showLabel = isTouched ||
+                                      percentage >= 10 ||
+                                      (isTopSlice && percentage > 5);
 
                                   return PieChartSectionData(
-                                    value: e.value == 0
-                                        ? 0.01
-                                        : e.value, // Prevent zero value crash
+                                    value: e.value == 0 ? 0.01 : e.value,
+                                    titlePositionPercentageOffset:
+                                        1.6, // Move Outside
                                     title: showLabel
-                                        ? (isTouched
-                                            ? '${e.key}\n${CurrencyUtils.getSmartFormat(e.value, currencyLocale)}'
-                                            : '${percentage.toStringAsFixed(0)}%')
+                                        ? '${e.key} (${percentage.toStringAsFixed(0)}%)'
                                         : '',
                                     radius: radius,
                                     titleStyle: AppTheme.offlineSafeTextStyle
                                         .copyWith(
                                             fontSize: fontSize,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface), // Visible on background
                                     color: isOthers
                                         ? Colors.grey
                                         : _getChartColor(index),
@@ -650,8 +652,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                               final e = sortedEntries[index];
                               return ListTile(
                                 leading: CircleAvatar(
-                                  // Use standard palette color if it's in Top 9, else Grey
-                                  backgroundColor: index < 9
+                                  // Use standard palette color if it's in Top 6, else Grey
+                                  backgroundColor: index < 6
                                       ? _getChartColor(index)
                                       : Colors.grey,
                                   radius: 8,
@@ -668,6 +670,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                       builder: (_) => TransactionsScreen(
                                         initialCategory: e.key,
                                         initialRange: _getTimeRange(),
+                                        initialType:
+                                            _type == ReportType.spending
+                                                ? TransactionType.expense
+                                                : (_type == ReportType.income
+                                                    ? TransactionType.income
+                                                    : null),
                                       ),
                                     ),
                                   );
@@ -789,20 +797,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Color _getChartColor(int index) {
     const List<Color> palette = [
-      Colors.blue,
-      Colors.redAccent,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.pinkAccent,
-      Colors.indigo,
-      Colors.amber,
-      Colors.cyan,
-      Colors.deepOrange,
-      Colors.lime,
-      Colors.brown,
-      Colors.blueGrey,
+      Color(0xFF4CAF50), // Green
+      Color(0xFF2196F3), // Blue
+      Color(0xFFFFC107), // Amber
+      Color(0xFFE91E63), // Pink
+      Color(0xFF9C27B0), // Purple
+      Color(0xFF00BCD4), // Cyan
     ];
     return palette[index % palette.length];
   }

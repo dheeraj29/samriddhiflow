@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/transaction.dart';
 
 enum TimeRange { all, last30Days, thisMonth, lastMonth, custom }
 
@@ -6,6 +7,7 @@ class TransactionFilter extends StatelessWidget {
   final TimeRange selectedRange;
   final String? selectedCategory;
   final String? selectedAccountId;
+  final TransactionType? selectedType; // New
 
   final List<String> categories;
   final List<DropdownMenuItem<String?>> accountItems;
@@ -13,6 +15,7 @@ class TransactionFilter extends StatelessWidget {
   final Function(TimeRange) onRangeChanged;
   final Function(String?) onCategoryChanged;
   final Function(String?) onAccountChanged;
+  final Function(TransactionType?) onTypeChanged; // New
   final VoidCallback? onCustomRangeTap;
   final String? customRangeLabel;
 
@@ -21,11 +24,13 @@ class TransactionFilter extends StatelessWidget {
     required this.selectedRange,
     required this.selectedCategory,
     required this.selectedAccountId,
+    this.selectedType, // New
     required this.categories,
     required this.accountItems,
     required this.onRangeChanged,
     required this.onCategoryChanged,
     required this.onAccountChanged,
+    required this.onTypeChanged, // New
     this.onCustomRangeTap,
     this.customRangeLabel,
   });
@@ -90,6 +95,29 @@ class TransactionFilter extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
+              // Type Dropdown
+              Expanded(
+                child: DropdownButtonFormField<TransactionType?>(
+                  initialValue: selectedType,
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    border: OutlineInputBorder(),
+                    labelText: 'Type',
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('All Types')),
+                    DropdownMenuItem(
+                        value: TransactionType.income, child: Text('Income')),
+                    DropdownMenuItem(
+                        value: TransactionType.expense, child: Text('Expense')),
+                    DropdownMenuItem(
+                        value: TransactionType.transfer,
+                        child: Text('Transfer')),
+                  ],
+                  onChanged: onTypeChanged,
+                ),
+              ),
+              const SizedBox(width: 16),
               // Account Dropdown
               Expanded(
                 child: DropdownButtonFormField<String?>(

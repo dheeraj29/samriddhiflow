@@ -342,6 +342,63 @@ class StorageService {
     await _incrementBackupCounter();
   }
 
+  Future<void> saveTransactions(List<Transaction> transactions,
+      {bool applyImpact = true}) async {
+    final box = Hive.box<Transaction>(boxTransactions);
+    final accountsBox = Hive.box<Account>(boxAccounts);
+
+    final Map<dynamic, Transaction> batch = {};
+    for (var txn in transactions) {
+      if (applyImpact) {
+        // Apply Logic
+        final existingTxn = box.get(txn.id);
+        if (existingTxn != null && !existingTxn.isDeleted) {
+          if (existingTxn.accountId != null) {
+            final oldAcc = accountsBox.get(existingTxn.accountId);
+            if (oldAcc != null) {
+              _applyTransactionImpact(oldAcc, existingTxn,
+                  isReversal: true, isSource: true);
+              await oldAcc.save();
+            }
+          }
+          if (existingTxn.type == TransactionType.transfer &&
+              existingTxn.toAccountId != null) {
+            final oldAccTo = accountsBox.get(existingTxn.toAccountId);
+            if (oldAccTo != null) {
+              _applyTransactionImpact(oldAccTo, existingTxn,
+                  isReversal: true, isSource: false);
+              await oldAccTo.save();
+            }
+          }
+        }
+
+        if (!txn.isDeleted) {
+          if (txn.accountId != null) {
+            final newAcc = accountsBox.get(txn.accountId);
+            if (newAcc != null) {
+              _applyTransactionImpact(newAcc, txn,
+                  isReversal: false, isSource: true);
+              await newAcc.save();
+            }
+          }
+          if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
+            final newAccTo = accountsBox.get(txn.toAccountId);
+            if (newAccTo != null) {
+              _applyTransactionImpact(newAccTo, txn,
+                  isReversal: false, isSource: false);
+              await newAccTo.save();
+            }
+          }
+        }
+      } // End applyImpact
+
+      batch[txn.id] = txn;
+    }
+
+    await box.putAll(batch);
+    await _incrementBackupCounter();
+  }
+
   void _applyTransactionImpact(Account acc, Transaction txn,
       {required bool isReversal, required bool isSource}) {
     double amount = txn.amount;
@@ -352,8 +409,9 @@ class StorageService {
       final now = DateTime.now();
       final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
 
-      if ((txn.date.isAtSameMomentAs(cycleStart) ||
-          txn.date.isAfter(cycleStart))) {
+      final txnDateOnly = DateTime(txn.date.year, txn.date.month, txn.date.day);
+
+      if (txnDateOnly.isAfter(cycleStart)) {
         if (txn.type == TransactionType.expense ||
             (txn.type == TransactionType.transfer && isSource)) {
           skipBalanceUpdate = true;
@@ -441,6 +499,38 @@ class StorageService {
       }
     } catch (e) {
       DebugLogger().log("StorageService: deleteTransaction error: $e");
+    }
+  }
+
+  Future<int> getSimilarTransactionCount(
+      String title, String category, String excludeId) async {
+    final box = Hive.box<Transaction>(boxTransactions);
+    final profileId = getActiveProfileId();
+    return box.values
+        .where((t) =>
+            t.profileId == profileId &&
+            t.id != excludeId &&
+            t.title.trim().toLowerCase() == title.trim().toLowerCase() &&
+            t.category == category &&
+            !t.isDeleted)
+        .length;
+  }
+
+  Future<void> bulkUpdateCategory(
+      String title, String oldCategory, String newCategory) async {
+    final box = Hive.box<Transaction>(boxTransactions);
+    final profileId = getActiveProfileId();
+    final toUpdate = box.values
+        .where((t) =>
+            t.profileId == profileId &&
+            t.title.trim().toLowerCase() == title.trim().toLowerCase() &&
+            t.category == oldCategory &&
+            !t.isDeleted)
+        .toList();
+
+    for (var t in toUpdate) {
+      t.category = newCategory;
+      await t.save();
     }
   }
 
@@ -825,6 +915,11 @@ class StorageService {
           name: 'Hospital',
           usage: CategoryUsage.expense,
           iconCode: 0xe548,
+          profileId: profileId),
+      Category.create(
+          name: 'Shopping',
+          usage: CategoryUsage.expense,
+          iconCode: 0xf1cc,
           profileId: profileId),
     ];
   }
