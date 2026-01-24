@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v1.6.0
+**Current Version:** v1.7.0
 
 ## 2. Architecture
 
@@ -83,12 +83,13 @@ graph TD
     *   **Option 2: Reduce EMI:** The tenure (remaining months) remains the same. The EMI is recalculated to be lower based on the reduced principal.
 *   **Impact:** All loan transactions (EMI, Prepayment) are automatically linked to an Account (e.g., Savings), creating a corresponding "Expense" or "Transfer" transaction in that account to keep balances in sync.
 
-## 4. Current Status (v1.6.0)
+## 4. Current Status (v1.7.0)
 *   **Stable:** Core features (CRUD, Loans, Import/Export, Credit Cards) are stable.
-*   **Recent Updates:**
-    *   **Accounts Screen:** Added "Total Credit Usage" dashboard.
+*   **Recent Updates (v1.7.0):**
+    *   **Cloud Restore Fix:** Fixed balance mismatch by preventing transaction impact logic from re-running during restore.
+    *   **Credit Dashboard:** Fixed "Total Usage" logic (Debt is now correctly identified as Positive Balance for Credit Cards).
+    *   **Build Scripts:** Local `build_pwa.bat` integrated with Environment Variables for secrets.
     *   **Excel:** Fixed restore logic for complex templates.
-    *   **Architecture:** Cleaned up project documentation.
 
 ## 5. Build Instructions
 Run: `flutter build web --no-web-resources-cdn --release`
@@ -96,4 +97,3 @@ Run: `flutter build web --no-web-resources-cdn --release`
 
 ## 6. Future Roadmap
 *   **Tax Engine:** Tax calculation and assessment features (Indian Regime).
-*   **Sharing Profiles:** Ability to export/share specific profiles securely.

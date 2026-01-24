@@ -98,8 +98,9 @@ class CloudSyncService {
 
     if (data['transactions'] != null) {
       for (var t in (data['transactions'] as List)) {
-        await _storageService
-            .saveTransaction(_mapToTransaction(Map<String, dynamic>.from(t)));
+        await _storageService.saveTransaction(
+            _mapToTransaction(Map<String, dynamic>.from(t)),
+            applyImpact: false);
       }
     }
 

@@ -288,52 +288,55 @@ class StorageService {
     }
   }
 
-  Future<void> saveTransaction(Transaction transaction) async {
+  Future<void> saveTransaction(Transaction transaction,
+      {bool applyImpact = true}) async {
     final box = Hive.box<Transaction>(boxTransactions);
     final accountsBox = Hive.box<Account>(boxAccounts);
 
     final existingTxn = box.get(transaction.id);
 
-    if (existingTxn != null && !existingTxn.isDeleted) {
-      // Impact of Source Account
-      if (existingTxn.accountId != null) {
-        final oldAccFrom = accountsBox.get(existingTxn.accountId);
-        if (oldAccFrom != null) {
-          _applyTransactionImpact(oldAccFrom, existingTxn,
-              isReversal: true, isSource: true);
-          await oldAccFrom.save();
+    if (applyImpact) {
+      if (existingTxn != null && !existingTxn.isDeleted) {
+        // Impact of Source Account
+        if (existingTxn.accountId != null) {
+          final oldAccFrom = accountsBox.get(existingTxn.accountId);
+          if (oldAccFrom != null) {
+            _applyTransactionImpact(oldAccFrom, existingTxn,
+                isReversal: true, isSource: true);
+            await oldAccFrom.save();
+          }
+        }
+        // Impact of Target Account
+        if (existingTxn.type == TransactionType.transfer &&
+            existingTxn.toAccountId != null) {
+          final oldAccTo = accountsBox.get(existingTxn.toAccountId);
+          if (oldAccTo != null) {
+            _applyTransactionImpact(oldAccTo, existingTxn,
+                isReversal: true, isSource: false);
+            await oldAccTo.save();
+          }
         }
       }
-      // Impact of Target Account
-      if (existingTxn.type == TransactionType.transfer &&
-          existingTxn.toAccountId != null) {
-        final oldAccTo = accountsBox.get(existingTxn.toAccountId);
-        if (oldAccTo != null) {
-          _applyTransactionImpact(oldAccTo, existingTxn,
-              isReversal: true, isSource: false);
-          await oldAccTo.save();
-        }
-      }
-    }
 
-    if (!transaction.isDeleted) {
-      // Impact of Source Account
-      if (transaction.accountId != null) {
-        final newAccFrom = accountsBox.get(transaction.accountId);
-        if (newAccFrom != null) {
-          _applyTransactionImpact(newAccFrom, transaction,
-              isReversal: false, isSource: true);
-          await newAccFrom.save();
+      if (!transaction.isDeleted) {
+        // Impact of Source Account
+        if (transaction.accountId != null) {
+          final newAccFrom = accountsBox.get(transaction.accountId);
+          if (newAccFrom != null) {
+            _applyTransactionImpact(newAccFrom, transaction,
+                isReversal: false, isSource: true);
+            await newAccFrom.save();
+          }
         }
-      }
-      // Impact of Target Account
-      if (transaction.type == TransactionType.transfer &&
-          transaction.toAccountId != null) {
-        final newAccTo = accountsBox.get(transaction.toAccountId);
-        if (newAccTo != null) {
-          _applyTransactionImpact(newAccTo, transaction,
-              isReversal: false, isSource: false);
-          await newAccTo.save();
+        // Impact of Target Account
+        if (transaction.type == TransactionType.transfer &&
+            transaction.toAccountId != null) {
+          final newAccTo = accountsBox.get(transaction.toAccountId);
+          if (newAccTo != null) {
+            _applyTransactionImpact(newAccTo, transaction,
+                isReversal: false, isSource: false);
+            await newAccTo.save();
+          }
         }
       }
     }

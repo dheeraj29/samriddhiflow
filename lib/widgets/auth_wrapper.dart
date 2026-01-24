@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../providers.dart';
+import '../feature_providers.dart';
 import '../navigator_key.dart';
 import '../screens/login_screen.dart';
 import '../screens/dashboard_screen.dart';
@@ -268,6 +269,40 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 ),
               ),
             );
+          }
+        }
+
+        // 4. AUTO-RESTORE CHECK
+        if (next.value != null && isLoggedIn) {
+          // Check if local data is empty (Fresh Install / Cache Clear)
+          final storage = ref.read(storageServiceProvider);
+          if (storage.getAccounts().isEmpty) {
+            DebugLogger().log(
+                "AuthWrapper: Local data empty. Triggering Auto-Restore...");
+
+            // Run in background, don't await blocking the UI
+            ref.read(cloudSyncServiceProvider).restoreFromCloud().then((_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Cloud Restore Completed"),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+                // Refresh providers to show data
+                ref.invalidate(accountsProvider);
+                ref.invalidate(transactionsProvider);
+              }
+            }).catchError((e) {
+              DebugLogger().log("AuthWrapper: Auto-Restore failed/skipped: $e");
+              // Optional: Show error only if it's not "No cloud data found"
+              if (context.mounted && !e.toString().contains("No cloud data")) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Restore Failed: ${e.toString()}")),
+                );
+              }
+            });
           }
         }
       } catch (e) {

@@ -11,6 +11,17 @@ import '../utils/billing_helper.dart';
 import '../models/transaction.dart';
 import '../widgets/pure_icons.dart';
 
+class CreditUsageVisibilityNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
+
+final showCreditUsageProvider =
+    NotifierProvider<CreditUsageVisibilityNotifier, bool>(
+        CreditUsageVisibilityNotifier.new);
+
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
@@ -37,7 +48,24 @@ class AccountsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: const Text('My Accounts')),
+      appBar: AppBar(
+        title: const Text('My Accounts'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              ref.watch(showCreditUsageProvider)
+                  ? Icons.visibility
+                  : Icons.visibility_off,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            tooltip: ref.watch(showCreditUsageProvider)
+                ? 'Hide Credit Usage'
+                : 'Show Credit Usage',
+            onPressed: () =>
+                ref.read(showCreditUsageProvider.notifier).toggle(),
+          ),
+        ],
+      ),
       body: accountsAsync.when(
         data: (accounts) {
           if (accounts.isEmpty) {
@@ -68,9 +96,9 @@ class AccountsScreen extends ConsumerWidget {
 
             for (var card in creditCards) {
               totalLimit += card.creditLimit ?? 0;
-              // If balance is negative, it represents debt/usage.
-              if (card.balance < 0) {
-                totalUsage += card.balance.abs();
+              // If balance is positive, it represents debt/usage.
+              if (card.balance > 0) {
+                totalUsage += card.balance;
               }
             }
 
@@ -217,7 +245,8 @@ class AccountsScreen extends ConsumerWidget {
 
           return Column(
             children: [
-              if (summaryWidget != null) summaryWidget,
+              if (summaryWidget != null && ref.watch(showCreditUsageProvider))
+                summaryWidget,
               Expanded(
                 child: GridView.builder(
                   padding: const EdgeInsets.all(16),
