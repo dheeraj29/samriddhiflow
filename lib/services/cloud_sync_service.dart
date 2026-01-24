@@ -153,6 +153,9 @@ class CloudSyncService {
         'type': a.type.index,
         'profileId': a.profileId,
         'billingCycleDay': a.billingCycleDay,
+        'paymentDueDateDay': a.paymentDueDateDay,
+        'creditLimit': a.creditLimit,
+        'currency': a.currency,
       };
 
   Account _mapToAccount(Map<String, dynamic> m) => Account(
@@ -162,6 +165,9 @@ class CloudSyncService {
         type: AccountType.values[m['type']],
         profileId: m['profileId'],
         billingCycleDay: m['billingCycleDay'],
+        paymentDueDateDay: m['paymentDueDateDay'],
+        creditLimit: (m['creditLimit'] as num?)?.toDouble(),
+        currency: m['currency'] ?? 'USD',
       );
 
   Map<String, dynamic> _transactionToMap(Transaction t) => {

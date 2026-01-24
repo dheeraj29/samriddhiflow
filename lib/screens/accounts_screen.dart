@@ -56,7 +56,6 @@ class AccountsScreen extends ConsumerWidget {
               ref.watch(showCreditUsageProvider)
                   ? Icons.visibility
                   : Icons.visibility_off,
-              color: Theme.of(context).colorScheme.onSurface,
             ),
             tooltip: ref.watch(showCreditUsageProvider)
                 ? 'Hide Credit Usage'
@@ -315,12 +314,7 @@ class AccountsScreen extends ConsumerWidget {
     return AccountCard(
       account: acc,
       unbilledAmount: unbilled,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TransactionsScreen(initialAccountId: acc.id),
-        ),
-      ),
+      onTap: () => _showAccountOptions(context, ref, acc),
     );
   }
 
@@ -350,11 +344,47 @@ class AccountsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddAccountSheet(BuildContext context, WidgetRef ref) {
+  void _showAccountOptions(BuildContext context, WidgetRef ref, Account acc) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('View Transactions'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        TransactionsScreen(initialAccountId: acc.id),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Account'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddAccountSheet(context, ref, account: acc);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddAccountSheet(BuildContext context, WidgetRef ref,
+      {Account? account}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const AddAccountSheet(),
+      builder: (_) => AddAccountSheet(account: account),
     );
   }
 }
