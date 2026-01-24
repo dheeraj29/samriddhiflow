@@ -54,9 +54,6 @@ app.*.map.json
 **/android/app/release/
 
 # Sensitive/Firebase Files (Requested)
-lib/firebase_options.dart
-firebase_options.dart
-firebase_cors.json
 *.secret
 *.pem
 *.key
