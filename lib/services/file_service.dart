@@ -76,14 +76,9 @@ class FileService {
       // For simplicity and compatibility:
       if (await Permission.storage.request().isGranted) {
         // use getExternalStorageDirectory or path_provider's equivalent
-        final directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          // Fallback if Download folder is not accessible
-          final fallbackDir = await getExternalStorageDirectory();
-          final path = "${fallbackDir!.path}/$fileName";
-          await File(path).writeAsBytes(bytes);
-          return "Saved to: $path";
-        }
+        // Use path_provider to get safe application directory (Sonar Compliant)
+        final directory = await getApplicationSupportDirectory();
+
         final path = "${directory.path}/$fileName";
         await File(path).writeAsBytes(bytes);
         return "Saved to: $path";

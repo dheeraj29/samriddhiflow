@@ -4,10 +4,10 @@ on:
     branches:
       - main
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [synchronize]
 jobs:
-  sonarqube:
-    name: SonarQube
+  samriddhiflow:
+    name: SamriddhiFlow
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v4
@@ -24,13 +24,30 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
+        env:
+          FIREBASE_API_KEY_WEB: ${{ secrets.FIREBASE_API_KEY_WEB }}
+          FIREBASE_API_KEY_ANDROID: ${{ secrets.FIREBASE_API_KEY_ANDROID }}
+          FIREBASE_API_KEY_WINDOWS: ${{ secrets.FIREBASE_API_KEY_WEB }}
         run: |
           flutter build web --no-web-resources-cdn --release \
-            --dart-define=FIREBASE_API_KEY_WEB="${{ secrets.FIREBASE_API_KEY_WEB }}" \
-            --dart-define=FIREBASE_API_KEY_ANDROID="${{ secrets.FIREBASE_API_KEY_ANDROID }}"
+            --dart-define=FIREBASE_API_KEY_WEB="$FIREBASE_API_KEY_WEB" \
+            --dart-define=FIREBASE_API_KEY_ANDROID="$FIREBASE_API_KEY_ANDROID" \
+            --dart-define=FIREBASE_API_KEY_WINDOWS="$FIREBASE_API_KEY_WINDOWS"
 
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Deploy to Firebase Hosting
+        if: github.ref == 'refs/heads/main'
+        uses: FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c
+        env:
+          FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          repoToken: $GITHUB_TOKEN
+          firebaseServiceAccount: $FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW
+          channelId: live
+          projectId: samriddhiflow
