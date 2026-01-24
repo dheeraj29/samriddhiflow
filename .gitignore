@@ -61,6 +61,7 @@ app.*.map.json
 .env
 google-services.json
 GoogleService-Info.plist
+build_pwa.bat
 
 # Tooling
 .agent/

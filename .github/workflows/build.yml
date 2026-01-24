@@ -24,7 +24,11 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --no-web-resources-cdn --release
+        run: |
+          flutter build web --no-web-resources-cdn --release \
+            --dart-define=FIREBASE_API_KEY_WEB="${{ secrets.FIREBASE_API_KEY_WEB }}" \
+            --dart-define=FIREBASE_API_KEY_ANDROID="${{ secrets.FIREBASE_API_KEY_ANDROID }}"
+
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6

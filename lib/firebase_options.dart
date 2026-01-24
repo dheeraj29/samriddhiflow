@@ -40,8 +40,9 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // WEB
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAzfqSBS_lOo76Y8UqDnmj_hUBC5zpue2w',
+    apiKey: String.fromEnvironment('FIREBASE_API_KEY_WEB'),
     appId: '1:36853289802:web:b49171c09b4114c2c027b3',
     messagingSenderId: '36853289802',
     projectId: 'samriddhiflow',
@@ -49,16 +50,19 @@ class DefaultFirebaseOptions {
     storageBucket: 'samriddhiflow.firebasestorage.app',
   );
 
+  // ANDROID
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD2lsJcmRRnidDeeXmO957TXJK1Klyzy9w',
+    apiKey: String.fromEnvironment('FIREBASE_API_KEY_ANDROID'),
     appId: '1:36853289802:android:47e2dce1397e89eac027b3',
     messagingSenderId: '36853289802',
     projectId: 'samriddhiflow',
     storageBucket: 'samriddhiflow.firebasestorage.app',
   );
 
+  // WINDOWS (Uses Web Key if typically same but separate option here)
+  // Originally visible key was same as Web: AIza...e2w
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAzfqSBS_lOo76Y8UqDnmj_hUBC5zpue2w',
+    apiKey: String.fromEnvironment('FIREBASE_API_KEY_WINDOWS'),
     appId: '1:36853289802:web:dd3bf3b583b1dfa2c027b3',
     messagingSenderId: '36853289802',
     projectId: 'samriddhiflow',
