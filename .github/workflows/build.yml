@@ -47,7 +47,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repoToken: "$GITHUB_TOKEN"
-          firebaseServiceAccount: "$FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW"
+          repoToken: ${{ env.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
           channelId: live
           projectId: samriddhiflow
