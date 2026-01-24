@@ -6,7 +6,6 @@ import '../models/loan.dart';
 import '../models/category.dart';
 import '../models/profile.dart';
 import '../utils/currency_utils.dart';
-import 'dart:math' as math;
 import 'package:uuid/uuid.dart';
 import 'file_service.dart';
 
@@ -736,15 +735,18 @@ class ExcelService {
                       : TransactionType.expense;
 
               // Debug Counters
-              if (finalType == TransactionType.income)
+              if (finalType == TransactionType.income) {
                 resultCounts['type_income'] =
                     (resultCounts['type_income'] ?? 0) + 1;
-              if (finalType == TransactionType.expense)
+              }
+              if (finalType == TransactionType.expense) {
                 resultCounts['type_expense'] =
                     (resultCounts['type_expense'] ?? 0) + 1;
-              if (finalType == TransactionType.transfer)
+              }
+              if (finalType == TransactionType.transfer) {
                 resultCounts['type_transfer'] =
                     (resultCounts['type_transfer'] ?? 0) + 1;
+              }
 
               final txn = Transaction(
                 id: id.isEmpty ? const Uuid().v4() : id,

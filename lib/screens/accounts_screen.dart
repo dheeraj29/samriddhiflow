@@ -57,19 +57,205 @@ class AccountsScreen extends ConsumerWidget {
               ),
             );
           }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 220,
-              childAspectRatio: 0.9, // Taller for more vertical space
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: accounts.length + 1, // +1 for Add Button
-            itemBuilder: (context, index) {
-              if (index == accounts.length) {
-                return _buildAddCard(context, ref);
+
+          // Credit Card Summary Logic
+          final creditCards =
+              accounts.where((a) => a.type == AccountType.creditCard).toList();
+          Widget? summaryWidget;
+
+          if (creditCards.isNotEmpty) {
+            double totalLimit = 0;
+            double totalUsage = 0;
+
+            for (var card in creditCards) {
+              totalLimit += card.creditLimit ?? 0;
+              // If balance is negative, it represents debt/usage.
+              if (card.balance < 0) {
+                totalUsage += card.balance.abs();
               }
+            }
+
+            final utilization =
+                totalLimit > 0 ? (totalUsage / totalLimit) * 100 : 0.0;
+            final available = totalLimit > totalUsage ? totalLimit - totalUsage : 0.0;
+
+            summaryWidget = Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total Credit Usage',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${utilization.toStringAsFixed(1)}% Used',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            CurrencyUtils.formatCurrency(totalUsage),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Used',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            CurrencyUtils.formatCurrency(totalLimit),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                           const SizedBox(height: 4),
+                          Text(
+                            'Total Limit',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                   const SizedBox(height: 12),
+                   // Progress Bar
+                   ClipRRect(
+                     borderRadius: BorderRadius.circular(4),
+                     child: LinearProgressIndicator(
+                       value: totalLimit > 0 ? (totalUsage / totalLimit).clamp(0.0, 1.0) : 0,
+                       backgroundColor: Colors.white.withOpacity(0.2),
+                       valueColor: AlwaysStoppedAnimation<Color>(
+                         utilization > 80 ? Colors.redAccent : Colors.white
+                       ),
+                       minHeight: 6,
+                     ),
+                   ),
+                   if (available > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Available: ${CurrencyUtils.formatCurrency(available)}',
+                         style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic
+                            ),
+                      ),
+                    )
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              if (summaryWidget != null) summaryWidget,
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 220,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: accounts.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == accounts.length) {
+                      return _buildAddCard(context, ref);
+                    }
+                    // Continue with existing item builder...
+                    // We need to access the rest of the method, but replace_file does distinct chunks.
+                    // The original code returned GridView directly.
+                    // I am replacing the START of the `data:` block.
+                    // I need to ensure I don't break the closure.
+                    
+                    // Original code:
+                    // return GridView.builder(
+                    //   padding: ...
+                    
+                    // New code:
+                    // return Column(children: [..., Expanded(child: GridView.builder(...))]);
+                    
+                    // The `itemBuilder` Logic follows.
+                    
+                    // I'll execute the replacement carefully.
+                    // The TargetContent should match exactly lines 60-69 of original.
+                    return _buildAccountItem(context, ref, accounts[index]);
+                  },
+                ),
+              ),
+            ],
+          );
+        },
 
               // Calculate Unbilled for Credit Cards
               double unbilled = 0;
@@ -534,5 +720,38 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
 
       if (mounted) Navigator.pop(context);
     }
+  }
+
+  Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
+    double unbilled = 0;
+    if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+      final now = DateTime.now();
+      final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+
+      final allTxns = ref.watch(transactionsProvider).value ?? [];
+      final relevantTxns = allTxns.where((t) =>
+          !t.isDeleted &&
+          t.accountId == acc.id &&
+          DateTime(t.date.year, t.date.month, t.date.day).isAfter(cycleStart));
+
+      for (var t in relevantTxns) {
+        if (t.type == TransactionType.expense) unbilled += t.amount;
+        if (t.type == TransactionType.income) unbilled -= t.amount;
+        if (t.type == TransactionType.transfer && t.accountId == acc.id) {
+          unbilled += t.amount;
+        }
+      }
+    }
+
+    return AccountCard(
+      account: acc,
+      unbilledAmount: unbilled,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TransactionsScreen(accountId: acc.id),
+        ),
+      ),
+    );
   }
 }

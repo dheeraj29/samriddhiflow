@@ -69,4 +69,8 @@ class CurrencyUtils {
   static double roundTo2Decimals(double value) {
     return (value * 100).roundToDouble() / 100;
   }
+
+  static String formatCurrency(double value) {
+    return getFormatter('en_IN').format(value);
+  }
 }

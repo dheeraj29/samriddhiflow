@@ -68,8 +68,6 @@ GoogleService-Info.plist
 # Tooling
 .agent/
 .gemini/
-.cursorrules
-AI.md
 
 # Web related
 .web_assets/

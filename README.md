@@ -1,37 +1,17 @@
 # Samriddhi Flow
 
-**Samriddhi Flow** is a premium personal finance and smart budgeting PWA built with Flutter. It focuses on privacy, smart syncing, and a beautiful Material 3 design.
+**Premium Personal Finance PWA Component**
 
-## Key Features
-- **Smart Budgeting**: Set monthly budgets and track expenses.
-- **Privacy First**: Local-first architecture with optional secure cloud sync.
-- **Google Authentication**: Seamless and secure login experience.
-- **PWA Offline Resilience**: Bundled fonts and icon assets for 100% offline text visibility.
-- **Installable**: Works on Android, iOS, and Desktop.
+Samriddhi Flow is a local-first, aesthetic, and comprehensive financial tracking application built with Flutter Web.
 
-## Getting Started
+## Documentation
+For detailed architecture, features, and developer notes, please refer to **[AI.md](AI.md)**.
 
-### Prerequisites
-1.  **Flutter SDK**: Ensure you have the latest stable version (3.38+ recommended).
-2.  **Firebase Project**: You need a Firebase project with **Google Authentication** enabled.
-
-### Setup
-1.  Clone the repository.
-2.  Run `flutter pub get`.
-3.  Configure Firebase (generated `firebase_options.dart`).
-
-### Running the App
-```bash
-flutter run -d chrome
-```
-
-## Deployment
-
-### Recommended Build Command for PWA
-To ensure your icons and fonts work perfectly offline on iOS and other platforms, use this command:
+## Build Instructions
+To build the application for production (Offline-First):
 
 ```bash
-flutter build web --release --no-web-resources-cdn --no-tree-shake-icons
+flutter build web --no-web-resources-cdn --release
 ```
 
-See `.agent/workflows/deploy.md` for full deployment instructions.
+**Version:** v1.6.0

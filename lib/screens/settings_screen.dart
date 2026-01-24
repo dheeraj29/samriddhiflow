@@ -841,12 +841,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           String txnDetails = '${results['transactions']} transactions';
 
           List<String> types = [];
-          if ((results['type_income'] ?? 0) > 0)
+          if ((results['type_income'] ?? 0) > 0) {
             types.add('In: ${results['type_income']}');
-          if ((results['type_expense'] ?? 0) > 0)
+          }
+          if ((results['type_expense'] ?? 0) > 0) {
             types.add('Ex: ${results['type_expense']}');
-          if ((results['type_transfer'] ?? 0) > 0)
+          }
+          if ((results['type_transfer'] ?? 0) > 0) {
             types.add('Tr: ${results['type_transfer']}');
+          }
 
           if (types.isNotEmpty) {
             txnDetails += ' (${types.join(', ')})';
