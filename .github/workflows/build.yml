@@ -19,10 +19,6 @@ jobs:
           git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
 
-          
-      - name: Install Dependencies
-        run: flutter pub get
-
       - name: Build Web
         env:
           FIREBASE_API_KEY_WEB: ${{ secrets.FIREBASE_API_KEY_WEB }}

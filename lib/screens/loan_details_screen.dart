@@ -150,8 +150,43 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        const Text('Outstanding Principal',
-                            style: TextStyle(color: Colors.white70)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Outstanding Principal',
+                                style: TextStyle(color: Colors.white70)),
+                            if (!isGoldLoan) ...[
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () =>
+                                    _showBulkPaymentDialog(currentLoan),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(12)),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.library_add_check_outlined,
+                                          size: 14, color: Colors.white),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Bulk Pay',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            ]
+                          ],
+                        ),
                         SmartCurrencyText(
                           value: currentLoan.remainingPrincipal,
                           locale: currencyProviderValue,
@@ -311,32 +346,33 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                             LoanDetailView.simulator, theme),
                         _buildNavIcon(Icons.list_alt, 'Ledger',
                             LoanDetailView.ledger, theme),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                showDialog(
-                                    context: context,
-                                    builder: (_) => RecordLoanPaymentDialog(
-                                        loan: currentLoan));
-                              },
-                              icon: PureIcons.payment(color: Colors.green),
-                              style: IconButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.green.withValues(alpha: 0.1)),
-                              tooltip: 'Record Payment',
+                        InkWell(
+                          onTap: () {
+                            showDialog(
+                                context: context,
+                                builder: (_) =>
+                                    RecordLoanPaymentDialog(loan: currentLoan));
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                PureIcons.payment(color: Colors.green),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Pay',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            InkWell(
-                                onTap: () =>
-                                    _showBulkPaymentDialog(currentLoan),
-                                child: const Text('Bulk Pay',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline)))
-                          ],
+                          ),
                         ),
                       ],
                     ),
