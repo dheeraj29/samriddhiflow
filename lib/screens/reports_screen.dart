@@ -137,6 +137,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         .where((t) => t.type == TransactionType.expense)
                         .toList();
                     for (var t in expenses) {
+                      // Exclude manual loan transactions
+                      if (t.accountId == null && t.loanId != null) continue;
                       data[t.category] = (data[t.category] ?? 0) + t.amount;
                     }
                   } else if (_type == ReportType.income) {
@@ -144,6 +146,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         .where((t) => t.type == TransactionType.income)
                         .toList();
                     for (var t in income) {
+                      // Exclude manual loan transactions
+                      if (t.accountId == null && t.loanId != null) continue;
                       data[t.category] = (data[t.category] ?? 0) + t.amount;
                     }
                   } else if (_type == ReportType.loan) {

@@ -453,9 +453,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 _scheduleType = ScheduleType.fixedDate;
                               } else if (_frequency == Frequency.weekly) {
                                 _scheduleType = ScheduleType.specificWeekday;
-                                if (_selectedWeekday == null) {
-                                  _selectedWeekday = _date.weekday;
-                                }
+                                _selectedWeekday ??= _date.weekday;
                               } else if (_frequency == Frequency.monthly) {
                                 _scheduleType = ScheduleType.fixedDate;
                               }
