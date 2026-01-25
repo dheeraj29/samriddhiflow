@@ -147,72 +147,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Amount
-                TextFormField(
-                  controller: _amountController,
-                  decoration: InputDecoration(
-                    labelText: 'Amount',
-                    prefixText:
-                        '${CurrencyUtils.getSymbol(_selectedAccountId == null || accounts.isEmpty ? "en_IN" : accounts.firstWhere((a) => a.id == _selectedAccountId, orElse: () => accounts.first).currency)} ',
-                    prefixStyle: AppTheme.offlineSafeTextStyle,
-                    border: const OutlineInputBorder(),
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
-                  ],
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
-                  validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
-                      ? 'Invalid Amount'
-                      : null,
-                  onSaved: (v) => _amount =
-                      CurrencyUtils.roundTo2Decimals(double.parse(v!)),
-                ),
-                const SizedBox(height: 16),
-
-                // Gain Amount (Sub-field)
-                if (filteredCategories.any((c) =>
-                    c.name == _category &&
-                    c.tag == CategoryTag.capitalGain)) ...[
-                  TextFormField(
-                    initialValue: _gainAmount?.toString(),
-                    decoration: InputDecoration(
-                      labelText: 'Gain / Profit Amount',
-                      border: const OutlineInputBorder(),
-                      prefixText:
-                          '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
-                      prefixStyle: AppTheme.offlineSafeTextStyle,
-                      helperText: _amount > 0 && (_gainAmount ?? 0) != 0
-                          ? '${(_gainAmount ?? 0) > 0 ? "Profit" : "Loss"}: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_gainAmount!.abs())}'
-                              ' (Purchase Cost: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_amount - (_gainAmount ?? 0))})'
-                          : 'Enter the profit (positive) or loss (negative)',
-                      helperStyle: TextStyle(
-                        color: (_gainAmount ?? 0) > 0
-                            ? Colors.greenAccent
-                            : (_gainAmount ?? 0) < 0
-                                ? Colors.redAccent
-                                : null,
-                      ),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      // Allow minus sign for loss, and max 2 decimals
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^-?\d*\.?\d{0,2}')),
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _gainAmount = double.tryParse(v)),
-                    onSaved: (v) => _gainAmount = v == null || v.isEmpty
-                        ? null
-                        : CurrencyUtils.roundTo2Decimals(double.parse(v)),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Category (If not transfer)
+                // Category (If not transfer) - MOVED UP
                 if (_type != TransactionType.transfer) ...[
                   DropdownButtonFormField<String?>(
                     initialValue: _category,
@@ -235,7 +170,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.blueGrey.withOpacity(0.1),
+                                      color: Colors.blueGrey
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -256,6 +192,40 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   if (filteredCategories.any((c) =>
                       c.name == _category &&
                       c.tag == CategoryTag.capitalGain)) ...[
+                    // Capital Gain Fields
+                    TextFormField(
+                      initialValue: _gainAmount?.toString(),
+                      decoration: InputDecoration(
+                        labelText: 'Gain / Profit Amount',
+                        border: const OutlineInputBorder(),
+                        prefixText:
+                            '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
+                        prefixStyle: AppTheme.offlineSafeTextStyle,
+                        helperText: _amount > 0 && (_gainAmount ?? 0) != 0
+                            ? '${(_gainAmount ?? 0) > 0 ? "Profit" : "Loss"}: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_gainAmount!.abs())}'
+                                ' (Purchase Cost: ${CurrencyUtils.getFormatter(ref.read(currencyProvider)).format(_amount - (_gainAmount ?? 0))})'
+                            : 'Enter the profit (positive) or loss (negative)',
+                        helperStyle: TextStyle(
+                          color: (_gainAmount ?? 0) > 0
+                              ? Colors.greenAccent
+                              : (_gainAmount ?? 0) < 0
+                                  ? Colors.redAccent
+                                  : null,
+                        ),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^-?\d*\.?\d{0,2}')),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _gainAmount = double.tryParse(v)),
+                      onSaved: (v) => _gainAmount = v == null || v.isEmpty
+                          ? null
+                          : CurrencyUtils.roundTo2Decimals(double.parse(v)),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       initialValue: _holdingTenureMonths?.toString(),
                       decoration: const InputDecoration(
@@ -273,60 +243,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ],
                 ],
 
-                DropdownButtonFormField<String?>(
-                  initialValue: _selectedAccountId,
-                  decoration: InputDecoration(
-                    labelText: _type == TransactionType.transfer
-                        ? 'From Account'
-                        : 'Account',
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: <DropdownMenuItem<String?>>[
-                    const DropdownMenuItem<String?>(
-                        value: null, child: Text('No Account (Manual)')),
-                    ...accounts.map((a) => DropdownMenuItem<String?>(
-                          value: a.id,
-                          child:
-                              Text('${a.name} (${_formatAccountBalance(a)})'),
-                        )),
-                  ],
-                  onChanged: (v) {
-                    setState(() {
-                      _selectedAccountId = v;
-                      if (_selectedAccountId == _toAccountId) {
-                        _toAccountId = null;
-                      }
-                    });
-                  },
-                ),
-
-                if (_type == TransactionType.transfer) ...[
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String?>(
-                    initialValue: _toAccountId,
-                    decoration: const InputDecoration(
-                      labelText: 'To Account',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: <DropdownMenuItem<String?>>[
-                      if (_toAccountId == null)
-                        const DropdownMenuItem<String?>(
-                            value: null, child: Text('Select Recipient')),
-                      ...accounts
-                          .where((a) => a.id != _selectedAccountId)
-                          .map((a) => DropdownMenuItem<String?>(
-                                value: a.id,
-                                child: Text(
-                                    '${a.name} (${_formatAccountBalance(a)})'),
-                              )),
-                    ],
-                    onChanged: (v) => setState(() => _toAccountId = v),
-                    validator: (v) => v == null ? 'Required' : null,
-                  ),
-                ],
-                const SizedBox(height: 16),
-
-                // Title (Auto-complete / Description)
+                // Title (Description) - MOVED UP
                 RawAutocomplete<String>(
                   textEditingController: _titleController,
                   focusNode: _titleFocusNode,
@@ -387,6 +304,88 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     );
                   },
                 ),
+                const SizedBox(height: 16),
+
+                // Account
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedAccountId,
+                  decoration: InputDecoration(
+                    labelText: _type == TransactionType.transfer
+                        ? 'From Account'
+                        : 'Account',
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('No Account (Manual)')),
+                    ...accounts.map((a) => DropdownMenuItem<String?>(
+                          value: a.id,
+                          child:
+                              Text('${a.name} (${_formatAccountBalance(a)})'),
+                        )),
+                  ],
+                  onChanged: (v) {
+                    setState(() {
+                      _selectedAccountId = v;
+                      if (_selectedAccountId == _toAccountId) {
+                        _toAccountId = null;
+                      }
+                    });
+                  },
+                ),
+                if (_type == TransactionType.transfer) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _toAccountId,
+                    decoration: const InputDecoration(
+                      labelText: 'To Account',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: <DropdownMenuItem<String?>>[
+                      if (_toAccountId == null)
+                        const DropdownMenuItem<String?>(
+                            value: null, child: Text('Select Recipient')),
+                      ...accounts
+                          .where((a) => a.id != _selectedAccountId)
+                          .map((a) => DropdownMenuItem<String?>(
+                                value: a.id,
+                                child: Text(
+                                    '${a.name} (${_formatAccountBalance(a)})'),
+                              )),
+                    ],
+                    onChanged: (v) => setState(() => _toAccountId = v),
+                    validator: (v) => v == null ? 'Required' : null,
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Amount - MOVED DOWN
+                TextFormField(
+                  controller: _amountController,
+                  decoration: InputDecoration(
+                    labelText: 'Amount',
+                    prefixText:
+                        '${CurrencyUtils.getSymbol(_selectedAccountId == null || accounts.isEmpty ? "en_IN" : accounts.firstWhere((a) => a.id == _selectedAccountId, orElse: () => accounts.first).currency)} ',
+                    prefixStyle: AppTheme.offlineSafeTextStyle,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                  ],
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+                      ? 'Invalid Amount'
+                      : null,
+                  onSaved: (v) => _amount =
+                      CurrencyUtils.roundTo2Decimals(double.parse(v!)),
+                ),
+                const SizedBox(height: 16),
+
+                // Gain Amount (Sub-field)
+
                 const SizedBox(height: 16),
 
                 // Date & Time
@@ -558,7 +557,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             widget.transactionToEdit!.category, widget.transactionToEdit!.id);
 
         if (oldCount > 0) {
-          // ignore: use_build_context_synchronously
+          if (!mounted) return;
           final shouldUpdate = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -635,9 +634,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         await storage.saveRecurringTransaction(recurring);
       }
 
-      final _ = ref.refresh(transactionsProvider);
-      final __ = ref.refresh(accountsProvider);
-      final ___ = ref.refresh(recurringTransactionsProvider);
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(accountsProvider);
+      ref.invalidate(recurringTransactionsProvider);
 
       if (mounted) Navigator.pop(context);
     }

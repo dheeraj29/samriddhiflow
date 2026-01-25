@@ -25,7 +25,7 @@ class HolidayManagerScreen extends ConsumerWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
             child: Row(
               children: [
                 PureIcons.info(color: Colors.blue),

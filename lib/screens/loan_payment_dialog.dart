@@ -300,14 +300,13 @@ class _RecordLoanPaymentDialogState
 
               await storage.saveLoan(loan);
 
-              final _ = ref.refresh(transactionsProvider);
-              final __ = ref.refresh(loansProvider);
+              ref.invalidate(transactionsProvider);
+              ref.invalidate(loansProvider);
 
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Payment Recorded')));
-              }
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Payment Recorded')));
             }
           },
           child: const Text('Confirm'),

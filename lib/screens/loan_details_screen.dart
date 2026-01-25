@@ -324,10 +324,18 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                               icon: PureIcons.payment(color: Colors.green),
                               style: IconButton.styleFrom(
                                   backgroundColor:
-                                      Colors.green.withOpacity(0.1)),
+                                      Colors.green.withValues(alpha: 0.1)),
+                              tooltip: 'Record Payment',
                             ),
                             const SizedBox(height: 4),
-                            const Text('Pay', style: TextStyle(fontSize: 10))
+                            InkWell(
+                                onTap: () =>
+                                    _showBulkPaymentDialog(currentLoan),
+                                child: const Text('Bulk Pay',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.blue,
+                                        decoration: TextDecoration.underline)))
                           ],
                         ),
                       ],
@@ -1009,7 +1017,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
 
             return ListTile(
               leading: CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 child: Icon(icon, color: color, size: 20),
               ),
               title: Row(
@@ -1212,8 +1220,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 final newName = controller.text;
                 loan.name = newName;
                 await ref.read(storageServiceProvider).saveLoan(loan);
-                final _ = ref.refresh(loansProvider);
-                if (mounted) Navigator.pop(context);
+                ref.invalidate(loansProvider);
+                if (!mounted) return;
+                Navigator.pop(context);
               }
             },
             child: const Text('Save'),
@@ -1387,7 +1396,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12)),
           child: Row(
             children: [
@@ -1603,7 +1612,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   ref.invalidate(loansProvider);
                   ref.invalidate(transactionsProvider);
                   ref.invalidate(accountsProvider);
-                  if (mounted) Navigator.pop(context);
+                  if (!mounted) return;
+                  Navigator.pop(context);
                 }
               },
             )
@@ -1709,7 +1719,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   ref.invalidate(loansProvider);
                   ref.invalidate(transactionsProvider);
                   ref.invalidate(accountsProvider);
-                  if (mounted) Navigator.pop(context);
+                  if (!mounted) return;
+                  Navigator.pop(context);
                 }
               },
             )
@@ -1792,9 +1803,161 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 await ref.read(storageServiceProvider).saveLoan(currentLoan);
                 ref.invalidate(loansProvider);
 
-                if (mounted) Navigator.pop(context);
+                if (!mounted) return;
+                Navigator.pop(context);
               },
               child: const Text('Update Rate'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBulkPaymentDialog(Loan currentLoan) {
+    DateTime startDate = DateTime(DateTime.now().year, 1, 1);
+    DateTime endDate = DateTime.now();
+    bool isProcessing = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Bulk Record Payments'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                  'Record EMI payments for a date range automatically. Assumes paid on time.'),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Start Date'),
+                subtitle: Text(DateFormat('yyyy-MM-dd').format(startDate)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final d = await showDatePicker(
+                      context: context,
+                      initialDate: startDate,
+                      firstDate: DateTime(2010),
+                      lastDate: DateTime.now());
+                  if (d != null) setState(() => startDate = d);
+                },
+              ),
+              ListTile(
+                title: const Text('End Date'),
+                subtitle: Text(DateFormat('yyyy-MM-dd').format(endDate)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final d = await showDatePicker(
+                      context: context,
+                      initialDate: endDate,
+                      firstDate: DateTime(2010),
+                      lastDate: DateTime.now());
+                  if (d != null) setState(() => endDate = d);
+                },
+              ),
+              if (isProcessing) const LinearProgressIndicator(),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: isProcessing
+                  ? null
+                  : () async {
+                      setState(() => isProcessing = true);
+                      final storage = ref.read(storageServiceProvider);
+                      var loan = currentLoan; // Reference
+                      // We will iterate month by month from Start to End
+                      DateTime current =
+                          DateTime(startDate.year, startDate.month, 1);
+                      final end = DateTime(endDate.year, endDate.month, 1);
+
+                      int count = 0;
+                      List<Transaction> newTxns = [];
+                      List<LoanTransaction> newLoanTxns = [];
+
+                      while (current.isBefore(end) ||
+                          current.isAtSameMomentAs(end)) {
+                        // Determine EMI Date for this month
+                        final emiDate =
+                            DateTime(current.year, current.month, loan.emiDay);
+
+                        // Check if already paid in this month
+                        final exists = loan.transactions.any((t) =>
+                            t.type == LoanTransactionType.emi &&
+                            t.date.year == emiDate.year &&
+                            t.date.month == emiDate.month);
+
+                        if (!exists && emiDate.isAfter(loan.startDate)) {
+                          // Simple Interest split for bulk:
+                          // Interest = Principal * Rate / 12 / 100
+                          final interest = (loan.remainingPrincipal *
+                                  loan.interestRate /
+                                  12) /
+                              100;
+                          final principalComp = loan.emiAmount - interest;
+
+                          final loanTxn = LoanTransaction(
+                            id: const Uuid().v4(),
+                            date: emiDate,
+                            amount: loan.emiAmount,
+                            type: LoanTransactionType.emi,
+                            principalComponent: principalComp,
+                            interestComponent: interest,
+                            resultantPrincipal:
+                                loan.remainingPrincipal - principalComp,
+                          );
+
+                          loan.remainingPrincipal -= principalComp;
+                          newLoanTxns.add(loanTxn);
+
+                          // Expense Transaction
+                          if (loan.accountId != null) {
+                            final expTxn = Transaction.create(
+                              title: 'Loan EMI: ${loan.name}',
+                              amount: loan.emiAmount,
+                              type: TransactionType.expense,
+                              category: 'Loan Repayment',
+                              accountId: loan.accountId!,
+                              date: emiDate,
+                              loanId: loan.id,
+                            );
+                            newTxns.add(expTxn);
+                          }
+                          count++;
+                        }
+                        // Next month
+                        current = DateTime(current.year, current.month + 1, 1);
+                      }
+
+                      // Batch Save
+                      loan.transactions = [
+                        ...loan.transactions,
+                        ...newLoanTxns
+                      ];
+                      loan.transactions
+                          .sort((a, b) => a.date.compareTo(b.date));
+
+                      await storage.saveLoan(loan);
+
+                      for (final t in newTxns) {
+                        await storage.saveTransaction(t);
+                      }
+
+                      ref.invalidate(loansProvider);
+                      ref.invalidate(transactionsProvider);
+                      ref.invalidate(accountsProvider);
+
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text('Recorded $count payments successfully.')));
+                    },
+              child: const Text('Record Payments'),
             ),
           ],
         ),

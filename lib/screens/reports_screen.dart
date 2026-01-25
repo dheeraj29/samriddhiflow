@@ -728,8 +728,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
               color: total >= 0
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.red.withOpacity(0.3))),
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.3))),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -54,7 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withOpacity(0.05)
+                            ? Colors.white.withValues(alpha: 0.05)
                             : Colors.white,
                     foregroundColor:
                         Theme.of(context).brightness == Brightness.dark

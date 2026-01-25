@@ -111,8 +111,14 @@ class AccountsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                    Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
+                    Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.8),
+                    Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -120,7 +126,7 @@ class AccountsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -145,7 +151,7 @@ class AccountsScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -178,7 +184,7 @@ class AccountsScreen extends ConsumerWidget {
                           Text(
                             'Used',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 12,
                             ),
                           ),
@@ -187,7 +193,7 @@ class AccountsScreen extends ConsumerWidget {
                       Container(
                         height: 40,
                         width: 1,
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -204,7 +210,7 @@ class AccountsScreen extends ConsumerWidget {
                           Text(
                             'Total Limit',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 12,
                             ),
                           ),
@@ -220,7 +226,7 @@ class AccountsScreen extends ConsumerWidget {
                       value: totalLimit > 0
                           ? (totalUsage / totalLimit).clamp(0.0, 1.0)
                           : 0,
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       valueColor: AlwaysStoppedAnimation<Color>(
                           utilization > 80 ? Colors.redAccent : Colors.white),
                       minHeight: 6,
@@ -232,7 +238,7 @@ class AccountsScreen extends ConsumerWidget {
                       child: Text(
                         'Available: ${CurrencyUtils.formatCurrency(available)}',
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 12,
                             fontStyle: FontStyle.italic),
                       ),
@@ -575,7 +581,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8)),
                   child: Builder(builder: (context) {
                     final today = DateTime.now();

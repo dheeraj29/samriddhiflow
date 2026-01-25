@@ -334,10 +334,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                     backgroundColor: txn.type ==
                                                 TransactionType.income ||
                                             isIncomingTransfer
-                                        ? Colors.green.withOpacity(0.1)
+                                        ? Colors.green.withValues(alpha: 0.1)
                                         : (txn.type == TransactionType.transfer
-                                            ? Colors.blue.withOpacity(0.1)
-                                            : Colors.red.withOpacity(0.1)),
+                                            ? Colors.blue.withValues(alpha: 0.1)
+                                            : Colors.red
+                                                .withValues(alpha: 0.1)),
                                     child: txn.type == TransactionType.income
                                         ? PureIcons.income(size: 18)
                                         : (txn.type == TransactionType.transfer

@@ -454,7 +454,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -482,7 +482,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -515,7 +515,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
+        color: Colors.green.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -690,6 +690,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -726,6 +727,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           web.window.location.reload();
         }
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Update not available for this platform.')),
@@ -820,10 +822,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (status == 1) {
         // Success
-        ref.refresh(accountsProvider);
-        ref.refresh(transactionsProvider);
-        ref.refresh(loansProvider);
-        ref.refresh(recurringTransactionsProvider);
+        // Success
+        ref.invalidate(accountsProvider);
+        ref.invalidate(transactionsProvider);
+        ref.invalidate(loansProvider);
+        ref.invalidate(recurringTransactionsProvider);
 
         String msg = 'Imported: ';
         List<String> parts = [];
@@ -929,6 +932,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     // 1. Safety Dialog
+    if (!mounted) return;
     final decision = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -989,10 +993,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (mounted) {
         // Force refresh providers
-        ref.refresh(accountsProvider);
-        ref.refresh(transactionsProvider);
-        ref.refresh(loansProvider);
-        ref.refresh(recurringTransactionsProvider);
+        ref.invalidate(accountsProvider);
+        ref.invalidate(transactionsProvider);
+        ref.invalidate(loansProvider);
+        ref.invalidate(recurringTransactionsProvider);
 
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Restore Complete! Reloading...")));
@@ -1019,6 +1023,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     // 1. Verify Intent
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1095,6 +1100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     // 1. Verify Intent
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1292,7 +1298,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
               await ref.read(storageServiceProvider).saveProfile(newProfile);
               ref.invalidate(profilesProvider);
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text("CREATE"),
           ),
@@ -1394,10 +1400,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await storage.setAppPin(controller.text);
                 await storage.setAppLockEnabled(true);
                 setState(() => _isAppLockEnabled = true);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("PIN Set Successfully")),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("PIN Set Successfully")),
+                  );
+                }
               }
             },
             child: const Text("SAVE"),
@@ -1430,7 +1438,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     .read(activeProfileIdProvider.notifier)
                     .setProfile('default');
               }
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text("DELETE", style: TextStyle(color: Colors.red)),
           ),
@@ -1629,12 +1637,13 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFF6C63FF).withOpacity(0.1)
+                                  ? const Color(0xFF6C63FF)
+                                      .withValues(alpha: 0.1)
                                   : Colors.transparent,
                               border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF6C63FF)
-                                      : Colors.grey.withOpacity(0.3)),
+                                      : Colors.grey.withValues(alpha: 0.3)),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: PureIcons.categoryIcon(code,

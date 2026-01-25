@@ -47,9 +47,8 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
                       tooltip: 'Restore',
                       onPressed: () async {
                         await storage.restoreTransaction(txn.id);
-                        final _ = ref.refresh(transactionsProvider);
-                        final __ = ref
-                            .refresh(accountsProvider); // Also refresh accounts
+                        ref.invalidate(transactionsProvider);
+                        ref.invalidate(accountsProvider);
                         setState(() {}); // Rebuild to remove item from list
                       },
                     ),

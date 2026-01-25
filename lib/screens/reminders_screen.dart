@@ -334,8 +334,9 @@ class RemindersScreen extends ConsumerWidget {
           statusIcon = Icons.warning;
         }
 
-        final nextBillDate =
-            DateTime(today.year, today.month + 1, acc.billingCycleDay!);
+        final nextBillDate = today.day >= acc.billingCycleDay!
+            ? DateTime(today.year, today.month + 1, acc.billingCycleDay!)
+            : DateTime(today.year, today.month, acc.billingCycleDay!);
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

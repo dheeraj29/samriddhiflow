@@ -75,7 +75,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                   height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: filled ? Colors.teal : Colors.grey.withOpacity(0.3),
+                    color: filled
+                        ? Colors.teal
+                        : Colors.grey.withValues(alpha: 0.3),
                   ),
                 );
               }),

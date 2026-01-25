@@ -288,7 +288,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6C63FF).withOpacity(0.3),
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -328,9 +328,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -369,7 +370,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -432,7 +433,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4)),
             ],
@@ -462,7 +463,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Container(
                       width: 1,
                       height: 40,
-                      color: Colors.grey.withOpacity(0.2)),
+                      color: Colors.grey.withValues(alpha: 0.2)),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -512,7 +513,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ? 0
                           : (expense / ref.watch(monthlyBudgetProvider))
                               .clamp(0, 1),
-                      backgroundColor: Colors.grey.withOpacity(0.1),
+                      backgroundColor: Colors.grey.withValues(alpha: 0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(
                           expense > ref.watch(monthlyBudgetProvider)
                               ? Colors.redAccent
@@ -621,7 +622,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           height: 60,
           width: 60,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -668,10 +669,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             return ListTile(
               leading: CircleAvatar(
                 backgroundColor: txn.type == TransactionType.income
-                    ? Colors.green.withOpacity(0.1)
+                    ? Colors.green.withValues(alpha: 0.1)
                     : txn.type == TransactionType.transfer
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.redAccent.withOpacity(0.1),
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : Colors.redAccent.withValues(alpha: 0.1),
                 child: txn.type == TransactionType.income
                     ? PureIcons.income(size: 18)
                     : txn.type == TransactionType.transfer
@@ -684,7 +685,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • $accName',
+                    '${txn.category} • ${DateFormat('MMM dd, yyyy').format(txn.date)} • $accName',
                     style: const TextStyle(fontSize: 12),
                   ),
                   if (isCapitalGain &&
@@ -776,10 +777,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(
-            Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.15),
+        color: Colors.amber.withValues(
+            alpha:
+                Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.withOpacity(0.5)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
