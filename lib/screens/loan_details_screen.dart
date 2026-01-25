@@ -618,7 +618,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
   void _showUpdateRateDialog(Loan currentLoan) {
     final rateController =
         TextEditingController(text: currentLoan.interestRate.toString());
-    bool updateTenure = false; // false = Adjust EMI, true = Adjust Tenure
+    bool updateTenure = false;
+    DateTime selectedDate = DateTime.now();
 
     showDialog(
       context: context,
@@ -660,12 +661,15 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
               const SizedBox(height: 16),
               InkWell(
                 onTap: () async {
-                  await showDatePicker(
+                  final d = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.now(),
+                    initialDate: selectedDate,
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
                   );
+                  if (d != null) {
+                    setState(() => selectedDate = d);
+                  }
                 },
                 child: InputDecorator(
                   decoration: InputDecoration(
@@ -673,9 +677,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     border: const OutlineInputBorder(),
                     prefixIcon: PureIcons.calendar(),
                   ),
-                  child: const Text(
-                    "Today (Applied Immediately)",
-                    style: TextStyle(fontSize: 16),
+                  child: Text(
+                    DateFormat('MMM dd, yyyy').format(selectedDate),
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ),
               ),
@@ -693,9 +697,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   final loanService = ref.read(loanServiceProvider);
                   var loan = currentLoan;
 
-                  final effectiveDate = DateTime.now();
+                  final effectiveDate = selectedDate;
 
-                  // 1. Calculate and lock-in interest at OLD rate until today
+                  // 1. Calculate and lock-in interest at OLD rate until effective date
                   final lastDate = loan.transactions.isNotEmpty
                       ? loan.transactions
                           .map((t) => t.date)
@@ -1085,6 +1089,59 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     initialCompact: _compactLedger,
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
+                ],
+              ),
+              trailing: PopupMenuButton<String>(
+                onSelected: (v) async {
+                  if (v == 'delete') {
+                    final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Entry?'),
+                              content: const Text(
+                                  'Deleting this will attempt to reverse the principal impact, but won\'t perfectly recalculate interest history.\n\nAre you sure?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel')),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Delete',
+                                        style: TextStyle(color: Colors.red))),
+                              ],
+                            ));
+
+                    if (confirm == true) {
+                      // Reverse Impact
+                      if (txn.type == LoanTransactionType.emi ||
+                          txn.type == LoanTransactionType.prepayment) {
+                        loan.remainingPrincipal += txn.principalComponent;
+                      } else if (txn.type == LoanTransactionType.topup) {
+                        loan.remainingPrincipal -= txn.amount;
+                        loan.totalPrincipal -= txn.amount;
+                      }
+
+                      // Remove
+                      loan.transactions.removeWhere((t) => t.id == txn.id);
+
+                      await ref.read(storageServiceProvider).saveLoan(loan);
+                      ref.invalidate(loansProvider);
+                      // Force rebuild
+                      setState(() {});
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Text('Delete'),
+                      ],
+                    ),
+                  )
                 ],
               ),
             );

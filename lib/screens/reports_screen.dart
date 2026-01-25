@@ -362,7 +362,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                                     TextOverflow.ellipsis)),
                                         const DropdownMenuItem<String?>(
                                             value: 'none',
-                                            child: Text('Manual',
+                                            child: Text('Manual (No Account)',
                                                 overflow:
                                                     TextOverflow.ellipsis)),
                                         ...accounts.map((a) =>

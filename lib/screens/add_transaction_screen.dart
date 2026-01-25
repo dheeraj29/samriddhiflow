@@ -445,22 +445,51 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     child: Text(f.name.toUpperCase()),
                                   ))
                               .toList(),
-                          onChanged: (v) => setState(() => _frequency = v!),
+                          onChanged: (v) {
+                            setState(() {
+                              _frequency = v!;
+                              if (_frequency == Frequency.daily ||
+                                  _frequency == Frequency.yearly) {
+                                _scheduleType = ScheduleType.fixedDate;
+                              } else if (_frequency == Frequency.weekly) {
+                                _scheduleType = ScheduleType.specificWeekday;
+                                if (_selectedWeekday == null) {
+                                  _selectedWeekday = _date.weekday;
+                                }
+                              } else if (_frequency == Frequency.monthly) {
+                                _scheduleType = ScheduleType.fixedDate;
+                              }
+                            });
+                          },
                         ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<ScheduleType>(
-                          initialValue: _scheduleType,
-                          decoration: const InputDecoration(
-                              labelText: 'Schedule Type',
-                              border: OutlineInputBorder()),
-                          items: ScheduleType.values
-                              .map((s) => DropdownMenuItem(
-                                    value: s,
-                                    child: Text(_getScheduleLabel(s)),
-                                  ))
-                              .toList(),
-                          onChanged: (v) => setState(() => _scheduleType = v!),
-                        ),
+                        if (_frequency == Frequency.monthly) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<ScheduleType>(
+                            initialValue: _scheduleType,
+                            decoration: const InputDecoration(
+                                labelText: 'Schedule Type',
+                                border: OutlineInputBorder()),
+                            items: ScheduleType.values
+                                .where((s) {
+                                  // Restrict Monthly Options
+                                  return [
+                                    ScheduleType.fixedDate,
+                                    ScheduleType.everyWeekend,
+                                    ScheduleType.lastWeekend,
+                                    ScheduleType.lastDayOfMonth,
+                                    ScheduleType.lastWorkingDay,
+                                    ScheduleType.specificWeekday
+                                  ].contains(s);
+                                })
+                                .map((s) => DropdownMenuItem(
+                                      value: s,
+                                      child: Text(_getScheduleLabel(s)),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _scheduleType = v!),
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         SwitchListTile(
                           title: const Text('Adjust for Holidays'),

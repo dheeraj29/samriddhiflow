@@ -321,38 +321,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                 ),
-                if (totalLoanLiability > 0) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        PureIcons.loan(color: Colors.orange),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text('Total Loan Liability',
-                              style: TextStyle(fontWeight: FontWeight.w500)),
-                        ),
-                        SmartCurrencyText(
-                          value: totalLoanLiability,
-                          locale: currencyLocale,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.orange),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 12),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          PureIcons.loan(color: Colors.orange),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text('Total Loan Liability',
+                                style: TextStyle(fontWeight: FontWeight.w500)),
+                          ),
+                          SmartCurrencyText(
+                            value: totalLoanLiability,
+                            locale: currencyLocale,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                      if (loans.isNotEmpty && totalLoanLiability > 0) ...[
+                        const SizedBox(height: 8),
+                        Builder(builder: (context) {
+                          // Calculate max end date
+                          final maxEndDate = loans
+                              .map((l) => l.startDate
+                                  .add(Duration(days: l.tenureMonths * 30)))
+                              .reduce((a, b) => a.isAfter(b) ? a : b);
+                          final daysLeft =
+                              maxEndDate.difference(DateTime.now()).inDays;
+
+                          if (daysLeft <= 0) return const SizedBox();
+
+                          return Row(
+                            children: [
+                              const SizedBox(
+                                  width: 36), // Indent to align with text
+                              Text(
+                                'Debt Free in ~${(daysLeft / 30).toStringAsFixed(1)} months ($daysLeft days)',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.withValues(alpha: 0.8),
+                                    fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          );
+                        })
+                      ]
+                    ],
+                  ),
+                ),
               ],
             );
           },
@@ -409,10 +440,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         final categories = ref.watch(categoriesProvider);
         final catMap = <String, Category>{};
         for (var c in categories) {
-          catMap[c.name] = c; // Last one wins, preventing crash on duplicates
+          // Prevent crash on duplicates
+          catMap[c.name] = c;
         }
 
         for (var t in transactions) {
+          // EXCLUDE Manual Loan Transactions from Expenses Stats
+          if (t.accountId == null && t.loanId != null) continue;
+
           if (t.date.year == now.year && t.date.month == now.month) {
             if (t.type == TransactionType.income) income += t.amount;
             if (t.type == TransactionType.expense) {
