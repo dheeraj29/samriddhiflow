@@ -460,7 +460,7 @@ class ExcelService {
                 balance: balance,
                 currency: currIdx != -1 && currIdx < row.length
                     ? _getVal(row[currIdx])
-                    : 'USD',
+                    : _storage.getCurrencyLocale(),
                 creditLimit: limitIdx != -1 && limitIdx < row.length
                     ? double.tryParse(_getVal(row[limitIdx]))
                     : null,

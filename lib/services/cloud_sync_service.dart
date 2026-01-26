@@ -167,7 +167,7 @@ class CloudSyncService {
         billingCycleDay: m['billingCycleDay'],
         paymentDueDateDay: m['paymentDueDateDay'],
         creditLimit: (m['creditLimit'] as num?)?.toDouble(),
-        currency: m['currency'] ?? 'USD',
+        currency: m['currency'] ?? _storageService.getCurrencyLocale(),
       );
 
   Map<String, dynamic> _transactionToMap(Transaction t) => {
