@@ -94,6 +94,14 @@ void main() {
     // Initial value 'MONTHLY' (Frequency labels are uppercase in AddTransactionScreen)
     expect(find.text('MONTHLY'), findsOneWidget);
 
+    // Ensure visible before tap
+    await tester.scrollUntilVisible(
+      find.text('MONTHLY'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     // Tap Frequency Dropdown
     await tester.tap(find.text('MONTHLY').last);
     await tester.pumpAndSettle();
