@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../utils/currency_utils.dart'; // Keep this for CurrencyUtils
-import '../providers.dart'; // Keep this for currencyProvider
+import '../utils/currency_utils.dart';
+import '../providers.dart';
 import '../models/account.dart';
 import '../widgets/account_card.dart';
-import '../screens/transactions_screen.dart'; // Added for navigation
+import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../models/transaction.dart';
 import '../widgets/pure_icons.dart';
@@ -28,21 +28,11 @@ class AccountsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
 
-    // Trigger Rollover check once (fire and forget, or awaited in provider?)
-    // Best to do it in provider creation, but here we can just do it.
-    // Or better, update accountsProvider to do it.
-    // Let's do it in a useEffect-like way or FutureBuilder if simpler.
-    // Actually, accountsProvider is a Stream/Provider.
-    // Let's rely on init. But Init is main.
-    // Let's call it here.
     ref.listen(accountsProvider, (prev, next) {
       if (next.value != null) {
-        ref.read(storageServiceProvider).checkCreditCardRollovers().then((_) {
-          // If rollover happened, we might need to refresh?
-          // storageService updates Hive directly.
-          // accountsProvider watches Hive. So it should auto-update.
-        });
+        ref.read(storageServiceProvider).checkCreditCardRollovers();
       }
     });
 
@@ -84,7 +74,6 @@ class AccountsScreen extends ConsumerWidget {
             );
           }
 
-          // Credit Card Summary Logic
           final creditCards =
               accounts.where((a) => a.type == AccountType.creditCard).toList();
           Widget? summaryWidget;
@@ -92,13 +81,35 @@ class AccountsScreen extends ConsumerWidget {
           if (creditCards.isNotEmpty) {
             double totalLimit = 0;
             double totalUsage = 0;
+            final allTxns = transactionsAsync.value ?? [];
+            final now = DateTime.now();
 
             for (var card in creditCards) {
               totalLimit += card.creditLimit ?? 0;
-              // If balance is positive, it represents debt/usage.
-              if (card.balance > 0) {
-                totalUsage += card.balance;
+
+              double billed = card.balance;
+              double unbilled = 0;
+
+              if (card.billingCycleDay != null) {
+                final cycleStart =
+                    BillingHelper.getCycleStart(now, card.billingCycleDay!);
+                final relevantTxns = allTxns.where((t) =>
+                    !t.isDeleted &&
+                    t.accountId == card.id &&
+                    DateTime(t.date.year, t.date.month, t.date.day)
+                        .isAfter(cycleStart));
+
+                for (var t in relevantTxns) {
+                  if (t.type == TransactionType.expense) unbilled += t.amount;
+                  if (t.type == TransactionType.income) unbilled -= t.amount;
+                  if (t.type == TransactionType.transfer &&
+                      t.accountId == card.id) {
+                    unbilled += t.amount;
+                  }
+                }
               }
+
+              totalUsage += (billed + unbilled);
             }
 
             final utilization =
@@ -219,7 +230,6 @@ class AccountsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Progress Bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
@@ -266,23 +276,6 @@ class AccountsScreen extends ConsumerWidget {
                     if (index == accounts.length) {
                       return _buildAddCard(context, ref);
                     }
-                    // Continue with existing item builder...
-                    // We need to access the rest of the method, but replace_file does distinct chunks.
-                    // The original code returned GridView directly.
-                    // I am replacing the START of the `data:` block.
-                    // I need to ensure I don't break the closure.
-
-                    // Original code:
-                    // return GridView.builder(
-                    //   padding: ...
-
-                    // New code:
-                    // return Column(children: [..., Expanded(child: GridView.builder(...))]);
-
-                    // The `itemBuilder` Logic follows.
-
-                    // I'll execute the replacement carefully.
-                    // The TargetContent should match exactly lines 60-69 of original.
                     return _buildAccountItem(context, ref, accounts[index]);
                   },
                 ),
@@ -408,10 +401,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   String _name = '';
   AccountType _type = AccountType.savings;
   double _initialBalance = 0;
-
   String _currency = 'en_US';
-
-  // CC fields
   double? _limit;
   int? _billingDay;
   int? _dueDay;
@@ -464,7 +454,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               onSaved: (v) => _name = v!.trim(),
             ),
             const SizedBox(height: 16),
-            // Disable Type change for existing accounts to avoid logic break
             IgnorePointer(
               ignoring: widget.account != null,
               child: Opacity(
@@ -506,7 +495,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               ),
               const SizedBox(height: 16),
             ],
-
             const SizedBox(height: 16),
             TextFormField(
               initialValue: _initialBalance.toString(),
@@ -569,8 +557,8 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                           helperText: 'Days to pay'),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: (v) => setState(() => _dueDay = int.tryParse(
-                          v)), // Storing grace period in dueDay field
+                      onChanged: (v) =>
+                          setState(() => _dueDay = int.tryParse(v)),
                       onSaved: (v) => _dueDay = int.tryParse(v ?? ''),
                     ),
                   ),
@@ -597,7 +585,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                 )
               ]
             ],
-
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _save,
@@ -619,23 +606,17 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   void _save() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-
       final storage = ref.read(storageServiceProvider);
-
       if (widget.account != null) {
-        // Edit logic
         final acc = widget.account!;
         acc.name = _name;
-        // acc.type = _type; // Cannot change type easily without breaking history
-        acc.balance = _initialBalance; // Manual correction
+        acc.balance = _initialBalance;
         acc.creditLimit = _limit;
         acc.billingCycleDay = _billingDay;
         acc.paymentDueDateDay = _dueDay;
         acc.currency = _currency;
-
         await storage.saveAccount(acc);
       } else {
-        // Create logic
         final profileId = ref.read(activeProfileIdProvider);
         final newAccount = Account.create(
           name: _name,
@@ -649,9 +630,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         );
         await storage.saveAccount(newAccount);
       }
-
-      final _ = ref.refresh(accountsProvider); // Refresh list
-
+      ref.refresh(accountsProvider);
       if (mounted) Navigator.pop(context);
     }
   }

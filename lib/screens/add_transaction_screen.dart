@@ -99,13 +99,34 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return true; // Transfer or other
     }).toList();
 
-    if (_category == null && filteredCategories.isNotEmpty) {
-      _category = filteredCategories.first.name;
+    // --- SMART SORTING LOGIC ---
+    final allTxns = transactionsAsync.asData?.value ?? [];
+    final cutoff = DateTime.now().subtract(const Duration(days: 360));
+    final matchingTxns =
+        allTxns.where((t) => !t.isDeleted && t.date.isAfter(cutoff));
+
+    // 1. Sort Categories by Frequency
+    final catFreq = <String, int>{};
+    for (var t in matchingTxns) {
+      if (t.type == _type) {
+        catFreq[t.category] = (catFreq[t.category] ?? 0) + 1;
+      }
+    }
+
+    final sortedCategories = filteredCategories.toList()
+      ..sort((a, b) {
+        final fA = catFreq[a.name] ?? 0;
+        final fB = catFreq[b.name] ?? 0;
+        if (fA != fB) return fB.compareTo(fA); // Descending count
+        return a.name.compareTo(b.name); // Ascending Alphabetical
+      });
+
+    if (_category == null && sortedCategories.isNotEmpty) {
+      _category = sortedCategories.first.name;
     } else if (_category != null &&
-        !filteredCategories.any((c) => c.name == _category)) {
-      // If type changed and current category is no longer valid, reset to first valid
+        !sortedCategories.any((c) => c.name == _category)) {
       _category =
-          filteredCategories.isNotEmpty ? filteredCategories.first.name : null;
+          sortedCategories.isNotEmpty ? sortedCategories.first.name : null;
     }
 
     return Scaffold(
@@ -115,14 +136,30 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               : 'Edit Transaction')),
       body: accountsAsync.when(
         data: (accounts) {
-          // Allow Proceeding even without accounts
-          // No longer forcing a selection. null means 'No Account'
+          // 2. Sort Accounts by Frequency
+          final accFreq = <String, int>{};
+          for (var t in matchingTxns) {
+            if (t.accountId != null) {
+              accFreq[t.accountId!] = (accFreq[t.accountId!] ?? 0) + 1;
+            }
+            if (t.toAccountId != null) {
+              accFreq[t.toAccountId!] = (accFreq[t.toAccountId!] ?? 0) + 1;
+            }
+          }
+
+          final sortedAccounts = accounts.toList()
+            ..sort((a, b) {
+              final fA = accFreq[a.id] ?? 0;
+              final fB = accFreq[b.id] ?? 0;
+              if (fA != fB) return fB.compareTo(fA); // Descending count
+              return a.name.compareTo(b.name); // Ascending Alphabetical
+            });
+
           return Form(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Type Selector
                 SegmentedButton<TransactionType>(
                   segments: [
                     ButtonSegment(
@@ -146,14 +183,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-
-                // Category (If not transfer) - MOVED UP
                 if (_type != TransactionType.transfer) ...[
                   DropdownButtonFormField<String?>(
+                    key: const Key('category_dropdown'),
                     initialValue: _category,
                     decoration: const InputDecoration(
                         labelText: 'Category', border: OutlineInputBorder()),
-                    items: filteredCategories
+                    items: sortedCategories
                         .map((c) => DropdownMenuItem<String?>(
                             value: c.name,
                             child: Row(
@@ -189,10 +225,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     onChanged: (v) => setState(() => _category = v!),
                   ),
                   const SizedBox(height: 16),
-                  if (filteredCategories.any((c) =>
+                  if (sortedCategories.any((c) =>
                       c.name == _category &&
                       c.tag == CategoryTag.capitalGain)) ...[
-                    // Capital Gain Fields
                     TextFormField(
                       initialValue: _gainAmount?.toString(),
                       decoration: InputDecoration(
@@ -242,8 +277,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     const SizedBox(height: 16),
                   ],
                 ],
-
-                // Title (Description) - MOVED UP
                 RawAutocomplete<String>(
                   textEditingController: _titleController,
                   focusNode: _titleFocusNode,
@@ -252,12 +285,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     final filteredTxns = txns.where((t) =>
                         _type == TransactionType.transfer ||
                         t.category == _category);
-
                     if (textEditingValue.text.isEmpty) {
-                      return filteredTxns.map((t) => t.title).toSet().take(
-                          5); // Show top 5 recent titles for this category
+                      return filteredTxns.map((t) => t.title).toSet().take(5);
                     }
-
                     final suggestions = filteredTxns
                         .map((t) => t.title)
                         .toSet()
@@ -305,9 +335,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Account
                 DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: _selectedAccountId,
                   decoration: InputDecoration(
                     labelText: _type == TransactionType.transfer
@@ -318,7 +347,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   items: <DropdownMenuItem<String?>>[
                     const DropdownMenuItem<String?>(
                         value: null, child: Text('No Account (Manual)')),
-                    ...accounts.map((a) => DropdownMenuItem<String?>(
+                    ...sortedAccounts.map((a) => DropdownMenuItem<String?>(
                           value: a.id,
                           child:
                               Text('${a.name} (${_formatAccountBalance(a)})'),
@@ -336,6 +365,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 if (_type == TransactionType.transfer) ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String?>(
+                    isExpanded: true,
                     initialValue: _toAccountId,
                     decoration: const InputDecoration(
                       labelText: 'To Account',
@@ -345,7 +375,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       if (_toAccountId == null)
                         const DropdownMenuItem<String?>(
                             value: null, child: Text('Select Recipient')),
-                      ...accounts
+                      ...sortedAccounts
                           .where((a) => a.id != _selectedAccountId)
                           .map((a) => DropdownMenuItem<String?>(
                                 value: a.id,
@@ -358,8 +388,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-
-                // Amount - MOVED DOWN
                 TextFormField(
                   controller: _amountController,
                   decoration: InputDecoration(
@@ -383,12 +411,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       CurrencyUtils.roundTo2Decimals(double.parse(v!)),
                 ),
                 const SizedBox(height: 16),
-
-                // Gain Amount (Sub-field)
-
-                const SizedBox(height: 16),
-
-                // Date & Time
                 Row(
                   children: [
                     Expanded(
@@ -418,7 +440,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                   ],
                 ),
-
                 if (widget.transactionToEdit == null) ...[
                   const Divider(),
                   SwitchListTile(
@@ -435,6 +456,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<Frequency>(
+                          key: const Key('frequency_dropdown'),
+                          isExpanded: true,
                           initialValue: _frequency,
                           decoration: const InputDecoration(
                               labelText: 'Frequency',
@@ -463,13 +486,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         if (_frequency == Frequency.monthly) ...[
                           const SizedBox(height: 16),
                           DropdownButtonFormField<ScheduleType>(
+                            key: const Key('schedule_type_dropdown'),
+                            isExpanded: true,
                             initialValue: _scheduleType,
                             decoration: const InputDecoration(
                                 labelText: 'Schedule Type',
                                 border: OutlineInputBorder()),
                             items: ScheduleType.values
                                 .where((s) {
-                                  // Restrict Monthly Options
                                   return [
                                     ScheduleType.fixedDate,
                                     ScheduleType.everyWeekend,
@@ -526,7 +550,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _save,
@@ -554,8 +577,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void _save() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-
-      // Validation: Prevent Transfer to Self
       if (_type == TransactionType.transfer &&
           _selectedAccountId != null &&
           _selectedAccountId == _toAccountId) {
@@ -567,14 +588,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
         return;
       }
-
       final dateTime = DateTime(
           _date.year, _date.month, _date.day, _time.hour, _time.minute);
-
-      // Save logic
       final storage = ref.read(storageServiceProvider);
 
-      // Bulk Update Check (Only in Edit Mode and if Category Changed)
       if (widget.transactionToEdit != null &&
           _category != null &&
           widget.transactionToEdit!.category != _category &&
@@ -582,7 +599,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               _title.trim().toLowerCase()) {
         final oldCount = await storage.getSimilarTransactionCount(_title,
             widget.transactionToEdit!.category, widget.transactionToEdit!.id);
-
         if (oldCount > 0) {
           if (!mounted) return;
           final shouldUpdate = await showDialog<bool>(
@@ -603,16 +619,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ],
             ),
           );
-
           if (shouldUpdate == true) {
             await storage.bulkUpdateCategory(
                 _title, widget.transactionToEdit!.category, _category!);
-            // Note: Current transaction is updated by saveTransaction below
           }
         }
       }
 
-      // Create/Update Transaction Record
       final selectedCat = storage.getCategories().firstWhere(
           (c) => c.name == _category,
           orElse: () => Category(id: '', name: '', usage: CategoryUsage.both));
@@ -636,15 +649,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       );
 
       await storage.saveTransaction(txn);
-
       if (widget.recurringId != null) {
         await storage.advanceRecurringTransactionDate(widget.recurringId!);
         final _ = ref.refresh(recurringTransactionsProvider);
       }
-
       ref.read(txnsSinceBackupProvider.notifier).refresh();
-
-      // If recurring, create the template
       if (_isRecurring) {
         final recurring = RecurringTransaction.create(
           title: _title,
@@ -660,11 +669,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
         await storage.saveRecurringTransaction(recurring);
       }
-
       ref.invalidate(transactionsProvider);
       ref.invalidate(accountsProvider);
       ref.invalidate(recurringTransactionsProvider);
-
       if (mounted) Navigator.pop(context);
     }
   }

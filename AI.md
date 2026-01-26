@@ -95,5 +95,15 @@ graph TD
 Run: `flutter build web --no-web-resources-cdn --release`
 *   **Note:** This command ensures that web resources (like CanvasKit and fonts) are bundled locally instead of loaded from a CDN, making the app fully offline-capable.
 
-## 6. Future Roadmap
+## 6. Testing
+Execute the comprehensive test suite (Unit, Widget, and Integration tests) using:
+```bash
+flutter test
+```
+To generate coverage reports, use:
+```bash
+flutter test --coverage
+```
+
+## 7. Future Roadmap
 *   **Tax Engine:** Tax calculation and assessment features (Indian Regime).

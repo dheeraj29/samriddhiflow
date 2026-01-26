@@ -3,8 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import '../utils/connectivity_platform.dart';
 import 'firebase_web_safe.dart';
-import 'package:web/web.dart' as web;
+
 import '../utils/debug_logger.dart';
 import '../providers.dart';
 import '../firebase_options.dart' as prod;
@@ -95,7 +96,8 @@ class AuthService {
         // This survives the reload but is tab-specific and clears on tab close.
         // It prevents the "Ghost Session" issue if a user cancels auth.
         try {
-          web.window.sessionStorage.setItem('auth_redirect_pending', 'true');
+          ConnectivityPlatform.setSessionStorageItem(
+              'auth_redirect_pending', 'true');
         } catch (_) {
           // Fail gracefully if web storage is somehow blocked
         }
@@ -198,7 +200,7 @@ class AuthService {
       // Small delay to allow JS SDK to settle after reload
       await Future.delayed(const Duration(milliseconds: 500));
 
-      final currentUri = Uri.parse(web.window.location.href);
+      final currentUri = Uri.parse(ConnectivityPlatform.getCurrentUrl());
       DebugLogger().log(
           "AuthService: Checking Redirect at ${currentUri.host}${currentUri.path}");
 
@@ -232,7 +234,8 @@ class AuthService {
         // Always clear the pending flag after checking result
         try {
           DebugLogger().log("AuthService: Clearing pending redirect flag.");
-          web.window.sessionStorage.removeItem('auth_redirect_pending');
+          ConnectivityPlatform.removeSessionStorageItem(
+              'auth_redirect_pending');
         } catch (e) {
           DebugLogger().log("AuthService: Failed to clear session flag: $e");
         }

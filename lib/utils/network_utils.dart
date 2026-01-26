@@ -1,7 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
-import 'dart:js_interop';
+
+import 'connectivity_platform.dart';
 import 'debug_logger.dart';
 
 class NetworkUtils {
@@ -13,7 +13,7 @@ class NetworkUtils {
     try {
       // 0. Web Optimization: Trust navigator.onLine (Synchronous & Reliable)
       if (kIsWeb) {
-        if (!web.window.navigator.onLine) {
+        if (!ConnectivityPlatform.checkWebOnline()) {
           DebugLogger()
               .log("NetworkUtils: navigator.onLine is FALSE (Offline)");
           return true;
@@ -46,7 +46,7 @@ class NetworkUtils {
               "NetworkUtils: Connectivity plugin missing. Using Web Fallback.");
           try {
             // true if NOT onLine
-            final webOffline = !web.window.navigator.onLine;
+            final webOffline = !ConnectivityPlatform.checkWebOnline();
             DebugLogger().log(
                 "NetworkUtils: Web Navigator reports ${webOffline ? 'OFFLINE' : 'ONLINE'}");
             return webOffline;
@@ -68,18 +68,7 @@ class NetworkUtils {
   /// This helps detect DNS resolution delays or captive portals on iOS.
   static Future<bool> hasActualInternet() async {
     if (kIsWeb) {
-      if (!web.window.navigator.onLine) return false;
-      try {
-        final response = await web.window
-            .fetch(
-                'https://www.google.com/generate_204?pb=${DateTime.now().millisecondsSinceEpoch}'
-                    .toJS,
-                web.RequestInit(method: 'HEAD', mode: 'no-cors'))
-            .toDart;
-        return response.type != 'error';
-      } catch (_) {
-        return false;
-      }
+      return ConnectivityPlatform.checkActualWebReachability();
     }
     // For non-web, standard connectivity is usually enough or we'd use a package.
     return true;

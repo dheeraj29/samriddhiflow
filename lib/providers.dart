@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:web/web.dart' as web;
+
 import 'services/storage_service.dart';
 import 'utils/network_utils.dart';
 import 'utils/debug_logger.dart';
@@ -22,7 +22,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'firebase_options.dart' as prod;
 import 'firebase_options_debug.dart' as dev;
 
-import 'dart:js_interop';
+import 'utils/connectivity_platform.dart';
 
 final isOfflineProvider =
     NotifierProvider<IsOfflineNotifier, bool>(IsOfflineNotifier.new);
@@ -32,23 +32,10 @@ class IsOfflineNotifier extends Notifier<bool> {
   bool build() {
     bool initial = false;
     if (kIsWeb) {
-      initial = !web.window.navigator.onLine;
+      initial = ConnectivityPlatform.getInitialWebStatus();
 
       // Web Native Listeners (Fastest response)
-      final onlineHandler = (web.Event _) {
-        state = false;
-      }.toJS;
-      final offlineHandler = (web.Event _) {
-        state = true;
-      }.toJS;
-
-      web.window.addEventListener('online', onlineHandler);
-      web.window.addEventListener('offline', offlineHandler);
-
-      ref.onDispose(() {
-        web.window.removeEventListener('online', onlineHandler);
-        web.window.removeEventListener('offline', offlineHandler);
-      });
+      ConnectivityPlatform.setupWebListeners(ref, (val) => state = val);
     }
 
     // Continuous Monitoring via Plugin (Platform agnostic fallback)
@@ -61,7 +48,7 @@ class IsOfflineNotifier extends Notifier<bool> {
           r == ConnectivityResult.ethernet);
 
       if (kIsWeb) {
-        reportOffline = reportOffline || !web.window.navigator.onLine;
+        reportOffline = reportOffline || !ConnectivityPlatform.checkWebOnline();
       }
       state = reportOffline;
     });

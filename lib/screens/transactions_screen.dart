@@ -9,6 +9,7 @@ import '../widgets/smart_currency_text.dart';
 import '../widgets/transaction_filter.dart';
 import 'add_transaction_screen.dart';
 import '../widgets/pure_icons.dart';
+import '../utils/transaction_filter_utils.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
   final String? initialCategory;
@@ -70,60 +71,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     // Since build is called, we can compute it or use the data from AsyncValue
                     transactionsAsync.whenData((transactions) {
                       accountsAsync.whenData((accounts) {
-                        var filtered = transactions.toList();
-                        if (_typeFilter != null) {
-                          filtered = filtered
-                              .where((t) => t.type == _typeFilter)
-                              .toList();
-                        }
-                        if (_category != null) {
-                          filtered = filtered
-                              .where((t) => t.category == _category)
-                              .toList();
-                        }
-                        if (_selectedAccountId != null) {
-                          if (_selectedAccountId == 'none') {
-                            filtered = filtered
-                                .where((t) => t.accountId == null)
-                                .toList();
-                          } else {
-                            filtered = filtered
-                                .where((t) => t.accountId == _selectedAccountId)
-                                .toList();
-                          }
-                        }
-
-                        final now = DateTime.now();
-                        if (_range == TimeRange.last30Days) {
-                          final start = now.subtract(const Duration(days: 30));
-                          filtered = filtered
-                              .where((t) => t.date.isAfter(start))
-                              .toList();
-                        } else if (_range == TimeRange.thisMonth) {
-                          final start = DateTime(now.year, now.month, 1);
-                          filtered = filtered
-                              .where((t) =>
-                                  t.date.isAfter(start) ||
-                                  t.date.isAtSameMomentAs(start))
-                              .toList();
-                        } else if (_range == TimeRange.lastMonth) {
-                          final start = DateTime(now.year, now.month - 1, 1);
-                          final end = DateTime(now.year, now.month, 0);
-                          filtered = filtered
-                              .where((t) =>
-                                  t.date.isAfter(start) && t.date.isBefore(end))
-                              .toList();
-                        } else if (_range == TimeRange.custom &&
-                            _customRange != null) {
-                          final start = _customRange!.start;
-                          final end = _customRange!.end
-                              .add(const Duration(days: 1))
-                              .subtract(const Duration(milliseconds: 1));
-                          filtered = filtered
-                              .where((t) =>
-                                  t.date.isAfter(start) && t.date.isBefore(end))
-                              .toList();
-                        }
+                        final filtered = TransactionFilterUtils.filter(
+                          transactions: transactions,
+                          type: _typeFilter,
+                          category: _category,
+                          accountId: _selectedAccountId,
+                          range: _range,
+                          customRange: _customRange,
+                        );
 
                         final filteredIds = filtered.map((t) => t.id).toSet();
                         setState(() {
@@ -188,54 +143,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               }
 
               // Filter Logic
-              var filtered = transactions.toList();
-              if (_typeFilter != null) {
-                filtered =
-                    filtered.where((t) => t.type == _typeFilter).toList();
-              }
-              if (_category != null) {
-                filtered =
-                    filtered.where((t) => t.category == _category).toList();
-              }
-              if (_selectedAccountId != null) {
-                if (_selectedAccountId == 'none') {
-                  filtered =
-                      filtered.where((t) => t.accountId == null).toList();
-                } else {
-                  filtered = filtered
-                      .where((t) =>
-                          t.accountId == _selectedAccountId ||
-                          t.toAccountId == _selectedAccountId)
-                      .toList();
-                }
-              }
-
-              final now = DateTime.now();
-              if (_range == TimeRange.last30Days) {
-                final start = now.subtract(const Duration(days: 30));
-                filtered =
-                    filtered.where((t) => t.date.isAfter(start)).toList();
-              } else if (_range == TimeRange.thisMonth) {
-                final start = DateTime(now.year, now.month, 1);
-                filtered = filtered
-                    .where((t) =>
-                        t.date.isAfter(start) || t.date.isAtSameMomentAs(start))
-                    .toList();
-              } else if (_range == TimeRange.lastMonth) {
-                final start = DateTime(now.year, now.month - 1, 1);
-                final end = DateTime(now.year, now.month, 0);
-                filtered = filtered
-                    .where((t) => t.date.isAfter(start) && t.date.isBefore(end))
-                    .toList();
-              } else if (_range == TimeRange.custom && _customRange != null) {
-                final start = _customRange!.start;
-                final end = _customRange!.end
-                    .add(const Duration(days: 1))
-                    .subtract(const Duration(milliseconds: 1));
-                filtered = filtered
-                    .where((t) => t.date.isAfter(start) && t.date.isBefore(end))
-                    .toList();
-              }
+              var filtered = TransactionFilterUtils.filter(
+                transactions: transactions,
+                type: _typeFilter,
+                category: _category,
+                accountId: _selectedAccountId,
+                range: _range,
+                customRange: _customRange,
+              );
 
               filtered.sort((a, b) => b.date.compareTo(a.date));
 

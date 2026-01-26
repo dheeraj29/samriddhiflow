@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
-import '../models/category.dart';
 import '../models/transaction.dart';
 import '../models/loan.dart';
 import '../widgets/transaction_filter.dart';
@@ -11,6 +10,8 @@ import '../widgets/smart_currency_text.dart';
 
 import 'transactions_screen.dart';
 import '../theme/app_theme.dart';
+import '../utils/transaction_filter_utils.dart';
+import '../utils/report_utils.dart';
 
 enum ReportType { spending, income, loan }
 
@@ -32,6 +33,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   DateTime? _selectedMonth; // For month mode (YYYY, MM, 1)
   int? _selectedYear; // For year mode (YYYY)
   LoanType? _selectedLoanType;
+  Set<String> _excludedCategories = {};
 
   @override
   Widget build(BuildContext context) {
@@ -77,133 +79,52 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   }
 
                   // 2. Filter Transactions
-                  var filtered =
-                      transactions.where((t) => !t.isDeleted).toList();
+                  var filtered = TransactionFilterUtils.filter(
+                    transactions: transactions,
+                    accountId: _selectedAccountId,
+                    loanId: _type == ReportType.loan ? _selectedLoanId : null,
+                    periodMode: _timeFilterMode,
+                    selectedMonth: _selectedMonth,
+                    selectedYear: _selectedYear,
+                    excludedCategories: _excludedCategories.toList(),
+                  );
 
-                  // Account Filter
-                  if (_selectedAccountId != null) {
-                    if (_selectedAccountId == 'none') {
-                      filtered =
-                          filtered.where((t) => t.accountId == null).toList();
-                    } else {
-                      filtered = filtered
-                          .where((t) => t.accountId == _selectedAccountId)
-                          .toList();
-                    }
-                  }
-
-                  // Loan Specific Filter Logic
-                  if (_type == ReportType.loan) {
-                    if (_selectedLoanId != null) {
-                      filtered = filtered
-                          .where((t) => t.loanId == _selectedLoanId)
-                          .toList();
-                    }
-                  }
-
-                  // Time Filter
-                  final now = DateTime.now();
-                  if (_timeFilterMode == '30') {
-                    final start = now.subtract(const Duration(days: 30));
-                    filtered =
-                        filtered.where((t) => t.date.isAfter(start)).toList();
-                  } else if (_timeFilterMode == '90') {
-                    final start = now.subtract(const Duration(days: 90));
-                    filtered =
-                        filtered.where((t) => t.date.isAfter(start)).toList();
-                  } else if (_timeFilterMode == '365') {
-                    final start = now.subtract(const Duration(days: 365));
-                    filtered =
-                        filtered.where((t) => t.date.isAfter(start)).toList();
-                  } else if (_timeFilterMode == 'month' &&
-                      _selectedMonth != null) {
-                    filtered = filtered
-                        .where((t) =>
-                            t.date.year == _selectedMonth!.year &&
-                            t.date.month == _selectedMonth!.month)
-                        .toList();
-                  } else if (_timeFilterMode == 'year' &&
-                      _selectedYear != null) {
-                    filtered = filtered
-                        .where((t) => t.date.year == _selectedYear)
-                        .toList();
-                  }
                   // 3. Aggregate Data
                   Map<String, double> data = {};
-                  double total = 0;
-
                   if (_type == ReportType.spending) {
-                    final expenses = filtered
-                        .where((t) => t.type == TransactionType.expense)
-                        .toList();
-                    for (var t in expenses) {
-                      // Exclude manual loan transactions
-                      if (t.accountId == null && t.loanId != null) continue;
-                      data[t.category] = (data[t.category] ?? 0) + t.amount;
-                    }
+                    data = ReportUtils.aggregateByCategory(
+                        transactions: filtered, type: TransactionType.expense);
                   } else if (_type == ReportType.income) {
-                    final income = filtered
-                        .where((t) => t.type == TransactionType.income)
-                        .toList();
-                    for (var t in income) {
-                      // Exclude manual loan transactions
-                      if (t.accountId == null && t.loanId != null) continue;
-                      data[t.category] = (data[t.category] ?? 0) + t.amount;
-                    }
+                    data = ReportUtils.aggregateByCategory(
+                        transactions: filtered, type: TransactionType.income);
                   } else if (_type == ReportType.loan) {
-                    final loanTransactions = filtered
-                        .where((t) =>
-                            t.loanId != null &&
-                            (t.category == 'EMI' ||
-                                t.category == 'Prepayment' ||
-                                t.category == 'Loan Payment'))
-                        .toList();
-                    for (var t in loanTransactions) {
-                      data[t.title] = (data[t.title] ?? 0) + t.amount;
-                    }
+                    data = ReportUtils.aggregateLoanPayments(
+                        transactions: filtered);
                   }
 
                   // Capital Gains Aggregation
                   final categories = ref.watch(categoriesProvider);
-                  final catMap = <String, Category>{};
-                  for (var c in categories) {
-                    catMap[c.name] = c;
-                  }
-                  double totalGains = 0;
-                  Map<String, double> gainsByCategory = {};
+                  final gainsByCategory = ReportUtils.aggregateCapitalGains(
+                    transactions: filtered,
+                    categories: categories,
+                    reportType: _type == ReportType.spending
+                        ? TransactionType.expense
+                        : TransactionType.income,
+                  );
+                  final double totalGains =
+                      gainsByCategory.values.fold(0, (a, b) => a + b);
+                  final gainTxns = ReportUtils.getCapitalGainTransactions(
+                    transactions: filtered,
+                    categories: categories,
+                    reportType: _type == ReportType.spending
+                        ? TransactionType.expense
+                        : TransactionType.income,
+                  );
 
-                  // Filter gains based on report type
-                  final gainTxns = filtered.where((t) {
-                    final catObj = catMap[t.category];
-
-                    if (catObj?.tag != CategoryTag.capitalGain) return false;
-
-                    // Match report type
-                    if (_type == ReportType.spending) {
-                      return t.type == TransactionType.expense;
-                    } else if (_type == ReportType.income) {
-                      return t.type == TransactionType.income;
-                    }
-                    return false;
-                  }).toList();
-
-                  for (var t in gainTxns) {
-                    final amount = t.gainAmount ?? 0;
-                    totalGains += amount;
-                    gainsByCategory[t.category] =
-                        (gainsByCategory[t.category] ?? 0) + amount;
-                  }
-
-                  total = data.values.fold(0, (sum, val) => sum + val);
+                  final double total =
+                      data.values.fold(0, (sum, val) => sum + val);
 
                   // --- CHART DATA PREPARATION (Top 6 + Others) ---
-                  // 1. Exclude Transfers from Chart Data
-                  // Note: 'data' map is built from 'filtered' transactions.
-                  // If we are in Spending mode, we show Expenses.
-                  // If Income mode, Income.
-                  // We should ensure Transfer type is explicitly excluded if it somehow got in.
-
-                  // 2. Convert to List and Sort
                   final sortedEntries = data.entries.toList()
                     ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -211,23 +132,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   if (sortedEntries.length <= 6) {
                     chartEntries = sortedEntries;
                   } else {
-                    // Take Top 6
                     chartEntries = sortedEntries.take(6).toList();
-
-                    // Sum the rest
                     final rest = sortedEntries.skip(6);
                     double othersSum = rest.fold(0, (sum, e) => sum + e.value);
-
-                    // Add "Others" entry
                     if (othersSum > 0) {
                       chartEntries.add(MapEntry('Others', othersSum));
                     }
                   }
-                  // --------------------------------------------------
 
                   return ListView(
                     children: [
-                      // Filters Area
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
@@ -347,7 +261,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                           setState(() => _selectedLoanType = v),
                                     ),
                                   ),
-                                ] else
+                                ] else ...[
                                   SizedBox(
                                     width: 130,
                                     child: DropdownButtonFormField<String?>(
@@ -380,6 +294,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                           () => _selectedAccountId = v),
                                     ),
                                   ),
+                                  // Category Exclusion UI
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: ActionChip(
+                                      avatar: Icon(Icons.filter_list,
+                                          size: 16,
+                                          color: _excludedCategories.isEmpty
+                                              ? Colors.grey
+                                              : Colors.blue),
+                                      label: Text(_excludedCategories.isEmpty
+                                          ? 'Filter Categories'
+                                          : '${_excludedCategories.length} Categories Excluded'),
+                                      onPressed: () =>
+                                          _showExclusionDialog(transactions),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -439,11 +370,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         const SizedBox(height: 16),
                         if (_type == ReportType.loan) ...[
                           Builder(builder: (context) {
-                            // Calculate Breakdown (EMI vs Prepayment) for selected period
                             double emiPaid = 0;
                             double prepaymentPaid = 0;
-
-                            // FILTER LOANS based on selection
                             final filteredLoans = loans.where((l) {
                               if (_selectedLoanId != null &&
                                   l.id != _selectedLoanId) {
@@ -462,6 +390,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             for (var loan in filteredLoans) {
                               for (var txn in loan.transactions) {
                                 bool inRange = false;
+                                final now = DateTime.now();
                                 if (_timeFilterMode == 'month' &&
                                     _selectedMonth != null) {
                                   inRange =
@@ -469,23 +398,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                           txn.date.year == _selectedMonth!.year;
                                 } else if (_timeFilterMode == 'year') {
                                   inRange = txn.date.year == _selectedYear;
+                                } else if (_timeFilterMode == '30') {
+                                  inRange = txn.date.isAfter(
+                                      now.subtract(const Duration(days: 30)));
+                                } else if (_timeFilterMode == '90') {
+                                  inRange = txn.date.isAfter(
+                                      now.subtract(const Duration(days: 90)));
+                                } else if (_timeFilterMode == '365') {
+                                  inRange = txn.date.isAfter(
+                                      now.subtract(const Duration(days: 365)));
                                 } else {
-                                  // For 30/90/365/All, we rely on the helper or manual calc
-                                  // Simplified: Use _getTimeRange logic mapping if possible
-                                  // Or just re-implement simple date check since custom range isn't fully exposed in helpers here
-                                  final now = DateTime.now();
-                                  if (_timeFilterMode == '30') {
-                                    inRange = txn.date.isAfter(
-                                        now.subtract(const Duration(days: 30)));
-                                  } else if (_timeFilterMode == '90') {
-                                    inRange = txn.date.isAfter(
-                                        now.subtract(const Duration(days: 90)));
-                                  } else if (_timeFilterMode == '365') {
-                                    inRange = txn.date.isAfter(now
-                                        .subtract(const Duration(days: 365)));
-                                  } else {
-                                    inRange = true; // All Time
-                                  }
+                                  inRange = true;
                                 }
 
                                 if (inRange) {
@@ -607,27 +530,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                   final e = entry.$2;
                                   final isTouched = index == touchedIndex;
                                   final isOthers = e.key == 'Others';
-
                                   final fontSize = isTouched ? 16.0 : 12.0;
-                                  final radius = isTouched
-                                      ? 60.0
-                                      : 50.0; // Smaller radius to make room for external labels
+                                  final radius = isTouched ? 60.0 : 50.0;
                                   final percentage =
                                       total == 0 ? 0 : (e.value / total) * 100;
-
-                                  // Determine visibility: Touched OR > 10% OR (Top 6 AND > 5%)
-                                  final isTopSlice = chartEntries.length <= 6 ||
-                                      index <
-                                          6; // Entries are sorted by value desc
-
+                                  final isTopSlice =
+                                      chartEntries.length <= 6 || index < 6;
                                   final showLabel = isTouched ||
                                       percentage >= 10 ||
                                       (isTopSlice && percentage > 5);
 
                                   return PieChartSectionData(
                                     value: e.value == 0 ? 0.01 : e.value,
-                                    titlePositionPercentageOffset:
-                                        1.6, // Move Outside
+                                    titlePositionPercentageOffset: 1.6,
                                     title: showLabel
                                         ? '${e.key} (${percentage.toStringAsFixed(0)}%)'
                                         : '',
@@ -638,7 +553,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                             fontWeight: FontWeight.bold,
                                             color: Theme.of(context)
                                                 .colorScheme
-                                                .onSurface), // Visible on background
+                                                .onSurface),
                                     color: isOthers
                                         ? Colors.grey
                                         : _getChartColor(index),
@@ -656,7 +571,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                               final e = sortedEntries[index];
                               return ListTile(
                                 leading: CircleAvatar(
-                                  // Use standard palette color if it's in Top 6, else Grey
                                   backgroundColor: index < 6
                                       ? _getChartColor(index)
                                       : Colors.grey,
@@ -706,12 +620,77 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
+  void _showExclusionDialog(List<Transaction> transactions) {
+    // Get unique categories for this view type from the FULL list (before exclusion filter)
+    final availableCategories = transactions
+        .where((t) =>
+            t.type ==
+            (_type == ReportType.spending
+                ? TransactionType.expense
+                : TransactionType.income))
+        .map((t) => t.category)
+        .toSet()
+        .toList()
+      ..sort();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Exclude Categories'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: availableCategories.isEmpty
+                  ? const Center(child: Text('No categories found.'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: availableCategories.length,
+                      itemBuilder: (context, index) {
+                        final cat = availableCategories[index];
+                        final isExcluded = _excludedCategories.contains(cat);
+                        return CheckboxListTile(
+                          title: Text(cat),
+                          value: !isExcluded, // Value is 'Included'
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _excludedCategories.remove(cat);
+                              } else {
+                                _excludedCategories.add(cat);
+                              }
+                            });
+                            setDialogState(() {});
+                          },
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  setState(() => _excludedCategories.clear());
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Reset'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
   TimeRange _getTimeRange() {
     switch (_timeFilterMode) {
       case '30':
         return TimeRange.last30Days;
       case '90':
-        return TimeRange.all; // Default if no direct map
+        return TimeRange.all;
       case '365':
         return TimeRange.all;
       case 'month':
@@ -791,9 +770,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       onSelected: (bool selected) {
         setState(() {
           _type = type;
-          _selectedAccountId = null; // Reset filters on switch
+          _selectedAccountId = null;
           _selectedLoanId = null;
           _selectedLoanType = null;
+          _excludedCategories = {};
         });
       },
     );
@@ -801,12 +781,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Color _getChartColor(int index) {
     const List<Color> palette = [
-      Color(0xFF4CAF50), // Green
-      Color(0xFF2196F3), // Blue
-      Color(0xFFFFC107), // Amber
-      Color(0xFFE91E63), // Pink
-      Color(0xFF9C27B0), // Purple
-      Color(0xFF00BCD4), // Cyan
+      Color(0xFF4CAF50),
+      Color(0xFF2196F3),
+      Color(0xFFFFC107),
+      Color(0xFFE91E63),
+      Color(0xFF9C27B0),
+      Color(0xFF00BCD4),
     ];
     return palette[index % palette.length];
   }

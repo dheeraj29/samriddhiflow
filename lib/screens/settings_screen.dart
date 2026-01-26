@@ -1,11 +1,10 @@
-import 'dart:js_interop';
+import '../utils/connectivity_platform.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter/services.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart' hide Category; // Fix Collision
-import 'package:web/web.dart' as web;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
@@ -24,11 +23,6 @@ import 'dashboard_screen.dart';
 import 'login_screen.dart';
 
 // --- JS Interop Definitions ---
-@JS()
-extension type BeforeInstallPromptEvent(JSObject o) implements web.Event {
-  external JSPromise<JSAny?> prompt();
-  external JSPromise<JSObject> get userChoice;
-}
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -44,7 +38,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isAppLockEnabled = false;
 
   // PWA Install Prompt
-  BeforeInstallPromptEvent? _installPrompt;
+  Object? _installPrompt;
 
   @override
   void initState() {
@@ -54,17 +48,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     // Listen for PWA Install Prompt (Web Only)
     if (kIsWeb) {
-      web.window.addEventListener(
-          'beforeinstallprompt',
-          (web.Event event) {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            event.preventDefault();
-            // Stash the event so it can be triggered later.
-            setState(() {
-              // Safe cast via JS Interop
-              _installPrompt = event as BeforeInstallPromptEvent;
-            });
-          }.toJS);
+      if (kIsWeb) {
+        ConnectivityPlatform.listenForInstallPrompt((event) {
+          setState(() {
+            _installPrompt = event;
+          });
+        });
+      }
     }
   }
 
@@ -356,7 +346,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: const Icon(Icons.install_mobile, color: Colors.blue),
               onTap: () async {
                 if (_installPrompt != null) {
-                  await _installPrompt!.prompt().toDart;
+                  await ConnectivityPlatform.triggerInstallPrompt(
+                      _installPrompt!);
                   setState(() => _installPrompt = null);
                 }
               },
@@ -613,16 +604,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
 
         try {
-          final registration =
-              await web.window.navigator.serviceWorker.ready.toDart;
-          await registration.update().toDart;
-
-          // Give it a moment to detect
-          await Future.delayed(const Duration(seconds: 1));
-
-          if (registration.waiting != null || registration.installing != null) {
-            updateFound = true;
-          }
+          updateFound =
+              await ConnectivityPlatform.checkForServiceWorkerUpdate();
         } catch (e) {
           debugPrint("Update check failed: $e");
           // Explicitly warn user if the check threw an exception
@@ -672,18 +655,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         if (wantReload == true && kIsWeb) {
           try {
-            // Clear all caches
-            final caches = web.window.caches;
-            final keysArray = await caches.keys().toDart;
-            final keys = keysArray.toDart; // List<JSString>
-            for (final key in keys) {
-              await caches.delete(key.toDart).toDart;
-            }
-            // Reload
-            web.window.location.reload();
+            await ConnectivityPlatform.reloadAndClearCache();
           } catch (e) {
             debugPrint("Failed to clear cache: $e");
-            web.window.location.reload();
+            // Reload is handled in platform
           }
         }
       }
@@ -713,18 +688,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed == true) {
       if (kIsWeb) {
         try {
-          // Clear all caches
-          final caches = web.window.caches;
-          final keysArray = await caches.keys().toDart;
-          final keys = keysArray.toDart; // List<JSString>
-          for (final key in keys) {
-            await caches.delete(key.toDart).toDart;
-          }
-          // Reload
-          web.window.location.reload();
+          await ConnectivityPlatform.reloadAndClearCache();
         } catch (e) {
           debugPrint("Failed to clear cache: $e");
-          web.window.location.reload();
+          // Reload is handled in platform
         }
       } else {
         if (!mounted) return;

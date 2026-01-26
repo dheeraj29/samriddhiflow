@@ -1,12 +1,12 @@
 import 'dart:io';
-import 'dart:js_interop';
+
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 
 // We will keep the web-specific logic internal to this service
-import 'package:web/web.dart' as web;
+import '../utils/connectivity_platform.dart';
 
 class FileService {
   /// Saves a file to the device.
@@ -40,19 +40,7 @@ class FileService {
 
   // --- PRIVATE WEB LOGIC ---
   Future<String> _saveFileWeb(String fileName, List<int> bytes) async {
-    final uint8List = Uint8List.fromList(bytes);
-    final blob = web.Blob([uint8List.toJS].toJS,
-        web.BlobPropertyBag(type: "application/octet-stream"));
-    final url = web.URL.createObjectURL(blob);
-    final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.style.display = 'none';
-    web.document.body?.append(anchor);
-    anchor.click();
-    anchor.remove();
-    web.URL.revokeObjectURL(url);
-    return "Download triggered in browser";
+    return ConnectivityPlatform.saveFileWeb(fileName, bytes);
   }
 
   // --- PRIVATE WINDOWS LOGIC ---

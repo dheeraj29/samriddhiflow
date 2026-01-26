@@ -12,7 +12,7 @@ import '../navigator_key.dart';
 import '../screens/login_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
-import 'package:web/web.dart' as web;
+import '../utils/connectivity_platform.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthWrapper extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (kIsWeb) {
       try {
         final pending =
-            web.window.sessionStorage.getItem('auth_redirect_pending');
+            ConnectivityPlatform.getSessionStorageItem('auth_redirect_pending');
         if (pending == 'true') {
           _isRedirectingLocal = true;
           // Safety timeout: If Firebase fails to sign us in within 120s, release the screen
