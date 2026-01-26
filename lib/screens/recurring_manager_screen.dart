@@ -67,6 +67,11 @@ class RecurringManagerScreen extends ConsumerWidget {
                         },
                       ),
                       IconButton(
+                        icon: PureIcons.editOutlined(color: Colors.orange),
+                        onPressed: () =>
+                            _showEditAmountDialog(context, ref, rule),
+                      ),
+                      IconButton(
                         icon: PureIcons.deleteOutlined(color: Colors.red),
                         onPressed: () => _confirmDelete(context, ref, rule),
                       ),
@@ -153,6 +158,49 @@ class RecurringManagerScreen extends ConsumerWidget {
       await ref
           .read(storageServiceProvider)
           .deleteRecurringTransaction(rule.id);
+      final _ = ref.refresh(recurringTransactionsProvider);
+    }
+  }
+
+  Future<void> _showEditAmountDialog(
+      BuildContext context, WidgetRef ref, RecurringTransaction rule) async {
+    final controller =
+        TextEditingController(text: rule.amount.toStringAsFixed(2));
+    final updatedAmount = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Recurring Amount'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'New Amount',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text);
+              if (val != null && val > 0) {
+                Navigator.pop(context, val);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (updatedAmount != null) {
+      final storage = ref.read(storageServiceProvider);
+      rule.amount = updatedAmount;
+      await storage.saveRecurringTransaction(rule);
       final _ = ref.refresh(recurringTransactionsProvider);
     }
   }

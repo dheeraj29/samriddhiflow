@@ -58,8 +58,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
 
   @override
   Widget build(BuildContext context) {
-    // Ensure we rebuild when storage initializes
-    ref.watch(storageInitializerProvider);
+    final storageInit = ref.watch(storageInitializerProvider);
 
     // Perform initial check once storage is ready
     ref.listen(storageInitializerProvider, (prev, next) {
@@ -67,6 +66,24 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         _checkInitialLock();
       }
     });
+
+    // If storage is not ready, don't show anything yet to prevent glitch
+    if (!storageInit.hasValue) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Safety: If storage JUST finished but listener hasn't fired yet,
+    // we do a one-time sync check to prevent that 1-frame glitch.
+    final storage = ref.read(storageServiceProvider);
+    final shouldBeLocked =
+        storage.isAppLockEnabled() && storage.getAppPin() != null;
+
+    // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
+    // But setState during build is tricky, so we rely on the flags.
+    final effectiveLocked =
+        (shouldBeLocked && !_isLocked && !_isFallbackMode) ? true : _isLocked;
 
     // Watch Auth State - if user logs in, we can optionally unlock
     ref.listen(authStreamProvider, (previous, next) {
@@ -79,7 +96,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       }
     });
 
-    if (_isLocked && !_isFallbackMode) {
+    if ((effectiveLocked || _isLocked) && !_isFallbackMode) {
       return AppLockScreen(
         onUnlocked: () => setState(() => _isLocked = false),
         onFallback: () => setState(() => _isFallbackMode = true),

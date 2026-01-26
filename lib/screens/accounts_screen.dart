@@ -401,7 +401,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   String _name = '';
   AccountType _type = AccountType.savings;
   double _initialBalance = 0;
-  String _currency = 'en_US';
+  String _currency = '';
   double? _limit;
   int? _billingDay;
   int? _dueDay;
@@ -418,7 +418,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       _dueDay = widget.account!.paymentDueDateDay;
       _currency = widget.account!.currency;
     } else {
-      _currency = ref.read(currencyProvider);
+      _currency = '';
     }
   }
 

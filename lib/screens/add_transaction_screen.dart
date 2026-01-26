@@ -42,6 +42,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   String? _toAccountId; // For transfers
 
   bool _isRecurring = false;
+  bool _isScheduleOnly = false;
   Frequency _frequency = Frequency.monthly;
   ScheduleType _scheduleType = ScheduleType.fixedDate;
   int? _selectedWeekday;
@@ -449,6 +450,41 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     value: _isRecurring,
                     onChanged: (v) => setState(() => _isRecurring = v),
                   ),
+                  if (_isRecurring) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Recurring Action',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          SegmentedButton<bool>(
+                            segments: [
+                              ButtonSegment(
+                                  value: false,
+                                  label: const Text('Pay & Schedule'),
+                                  icon: PureIcons.income()),
+                              ButtonSegment(
+                                  value: true,
+                                  label: const Text('Just Schedule'),
+                                  icon: PureIcons.calendar()),
+                            ],
+                            selected: {_isScheduleOnly},
+                            onSelectionChanged: (Set<bool> newSelection) {
+                              setState(() {
+                                _isScheduleOnly = newSelection.first;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
                 if (_isRecurring) ...[
                   Padding(
@@ -648,12 +684,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             selectedCat.tag == CategoryTag.capitalGain ? _gainAmount : null,
       );
 
-      await storage.saveTransaction(txn);
-      if (widget.recurringId != null) {
-        await storage.advanceRecurringTransactionDate(widget.recurringId!);
-        final _ = ref.refresh(recurringTransactionsProvider);
+      if (!_isScheduleOnly) {
+        await storage.saveTransaction(txn);
+        if (widget.recurringId != null) {
+          await storage.advanceRecurringTransactionDate(widget.recurringId!);
+          final _ = ref.refresh(recurringTransactionsProvider);
+        }
+        ref.read(txnsSinceBackupProvider.notifier).refresh();
       }
-      ref.read(txnsSinceBackupProvider.notifier).refresh();
       if (_isRecurring) {
         final recurring = RecurringTransaction.create(
           title: _title,
