@@ -23,10 +23,6 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         _pin += d;
         _error = null;
       });
-
-      if (_pin.length == 4) {
-        _verify();
-      }
     }
   }
 
@@ -117,33 +113,46 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(width: 80, height: 80), // Empty placeholder
+            _buildKey('submit'),
             _buildKey('0'),
-            _buildKey('backspace',
-                icon: null), // We'll handle icon inside _buildKey
+            _buildKey('backspace'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKey(String value, {IconData? icon}) {
+  Widget _buildKey(String value) {
+    VoidCallback? onTap;
+    Widget child;
+
+    if (value == 'backspace') {
+      onTap = _onBackspace;
+      child = PureIcons.backspace(size: 28);
+    } else if (value == 'submit') {
+      onTap = _pin.length == 4 ? _verify : null;
+      child = Icon(
+        Icons.check_circle,
+        size: 40,
+        color:
+            _pin.length == 4 ? Colors.teal : Colors.grey.withValues(alpha: 0.3),
+      );
+    } else {
+      onTap = () => _onDigit(value);
+      child = Text(
+        value,
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.all(8),
       width: 80,
       height: 80,
       child: InkWell(
-        onTap: value == 'backspace' ? _onBackspace : () => _onDigit(value),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(40),
-        child: Center(
-          child: value == 'backspace'
-              ? PureIcons.backspace(size: 28)
-              : Text(
-                  value,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-        ),
+        child: Center(child: child),
       ),
     );
   }

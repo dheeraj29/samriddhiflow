@@ -297,13 +297,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: _isAppLockEnabled,
             onChanged: (val) async {
               if (val) {
-                final storage = ref.read(storageServiceProvider);
-                if (storage.getAppPin() == null) {
-                  _showSetPinDialog(context);
-                } else {
-                  setState(() => _isAppLockEnabled = true);
-                  await storage.setAppLockEnabled(true);
-                }
+                _showSetPinDialog(context);
               } else {
                 final verified = await _showVerifyPinDialog(context);
                 if (verified) {
@@ -1328,16 +1322,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showSetPinDialog(BuildContext context) {
+    final storage = ref.read(storageServiceProvider);
+    final currentPin = storage.getAppPin();
     final controller = TextEditingController();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("Set App PIN"),
+        title: Text(currentPin == null ? "Set App PIN" : "Setup App Lock"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter a 4-digit PIN to secure the app."),
+            Text(currentPin == null
+                ? "Enter a 4-digit PIN to secure the app."
+                : "You have an existing PIN. Do you want to use it or set a new one?"),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
@@ -1349,6 +1348,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
                 counterText: "",
+                hintText: "NEW PIN",
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
@@ -1360,22 +1360,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text("CANCEL"),
           ),
+          if (currentPin != null)
+            ElevatedButton(
+              onPressed: () async {
+                await storage.setAppLockEnabled(true);
+                setState(() => _isAppLockEnabled = true);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("App Lock Enabled")),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+              child: const Text("USE EXISTING"),
+            ),
           ElevatedButton(
             onPressed: () async {
               if (controller.text.length == 4) {
-                final storage = ref.read(storageServiceProvider);
                 await storage.setAppPin(controller.text);
                 await storage.setAppLockEnabled(true);
                 setState(() => _isAppLockEnabled = true);
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("PIN Set Successfully")),
+                    const SnackBar(content: Text("PIN Saved & Locked")),
                   );
                 }
               }
             },
-            child: const Text("SAVE"),
+            child: const Text("SAVE & ENABLE"),
           ),
         ],
       ),

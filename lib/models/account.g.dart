@@ -21,7 +21,7 @@ class AccountAdapter extends TypeAdapter<Account> {
       name: fields[1] as String,
       type: fields[2] as AccountType,
       balance: fields[3] == null ? 0.0 : (fields[3] as num).toDouble(),
-      currency: fields[4] == null ? 'USD' : fields[4] as String,
+      currency: fields[4] == null ? '' : fields[4] as String,
       creditLimit: (fields[5] as num?)?.toDouble(),
       billingCycleDay: (fields[6] as num?)?.toInt(),
       paymentDueDateDay: (fields[7] as num?)?.toInt(),

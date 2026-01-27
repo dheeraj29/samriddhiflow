@@ -624,6 +624,23 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
         return;
       }
+
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final selectedDateOnly = DateTime(_date.year, _date.month, _date.day);
+
+      if (_isRecurring &&
+          _isScheduleOnly &&
+          selectedDateOnly.isBefore(todayStart)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                '"Just Schedule" is only allowed for Today or Future dates.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
       final dateTime = DateTime(
           _date.year, _date.month, _date.day, _time.hour, _time.minute);
       final storage = ref.read(storageServiceProvider);
