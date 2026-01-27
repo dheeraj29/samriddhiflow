@@ -1,7 +1,7 @@
 name: samriddhi_flow
 description: Samriddhi Flow - Premium personal finance and smart budgeting PWA.
 publish_to: 'none'
-version: 1.16.0
+version: 1.17.0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -54,6 +54,7 @@ dev_dependencies:
 
   http: ^1.6.0
   shared_preferences: ^2.2.0
+  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

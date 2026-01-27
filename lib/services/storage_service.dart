@@ -10,6 +10,9 @@ import '../utils/debug_logger.dart';
 import '../utils/currency_utils.dart';
 
 class StorageService {
+  final HiveInterface _hive;
+  StorageService([HiveInterface? hive]) : _hive = hive ?? Hive;
+
   static const String boxAccounts = 'accounts';
   static const String boxTransactions = 'transactions';
   static const String boxLoans = 'loans';
@@ -19,31 +22,33 @@ class StorageService {
   static const String boxCategories = 'categories_v3';
 
   Future<void> init() async {
-    if (!Hive.isBoxOpen(boxAccounts)) await Hive.openBox<Account>(boxAccounts);
-    if (!Hive.isBoxOpen(boxTransactions)) {
-      await Hive.openBox<Transaction>(boxTransactions);
+    if (!_hive.isBoxOpen(boxAccounts))
+      await _hive.openBox<Account>(boxAccounts);
+    if (!_hive.isBoxOpen(boxTransactions)) {
+      await _hive.openBox<Transaction>(boxTransactions);
     }
-    if (!Hive.isBoxOpen(boxLoans)) await Hive.openBox<Loan>(boxLoans);
-    if (!Hive.isBoxOpen(boxRecurring)) {
-      await Hive.openBox<RecurringTransaction>(boxRecurring);
+    if (!_hive.isBoxOpen(boxLoans)) await _hive.openBox<Loan>(boxLoans);
+    if (!_hive.isBoxOpen(boxRecurring)) {
+      await _hive.openBox<RecurringTransaction>(boxRecurring);
     }
-    if (!Hive.isBoxOpen(boxSettings)) await Hive.openBox(boxSettings);
-    if (!Hive.isBoxOpen(boxProfiles)) await Hive.openBox<Profile>(boxProfiles);
-    if (!Hive.isBoxOpen(boxCategories)) {
-      await Hive.openBox<Category>(boxCategories);
+    if (!_hive.isBoxOpen(boxSettings)) await _hive.openBox(boxSettings);
+    if (!_hive.isBoxOpen(boxProfiles))
+      await _hive.openBox<Profile>(boxProfiles);
+    if (!_hive.isBoxOpen(boxCategories)) {
+      await _hive.openBox<Category>(boxCategories);
     }
 
     // Initial profile
-    final pBox = Hive.box<Profile>(boxProfiles);
+    final pBox = _hive.box<Profile>(boxProfiles);
     if (pBox.isEmpty) {
       final defaultProfile = Profile(id: 'default', name: 'Default');
       await pBox.put('default', defaultProfile);
     }
 
     // Migrate categories from settings to boxCategories if needed
-    final cBox = Hive.box<Category>(boxCategories);
+    final cBox = _hive.box<Category>(boxCategories);
     if (cBox.isEmpty) {
-      final sBox = Hive.box(boxSettings);
+      final sBox = _hive.box(boxSettings);
       final List<dynamic>? oldList = sBox.get('categories_v2');
       if (oldList != null && oldList.isNotEmpty) {
         for (var c in oldList.cast<Category>()) {
@@ -63,51 +68,51 @@ class StorageService {
 
   // --- Profile Operations ---
   String getActiveProfileId() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('activeProfileId', defaultValue: 'default');
   }
 
   Future<void> setActiveProfileId(String id) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('activeProfileId', id);
   }
 
   // --- Auth Optimistic Flag ---
   bool getAuthFlag() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('isLoggedIn', defaultValue: false) as bool;
   }
 
   Future<void> setAuthFlag(bool value) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('isLoggedIn', value);
   }
 
   // --- Smart Calculator Preference ---
   bool isSmartCalculatorEnabled() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('smartCalculatorEnabled', defaultValue: false) as bool;
   }
 
   Future<void> setSmartCalculatorEnabled(bool value) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('smartCalculatorEnabled', value);
   }
 
   List<Profile> getProfiles() {
-    return Hive.box<Profile>(boxProfiles).values.whereType<Profile>().toList();
+    return _hive.box<Profile>(boxProfiles).values.whereType<Profile>().toList();
   }
 
   Future<void> saveProfile(Profile profile) async {
-    await Hive.box<Profile>(boxProfiles).put(profile.id, profile);
+    await _hive.box<Profile>(boxProfiles).put(profile.id, profile);
   }
 
   Future<void> deleteProfile(String profileId) async {
     // 1. Delete Profile record
-    await Hive.box<Profile>(boxProfiles).delete(profileId);
+    await _hive.box<Profile>(boxProfiles).delete(profileId);
 
     // 2. Delete Accounts
-    final accBox = Hive.box<Account>(boxAccounts);
+    final accBox = _hive.box<Account>(boxAccounts);
     final accountsToDelete =
         accBox.values.where((a) => a.profileId == profileId).toList();
     for (var a in accountsToDelete) {
@@ -115,7 +120,7 @@ class StorageService {
     }
 
     // 3. Delete Transactions
-    final txnBox = Hive.box<Transaction>(boxTransactions);
+    final txnBox = _hive.box<Transaction>(boxTransactions);
     final txnsToDelete =
         txnBox.values.where((t) => t.profileId == profileId).toList();
     for (var t in txnsToDelete) {
@@ -123,7 +128,7 @@ class StorageService {
     }
 
     // 4. Delete Loans
-    final loanBox = Hive.box<Loan>(boxLoans);
+    final loanBox = _hive.box<Loan>(boxLoans);
     final loansToDelete =
         loanBox.values.where((l) => l.profileId == profileId).toList();
     for (var l in loansToDelete) {
@@ -131,7 +136,7 @@ class StorageService {
     }
 
     // 5. Delete Recurring
-    final recBox = Hive.box<RecurringTransaction>(boxRecurring);
+    final recBox = _hive.box<RecurringTransaction>(boxRecurring);
     final recToDelete =
         recBox.values.where((rt) => rt.profileId == profileId).toList();
     for (var rt in recToDelete) {
@@ -139,7 +144,7 @@ class StorageService {
     }
 
     // 6. Delete Categories
-    final catBox = Hive.box<Category>(boxCategories);
+    final catBox = _hive.box<Category>(boxCategories);
     final catsToDelete =
         catBox.values.where((c) => c.profileId == profileId).toList();
     for (var c in catsToDelete) {
@@ -161,7 +166,8 @@ class StorageService {
   // --- Account Operations ---
   List<Account> getAccounts() {
     final profileId = getActiveProfileId();
-    return Hive.box<Account>(boxAccounts)
+    return _hive
+        .box<Account>(boxAccounts)
         .values
         .whereType<Account>()
         .where((a) => a.profileId == profileId)
@@ -169,20 +175,20 @@ class StorageService {
   }
 
   List<Account> getAllAccounts() {
-    return Hive.box<Account>(boxAccounts).values.whereType<Account>().toList();
+    return _hive.box<Account>(boxAccounts).values.whereType<Account>().toList();
   }
 
   Future<void> saveAccount(Account account) async {
-    final box = Hive.box<Account>(boxAccounts);
+    final box = _hive.box<Account>(boxAccounts);
     await box.put(account.id, account);
   }
 
   Future<void> deleteAccount(String id) async {
-    final box = Hive.box<Account>(boxAccounts);
+    final box = _hive.box<Account>(boxAccounts);
     final account = box.get(id);
     if (account != null && account.type == AccountType.wallet) {
       // Cascade delete transactions for wallet
-      final txnsBox = Hive.box<Transaction>(boxTransactions);
+      final txnsBox = _hive.box<Transaction>(boxTransactions);
       final associatedTxns = txnsBox.values
           .where((t) => t.accountId == id || t.toAccountId == id)
           .toList();
@@ -196,7 +202,7 @@ class StorageService {
   // --- Transaction Operations ---
   List<Transaction> getTransactions() {
     final profileId = getActiveProfileId();
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     final list = box.values
         .whereType<Transaction>()
         .where((t) => !t.isDeleted && t.profileId == profileId)
@@ -206,7 +212,8 @@ class StorageService {
   }
 
   List<Transaction> getAllTransactions() {
-    return Hive.box<Transaction>(boxTransactions)
+    return _hive
+        .box<Transaction>(boxTransactions)
         .values
         .whereType<Transaction>()
         .toList();
@@ -214,7 +221,7 @@ class StorageService {
 
   List<Transaction> getDeletedTransactions() {
     final profileId = getActiveProfileId();
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     return box.values
         .whereType<Transaction>()
         .where((t) => t.isDeleted && t.profileId == profileId)
@@ -230,7 +237,7 @@ class StorageService {
 
     try {
       final accounts = getAccounts(); // Already filtered by profile
-      final settingsBox = Hive.box(boxSettings);
+      final settingsBox = _hive.box(boxSettings);
       final now = DateTime.now();
 
       for (var acc in accounts) {
@@ -257,7 +264,7 @@ class StorageService {
             await settingsBox.put(
                 key, currentCycleStart.millisecondsSinceEpoch);
 
-            final box = Hive.box<Transaction>(boxTransactions);
+            final box = _hive.box<Transaction>(boxTransactions);
             final txns = box.values
                 .where((t) =>
                     !t.isDeleted &&
@@ -278,7 +285,7 @@ class StorageService {
             if (adhocAmount != 0) {
               acc.balance =
                   CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
-              await acc.save();
+              await _hive.box<Account>(boxAccounts).put(acc.id, acc);
             }
           }
         }
@@ -290,8 +297,8 @@ class StorageService {
 
   Future<void> saveTransaction(Transaction transaction,
       {bool applyImpact = true}) async {
-    final box = Hive.box<Transaction>(boxTransactions);
-    final accountsBox = Hive.box<Account>(boxAccounts);
+    final box = _hive.box<Transaction>(boxTransactions);
+    final accountsBox = _hive.box<Account>(boxAccounts);
 
     final existingTxn = box.get(transaction.id);
 
@@ -303,7 +310,9 @@ class StorageService {
           if (oldAccFrom != null) {
             _applyTransactionImpact(oldAccFrom, existingTxn,
                 isReversal: true, isSource: true);
-            await oldAccFrom.save();
+            await _hive
+                .box<Account>(boxAccounts)
+                .put(oldAccFrom.id, oldAccFrom);
           }
         }
         // Impact of Target Account
@@ -313,7 +322,7 @@ class StorageService {
           if (oldAccTo != null) {
             _applyTransactionImpact(oldAccTo, existingTxn,
                 isReversal: true, isSource: false);
-            await oldAccTo.save();
+            await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
           }
         }
       }
@@ -325,7 +334,9 @@ class StorageService {
           if (newAccFrom != null) {
             _applyTransactionImpact(newAccFrom, transaction,
                 isReversal: false, isSource: true);
-            await newAccFrom.save();
+            await _hive
+                .box<Account>(boxAccounts)
+                .put(newAccFrom.id, newAccFrom);
           }
         }
         // Impact of Target Account
@@ -335,7 +346,7 @@ class StorageService {
           if (newAccTo != null) {
             _applyTransactionImpact(newAccTo, transaction,
                 isReversal: false, isSource: false);
-            await newAccTo.save();
+            await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
           }
         }
       }
@@ -347,8 +358,8 @@ class StorageService {
 
   Future<void> saveTransactions(List<Transaction> transactions,
       {bool applyImpact = true}) async {
-    final box = Hive.box<Transaction>(boxTransactions);
-    final accountsBox = Hive.box<Account>(boxAccounts);
+    final box = _hive.box<Transaction>(boxTransactions);
+    final accountsBox = _hive.box<Account>(boxAccounts);
 
     final Map<dynamic, Transaction> batch = {};
     for (var txn in transactions) {
@@ -361,7 +372,7 @@ class StorageService {
             if (oldAcc != null) {
               _applyTransactionImpact(oldAcc, existingTxn,
                   isReversal: true, isSource: true);
-              await oldAcc.save();
+              await _hive.box<Account>(boxAccounts).put(oldAcc.id, oldAcc);
             }
           }
           if (existingTxn.type == TransactionType.transfer &&
@@ -370,7 +381,7 @@ class StorageService {
             if (oldAccTo != null) {
               _applyTransactionImpact(oldAccTo, existingTxn,
                   isReversal: true, isSource: false);
-              await oldAccTo.save();
+              await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
             }
           }
         }
@@ -381,7 +392,7 @@ class StorageService {
             if (newAcc != null) {
               _applyTransactionImpact(newAcc, txn,
                   isReversal: false, isSource: true);
-              await newAcc.save();
+              await _hive.box<Account>(boxAccounts).put(newAcc.id, newAcc);
             }
           }
           if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
@@ -389,7 +400,7 @@ class StorageService {
             if (newAccTo != null) {
               _applyTransactionImpact(newAccTo, txn,
                   isReversal: false, isSource: false);
-              await newAccTo.save();
+              await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
             }
           }
         }
@@ -455,40 +466,40 @@ class StorageService {
   }
 
   Future<void> _incrementBackupCounter() async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     final count = box.get('txnsSinceBackup', defaultValue: 0) as int;
     await box.put('txnsSinceBackup', count + 1);
   }
 
   int getTxnsSinceBackup() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('txnsSinceBackup', defaultValue: 0) as int;
   }
 
   Future<void> resetTxnsSinceBackup() async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('txnsSinceBackup', 0);
   }
 
   Future<void> deleteTransaction(String id) async {
     try {
-      final box = Hive.box<Transaction>(boxTransactions);
+      final box = _hive.box<Transaction>(boxTransactions);
       final txn = box.get(id);
       if (txn == null || txn.isDeleted) return;
 
       // 1. Mark as deleted immediately for UI reactivity
       txn.isDeleted = true;
-      await txn.save();
+      await _hive.box<Transaction>(boxTransactions).put(txn.id, txn);
 
       // 2. Apply reverses if account-linked
       if (txn.accountId != null) {
-        final accountsBox = Hive.box<Account>(boxAccounts);
+        final accountsBox = _hive.box<Account>(boxAccounts);
         final accFrom = accountsBox.get(txn.accountId);
 
         if (accFrom != null) {
           _applyTransactionImpact(accFrom, txn,
               isReversal: true, isSource: true);
-          await accFrom.save();
+          await _hive.box<Account>(boxAccounts).put(accFrom.id, accFrom);
         }
 
         if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
@@ -496,7 +507,7 @@ class StorageService {
           if (accTo != null) {
             _applyTransactionImpact(accTo, txn,
                 isReversal: true, isSource: false);
-            await accTo.save();
+            await _hive.box<Account>(boxAccounts).put(accTo.id, accTo);
           }
         }
       }
@@ -507,7 +518,7 @@ class StorageService {
 
   Future<int> getSimilarTransactionCount(
       String title, String category, String excludeId) async {
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     final profileId = getActiveProfileId();
     return box.values
         .where((t) =>
@@ -521,7 +532,7 @@ class StorageService {
 
   Future<void> bulkUpdateCategory(
       String title, String oldCategory, String newCategory) async {
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     final profileId = getActiveProfileId();
     final toUpdate = box.values
         .where((t) =>
@@ -533,32 +544,32 @@ class StorageService {
 
     for (var t in toUpdate) {
       t.category = newCategory;
-      await t.save();
+      await _hive.box<Transaction>(boxTransactions).put(t.id, t);
     }
   }
 
   Future<void> restoreTransaction(String id) async {
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     final txn = box.get(id);
     if (txn != null && txn.isDeleted) {
       txn.isDeleted = false;
-      await txn.save();
+      await _hive.box<Transaction>(boxTransactions).put(txn.id, txn);
 
-      final accountsBox = Hive.box<Account>(boxAccounts);
+      final accountsBox = _hive.box<Account>(boxAccounts);
       final accFrom =
           txn.accountId != null ? accountsBox.get(txn.accountId) : null;
 
       if (accFrom != null) {
         _applyTransactionImpact(accFrom, txn,
             isReversal: false, isSource: true);
-        await accFrom.save();
+        await _hive.box<Account>(boxAccounts).put(accFrom.id, accFrom);
 
         if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
           final accTo = accountsBox.get(txn.toAccountId);
           if (accTo != null) {
             _applyTransactionImpact(accTo, txn,
                 isReversal: false, isSource: false);
-            await accTo.save();
+            await _hive.box<Account>(boxAccounts).put(accTo.id, accTo);
           }
         }
       }
@@ -566,74 +577,73 @@ class StorageService {
   }
 
   Future<void> permanentlyDeleteTransaction(String id) async {
-    final box = Hive.box<Transaction>(boxTransactions);
+    final box = _hive.box<Transaction>(boxTransactions);
     await box.delete(id);
   }
 
   // --- Loan Operations ---
   List<Loan> getLoans() {
     final profileId = getActiveProfileId();
-    return Hive.box<Loan>(boxLoans)
+    return _hive
+        .box<Loan>(boxLoans)
         .values
         .where((l) => l.profileId == profileId)
         .toList();
   }
 
   List<Loan> getAllLoans() {
-    return Hive.box<Loan>(boxLoans).values.whereType<Loan>().toList();
+    return _hive.box<Loan>(boxLoans).values.whereType<Loan>().toList();
   }
 
   Future<void> saveLoan(Loan loan) async {
-    final box = Hive.box<Loan>(boxLoans);
+    final box = _hive.box<Loan>(boxLoans);
     await box.put(loan.id, loan);
   }
 
   Future<void> deleteLoan(String id) async {
-    await Hive.box<Loan>(boxLoans).delete(id);
+    await _hive.box<Loan>(boxLoans).delete(id);
   }
 
   // --- Recurring Operations ---
   List<RecurringTransaction> getRecurring() {
     final profileId = getActiveProfileId();
-    return Hive.box<RecurringTransaction>(boxRecurring)
+    return _hive
+        .box<RecurringTransaction>(boxRecurring)
         .values
         .where((rt) => rt.profileId == profileId)
         .toList();
   }
 
   List<RecurringTransaction> getAllRecurring() {
-    return Hive.box<RecurringTransaction>(boxRecurring)
+    return _hive
+        .box<RecurringTransaction>(boxRecurring)
         .values
         .whereType<RecurringTransaction>()
         .toList();
   }
 
   Future<void> saveRecurringTransaction(RecurringTransaction rt) async {
-    final box = Hive.box<RecurringTransaction>(boxRecurring);
-    if (box.containsKey(rt.id)) {
-      await rt.save();
-    } else {
-      await box.put(rt.id, rt);
-    }
+    final box = _hive.box<RecurringTransaction>(boxRecurring);
+    await box.put(rt.id, rt);
   }
 
   Future<void> deleteRecurringTransaction(String id) async {
-    await Hive.box<RecurringTransaction>(boxRecurring).delete(id);
+    await _hive.box<RecurringTransaction>(boxRecurring).delete(id);
   }
 
   Future<void> advanceRecurringTransactionDate(String id) async {
-    final box = Hive.box<RecurringTransaction>(boxRecurring);
+    final box = _hive.box<RecurringTransaction>(boxRecurring);
     final rt = box.get(id);
     if (rt != null) {
       rt.nextExecutionDate = rt.calculateNextOccurrence(rt.nextExecutionDate);
-      await rt.save();
+      await box.put(rt.id, rt);
     }
   }
 
   // --- Category Operations ---
   List<Category> getCategories() {
     final profileId = getActiveProfileId();
-    final box = Hive.box<Category>(boxCategories);
+    final box = _hive.box<Category>(boxCategories);
     final profileCategories =
         box.values.where((c) => c.profileId == profileId).toList();
 
@@ -649,19 +659,20 @@ class StorageService {
   }
 
   List<Category> getAllCategories() {
-    return Hive.box<Category>(boxCategories)
+    return _hive
+        .box<Category>(boxCategories)
         .values
         .whereType<Category>()
         .toList();
   }
 
   Future<void> addCategory(Category category) async {
-    final box = Hive.box<Category>(boxCategories);
+    final box = _hive.box<Category>(boxCategories);
     await box.put(category.id, category);
   }
 
   Future<void> removeCategory(String id) async {
-    await Hive.box<Category>(boxCategories).delete(id);
+    await _hive.box<Category>(boxCategories).delete(id);
   }
 
   Future<void> updateCategory(String id,
@@ -669,19 +680,19 @@ class StorageService {
       required CategoryUsage usage,
       required CategoryTag tag,
       required int iconCode}) async {
-    final box = Hive.box<Category>(boxCategories);
+    final box = _hive.box<Category>(boxCategories);
     final category = box.get(id);
     if (category != null) {
       category.name = name;
       category.usage = usage;
       category.tag = tag;
       category.iconCode = iconCode;
-      await category.save();
+      await _hive.box<Category>(boxCategories).put(category.id, category);
     }
   }
 
   Future<void> copyCategories(String fromId, String toId) async {
-    final box = Hive.box<Category>(boxCategories);
+    final box = _hive.box<Category>(boxCategories);
     final source = box.values.where((c) => c.profileId == fromId).toList();
     // Delete existing categories in target if any? User usually expects "add/sync" or "copy".
     // Let's just add ones that don't exist by name.
@@ -930,59 +941,55 @@ class StorageService {
   // --- Other Settings ---
   String getCurrencyLocale() {
     final profileId = getActiveProfileId();
-    final pBox = Hive.box<Profile>(boxProfiles);
+    final pBox = _hive.box<Profile>(boxProfiles);
     return pBox.get(profileId)?.currencyLocale ?? 'en_IN';
   }
 
   Future<void> setCurrencyLocale(String locale) async {
     final profileId = getActiveProfileId();
-    final pBox = Hive.box<Profile>(boxProfiles);
+    final pBox = _hive.box<Profile>(boxProfiles);
     final p = pBox.get(profileId);
     if (p != null) {
       p.currencyLocale = locale;
-      await p.save();
-      // Force flush to ensure persistence survives immediate app kill
-      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-      // await pBox.flush(); // Hive CE might not need this but it's safer.
-      // Actually standard hive behavior implies save() is enough, but flush ensures disk write.
+      await pBox.put(p.id, p);
     }
   }
 
   double getMonthlyBudget() {
     final profileId = getActiveProfileId();
-    final pBox = Hive.box<Profile>(boxProfiles);
+    final pBox = _hive.box<Profile>(boxProfiles);
     return pBox.get(profileId)?.monthlyBudget ?? 0.0;
   }
 
   Future<void> setMonthlyBudget(double budget) async {
     final profileId = getActiveProfileId();
-    final pBox = Hive.box<Profile>(boxProfiles);
+    final pBox = _hive.box<Profile>(boxProfiles);
     final p = pBox.get(profileId);
     if (p != null) {
       p.monthlyBudget = budget;
-      await p.save();
+      await pBox.put(p.id, p);
     }
   }
 
   int getBackupThreshold() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('backupThreshold', defaultValue: 5) as int;
   }
 
   Future<void> setBackupThreshold(int threshold) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('backupThreshold', threshold);
   }
 
   // --- Holiday Operations ---
   List<DateTime> getHolidays() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     final List<dynamic> list = box.get('holidays', defaultValue: []);
     return list.map((e) => e as DateTime).toList();
   }
 
   Future<void> addHoliday(DateTime date) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     final holidays = getHolidays();
     final normalized = DateTime(date.year, date.month, date.day);
     if (!holidays.any((h) =>
@@ -995,7 +1002,7 @@ class StorageService {
   }
 
   Future<void> removeHoliday(DateTime date) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     final holidays = getHolidays();
     holidays.removeWhere((h) =>
         h.year == date.year && h.month == date.month && h.day == date.day);
@@ -1003,64 +1010,64 @@ class StorageService {
   }
 
   DateTime? getLastLogin() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('lastLogin') as DateTime?;
   }
 
   Future<void> setLastLogin(DateTime date) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('lastLogin', date);
   }
 
   int getInactivityThresholdDays() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('inactivityThresholdDays', defaultValue: 7) as int;
   }
 
   Future<void> setInactivityThresholdDays(int days) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('inactivityThresholdDays', days);
   }
 
   int getMaturityWarningDays() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('maturityWarningDays', defaultValue: 5) as int;
   }
 
   Future<void> setMaturityWarningDays(int days) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('maturityWarningDays', days);
   }
 
   // --- App Lock ---
   bool isAppLockEnabled() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('appLockEnabled', defaultValue: false) as bool;
   }
 
   Future<void> setAppLockEnabled(bool enabled) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('appLockEnabled', enabled);
   }
 
   String? getAppPin() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('appPin') as String?;
   }
 
   Future<void> setAppPin(String pin) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('appPin', pin);
   }
 
   // --- Theme Mode ---
   String getThemeMode() {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     return box.get('themeMode', defaultValue: 'system') as String;
   }
 
   Future<void> setThemeMode(String mode) async {
-    final box = Hive.box(boxSettings);
+    final box = _hive.box(boxSettings);
     await box.put('themeMode', mode);
   }
 
@@ -1068,7 +1075,7 @@ class StorageService {
     final profileId = getActiveProfileId();
 
     // Clear Accounts
-    final accBox = Hive.box<Account>(boxAccounts);
+    final accBox = _hive.box<Account>(boxAccounts);
     final accountsToDelete =
         accBox.values.where((a) => a.profileId == profileId).toList();
     for (var a in accountsToDelete) {
@@ -1076,7 +1083,7 @@ class StorageService {
     }
 
     // Clear Transactions
-    final txnBox = Hive.box<Transaction>(boxTransactions);
+    final txnBox = _hive.box<Transaction>(boxTransactions);
     final txnsToDelete =
         txnBox.values.where((t) => t.profileId == profileId).toList();
     for (var t in txnsToDelete) {
@@ -1084,7 +1091,7 @@ class StorageService {
     }
 
     // Clear Loans
-    final loanBox = Hive.box<Loan>(boxLoans);
+    final loanBox = _hive.box<Loan>(boxLoans);
     final loansToDelete =
         loanBox.values.where((l) => l.profileId == profileId).toList();
     for (var l in loansToDelete) {
@@ -1092,7 +1099,7 @@ class StorageService {
     }
 
     // Clear Recurring
-    final recBox = Hive.box<RecurringTransaction>(boxRecurring);
+    final recBox = _hive.box<RecurringTransaction>(boxRecurring);
     final recToDelete =
         recBox.values.where((rt) => rt.profileId == profileId).toList();
     for (var rt in recToDelete) {
@@ -1100,7 +1107,7 @@ class StorageService {
     }
 
     // Clear Categories
-    final catBox = Hive.box<Category>(boxCategories);
+    final catBox = _hive.box<Category>(boxCategories);
     final catsToDelete =
         catBox.values.where((c) => c.profileId == profileId).toList();
     for (var c in catsToDelete) {

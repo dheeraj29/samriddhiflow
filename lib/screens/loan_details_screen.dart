@@ -9,6 +9,7 @@ import '../providers.dart';
 import '../feature_providers.dart';
 import '../models/loan.dart';
 import '../theme/app_theme.dart';
+import '../models/account.dart';
 import '../models/transaction.dart';
 import '../widgets/smart_currency_text.dart';
 import 'loan_payment_dialog.dart';
@@ -109,33 +110,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
               IconButton(
                 icon: PureIcons.deleteOutlined(),
                 tooltip: 'Delete Loan',
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Delete Loan?'),
-                      content: const Text(
-                          'This will remove the loan tracking. Existing transactions will NOT be deleted.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel')),
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Delete',
-                                style: TextStyle(color: Colors.red))),
-                      ],
-                    ),
-                  );
-
-                  if (confirm == true) {
-                    await ref
-                        .read(storageServiceProvider)
-                        .deleteLoan(currentLoan.id);
-                    final _ = ref.refresh(loansProvider);
-                    if (mounted) Navigator.pop(context);
-                  }
-                },
+                onPressed: () => _showDeleteLoanDialog(currentLoan),
               )
             ],
           ),
@@ -648,7 +623,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     'Keep Tenure constant.\nMonthly payment will change.'),
                 value: false,
                 groupValue: updateTenure,
-                onChanged: (v) => setState(() => updateTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => updateTenure = v);
+                },
               ),
               RadioListTile<bool>(
                 title: const Text('Adjust Tenure'),
@@ -656,7 +633,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     'Keep EMI constant.\nLoan duration will change.'),
                 value: true,
                 groupValue: updateTenure,
-                onChanged: (v) => setState(() => updateTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => updateTenure = v);
+                },
               ),
               const SizedBox(height: 16),
               InkWell(
@@ -693,68 +672,14 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
               onPressed: () async {
                 final newRate = double.tryParse(rateController.text);
                 if (newRate != null && newRate > 0) {
-                  final storage = ref.read(storageServiceProvider);
-                  final loanService = ref.read(loanServiceProvider);
-                  var loan = currentLoan;
-
-                  final effectiveDate = selectedDate;
-
-                  // 1. Calculate and lock-in interest at OLD rate until effective date
-                  final lastDate = loan.transactions.isNotEmpty
-                      ? loan.transactions
-                          .map((t) => t.date)
-                          .reduce((a, b) => a.isAfter(b) ? a : b)
-                      : loan.startDate;
-
-                  final accruedInterest = loanService.calculateAccruedInterest(
-                    principal: loan.remainingPrincipal,
-                    annualRate: loan.interestRate,
-                    fromDate: lastDate,
-                    toDate: effectiveDate,
+                  await _handleUpdateInterestRate(
+                    loan: currentLoan,
+                    newRate: newRate,
+                    effectiveDate: selectedDate,
+                    updateTenure: updateTenure,
                   );
-
-                  // 2. Record Rate Change Event with Accrued Interest
-                  final rateTxn = LoanTransaction(
-                    id: const Uuid().v4(),
-                    date: effectiveDate,
-                    amount: newRate, // New rate recorded in amount
-                    type: LoanTransactionType.rateChange,
-                    principalComponent: 0,
-                    interestComponent: accruedInterest,
-                    resultantPrincipal: loan.remainingPrincipal,
-                  );
-
-                  loan.transactions = [...loan.transactions, rateTxn];
-                  loan.interestRate = newRate;
-
-                  // 3. Recalibrate (Adjust EMI or Adjust Tenure)
-                  if (!updateTenure) {
-                    // Adjust EMI (Keep Tenure)
-                    final monthsPassed =
-                        effectiveDate.difference(loan.startDate).inDays ~/ 30;
-                    final remainingMonths =
-                        (loan.tenureMonths - monthsPassed).clamp(1, 600);
-
-                    loan.emiAmount = loanService.calculateEMI(
-                      principal: loan.remainingPrincipal,
-                      annualRate: newRate,
-                      tenureMonths: remainingMonths,
-                    );
-                  } else {
-                    // Adjust Tenure (Keep EMI)
-                    loan.tenureMonths = loanService.calculateTenureForEMI(
-                      principal: loan.remainingPrincipal,
-                      annualRate: newRate,
-                      emi: loan.emiAmount,
-                    );
-                  }
-
-                  await storage.saveLoan(loan);
-                  final _ = ref.refresh(loansProvider);
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Rate updated and loan recalibrated.')));
                   }
                 }
               },
@@ -812,7 +737,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     const Text('Keep Tenure constant. EMI will increase.'),
                 value: false,
                 groupValue: updateTenure,
-                onChanged: (v) => setState(() => updateTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => updateTenure = v);
+                },
               ),
               RadioListTile<bool>(
                 title: const Text('Adjust Tenure'),
@@ -820,7 +747,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                     const Text('Keep EMI constant. Tenure will increase.'),
                 value: true,
                 groupValue: updateTenure,
-                onChanged: (v) => setState(() => updateTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => updateTenure = v);
+                },
               ),
             ],
           ),
@@ -832,104 +761,16 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
               onPressed: () async {
                 final topupAmount = double.tryParse(amountController.text);
                 if (topupAmount != null && topupAmount > 0) {
-                  final storage = ref.read(storageServiceProvider);
-                  final loanService = ref.read(loanServiceProvider);
-                  var loan = currentLoan;
-
-                  final topupDate = DateTime.now();
-
-                  // 1. Accrue interest on OLD balance until today
-                  final lastDate = loan.transactions.isNotEmpty
-                      ? loan.transactions
-                          .map((t) => t.date)
-                          .reduce((a, b) => a.isAfter(b) ? a : b)
-                      : loan.startDate;
-
-                  final accruedInterest = loanService.calculateAccruedInterest(
-                    principal: loan.remainingPrincipal,
-                    annualRate: loan.interestRate,
-                    fromDate: lastDate,
-                    toDate: topupDate,
+                  await _handleLoanTopup(
+                    loan: currentLoan,
+                    topupAmount: topupAmount,
+                    selectedAccountId: selectedAccountId,
+                    updateTenure: updateTenure,
+                    accounts: accounts,
                   );
-
-                  // 2. Add Top-up principal and record transaction
-                  loan.totalPrincipal += topupAmount;
-                  loan.remainingPrincipal += topupAmount;
-
-                  final topupTxn = LoanTransaction(
-                    id: const Uuid().v4(),
-                    date: topupDate,
-                    amount: topupAmount,
-                    type: LoanTransactionType.topup,
-                    principalComponent: topupAmount,
-                    interestComponent: accruedInterest,
-                    resultantPrincipal: loan.remainingPrincipal,
-                  );
-
-                  loan.transactions = [...loan.transactions, topupTxn];
-
-                  // 3. Recalibrate (Adjust EMI or Adjust Tenure)
-                  if (!updateTenure) {
-                    // Adjust EMI (Keep Tenure)
-                    final monthsPassed =
-                        topupDate.difference(loan.startDate).inDays ~/ 30;
-                    final remainingMonths =
-                        (loan.tenureMonths - monthsPassed).clamp(1, 600);
-
-                    loan.emiAmount = loanService.calculateEMI(
-                      principal: loan.remainingPrincipal,
-                      annualRate: loan.interestRate,
-                      tenureMonths: remainingMonths,
-                    );
-                  } else {
-                    // Adjust Tenure (Keep EMI)
-                    loan.tenureMonths = loanService.calculateTenureForEMI(
-                      principal: loan.remainingPrincipal,
-                      annualRate: loan.interestRate,
-                      emi: loan.emiAmount,
-                    );
+                  if (context.mounted) {
+                    Navigator.pop(context);
                   }
-
-                  loan.totalPrincipal += topupAmount;
-                  loan.remainingPrincipal += topupAmount;
-
-                  final txnId = const Uuid().v4();
-                  loan.transactions = [
-                    ...loan.transactions,
-                    LoanTransaction(
-                      id: txnId,
-                      date: DateTime.now(),
-                      amount: topupAmount,
-                      type: LoanTransactionType.topup,
-                      principalComponent: topupAmount,
-                      interestComponent: 0,
-                      resultantPrincipal: loan.remainingPrincipal,
-                    )
-                  ];
-
-                  // Record Income Transaction
-                  if (selectedAccountId != null) {
-                    final acc =
-                        accounts.firstWhere((a) => a.id == selectedAccountId);
-                    final financeTxn = Transaction.create(
-                      title: 'Loan Top-up: ${loan.name}',
-                      amount: topupAmount,
-                      type: TransactionType.income,
-                      category: 'Loan Top-up',
-                      accountId: selectedAccountId!,
-                      date: DateTime.now(),
-                      loanId: loan.id,
-                    );
-                    acc.balance += topupAmount;
-                    await storage.saveAccount(acc);
-                    await storage.saveTransaction(financeTxn);
-                  }
-
-                  await storage.saveLoan(loan);
-                  ref.invalidate(loansProvider);
-                  ref.invalidate(transactionsProvider);
-                  ref.invalidate(accountsProvider);
-                  if (mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Borrow'),
@@ -938,6 +779,163 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleUpdateInterestRate({
+    required Loan loan,
+    required double newRate,
+    required DateTime effectiveDate,
+    required bool updateTenure,
+  }) async {
+    final storage = ref.read(storageServiceProvider);
+    final loanService = ref.read(loanServiceProvider);
+
+    // 1. Calculate and lock-in interest at OLD rate until effective date
+    final lastDate = loan.transactions.isNotEmpty
+        ? loan.transactions
+            .map((t) => t.date)
+            .reduce((a, b) => a.isAfter(b) ? a : b)
+        : loan.startDate;
+
+    final accruedInterest = loanService.calculateAccruedInterest(
+      principal: loan.remainingPrincipal,
+      annualRate: loan.interestRate,
+      fromDate: lastDate,
+      toDate: effectiveDate,
+    );
+
+    // 2. Record Rate Change Event with Accrued Interest
+    final rateTxn = LoanTransaction(
+      id: const Uuid().v4(),
+      date: effectiveDate,
+      amount: newRate, // New rate recorded in amount
+      type: LoanTransactionType.rateChange,
+      principalComponent: 0,
+      interestComponent: accruedInterest,
+      resultantPrincipal: loan.remainingPrincipal,
+    );
+
+    loan.transactions = [...loan.transactions, rateTxn];
+    loan.interestRate = newRate;
+
+    // 3. Recalibrate (Adjust EMI or Adjust Tenure)
+    if (!updateTenure) {
+      // Adjust EMI (Keep Tenure)
+      final monthsPassed =
+          effectiveDate.difference(loan.startDate).inDays ~/ 30;
+      final remainingMonths = (loan.tenureMonths - monthsPassed).clamp(1, 600);
+
+      loan.emiAmount = loanService.calculateEMI(
+        principal: loan.remainingPrincipal,
+        annualRate: newRate,
+        tenureMonths: remainingMonths,
+      );
+    } else {
+      // Adjust Tenure (Keep EMI)
+      loan.tenureMonths = loanService.calculateTenureForEMI(
+        principal: loan.remainingPrincipal,
+        annualRate: newRate,
+        emi: loan.emiAmount,
+      );
+    }
+
+    await storage.saveLoan(loan);
+    final _ = ref.refresh(loansProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rate updated and loan recalibrated.')));
+    }
+  }
+
+  Future<void> _handleLoanTopup({
+    required Loan loan,
+    required double topupAmount,
+    required String? selectedAccountId,
+    required bool updateTenure,
+    required List<Account> accounts,
+  }) async {
+    final storage = ref.read(storageServiceProvider);
+    final loanService = ref.read(loanServiceProvider);
+
+    final topupDate = DateTime.now();
+
+    // 1. Accrue interest on OLD balance until today
+    final lastDate = loan.transactions.isNotEmpty
+        ? loan.transactions
+            .map((t) => t.date)
+            .reduce((a, b) => a.isAfter(b) ? a : b)
+        : loan.startDate;
+
+    final accruedInterest = loanService.calculateAccruedInterest(
+      principal: loan.remainingPrincipal,
+      annualRate: loan.interestRate,
+      fromDate: lastDate,
+      toDate: topupDate,
+    );
+
+    // 2. Add Top-up principal and record transaction
+    loan.totalPrincipal += topupAmount;
+    loan.remainingPrincipal += topupAmount;
+
+    final topupTxn = LoanTransaction(
+      id: const Uuid().v4(),
+      date: topupDate,
+      amount: topupAmount,
+      type: LoanTransactionType.topup,
+      principalComponent: topupAmount,
+      interestComponent: accruedInterest,
+      resultantPrincipal: loan.remainingPrincipal,
+    );
+
+    loan.transactions = [...loan.transactions, topupTxn];
+
+    // 3. Recalibrate (Adjust EMI or Adjust Tenure)
+    if (!updateTenure) {
+      // Adjust EMI (Keep Tenure)
+      final monthsPassed = topupDate.difference(loan.startDate).inDays ~/ 30;
+      final remainingMonths = (loan.tenureMonths - monthsPassed).clamp(1, 600);
+
+      loan.emiAmount = loanService.calculateEMI(
+        principal: loan.remainingPrincipal,
+        annualRate: loan.interestRate,
+        tenureMonths: remainingMonths,
+      );
+    } else {
+      // Adjust Tenure (Keep EMI)
+      loan.tenureMonths = loanService.calculateTenureForEMI(
+        principal: loan.remainingPrincipal,
+        annualRate: loan.interestRate,
+        emi: loan.emiAmount,
+      );
+    }
+
+    // Record Income Transaction
+    if (selectedAccountId != null) {
+      final acc = accounts.firstWhere((a) => a.id == selectedAccountId);
+      final financeTxn = Transaction.create(
+        title: 'Loan Top-up: ${loan.name}',
+        amount: topupAmount,
+        type: TransactionType.income,
+        category: 'Loan Top-up',
+        accountId: selectedAccountId,
+        date: DateTime.now(),
+        loanId: loan.id,
+      );
+      acc.balance += topupAmount;
+      await storage.saveAccount(acc);
+      await storage.saveTransaction(financeTxn);
+    }
+
+    await storage.saveLoan(loan);
+    ref.invalidate(loansProvider);
+    ref.invalidate(transactionsProvider);
+    ref.invalidate(accountsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Loan topped up successfully.')));
+    }
   }
 
   Widget _buildLedger(Loan loan, String currencyLocale) {
@@ -1281,7 +1279,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
 
                   await storage.saveLoan(loan);
                   final _ = ref.refresh(loansProvider);
-                  if (mounted) Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Update'),
@@ -1314,8 +1312,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 loan.name = newName;
                 await ref.read(storageServiceProvider).saveLoan(loan);
                 ref.invalidate(loansProvider);
-                if (!mounted) return;
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               }
             },
             child: const Text('Save'),
@@ -1525,19 +1524,23 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         Row(
           children: [
             Expanded(
-              child: RadioListTile<bool>(
+              child: RadioListTile<bool>.adaptive(
                 title: const Text('Reduce Tenure'),
                 value: true,
                 groupValue: _reduceTenure,
-                onChanged: (v) => setState(() => _reduceTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => _reduceTenure = v);
+                },
               ),
             ),
             Expanded(
-              child: RadioListTile<bool>(
+              child: RadioListTile<bool>.adaptive(
                 title: const Text('Reduce EMI'),
                 value: false,
                 groupValue: _reduceTenure,
-                onChanged: (v) => setState(() => _reduceTenure = v!),
+                onChanged: (v) {
+                  if (v != null) setState(() => _reduceTenure = v);
+                },
               ),
             ),
           ],
@@ -1705,8 +1708,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   ref.invalidate(loansProvider);
                   ref.invalidate(transactionsProvider);
                   ref.invalidate(accountsProvider);
-                  if (!mounted) return;
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
             )
@@ -1812,8 +1816,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   ref.invalidate(loansProvider);
                   ref.invalidate(transactionsProvider);
                   ref.invalidate(accountsProvider);
-                  if (!mounted) return;
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
             )
@@ -1896,8 +1901,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 await ref.read(storageServiceProvider).saveLoan(currentLoan);
                 ref.invalidate(loansProvider);
 
-                if (!mounted) return;
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: const Text('Update Rate'),
             ),
@@ -1961,94 +1967,14 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   ? null
                   : () async {
                       setState(() => isProcessing = true);
-                      final storage = ref.read(storageServiceProvider);
-                      var loan = currentLoan; // Reference
-                      // We will iterate month by month from Start to End
-                      DateTime current =
-                          DateTime(startDate.year, startDate.month, 1);
-                      final end = DateTime(endDate.year, endDate.month, 1);
-
-                      int count = 0;
-                      List<Transaction> newTxns = [];
-                      List<LoanTransaction> newLoanTxns = [];
-
-                      while (current.isBefore(end) ||
-                          current.isAtSameMomentAs(end)) {
-                        // Determine EMI Date for this month
-                        final emiDate =
-                            DateTime(current.year, current.month, loan.emiDay);
-
-                        // Check if already paid in this month
-                        final exists = loan.transactions.any((t) =>
-                            t.type == LoanTransactionType.emi &&
-                            t.date.year == emiDate.year &&
-                            t.date.month == emiDate.month);
-
-                        if (!exists && emiDate.isAfter(loan.startDate)) {
-                          // Simple Interest split for bulk:
-                          // Interest = Principal * Rate / 12 / 100
-                          final interest = (loan.remainingPrincipal *
-                                  loan.interestRate /
-                                  12) /
-                              100;
-                          final principalComp = loan.emiAmount - interest;
-
-                          final loanTxn = LoanTransaction(
-                            id: const Uuid().v4(),
-                            date: emiDate,
-                            amount: loan.emiAmount,
-                            type: LoanTransactionType.emi,
-                            principalComponent: principalComp,
-                            interestComponent: interest,
-                            resultantPrincipal:
-                                loan.remainingPrincipal - principalComp,
-                          );
-
-                          loan.remainingPrincipal -= principalComp;
-                          newLoanTxns.add(loanTxn);
-
-                          // Expense Transaction
-                          if (loan.accountId != null) {
-                            final expTxn = Transaction.create(
-                              title: 'Loan EMI: ${loan.name}',
-                              amount: loan.emiAmount,
-                              type: TransactionType.expense,
-                              category: 'Loan Repayment',
-                              accountId: loan.accountId!,
-                              date: emiDate,
-                              loanId: loan.id,
-                            );
-                            newTxns.add(expTxn);
-                          }
-                          count++;
-                        }
-                        // Next month
-                        current = DateTime(current.year, current.month + 1, 1);
+                      await _handleBulkPayment(
+                        currentLoan: currentLoan,
+                        startDate: startDate,
+                        endDate: endDate,
+                      );
+                      if (context.mounted) {
+                        Navigator.pop(context);
                       }
-
-                      // Batch Save
-                      loan.transactions = [
-                        ...loan.transactions,
-                        ...newLoanTxns
-                      ];
-                      loan.transactions
-                          .sort((a, b) => a.date.compareTo(b.date));
-
-                      await storage.saveLoan(loan);
-
-                      for (final t in newTxns) {
-                        await storage.saveTransaction(t);
-                      }
-
-                      ref.invalidate(loansProvider);
-                      ref.invalidate(transactionsProvider);
-                      ref.invalidate(accountsProvider);
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text('Recorded $count payments successfully.')));
                     },
               child: const Text('Record Payments'),
             ),
@@ -2056,5 +1982,107 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleBulkPayment({
+    required Loan currentLoan,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final storage = ref.read(storageServiceProvider);
+    var loan = currentLoan;
+
+    DateTime current = DateTime(startDate.year, startDate.month, 1);
+    final end = DateTime(endDate.year, endDate.month, 1);
+
+    int count = 0;
+    List<Transaction> newTxns = [];
+    List<LoanTransaction> newLoanTxns = [];
+
+    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+      final emiDate = DateTime(current.year, current.month, loan.emiDay);
+      final exists = loan.transactions.any((t) =>
+          t.type == LoanTransactionType.emi &&
+          t.date.year == emiDate.year &&
+          t.date.month == emiDate.month);
+
+      if (!exists && emiDate.isAfter(loan.startDate)) {
+        final interest =
+            (loan.remainingPrincipal * loan.interestRate / 12) / 100;
+        final principalComp = loan.emiAmount - interest;
+
+        final loanTxn = LoanTransaction(
+          id: const Uuid().v4(),
+          date: emiDate,
+          amount: loan.emiAmount,
+          type: LoanTransactionType.emi,
+          principalComponent: principalComp,
+          interestComponent: interest,
+          resultantPrincipal: loan.remainingPrincipal - principalComp,
+        );
+
+        loan.remainingPrincipal -= principalComp;
+        newLoanTxns.add(loanTxn);
+
+        if (loan.accountId != null) {
+          final expTxn = Transaction.create(
+            title: 'Loan EMI: ${loan.name}',
+            amount: loan.emiAmount,
+            type: TransactionType.expense,
+            category: 'Loan Repayment',
+            accountId: loan.accountId!,
+            date: emiDate,
+            loanId: loan.id,
+          );
+          newTxns.add(expTxn);
+        }
+        count++;
+      }
+      current = DateTime(current.year, current.month + 1, 1);
+    }
+
+    loan.transactions = [...loan.transactions, ...newLoanTxns];
+    loan.transactions.sort((a, b) => a.date.compareTo(b.date));
+
+    await storage.saveLoan(loan);
+    for (final t in newTxns) {
+      await storage.saveTransaction(t);
+    }
+
+    ref.invalidate(loansProvider);
+    ref.invalidate(transactionsProvider);
+    ref.invalidate(accountsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Recorded $count payments successfully.')));
+    }
+  }
+
+  Future<void> _showDeleteLoanDialog(Loan currentLoan) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Loan?'),
+        content: const Text(
+            'This will remove the loan tracking. Existing transactions will NOT be deleted.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ref.read(storageServiceProvider).deleteLoan(currentLoan.id);
+      final _ = ref.refresh(loansProvider);
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+    }
   }
 }
