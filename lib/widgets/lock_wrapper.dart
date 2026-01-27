@@ -44,6 +44,14 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     }
   }
 
+  void _disableAppLock() {
+    try {
+      final storage = ref.read(storageServiceProvider);
+      storage.setAppLockEnabled(false);
+      // Optionally clear PIN or leave it for reset flow
+    } catch (_) {}
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -77,8 +85,10 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     // Safety: If storage JUST finished but listener hasn't fired yet,
     // we do a one-time sync check to prevent that 1-frame glitch.
     final storage = ref.read(storageServiceProvider);
-    final shouldBeLocked =
-        storage.isAppLockEnabled() && storage.getAppPin() != null;
+    final user = ref.read(authServiceProvider).currentUser;
+    final shouldBeLocked = user != null &&
+        storage.isAppLockEnabled() &&
+        storage.getAppPin() != null;
 
     // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
     // But setState during build is tricky, so we rely on the flags.
@@ -89,9 +99,21 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     ref.listen(authStreamProvider, (previous, next) {
       if (next.value != null && previous?.value == null) {
         // User just logged in (e.g. via Forgot PIN fallback)
+        // Disable App Lock to prevent immediate re-lock, allowing user to Reset PIN.
+        _disableAppLock();
+
         setState(() {
           _isLocked = false;
           _isFallbackMode = false;
+        });
+
+        // Use a post-frame callback to show snackbar since we are in build/listener
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('App Unlocked. Please Reset your PIN in Settings.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ));
         });
       }
     });
@@ -99,7 +121,15 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     if ((effectiveLocked || _isLocked) && !_isFallbackMode) {
       return AppLockScreen(
         onUnlocked: () => setState(() => _isLocked = false),
-        onFallback: () => setState(() => _isFallbackMode = true),
+        onFallback: () {
+          // Sign out to force re-authentication (Forgot PIN flow)
+          ref.read(authServiceProvider).signOut(ref);
+          setState(() {
+            _isLocked =
+                false; // Will trigger rebuild showing AuthWrapper -> Login
+            _isFallbackMode = false;
+          });
+        },
       );
     }
     return widget.child;

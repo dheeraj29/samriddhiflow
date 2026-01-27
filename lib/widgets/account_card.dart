@@ -119,16 +119,21 @@ class AccountCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Used ${((percent * 100).toInt())}%',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(
-              'Limit: ${NumberFormat.compact().format(limit)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Used ${((percent * 100).toInt())}%',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              const SizedBox(width: 8),
+              Text(
+                'Limit: ${NumberFormat.compact().format(limit)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 6),
         LinearProgressIndicator(

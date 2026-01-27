@@ -2,7 +2,6 @@ import '../utils/connectivity_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/services.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -699,9 +698,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _exportLocalFile() async {
     // 1. Check Connectivity
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none) ||
-        connectivityResult.isEmpty) {
+    if (ref.read(isOfflineProvider)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -758,9 +755,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _importLocalFile() async {
     // 1. Check Connectivity
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none) ||
-        connectivityResult.isEmpty) {
+    if (ref.read(isOfflineProvider)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

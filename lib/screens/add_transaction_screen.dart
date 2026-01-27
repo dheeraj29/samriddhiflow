@@ -11,6 +11,7 @@ import '../models/category.dart';
 import '../models/account.dart';
 import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
+import '../utils/recurrence_utils.dart'; // Added import
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final TransactionType initialType;
@@ -480,6 +481,33 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               });
                             },
                           ),
+                          if (_isScheduleOnly) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: Colors.blue.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline,
+                                      size: 16, color: Colors.blue),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "First Execution: ${DateFormat('EEE, MMM d, y').format(RecurrenceUtils.findFirstOccurrence(baseDate: _date, frequency: _frequency, scheduleType: _scheduleType, selectedWeekday: _selectedWeekday))}",
+                                      style: const TextStyle(
+                                          fontSize: 12, color: Colors.blue),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                         ],
                       ),
@@ -716,7 +744,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           category: _type == TransactionType.transfer ? 'Transfer' : _category!,
           accountId: _selectedAccountId,
           frequency: _frequency,
-          startDate: dateTime,
+          startDate: _isScheduleOnly
+              ? RecurrenceUtils.findFirstOccurrence(
+                  baseDate: dateTime,
+                  frequency: _frequency,
+                  scheduleType: _scheduleType,
+                  selectedWeekday: _selectedWeekday)
+              : dateTime,
           scheduleType: _scheduleType,
           selectedWeekday: _selectedWeekday,
           adjustForHolidays: _adjustForHolidays,
