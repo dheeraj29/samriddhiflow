@@ -630,8 +630,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 : TransactionType.income))
         .map((t) => t.category)
         .toSet()
-        .toList()
-      ..sort();
+        .toList();
+
+    // Calculate totals for sorting
+    final Map<String, double> categoryTotals = {};
+    for (var t in transactions) {
+      if ((_type == ReportType.spending && t.type == TransactionType.expense) ||
+          (_type == ReportType.income && t.type == TransactionType.income)) {
+        categoryTotals[t.category] =
+            (categoryTotals[t.category] ?? 0) + t.amount;
+      }
+    }
+
+    availableCategories.sort((a, b) {
+      final totalA = categoryTotals[a] ?? 0;
+      final totalB = categoryTotals[b] ?? 0;
+      // Descending order (Highest first)
+      return totalB.compareTo(totalA);
+    });
 
     showDialog(
       context: context,

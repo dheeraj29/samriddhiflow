@@ -183,4 +183,60 @@ class RecurrenceUtils {
 
     return next;
   }
+
+  /// Calculates the "Ideal" date for a recurring transaction, ignoring holidays.
+  /// This attempts to "snap back" to the original schedule if holidays forced a shift.
+  static DateTime findIdealDate(
+      RecurringTransaction rt, List<DateTime> holidays) {
+    if (rt.frequency == Frequency.monthly &&
+        rt.scheduleType == ScheduleType.fixedDate) {
+      // Monthly Fixed Date Logic
+      int targetDay = rt.byMonthDay ?? rt.nextExecutionDate.day;
+      DateTime currentMonthAndYear =
+          DateTime(rt.nextExecutionDate.year, rt.nextExecutionDate.month, 1);
+
+      DateTime c1 = _getSafeDate(
+          currentMonthAndYear.year, currentMonthAndYear.month, targetDay);
+      DateTime c2 = _getSafeDate(
+          currentMonthAndYear.year, currentMonthAndYear.month + 1, targetDay);
+
+      if ((c1.difference(rt.nextExecutionDate).abs()) <
+          (c2.difference(rt.nextExecutionDate).abs())) {
+        return c1;
+      } else {
+        return c2;
+      }
+    } else if (rt.frequency == Frequency.weekly) {
+      // Weekly Logic
+      int targetWeekday = rt.byWeekDay ?? rt.selectedWeekday ?? 0;
+      if (targetWeekday > 0 && rt.nextExecutionDate.weekday != targetWeekday) {
+        for (int i = 0; i < 7; i++) {
+          final forward = rt.nextExecutionDate.add(Duration(days: i));
+          final backward = rt.nextExecutionDate.subtract(Duration(days: i));
+          if (forward.weekday == targetWeekday) return forward;
+          if (backward.weekday == targetWeekday) return backward;
+        }
+      }
+    } else if (rt.scheduleType == ScheduleType.lastWorkingDay) {
+      // Recalculate Last Working Day
+      DateTime base = DateTime(
+          rt.nextExecutionDate.year, rt.nextExecutionDate.month + 1, 0);
+      DateTime cursor = base;
+      // Use local check to break dependency on external list if needed,
+      // but here we simply use the helper
+      while (_isHolidayOrWeekend(cursor, holidays)) {
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+      return cursor;
+    }
+
+    return rt.nextExecutionDate;
+  }
+
+  static DateTime _getSafeDate(int year, int month, int day) {
+    int safeDay = day;
+    int daysInMonth = DateTime(year, month + 1, 0).day;
+    if (safeDay > daysInMonth) safeDay = daysInMonth;
+    return DateTime(year, month, safeDay);
+  }
 }

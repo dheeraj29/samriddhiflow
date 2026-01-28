@@ -129,13 +129,32 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       }
     });
 
+    // Check for PIN Reset Request (Forgot PIN Flow)
+    // This executes when user logs BACK IN (or on app start if already logged in but flag is set)
+    if (_isLocked && storage.getPinResetRequested()) {
+      _disableAppLock();
+      storage.setPinResetRequested(false);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() => _isLocked = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('App Unlocked. Please Reset your PIN in Settings.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ));
+      });
+      return widget.child;
+    }
+
     if (_isLocked && !_isFallbackMode) {
       return AppLockScreen(
         onUnlocked: () => setState(() => _isLocked = false),
         onFallback: () async {
           // Sign out to force re-authentication (Forgot PIN flow)
-          // Don't manually set _isLocked=false here; that briefly shows dashboard.
-          // Wait for AuthWrapper to unmount us when user becomes null.
+          // Set persistent flag so we know to reset PIN on next login
+          final storage = ref.read(storageServiceProvider);
+          await storage.setPinResetRequested(true);
+
           await ref.read(authServiceProvider).signOut(ref);
           if (mounted) {
             setState(() => _isFallbackMode = false); // Cleanup state
