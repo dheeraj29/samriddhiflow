@@ -4,11 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
+import '../utils/file_picker_wrapper.dart';
 
 // We will keep the web-specific logic internal to this service
 import '../utils/connectivity_platform.dart';
 
 class FileService {
+  final FilePickerWrapper _picker;
+
+  FileService({FilePickerWrapper? picker})
+      : _picker = picker ?? FilePickerWrapper();
+
   /// Saves a file to the device.
   /// On Web: Triggers a browser download.
   /// On Windows: Saves to the Downloads folder.
@@ -26,7 +32,7 @@ class FileService {
 
   /// Picks a file from the device.
   Future<Uint8List?> pickFile({List<String>? allowedExtensions}) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await _picker.pickFiles(
       type: allowedExtensions != null ? FileType.custom : FileType.any,
       allowedExtensions: allowedExtensions,
       withData: true,
@@ -74,6 +80,13 @@ class FileService {
         throw Exception("Storage permission denied");
       }
     } catch (e) {
+      // Allow testing on Desktop/Web where Permission handler might throw PlatformException
+      if (kIsWeb ||
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS) {
+        rethrow;
+      }
       throw Exception("Android save failed: $e");
     }
   }

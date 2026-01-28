@@ -92,8 +92,13 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
 
     // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
     // But setState during build is tricky, so we rely on the flags.
-    final effectiveLocked =
-        (shouldBeLocked && !_isLocked && !_isFallbackMode) ? true : _isLocked;
+    // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
+    // But setState during build is tricky, so we rely on the flags.
+
+    // FIX: Do not override _isLocked with shouldBeLocked.
+    // Initial lock is handled by _checkInitialLock and lifecycle observer.
+    // Overriding here causes immediate re-lock after successful unlock callback.
+    // final effectiveLocked = (shouldBeLocked && !_isLocked && !_isFallbackMode) ? true : _isLocked;
 
     // Watch Auth State - if user logs in VIA FALLBACK, we can unlock
     ref.listen(authStreamProvider, (previous, next) {
@@ -124,17 +129,17 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       }
     });
 
-    if ((effectiveLocked || _isLocked) && !_isFallbackMode) {
+    if (_isLocked && !_isFallbackMode) {
       return AppLockScreen(
         onUnlocked: () => setState(() => _isLocked = false),
-        onFallback: () {
+        onFallback: () async {
           // Sign out to force re-authentication (Forgot PIN flow)
-          ref.read(authServiceProvider).signOut(ref);
-          setState(() {
-            _isLocked =
-                false; // Will trigger rebuild showing AuthWrapper -> Login
-            _isFallbackMode = false;
-          });
+          // Don't manually set _isLocked=false here; that briefly shows dashboard.
+          // Wait for AuthWrapper to unmount us when user becomes null.
+          await ref.read(authServiceProvider).signOut(ref);
+          if (mounted) {
+            setState(() => _isFallbackMode = false); // Cleanup state
+          }
         },
       );
     }

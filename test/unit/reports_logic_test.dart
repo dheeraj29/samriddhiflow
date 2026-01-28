@@ -126,5 +126,22 @@ void main() {
       expect(res.length, 1);
       expect(res['Stocks'], 200);
     });
+
+    test('Get Capital Gain Transactions', () {
+      final cats = <Category>[
+        Category.create(
+          name: 'Stocks',
+          usage: CategoryUsage.income,
+          tag: CategoryTag.capitalGain,
+        ),
+      ];
+      final res = ReportUtils.getCapitalGainTransactions(
+        transactions: transactions,
+        categories: cats,
+        reportType: TransactionType.income,
+      );
+      expect(res.length, 1);
+      expect(res.first.id, '5'); // tGain
+    });
   });
 }

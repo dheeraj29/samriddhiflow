@@ -12,7 +12,13 @@ import '../firebase_options.dart' as prod;
 import '../firebase_options_debug.dart' as dev;
 
 class AuthService {
+  final FirebaseAuth? _injectedAuth;
+
+  AuthService([this._injectedAuth]);
+
   FirebaseAuth? get _auth {
+    if (_injectedAuth != null) return _injectedAuth;
+
     try {
       // CRITICAL: Check for JS object first to prevent ReferenceError crash on iOS
       if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) return null;

@@ -105,4 +105,42 @@ class Transaction extends HiveObject {
       profileId: profileId,
     );
   }
+
+  Transaction copyWith({
+    String? id,
+    String? title,
+    double? amount,
+    DateTime? date,
+    TransactionType? type,
+    String? category,
+    String? accountId,
+    String? toAccountId,
+    String? loanId,
+    bool? isRecurringInstance,
+    bool? isDeleted,
+    int? holdingTenureMonths,
+    double? gainAmount,
+    String? profileId,
+  }) {
+    // Explicitly handle nulls for optional fields if needed?
+    // Usually copyWith doesn't reset to null unless we use a wrapped value.
+    // For now, if passed null, keep existing. To set to null, we'd need another pattern.
+    // Given the test usage (modifying date), this is sufficient.
+    return Transaction(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      category: category ?? this.category,
+      accountId: accountId ?? this.accountId,
+      toAccountId: toAccountId ?? this.toAccountId,
+      loanId: loanId ?? this.loanId,
+      isRecurringInstance: isRecurringInstance ?? this.isRecurringInstance,
+      isDeleted: isDeleted ?? this.isDeleted,
+      holdingTenureMonths: holdingTenureMonths ?? this.holdingTenureMonths,
+      gainAmount: gainAmount ?? this.gainAmount,
+      profileId: profileId ?? this.profileId,
+    );
+  }
 }

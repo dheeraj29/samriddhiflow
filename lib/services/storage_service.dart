@@ -639,6 +639,7 @@ class StorageService {
       final holidays = getHolidays();
       rt.nextExecutionDate = RecurrenceUtils.calculateNextOccurrence(
         lastDate: rt.nextExecutionDate,
+        // startDate: null, // Optional
         frequency: rt.frequency,
         interval: rt.interval,
         scheduleType: rt.scheduleType,
@@ -1030,16 +1031,51 @@ class StorageService {
       if (rt.isActive && rt.adjustForHolidays) {
         // Only adjust if the current scheduled date lands on a newly added holiday.
         // We do strictly validation (ensure valid workday), not optimization (moving forward).
-        final original = rt.nextExecutionDate;
-        final adjusted =
-            RecurrenceUtils.adjustDateForHolidays(original, holidays);
+        // Try to "Re-Anchor" to the original schedule rule to allow moving forward
+        // (e.g. if holiday is removed, we want to snap back to the 25th)
+        DateTime idealDate = rt.nextExecutionDate;
 
-        if (original != adjusted) {
+        if (rt.frequency == Frequency.monthly &&
+            rt.scheduleType == ScheduleType.fixedDate) {
+          // Use byMonthDay as anchor if available, otherwise best effort with current day
+          int targetDay = rt.byMonthDay ?? rt.nextExecutionDate.day;
+
+          // Check closest candidate around the current execution date
+          DateTime currentMonthAndYear = DateTime(
+              rt.nextExecutionDate.year, rt.nextExecutionDate.month, 1);
+
+          // Candidates: current month, next month (if we shifted back from 1st to 31st)
+          DateTime c1 = _getSafeDate(
+              currentMonthAndYear.year, currentMonthAndYear.month, targetDay);
+          DateTime c2 = _getSafeDate(currentMonthAndYear.year,
+              currentMonthAndYear.month + 1, targetDay);
+
+          // Pick closest to current nextExecutionDate
+          if ((c1.difference(rt.nextExecutionDate).abs()) <
+              (c2.difference(rt.nextExecutionDate).abs())) {
+            idealDate = c1;
+          } else {
+            idealDate = c2;
+          }
+        }
+
+        final adjusted =
+            RecurrenceUtils.adjustDateForHolidays(idealDate, holidays);
+
+        if (rt.nextExecutionDate != adjusted) {
           rt.nextExecutionDate = adjusted;
           await box.put(rt.id, rt);
         }
       }
     }
+  }
+
+  DateTime _getSafeDate(int year, int month, int day) {
+    // Handle overflow (e.g. Feb 30 -> Feb 28)
+    int safeDay = day;
+    int daysInMonth = DateTime(year, month + 1, 0).day;
+    if (safeDay > daysInMonth) safeDay = daysInMonth;
+    return DateTime(year, month, safeDay);
   }
 
   DateTime? getLastLogin() {

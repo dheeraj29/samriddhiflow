@@ -109,6 +109,7 @@ class RecurrenceUtils {
 
   static DateTime calculateNextOccurrence({
     required DateTime lastDate,
+    DateTime? startDate, // OPTIONAL: To prevent drift
     required Frequency frequency,
     required int interval,
     required ScheduleType scheduleType,
@@ -124,7 +125,25 @@ class RecurrenceUtils {
     } else if (frequency == Frequency.weekly) {
       next = lastDate.add(Duration(days: 7 * interval));
     } else if (frequency == Frequency.monthly) {
-      next = DateTime(lastDate.year, lastDate.month + interval, lastDate.day);
+      // Use startDate.day to prevent drift if lastDate was adjusted
+      int targetDay = startDate?.day ?? lastDate.day;
+      if (scheduleType == ScheduleType.fixedDate) {
+        // Create next month candidate using targetDay
+        // Handle month overflow (e.g. Jan 31 -> Feb 28)
+        int nextMonth = lastDate.month + interval;
+        int nextYear = lastDate.year;
+        // Normalize month/year
+        while (nextMonth > 12) {
+          nextMonth -= 12;
+          nextYear++;
+        }
+
+        int maxDays = DateTime(nextYear, nextMonth + 1, 0).day;
+        next = DateTime(
+            nextYear, nextMonth, targetDay > maxDays ? maxDays : targetDay);
+      } else {
+        next = DateTime(lastDate.year, lastDate.month + interval, lastDate.day);
+      }
     } else if (frequency == Frequency.yearly) {
       next = DateTime(lastDate.year + interval, lastDate.month, lastDate.day);
     }

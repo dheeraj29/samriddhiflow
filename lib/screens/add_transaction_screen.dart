@@ -745,6 +745,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           category: _type == TransactionType.transfer ? 'Transfer' : _category!,
           accountId: _selectedAccountId,
           frequency: _frequency,
+          byMonthDay: (_frequency == Frequency.monthly &&
+                  _scheduleType == ScheduleType.fixedDate)
+              ? dateTime.day
+              : null,
           startDate: _isScheduleOnly
               ? RecurrenceUtils.findFirstOccurrence(
                   baseDate: dateTime,
