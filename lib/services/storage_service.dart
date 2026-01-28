@@ -2,6 +2,7 @@ import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../utils/billing_helper.dart';
+import '../utils/recurrence_utils.dart'; // Added import
 import '../models/loan.dart';
 import '../models/recurring_transaction.dart';
 import '../models/category.dart';
@@ -635,7 +636,16 @@ class StorageService {
     final box = _hive.box<RecurringTransaction>(boxRecurring);
     final rt = box.get(id);
     if (rt != null) {
-      rt.nextExecutionDate = rt.calculateNextOccurrence(rt.nextExecutionDate);
+      final holidays = getHolidays();
+      rt.nextExecutionDate = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: rt.nextExecutionDate,
+        frequency: rt.frequency,
+        interval: rt.interval,
+        scheduleType: rt.scheduleType,
+        selectedWeekday: rt.selectedWeekday,
+        adjustForHolidays: rt.adjustForHolidays,
+        holidays: holidays,
+      );
       await box.put(rt.id, rt);
     }
   }
@@ -998,6 +1008,7 @@ class StorageService {
         h.day == normalized.day)) {
       holidays.add(normalized);
       await box.put('holidays', holidays);
+      await _revalidateRecurringDates();
     }
   }
 
@@ -1007,6 +1018,28 @@ class StorageService {
     holidays.removeWhere((h) =>
         h.year == date.year && h.month == date.month && h.day == date.day);
     await box.put('holidays', holidays);
+    await _revalidateRecurringDates();
+  }
+
+  Future<void> _revalidateRecurringDates() async {
+    final box = _hive.box<RecurringTransaction>(boxRecurring);
+    final holidays = getHolidays();
+    final allRecurring = getAllRecurring();
+
+    for (var rt in allRecurring) {
+      if (rt.isActive && rt.adjustForHolidays) {
+        // Only adjust if the current scheduled date lands on a newly added holiday.
+        // We do strictly validation (ensure valid workday), not optimization (moving forward).
+        final original = rt.nextExecutionDate;
+        final adjusted =
+            RecurrenceUtils.adjustDateForHolidays(original, holidays);
+
+        if (original != adjusted) {
+          rt.nextExecutionDate = adjusted;
+          await box.put(rt.id, rt);
+        }
+      }
+    }
   }
 
   DateTime? getLastLogin() {

@@ -90,6 +90,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
     final categories = ref.watch(categoriesProvider);
+    final holidays = ref.watch(holidaysProvider);
 
     final filteredCategories = categories.where((c) {
       if (_type == TransactionType.income) {
@@ -499,7 +500,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      "First Execution: ${DateFormat('EEE, MMM d, y').format(RecurrenceUtils.findFirstOccurrence(baseDate: _date, frequency: _frequency, scheduleType: _scheduleType, selectedWeekday: _selectedWeekday))}",
+                                      "First Execution: ${DateFormat('EEE, MMM d, y').format(RecurrenceUtils.findFirstOccurrence(baseDate: _date, frequency: _frequency, scheduleType: _scheduleType, selectedWeekday: _selectedWeekday, adjustForHolidays: _adjustForHolidays, holidays: holidays))}",
                                       style: const TextStyle(
                                           fontSize: 12, color: Colors.blue),
                                     ),
@@ -749,7 +750,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   baseDate: dateTime,
                   frequency: _frequency,
                   scheduleType: _scheduleType,
-                  selectedWeekday: _selectedWeekday)
+                  selectedWeekday: _selectedWeekday,
+                  adjustForHolidays: _adjustForHolidays,
+                  holidays: ref.read(holidaysProvider))
               : dateTime,
           scheduleType: _scheduleType,
           selectedWeekday: _selectedWeekday,

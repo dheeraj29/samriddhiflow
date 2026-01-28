@@ -95,25 +95,31 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     final effectiveLocked =
         (shouldBeLocked && !_isLocked && !_isFallbackMode) ? true : _isLocked;
 
-    // Watch Auth State - if user logs in, we can optionally unlock
+    // Watch Auth State - if user logs in VIA FALLBACK, we can unlock
     ref.listen(authStreamProvider, (previous, next) {
-      if (next.value != null && previous?.value == null) {
-        // User just logged in (e.g. via Forgot PIN fallback)
-        // Disable App Lock to prevent immediate re-lock, allowing user to Reset PIN.
-        _disableAppLock();
+      if (next.value != null && previous?.value == null && _isFallbackMode) {
+        // User just logged in via Forgot PIN fallback
+        // Disable App Lock to prevent immediate re-lock.
+        final storage = ref.read(storageServiceProvider);
+        final wasLocked =
+            storage.isAppLockEnabled() && storage.getAppPin() != null;
+
+        if (wasLocked) {
+          _disableAppLock();
+
+          // Use a post-frame callback to show snackbar since we are in build/listener
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('App Unlocked. Please Reset your PIN in Settings.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ));
+          });
+        }
 
         setState(() {
           _isLocked = false;
           _isFallbackMode = false;
-        });
-
-        // Use a post-frame callback to show snackbar since we are in build/listener
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('App Unlocked. Please Reset your PIN in Settings.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
-          ));
         });
       }
     });
