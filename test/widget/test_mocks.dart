@@ -16,7 +16,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 // --- Service Mocks (Mocktail) ---
 class MockFileService extends Mock implements FileService {}
 
-class MockExcelService extends Mock implements ExcelService {}
+class MockExcelService extends Mock implements ExcelService {
+  @override
+  Future<List<int>> exportData({bool allProfiles = false}) async => [];
+}
 
 class MockAuthService extends Mock implements AuthService {}
 
@@ -24,7 +27,13 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockUser extends Mock implements User {}
 
-class MockNotificationService extends Mock implements NotificationService {}
+class MockNotificationService extends Mock implements NotificationService {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<String>> checkNudges() async => [];
+}
 
 // --- Manual Mock Storage ---
 class MockStorageService extends StorageService implements Mock {
@@ -129,7 +138,20 @@ class MockBudgetNotifier extends BudgetNotifier {
 
 class MockCategoriesNotifier extends CategoriesNotifier {
   @override
-  List<Category> build() => [];
+  List<Category> build() => [
+        Category(
+            id: 'cat1',
+            name: 'Food',
+            usage: CategoryUsage.expense,
+            iconCode: 57564,
+            tag: CategoryTag.none),
+        Category(
+            id: 'cat2',
+            name: 'Salary',
+            usage: CategoryUsage.income,
+            iconCode: 57565,
+            tag: CategoryTag.none),
+      ];
 }
 
 class MockProfileNotifier extends ProfileNotifier {

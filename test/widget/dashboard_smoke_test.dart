@@ -25,6 +25,7 @@ void main() {
           loansProvider.overrideWith((ref) => Stream.value([])),
           // Also override initializer to be "done"
           storageInitializerProvider.overrideWith((ref) => Future.value()),
+          firebaseInitializerProvider.overrideWith((ref) => Future.value()),
           // Mock offline status
           isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
           // Mock budget

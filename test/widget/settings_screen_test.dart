@@ -30,6 +30,7 @@ void main() {
           authStreamProvider.overrideWith((ref) => Stream.value(null)),
           storageServiceProvider.overrideWith((ref) => MockStorageService()),
           storageInitializerProvider.overrideWith((ref) => Future.value()),
+          firebaseInitializerProvider.overrideWith((ref) => Future.value()),
           profilesProvider.overrideWith((ref) => Future.value(
               [Profile(id: 'default', name: 'User', currencyLocale: 'en_IN')])),
           activeProfileIdProvider.overrideWith(() => MockProfileNotifier()),
@@ -46,8 +47,9 @@ void main() {
     );
 
     // Initial Pump
-    await tester.pump(); // No settle yet, might be async loading
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
 
     // Verify Title
     expect(find.text('Settings'), findsOneWidget);

@@ -23,6 +23,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWith((ref) => MockStorageService()),
           storageInitializerProvider.overrideWith((ref) => Future.value()),
+          firebaseInitializerProvider.overrideWith((ref) => Future.value()),
           categoriesProvider
               .overrideWith(() => MockCategoriesNotifier()..build()),
           accountsProvider.overrideWith((ref) => Stream.value([
