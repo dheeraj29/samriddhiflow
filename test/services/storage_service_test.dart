@@ -94,6 +94,8 @@ void main() {
     // Default active profile
     when(() => mockSettingsBox.get('activeProfileId',
         defaultValue: any(named: 'defaultValue'))).thenReturn('default');
+    when(() => mockSettingsBox.get('holidays',
+        defaultValue: any(named: 'defaultValue'))).thenReturn([]);
   });
 
   group('StorageService - Initialization', () {
