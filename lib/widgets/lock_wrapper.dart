@@ -15,6 +15,8 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _isFallbackMode = false;
+  bool _isObscured = false; // For privacy screen
+  DateTime? _backgroundTimestamp; // For delayed lock
 
   @override
   void initState() {
@@ -54,13 +56,33 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      try {
-        final storage = ref.read(storageServiceProvider);
-        if (storage.isAppLockEnabled() && storage.getAppPin() != null) {
-          setState(() => _isLocked = true);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // App is going to background or app switcher
+      // 1. Show Privacy Screen immediately
+      setState(() => _isObscured = true);
+
+      // 2. Record timestamp for delayed lock
+      _backgroundTimestamp = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      // App is back
+      // 1. Check duration
+      if (_backgroundTimestamp != null) {
+        final duration = DateTime.now().difference(_backgroundTimestamp!);
+        if (duration.inMinutes >= 1) {
+          // Time exceeded, Lock!
+          try {
+            final storage = ref.read(storageServiceProvider);
+            if (storage.isAppLockEnabled() && storage.getAppPin() != null) {
+              setState(() => _isLocked = true);
+            }
+          } catch (_) {}
         }
-      } catch (_) {}
+        _backgroundTimestamp = null;
+      }
+
+      // 2. Hide Privacy Screen (reveal content or lock screen)
+      setState(() => _isObscured = false);
     }
   }
 
@@ -146,6 +168,26 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       return widget.child;
     }
 
+    return Stack(
+      children: [
+        // 1. The main app content (maybe locked)
+        _buildContent(),
+
+        // 2. Privacy Overlay (Obscures everything when backgrounded)
+        if (_isObscured)
+          Positioned.fill(
+            child: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: const Center(
+                child: Icon(Icons.lock, size: 80, color: Colors.grey),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
     if (_isLocked && !_isFallbackMode) {
       return AppLockScreen(
         onUnlocked: () => setState(() => _isLocked = false),

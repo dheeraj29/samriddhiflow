@@ -366,7 +366,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           return const DashboardScreen();
         }
 
-        // 3. REGULAR OFFLINE GUARD (For guests/logged-out)
+        // 3. DEBUG BYPASS (Web Only)
+        // Bypass authentication for quicker local testing
+        if (kDebugMode && kIsWeb) {
+          // Ensure isLoggedIn flag is set so other components behave correctly
+          // We do this optimistically.
+          return const DashboardScreen();
+        }
+
+        // 4. REGULAR OFFLINE GUARD (For guests/logged-out)
         if (isOffline && !isPersistentLogin) {
           return _buildErrorScreen(
             context,
