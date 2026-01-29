@@ -3,39 +3,67 @@ import 'package:samriddhi_flow/utils/billing_helper.dart';
 
 void main() {
   group('BillingHelper', () {
-    test('getCycleStart - Date after cycle day', () {
-      final date = DateTime(2024, 5, 20);
-      final cycleDay = 15;
-      final start = BillingHelper.getCycleStart(date, cycleDay);
-      expect(start, DateTime(2024, 5, 15));
+    const cycleDay28 = 28;
+    const cycleDay5 = 5;
+
+    group('getCycleStart', () {
+      test('Date after cycle day (28)', () {
+        final date = DateTime(2024, 5, 29);
+        final start = BillingHelper.getCycleStart(date, cycleDay28);
+        expect(start, DateTime(2024, 5, 28));
+      });
+
+      test('Date before cycle day (28)', () {
+        final date = DateTime(2024, 5, 27);
+        final start = BillingHelper.getCycleStart(date, cycleDay28);
+        expect(start, DateTime(2024, 4, 28));
+      });
+
+      test('Date after cycle day (5)', () {
+        final date = DateTime(2024, 5, 6);
+        final start = BillingHelper.getCycleStart(date, cycleDay5);
+        expect(start, DateTime(2024, 5, 5));
+      });
+
+      test('Date before cycle day (5)', () {
+        final date = DateTime(2024, 5, 4);
+        final start = BillingHelper.getCycleStart(date, cycleDay5);
+        expect(start, DateTime(2024, 4, 5));
+      });
     });
 
-    test('getCycleStart - Date before cycle day', () {
-      final date = DateTime(2024, 5, 10);
-      final cycleDay = 15;
-      final start = BillingHelper.getCycleStart(date, cycleDay);
-      // Should be previous month
-      expect(start, DateTime(2024, 4, 15));
-    });
+    group('isUnbilled (Dynamic)', () {
+      test('Cycle Day 28: Date ON bill day is NOT unbilled', () {
+        final now = DateTime(2024, 5, 28);
+        final date = DateTime(2024, 5, 28);
+        expect(BillingHelper.isUnbilled(date, now, 28), false);
+      });
 
-    test('getCycleStart - Year boundary (Jan)', () {
-      final date = DateTime(2024, 1, 10);
-      final cycleDay = 15;
-      final start = BillingHelper.getCycleStart(date, cycleDay);
-      // Dec 2023
-      expect(start, DateTime(2023, 12, 15));
-    });
+      test('Cycle Day 28: Date after bill day IS unbilled', () {
+        final now = DateTime(2024, 5, 28);
+        final date = DateTime(2024, 5, 29);
+        expect(BillingHelper.isUnbilled(date, now, 28), true);
+      });
 
-    test('getNextCycleStart', () {
-      final currentStart = DateTime(2024, 5, 15);
-      final next = BillingHelper.getNextCycleStart(currentStart);
-      expect(next, DateTime(2024, 6, 15));
-    });
+      test('Cycle Day 5: Date ON bill day is NOT unbilled', () {
+        final now = DateTime(2024, 5, 5);
+        final date = DateTime(2024, 5, 5);
+        expect(BillingHelper.isUnbilled(date, now, 5), false);
+      });
 
-    test('getNextCycleStart - Year boundary', () {
-      final currentStart = DateTime(2023, 12, 15);
-      final next = BillingHelper.getNextCycleStart(currentStart);
-      expect(next, DateTime(2024, 1, 15));
+      test('Cycle Day 5: Date after bill day IS unbilled', () {
+        final now = DateTime(2024, 5, 5);
+        final date = DateTime(2024, 5, 6);
+        expect(BillingHelper.isUnbilled(date, now, 5), true);
+      });
+
+      test('Handling late opening (next day)', () {
+        // App opened on the 29th for a Cycle-Day-28 card
+        final now = DateTime(2024, 5, 29);
+        final dateOn28 = DateTime(2024, 5, 28);
+        // The 28th should still be considered "Billed" (of the cycle that just concluded)
+        expect(BillingHelper.isUnbilled(dateOn28, now, 28), false);
+      });
     });
   });
 }

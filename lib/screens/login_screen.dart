@@ -17,6 +17,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
+  Timer? _safetyTimer;
+
+  @override
+  void dispose() {
+    _safetyTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +152,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Safety fallback for Redirect: If we aren't unmounted (redirect hasn't happened yet)
     // and we are still loading, reset after 10s to let user try again.
-    Future.delayed(const Duration(seconds: 10), () {
+    _safetyTimer?.cancel();
+    _safetyTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
         debugPrint("Login: Safety timeout triggered.");

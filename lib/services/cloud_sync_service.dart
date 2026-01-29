@@ -50,12 +50,7 @@ class CloudSyncService {
           .toList(),
       'profiles':
           _storageService.getProfiles().map((e) => _profileToMap(e)).toList(),
-      'settings': {
-        'activeProfileId': _storageService.getActiveProfileId(),
-        'backupThreshold': _storageService.getBackupThreshold(),
-        'currencyLocale': _storageService.getCurrencyLocale(),
-        'monthlyBudget': _storageService.getMonthlyBudget(),
-      }
+      'settings': _storageService.getAllSettings()
     };
 
     await _cloudStorage.syncData(user.uid, data);
@@ -119,19 +114,8 @@ class CloudSyncService {
     }
 
     if (data['settings'] != null) {
-      final s = Map<String, dynamic>.from(data['settings']);
-      if (s['activeProfileId'] != null) {
-        await _storageService.setActiveProfileId(s['activeProfileId']);
-      }
-      if (s['backupThreshold'] != null) {
-        await _storageService.setBackupThreshold(s['backupThreshold']);
-      }
-      if (s['currencyLocale'] != null) {
-        await _storageService.setCurrencyLocale(s['currencyLocale']);
-      }
-      if (s['monthlyBudget'] != null) {
-        await _storageService.setMonthlyBudget(s['monthlyBudget']);
-      }
+      await _storageService
+          .saveSettings(Map<String, dynamic>.from(data['settings']));
     }
   }
 

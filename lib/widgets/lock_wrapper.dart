@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../screens/app_lock_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 
 class LockWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -22,7 +25,26 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Don't check lock here immediately; wait for storage init via build or listener
+
+    // iOS PWA Reliability: Listen for browser-level blur event
+    if (kIsWeb) {
+      web.window.addEventListener(
+          'blur',
+          ((web.Event event) => _handleBrowserBlur()).toJS
+              as web.EventListener);
+      web.window.addEventListener(
+          'focus',
+          ((web.Event event) => _handleBrowserFocus()).toJS
+              as web.EventListener);
+    }
+  }
+
+  void _handleBrowserBlur() {
+    if (mounted) setState(() => _isObscured = true);
+  }
+
+  void _handleBrowserFocus() {
+    if (mounted) setState(() => _isObscured = false);
   }
 
   @override
@@ -57,7 +79,8 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
       // App is going to background or app switcher
       // 1. Show Privacy Screen immediately
       setState(() => _isObscured = true);

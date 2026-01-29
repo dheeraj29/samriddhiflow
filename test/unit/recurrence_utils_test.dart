@@ -88,5 +88,71 @@ void main() {
 
       expect(next, DateTime(2024, 2, 23));
     });
+
+    test('findIdealDate - Snaps back to original day', () {
+      // RT has nextExecutionDate = Feb 23 (Friday),
+      // but original day was 25th (which was Sunday).
+      final rt = RecurringTransaction(
+        id: '1',
+        title: 'Rent',
+        amount: 1000,
+        category: 'Housing',
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.fixedDate,
+        byMonthDay: 25,
+        nextExecutionDate: DateTime(2024, 2, 23),
+      );
+
+      final ideal = RecurrenceUtils.findIdealDate(rt, []);
+      expect(ideal.day, 25);
+    });
+
+    test('daily frequency calculation', () {
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: DateTime(2024, 1, 1),
+        frequency: Frequency.daily,
+        interval: 3,
+        scheduleType: ScheduleType.fixedDate,
+      );
+      expect(next, DateTime(2024, 1, 4));
+    });
+
+    test('yearly frequency calculation', () {
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: DateTime(2024, 1, 1),
+        frequency: Frequency.yearly,
+        interval: 1,
+        scheduleType: ScheduleType.fixedDate,
+      );
+      expect(next, DateTime(2025, 1, 1));
+    });
+
+    test('Specific Weekday - Monthly', () {
+      // Find the first Friday of Feb 2024.
+      // Feb 1 2024 is Thursday. Feb 2 is Friday.
+      final start = DateTime(2024, 2, 1);
+      final firstFriday = RecurrenceUtils.findFirstOccurrence(
+        baseDate: start,
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.specificWeekday,
+        selectedWeekday: 5, // Friday
+      );
+      expect(firstFriday, DateTime(2024, 2, 2));
+    });
+
+    test('Last Weekend - Monthly', () {
+      // March 2024. Last Weekend starts on March 30 (Sat) and 31 (Sun).
+      // If we start from March 1, findFirstOccurrence with lastWeekend
+      // should find March 30?
+      // Actually _matchesCriteria for everyWeekend checks if it IS Sat/Sun.
+      // For lastWeekend it checks if it's Sat/Sun AND next week is next month.
+      final start = DateTime(2024, 3, 1);
+      final lastSat = RecurrenceUtils.findFirstOccurrence(
+        baseDate: start,
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.lastWeekend,
+      );
+      expect(lastSat, DateTime(2024, 3, 30));
+    });
   });
 }

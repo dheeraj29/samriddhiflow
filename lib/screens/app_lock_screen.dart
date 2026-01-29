@@ -50,49 +50,63 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(),
-            PureIcons.lockOutline(size: 64, color: Colors.teal),
-            const SizedBox(height: 24),
-            const Text(
-              'Enter PIN',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
-            // PIN Dots
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                bool filled = index < _pin.length;
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: filled
-                        ? Colors.teal
-                        : Colors.grey.withValues(alpha: 0.3),
-                  ),
-                );
-              }),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                        height: 48), // Padding at top for small scrolls
+                    PureIcons.lockOutline(size: 64, color: Colors.teal),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Enter PIN',
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 32),
+                    // PIN Dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(4, (index) {
+                        bool filled = index < _pin.length;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 12),
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: filled
+                                ? Colors.teal
+                                : Colors.grey.withValues(alpha: 0.3),
+                          ),
+                        );
+                      }),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Text(_error!,
+                            style: const TextStyle(color: Colors.red)),
+                      ),
+                    const SizedBox(
+                        height: 48), // Spacing between header and keypad
+                    // Numeric Keypad
+                    _buildKeypad(),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: widget.onFallback,
+                      child: const Text('Forgot PIN? / Use Password'),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            const Spacer(),
-            // Numeric Keypad
-            _buildKeypad(),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: widget.onFallback,
-              child: const Text('Forgot PIN? / Use Password'),
-            ),
-            const SizedBox(height: 32),
-          ],
+            );
+          },
         ),
       ),
     );

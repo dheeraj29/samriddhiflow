@@ -30,12 +30,6 @@ class AccountsScreen extends ConsumerWidget {
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
 
-    ref.listen(accountsProvider, (prev, next) {
-      if (next.value != null) {
-        ref.read(storageServiceProvider).checkCreditCardRollovers();
-      }
-    });
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -293,19 +287,21 @@ class AccountsScreen extends ConsumerWidget {
     double unbilled = 0;
     if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
       final now = DateTime.now();
-      final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-
       final allTxns = ref.watch(transactionsProvider).value ?? [];
       final relevantTxns = allTxns.where((t) =>
           !t.isDeleted &&
-          t.accountId == acc.id &&
-          DateTime(t.date.year, t.date.month, t.date.day).isAfter(cycleStart));
+          (t.accountId == acc.id || t.toAccountId == acc.id) &&
+          BillingHelper.isUnbilled(t.date, now, acc.billingCycleDay!));
 
       for (var t in relevantTxns) {
-        if (t.type == TransactionType.expense) unbilled += t.amount;
-        if (t.type == TransactionType.income) unbilled -= t.amount;
-        if (t.type == TransactionType.transfer && t.accountId == acc.id) {
-          unbilled += t.amount;
+        if (t.accountId == acc.id) {
+          if (t.type == TransactionType.expense) unbilled += t.amount;
+          if (t.type == TransactionType.income) unbilled -= t.amount;
+          if (t.type == TransactionType.transfer) unbilled += t.amount;
+        } else if (t.toAccountId == acc.id &&
+            t.type == TransactionType.transfer) {
+          // Payment to credit card - reduces unbilled if made in current cycle
+          unbilled -= t.amount;
         }
       }
     }

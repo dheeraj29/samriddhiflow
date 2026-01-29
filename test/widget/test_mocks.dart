@@ -39,7 +39,8 @@ class MockNotificationService extends Mock implements NotificationService {
 class MockStorageService extends StorageService implements Mock {
   bool _isLockEnabled = false;
   String? _appPin = '1111';
-  String _activeProfileId = 'default';
+  final String _activeProfileId = 'default';
+  bool saveAccountCalled = false;
 
   // Test Helpers
   void setLocked(bool val) => _isLockEnabled = val;
@@ -119,6 +120,17 @@ class MockStorageService extends StorageService implements Mock {
   int getInactivityThresholdDays() => 30;
   @override
   int getMaturityWarningDays() => 7;
+  @override
+  Future<void> checkCreditCardRollovers() async {}
+  @override
+  Future<void> saveAccount(Account account) async {
+    saveAccountCalled = true;
+  }
+
+  @override
+  Stream<List<Account>> watchAccounts() => Stream.value(getAccounts());
+  @override
+  Stream<List<Transaction>> watchTransactions() => Stream.value([]);
 }
 
 // --- Notifier Mocks ---

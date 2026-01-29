@@ -83,8 +83,9 @@ class RecurrenceUtils {
           // Check if any *future* days in the month are working days
           DateTime temp = date.add(const Duration(days: 1));
           while (temp.month == date.month) {
-            if (!_isHolidayOrWeekend(temp, holidays))
+            if (!_isHolidayOrWeekend(temp, holidays)) {
               return false; // Found a later working day
+            }
             temp = temp.add(const Duration(days: 1));
           }
           return true;

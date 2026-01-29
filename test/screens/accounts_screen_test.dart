@@ -89,8 +89,8 @@ void main() {
         currencyProvider.overrideWith(() => FakeCurrencyNotifier()),
         activeProfileIdProvider.overrideWith(() => FakeProfileNotifier()),
       ],
-      child: MaterialApp(
-        home: const AccountsScreen(),
+      child: const MaterialApp(
+        home: AccountsScreen(),
       ),
     );
   }
@@ -230,5 +230,53 @@ void main() {
 
     // Should navigate to TransactionsScreen
     expect(find.byType(TransactionsScreen), findsOneWidget);
+  });
+
+  testWidgets('AccountsScreen handles credit card unbilled calculation',
+      (tester) async {
+    final now = DateTime.now();
+    final card = Account(
+        id: 'cc1',
+        name: 'ICICI Credit',
+        type: AccountType.creditCard,
+        balance: 5000,
+        creditLimit: 100000,
+        billingCycleDay: 15,
+        paymentDueDateDay: 20,
+        profileId: 'default',
+        currency: 'en_IN');
+
+    final txn = Transaction(
+      id: 't1',
+      title: 'Amazon',
+      amount: 2000,
+      date: DateTime(now.year, now.month, now.day),
+      type: TransactionType.expense,
+      category: 'Shopping',
+      accountId: card.id,
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storageServiceProvider.overrideWithValue(mockStorageService),
+        storageInitializerProvider.overrideWith((ref) => Future.value()),
+        accountsProvider.overrideWith((ref) => Stream.value([card])),
+        transactionsProvider.overrideWith((ref) => Stream.value([txn])),
+        currencyProvider.overrideWith(() => FakeCurrencyNotifier()),
+        activeProfileIdProvider.overrideWith(() => FakeProfileNotifier()),
+      ],
+      child: const MaterialApp(home: AccountsScreen()),
+    ));
+
+    await tester.pumpAndSettle();
+
+    // Toggle on
+    await tester.tap(find.byIcon(Icons.visibility_off));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total Credit Usage'), findsOneWidget);
+    // 5000 (billed) + 2000 (unbilled) = 7000
+    expect(find.textContaining('7,000'), findsAny);
   });
 }

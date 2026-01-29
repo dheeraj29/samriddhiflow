@@ -154,5 +154,48 @@ void main() {
       expect(res.length, 1);
       expect(res.first, tIn);
     });
+
+    test('Filters by TimeRange.thisMonth', () {
+      final now = DateTime.now();
+      final tIn = t1.copyWith(date: DateTime(now.year, now.month, now.day));
+      final tOut = t1.copyWith(date: DateTime(now.year, now.month - 1, 15));
+
+      final res = TransactionFilterUtils.filter(
+          transactions: [tIn, tOut], range: TimeRange.thisMonth);
+      expect(res.length, 1);
+      expect(res.first, tIn);
+    });
+
+    test('Filters by PeriodMode 90 and 365', () {
+      final now = DateTime.now();
+      final t40 = t1.copyWith(date: now.subtract(const Duration(days: 40)));
+      final t100 = t1.copyWith(date: now.subtract(const Duration(days: 100)));
+
+      final res90 = TransactionFilterUtils.filter(
+          transactions: [t40, t100], periodMode: '90');
+      expect(res90.length, 1);
+      expect(res90.first, t40);
+
+      final res365 = TransactionFilterUtils.filter(
+          transactions: [t40, t100], periodMode: '365');
+      expect(res365.length, 2);
+    });
+
+    test('Filters by loanId', () {
+      final tLoan = t1.copyWith(loanId: 'L123');
+      final res = TransactionFilterUtils.filter(
+          transactions: [tLoan, t1], loanId: 'L123');
+      expect(res.length, 1);
+      expect(res.first.loanId, 'L123');
+    });
+
+    test('Filters by selectedYear', () {
+      final t2023 = t1.copyWith(date: DateTime(2023, 5, 1));
+      final t2024 = t1.copyWith(date: DateTime(2024, 5, 1));
+      final res = TransactionFilterUtils.filter(
+          transactions: [t2023, t2024], periodMode: 'year', selectedYear: 2023);
+      expect(res.length, 1);
+      expect(res.first.date.year, 2023);
+    });
   });
 }

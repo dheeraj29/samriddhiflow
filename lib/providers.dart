@@ -27,6 +27,15 @@ import 'utils/connectivity_platform.dart';
 final isOfflineProvider =
     NotifierProvider<IsOfflineNotifier, bool>(IsOfflineNotifier.new);
 
+final connectivityCheckProvider = Provider<Future<bool> Function()>((ref) {
+  return () => NetworkUtils.isOffline();
+});
+
+final connectivityStreamProvider =
+    StreamProvider<List<ConnectivityResult>>((ref) {
+  return Connectivity().onConnectivityChanged;
+});
+
 class IsOfflineNotifier extends Notifier<bool> {
   @override
   bool build() {
@@ -290,6 +299,9 @@ final accountsProvider = StreamProvider<List<Account>>((ref) async* {
   await ref.watch(storageInitializerProvider.future);
   ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
+
+  // Trigger CC Rollovers (profile agnostic)
+  storage.checkCreditCardRollovers();
 
   final box = Hive.box<Account>('accounts');
 

@@ -23,13 +23,13 @@ class AuthWrapper extends ConsumerStatefulWidget {
 }
 
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
-  StreamSubscription? _connectivitySubscription;
   bool _isRedirectingLocal = false;
   bool _bootGracePeriodFinished = false;
   bool _hasVerificationTimedOut = false;
   bool _isSlowConnection = false;
   Timer? _verificationSafetyTimer;
   Timer? _slowConnectionTimer;
+  Timer? _bootGraceTimer;
 
   @override
   void initState() {
@@ -56,7 +56,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
     // 2. Start Boot Grace Period (5 seconds)
     // This prevents "Ghost Session" logic from firing until the stream is stable.
-    Future.delayed(const Duration(seconds: 5), () {
+    // 2. Start Boot Grace Period (5 seconds)
+    _bootGraceTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         _bootGracePeriodFinished = true;
       }
@@ -87,9 +88,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   @override
   void dispose() {
-    _connectivitySubscription?.cancel();
     _verificationSafetyTimer?.cancel();
     _slowConnectionTimer?.cancel();
+    _bootGraceTimer?.cancel();
     super.dispose();
   }
 
@@ -104,7 +105,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       await ref.read(storageInitializerProvider.future);
 
       // 2. Check offline status to avoid unnecessary waits
-      final isOffline = await NetworkUtils.isOffline();
+      final checkFn = ref.read(connectivityCheckProvider);
+      final isOffline = await checkFn();
       if (isOffline) {
         DebugLogger().log("AuthWrapper: Offline. Skipping revalidation.");
         return;

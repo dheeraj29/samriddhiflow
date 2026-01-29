@@ -23,8 +23,9 @@ class StorageService {
   static const String boxCategories = 'categories_v3';
 
   Future<void> init() async {
-    if (!_hive.isBoxOpen(boxAccounts))
+    if (!_hive.isBoxOpen(boxAccounts)) {
       await _hive.openBox<Account>(boxAccounts);
+    }
     if (!_hive.isBoxOpen(boxTransactions)) {
       await _hive.openBox<Transaction>(boxTransactions);
     }
@@ -33,8 +34,9 @@ class StorageService {
       await _hive.openBox<RecurringTransaction>(boxRecurring);
     }
     if (!_hive.isBoxOpen(boxSettings)) await _hive.openBox(boxSettings);
-    if (!_hive.isBoxOpen(boxProfiles))
+    if (!_hive.isBoxOpen(boxProfiles)) {
       await _hive.openBox<Profile>(boxProfiles);
+    }
     if (!_hive.isBoxOpen(boxCategories)) {
       await _hive.openBox<Category>(boxCategories);
     }
@@ -237,7 +239,8 @@ class StorageService {
     _isCheckingRollover = true;
 
     try {
-      final accounts = getAccounts(); // Already filtered by profile
+      final accountsBox = _hive.box<Account>(boxAccounts);
+      final accounts = accountsBox.values.toList(); // Run for ALL profiles
       final settingsBox = _hive.box(boxSettings);
       final now = DateTime.now();
 
@@ -251,6 +254,7 @@ class StorageService {
               BillingHelper.getCycleStart(now, acc.billingCycleDay!);
 
           if (lastRolloverMillis == null) {
+            // New card or first time check: initialize to the start of current cycle
             await settingsBox.put(
                 key, currentCycleStart.millisecondsSinceEpoch);
             continue;
@@ -260,37 +264,67 @@ class StorageService {
           }
 
           if (currentCycleStart.isAfter(lastRollover)) {
-            // CRITICAL: Mark as processed BEFORE saving account changes to prevent
-            // infinite loop if the listener fires immediately.
-            await settingsBox.put(
-                key, currentCycleStart.millisecondsSinceEpoch);
+            // There are pending cycles to roll over
+            final txnBox = _hive.box<Transaction>(boxTransactions);
 
-            final box = _hive.box<Transaction>(boxTransactions);
-            final txns = box.values
+            // Fetch txns: (lastRollover, currentCycleStart]
+            // We use exclusive start because the last rollover timestamp
+            // marks the point we've already processed.
+            // We use inclusive end because the user considers the billing day
+            // itself as part of the billed period.
+            final txns = txnBox.values
                 .where((t) =>
                     !t.isDeleted &&
                     t.accountId == acc.id &&
                     t.date.isAfter(lastRollover) &&
-                    t.date.isBefore(currentCycleStart) &&
-                    (t.date.isAtSameMomentAs(lastRollover) ||
-                        t.date.isAfter(lastRollover)))
+                    (t.date.isBefore(currentCycleStart) ||
+                        t.date.isAtSameMomentAs(currentCycleStart)))
                 .toList();
 
             double adhocAmount = 0;
             for (var t in txns) {
               if (t.type == TransactionType.expense) adhocAmount += t.amount;
               if (t.type == TransactionType.income) adhocAmount -= t.amount;
-              if (t.type == TransactionType.transfer) adhocAmount += t.amount;
+              if (t.type == TransactionType.transfer) {
+                // If CC is source, balance increases
+                if (t.accountId == acc.id) adhocAmount += t.amount;
+              }
+            }
+
+            // Also check if CC was the TARGET of a transfer (payment)
+            // Payments reduce the balance.
+            final payments = txnBox.values
+                .where((t) =>
+                    !t.isDeleted &&
+                    t.type == TransactionType.transfer &&
+                    t.toAccountId != null &&
+                    t.toAccountId == acc.id &&
+                    t.date.isAfter(lastRollover) &&
+                    (t.date.isBefore(currentCycleStart) ||
+                        t.date.isAtSameMomentAs(currentCycleStart)))
+                .toList();
+
+            for (var p in payments) {
+              adhocAmount -= p.amount;
             }
 
             if (adhocAmount != 0) {
               acc.balance =
                   CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
-              await _hive.box<Account>(boxAccounts).put(acc.id, acc);
+              await accountsBox.put(acc.id, acc);
             }
+
+            // Mark as rolled over to the current cycle start
+            await settingsBox.put(
+                key, currentCycleStart.millisecondsSinceEpoch);
+
+            DebugLogger().log(
+                'CC Rollover: ${acc.name} updated by $adhocAmount. New Balance: ${acc.balance}');
           }
         }
       }
+    } catch (e) {
+      DebugLogger().log('CC Rollover Error: $e');
     } finally {
       _isCheckingRollover = false;
     }
@@ -422,11 +456,9 @@ class StorageService {
     bool skipBalanceUpdate = false;
     if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
       final now = DateTime.now();
-      final cycleStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-
-      final txnDateOnly = DateTime(txn.date.year, txn.date.month, txn.date.day);
-
-      if (txnDateOnly.isAfter(cycleStart)) {
+      // If the transaction is "Unbilled" (belongs to current cycle), we skip updating the balance
+      // because the balance only represents "Billed" amounts.
+      if (BillingHelper.isUnbilled(txn.date, now, acc.billingCycleDay!)) {
         if (txn.type == TransactionType.expense ||
             (txn.type == TransactionType.transfer && isSource)) {
           skipBalanceUpdate = true;
@@ -435,6 +467,8 @@ class StorageService {
       }
 
       if (!isSource && txn.type == TransactionType.transfer) {
+        // Transfers TO the credit card (payments) are always billed immediately
+        // to reduce the outstanding balance.
         skipBalanceUpdate = false;
       }
     }
@@ -1116,6 +1150,20 @@ class StorageService {
   Future<void> setThemeMode(String mode) async {
     final box = _hive.box(boxSettings);
     await box.put('themeMode', mode);
+  }
+
+  /// Exports all keys from the settings box.
+  Map<String, dynamic> getAllSettings() {
+    final box = _hive.box(boxSettings);
+    return Map<String, dynamic>.from(box.toMap());
+  }
+
+  /// Bulk-save settings from a map (used during restore).
+  Future<void> saveSettings(Map<String, dynamic> settings) async {
+    final box = _hive.box(boxSettings);
+    for (var entry in settings.entries) {
+      await box.put(entry.key, entry.value);
+    }
   }
 
   Future<void> clearAllData() async {

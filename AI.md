@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v1.7.0
+**Current Version:** v1.21.0
 
 ## 2. Architecture
 
@@ -30,10 +30,12 @@ graph TD
         File[FileService (File Picker)]
         Theme[ThemeService]
         Storage
+        CloudSync[CloudSyncService]
     end
 
     Providers --> Excel
     Providers --> File
+    Providers --> CloudSync
 ```
 
 ### Key Components
@@ -49,15 +51,16 @@ graph TD
 *   **Types:** Savings, Credit Card, Wallet.
 *   **Credit Logic:**
     *   Tracks `Credit Limit`, `Billing Cycle`, `Due Date`.
-    *   **Auto-Rollover:** Detects billing cycle end and snapshots statement balance.
-    *   **Unbilled Usage:** Calculated dynamically based on transactions after the last cycle start.
+    *   **Auto-Rollover:** Centrally triggered via `accountsProvider` on app launch. Detects billing cycle completion across all profiles.
+    *   **Inclusive Billing:** Transactions on the billing day (e.g., the 28th) are treated as "Billed," while the new cycle starts on the 29th.
+    *   **Unbilled Usage:** Calculated dynamically based on transactions strictly after the current cycle start.
     *   **Aggregated View:** Dashboard shows Total Credit Limit, Total Usage, and Utilization % across all cards.
 
 ### B. Transactions
 *   **Types:** Income, Expense, Transfer.
 *   **Logic:**
     *   `ImpactCalculator` determines how a transaction affects Account/Loan balances.
-    *   **Recurring:** Supports recurring patterns (Daily, Monthly, etc).
+    *   **Recurring:** Supports recurring patterns (Daily, Monthly, etc) with holiday-aware adjustments.
     *   **Loans:** EMI payments are transactions linked to Loan entities.
 
 ### C. Import/Export (Excel)
@@ -65,45 +68,44 @@ graph TD
 *   **Logic:**
     *   **Strict Column Matching:** Uses specific aliases (e.g., `Holding Tenure (Months)`) to map user headers to internal fields.
     *   **Two-Pass Detection:** 1. Exact Match (Priority) -> 2. Substring Match (Fallback).
-    *   **Self-Correction:** Errors like "To Account" matching "Account" are prevented via strict checks.
+    *   **Self-Correction:** Prevents mapping errors between "Account" and "To Account".
 
 ### D. Cloud Sync & Backup
 *   **Mechanism:** Snapshot Synchronization.
 *   **Backend:** Firebase Firestore (NoSQL).
 *   **How it Works:** 
-    *   **Sync:** Serializes the entire local database (Accounts, Loans, Transactions, Settings) into a single encrypted JSON object and pushes it to the user's private document in Firestore.
-    *   **Restore:** Fetches the latest snapshot from Firestore, **wipes the local database entirely**, and repopulates it with the cloud data. This ensures exact state replication across devices.
-    *   **Privacy:** Data is stored under the user's authenticated UID.
+    *   **Sync:** Serializes the entire local database (Accounts, Loans, Transactions, Categories, Profiles) and **all App Settings** (including rollover timestamps) into a single object in Firestore.
+    *   **Restore:** Fetches the latest snapshot from Firestore, **wipes the local database entirely**, and repopulates it. The inclusion of settings ensures that background processes (like CC Rollovers) don't duplicate or skip periods after a restore.
+    *   **Atomic Restoration:** Restored data handles transaction impacts atomically to maintain balance integrity.
 
-### E. Loan Logic & Part Payments
+### E. App Stability & Privacy
+*   **App Lock:** Supports PIN protection with a 1-minute grace period and "Forgot PIN" recovery via Firebase re-authentication.
+*   **Privacy Screen:** Immediately obscures app content in the app switcher. Uses browser-level `blur` events on iOS PWA for maximum reliability.
+*   **Layout Safety:** UI components are designed with `LayoutBuilder` and `SingleChildScrollView` to prevent overflow errors on various device sizes and orientations.
+
+### F. Loan Logic & Part Payments
 *   **Interest Calculation:** Uses **Daily Reducing Balance** method. Interest is calculated exactly for the number of days between payments.
 *   **Part Payment (Prepayment):**
     *   **Logic:** When a part payment is made, it is immediately deducted from the `Remaining Principal`.
-    *   **Option 1: Reduce Tenure:** The EMI remains the same. Since principal is lower, the loan is paid off faster (fewer months). This maximizes interest savings.
-    *   **Option 2: Reduce EMI:** The tenure (remaining months) remains the same. The EMI is recalculated to be lower based on the reduced principal.
-*   **Impact:** All loan transactions (EMI, Prepayment) are automatically linked to an Account (e.g., Savings), creating a corresponding "Expense" or "Transfer" transaction in that account to keep balances in sync.
+    *   **Option 1: Reduce Tenure:** EMI remains the same; loan pays off faster.
+    *   **Option 2: Reduce EMI:** Tenure remains the same; EMI is recalculated.
+*   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
-## 4. Current Status (v1.7.0)
-*   **Stable:** Core features (CRUD, Loans, Import/Export, Credit Cards) are stable.
-*   **Recent Updates (v1.7.0):**
-    *   **Cloud Restore Fix:** Fixed balance mismatch by preventing transaction impact logic from re-running during restore.
-    *   **Credit Dashboard:** Fixed "Total Usage" logic (Debt is now correctly identified as Positive Balance for Credit Cards).
-    *   **Build Scripts:** Local `build_pwa.bat` integrated with Environment Variables for secrets.
-    *   **Excel:** Fixed restore logic for complex templates.
+## 4. Current Status (v1.21.0)
+*   **Stable:** Core financial logic, cloud sync, and security features are fully operational.
+*   **Recent Updates (v1.21.0):**
+    *   **Credit Card Fix**: Standardized the **Billing Day** as a Billed day (inclusive); centralized rollover logic in `accountsProvider` to ensure zero-gap processing across all profiles.
+    *   **Backup Persistence**: Updated Cloud Sync to preserve all app settings (rollover timestamps, budget, etc.).
+    *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability via browser `blur` events.
+    *   **Code Quality**: Applied project-wide `dart fix` and synchronized `AI.md` with active project state.
 
 ## 5. Build Instructions
 Run: `flutter build web --no-web-resources-cdn --release`
-*   **Note:** This command ensures that web resources (like CanvasKit and fonts) are bundled locally instead of loaded from a CDN, making the app fully offline-capable.
+*   **Note:** This command ensures that web resources are bundled locally for full offline capability.
 
 ## 6. Testing
-Execute the comprehensive test suite (Unit, Widget, and Integration tests) using:
-```bash
-flutter test
-```
-To generate coverage reports, use:
-```bash
-flutter test --coverage
-```
+Execute: `flutter test`
+Archive 100% coverage target for core business logic and critical UI screens.
 
 ## 7. Future Roadmap
 *   **Tax Engine:** Tax calculation and assessment features (Indian Regime).
