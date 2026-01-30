@@ -719,10 +719,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${txn.category} • ${DateFormat('MMM dd, yyyy').format(txn.date)} • $accName',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  Builder(builder: (context) {
+                    final datePart =
+                        DateFormat('MMM dd, yyyy • hh:mm a').format(txn.date);
+                    String metadata;
+                    if (txn.type == TransactionType.transfer) {
+                      final toName = txn.toAccountId == null
+                          ? "Manual"
+                          : accounts.any((a) => a.id == txn.toAccountId)
+                              ? accounts
+                                  .firstWhere((a) => a.id == txn.toAccountId)
+                                  .name
+                              : "Deleted Account";
+                      metadata = '$accName -> $toName';
+                    } else {
+                      metadata = '${txn.category} • $accName';
+                    }
+                    return Text(
+                      '$datePart • $metadata',
+                      style: const TextStyle(fontSize: 12),
+                    );
+                  }),
                   if (isCapitalGain &&
                       (txn.gainAmount != null ||
                           txn.holdingTenureMonths != null))

@@ -114,11 +114,13 @@ class StorageService {
     // 1. Delete Profile record
     await _hive.box<Profile>(boxProfiles).delete(profileId);
 
-    // 2. Delete Accounts
+    // 2. Delete Accounts & Rollover Metadata
     final accBox = _hive.box<Account>(boxAccounts);
+    final settingsBox = _hive.box(boxSettings);
     final accountsToDelete =
         accBox.values.where((a) => a.profileId == profileId).toList();
     for (var a in accountsToDelete) {
+      await settingsBox.delete('last_rollover_${a.id}');
       await accBox.delete(a.id);
     }
 
@@ -200,6 +202,10 @@ class StorageService {
       }
     }
     await box.delete(id);
+
+    // Metadata Cleanup: Delete rollover timestamp
+    final settingsBox = _hive.box(boxSettings);
+    await settingsBox.delete('last_rollover_$id');
   }
 
   // --- Transaction Operations ---

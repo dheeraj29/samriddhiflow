@@ -261,7 +261,7 @@ class AccountsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 220,
-                    childAspectRatio: 0.9,
+                    childAspectRatio: 0.82,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),

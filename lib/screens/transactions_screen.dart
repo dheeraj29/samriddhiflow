@@ -292,7 +292,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   }
 
                                   return Text(
-                                    '${DateFormat('MMM dd, hh:mm a').format(txn.date)} • $subtitleText',
+                                    '${DateFormat('MMM dd, yyyy • hh:mm a').format(txn.date)} • $subtitleText',
                                     style: const TextStyle(fontSize: 12),
                                   );
                                 }),
