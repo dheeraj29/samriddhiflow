@@ -277,6 +277,6 @@ void main() {
 
     expect(find.text('Total Credit Usage'), findsOneWidget);
     // 5000 (billed) + 2000 (unbilled) = 7000
-    expect(find.textContaining('7,000'), findsAny);
+    expect(find.textContaining('7,000'), findsWidgets);
   });
 }

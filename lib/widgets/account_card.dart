@@ -47,63 +47,67 @@ class AccountCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  iconWidget,
-                  if (account.type == AccountType.creditCard)
-                    PureIcons.contactless(color: Colors.white54, size: 20),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                account.name,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              // Balance Display
-              if (account.type == AccountType.creditCard) ...[
-                Text(
-                  CurrencyUtils.getFormatter(account.currency)
-                      .format(account.balance + unbilledAmount),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildMiniInfo('Billed', account.balance, account.currency),
-                    _buildMiniInfo(
-                        'Unbilled', unbilledAmount, account.currency),
+                    iconWidget,
+                    if (account.type == AccountType.creditCard)
+                      PureIcons.contactless(color: Colors.white54, size: 20),
                   ],
                 ),
-              ] else
-                Text(
-                  CurrencyUtils.getFormatter(account.currency)
-                      .format(account.balance),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20),
-                ),
-
-              if (account.type == AccountType.creditCard &&
-                  account.creditLimit != null) ...[
                 const SizedBox(height: 8),
-                _buildCreditUtilization(account),
+                Text(
+                  account.name,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                // Balance Display
+                if (account.type == AccountType.creditCard) ...[
+                  Text(
+                    CurrencyUtils.getFormatter(account.currency)
+                        .format(account.balance + unbilledAmount),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _buildMiniInfo(
+                          'Billed', account.balance, account.currency),
+                      _buildMiniInfo(
+                          'Unbilled', unbilledAmount, account.currency),
+                    ],
+                  ),
+                ] else
+                  Text(
+                    CurrencyUtils.getFormatter(account.currency)
+                        .format(account.balance),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20),
+                  ),
+
+                if (account.type == AccountType.creditCard &&
+                    account.creditLimit != null) ...[
+                  const SizedBox(height: 8),
+                  _buildCreditUtilization(account),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -119,8 +123,11 @@ class AccountCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const SizedBox(height: 4),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 8,
+          runSpacing: 2,
           children: [
             Text('Used ${((percent * 100).toInt())}%',
                 style: const TextStyle(color: Colors.white70, fontSize: 10)),
