@@ -264,6 +264,7 @@ class CloudSyncService {
         'selectedWeekday': rt.selectedWeekday,
         'adjustForHolidays': rt.adjustForHolidays,
         'profileId': rt.profileId,
+        'type': rt.type.index,
       };
 
   RecurringTransaction _mapToRecurring(Map<String, dynamic> m) =>
@@ -283,6 +284,8 @@ class CloudSyncService {
         selectedWeekday: m['selectedWeekday'],
         adjustForHolidays: m['adjustForHolidays'] ?? false,
         profileId: m['profileId'] ?? 'default',
+        type:
+            TransactionType.values[m['type'] ?? TransactionType.expense.index],
       );
 
   Map<String, dynamic> _categoryToMap(Category c) => {

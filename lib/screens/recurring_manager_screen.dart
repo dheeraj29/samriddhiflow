@@ -104,6 +104,8 @@ class RecurringManagerScreen extends ConsumerWidget {
         return 'Last Day of Month${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
       case ScheduleType.lastWorkingDay:
         return 'Last Working Day${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
+      case ScheduleType.firstWorkingDay:
+        return 'First Working Day${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
     }
   }
 

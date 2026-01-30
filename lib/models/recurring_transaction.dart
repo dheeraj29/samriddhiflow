@@ -1,5 +1,6 @@
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'transaction.dart';
 
 part 'recurring_transaction.g.dart';
 
@@ -29,6 +30,8 @@ enum ScheduleType {
   lastDayOfMonth,
   @HiveField(5)
   lastWorkingDay,
+  @HiveField(6)
+  firstWorkingDay,
 }
 
 @HiveType(typeId: 8)
@@ -78,6 +81,9 @@ class RecurringTransaction extends HiveObject {
   @HiveField(14)
   String profileId;
 
+  @HiveField(15)
+  TransactionType type;
+
   RecurringTransaction({
     required this.id,
     required this.title,
@@ -94,6 +100,7 @@ class RecurringTransaction extends HiveObject {
     this.selectedWeekday,
     this.adjustForHolidays = false,
     this.profileId = 'default',
+    this.type = TransactionType.expense,
   });
 
   factory RecurringTransaction.create({
@@ -110,6 +117,7 @@ class RecurringTransaction extends HiveObject {
     int? selectedWeekday,
     bool adjustForHolidays = false,
     String profileId = 'default',
+    TransactionType type = TransactionType.expense,
   }) {
     return RecurringTransaction(
       id: const Uuid().v4(),
@@ -127,6 +135,7 @@ class RecurringTransaction extends HiveObject {
       selectedWeekday: selectedWeekday,
       adjustForHolidays: adjustForHolidays,
       profileId: profileId,
+      type: type,
     );
   }
 

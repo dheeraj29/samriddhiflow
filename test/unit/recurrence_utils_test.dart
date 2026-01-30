@@ -154,5 +154,127 @@ void main() {
       );
       expect(lastSat, DateTime(2024, 3, 30));
     });
+
+    test('Monthly Skip Fix (Jan 30 -> Feb Last Working Day)', () {
+      // Jan 30 2024 is Tuesday.
+      // If we calculate NEXT from Jan 30:
+      // Old logic: DateTime(2024, 1, 30) + 1 month = Feb 30 -> Mar 1. Skip Feb!
+      // New logic: Increment month first -> Feb 1. Then find last working day of Feb.
+
+      final lastDate = DateTime(2024, 1, 30);
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: lastDate,
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.lastWorkingDay,
+        holidays: [],
+      );
+
+      // Feb 2024 has 29 days (Leap year). Feb 29 is Thursday.
+      // So last working day of Feb 2024 should be Feb 29.
+      expect(next, DateTime(2024, 2, 29));
+    });
+
+    test('Monthly Skip Fix (Jan 30 -> Feb Last Day of Month)', () {
+      final lastDate = DateTime(2024, 1, 30);
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: lastDate,
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.lastDayOfMonth,
+      );
+
+      expect(next, DateTime(2024, 2, 29));
+    });
+
+    test('First Working Day - Monday (Jan 1, 2024)', () {
+      // Jan 1, 2024 is Monday.
+      final start = DateTime(2024, 1, 1);
+      final firstWorkday = RecurrenceUtils.findFirstOccurrence(
+        baseDate: start,
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.firstWorkingDay,
+      );
+      expect(firstWorkday, DateTime(2024, 1, 1));
+    });
+
+    test('First Working Day - Weekend Shift (June 1, 2024)', () {
+      // June 1, 2024 is Saturday. First workday should be June 3 (Monday).
+      final start = DateTime(2024, 6, 1);
+      final firstWorkday = RecurrenceUtils.findFirstOccurrence(
+        baseDate: start,
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.firstWorkingDay,
+      );
+      expect(firstWorkday, DateTime(2024, 6, 3));
+    });
+
+    test('First Working Day - Holiday Shift (Jan 1, 2024)', () {
+      // Jan 1, 2024 is Monday. Add holiday on Jan 1. First workday should be Jan 2.
+      final holidays = [DateTime(2024, 1, 1)];
+      final start = DateTime(2024, 1, 1);
+      final firstWorkday = RecurrenceUtils.findFirstOccurrence(
+        baseDate: start,
+        frequency: Frequency.monthly,
+        scheduleType: ScheduleType.firstWorkingDay,
+        holidays: holidays,
+      );
+      expect(firstWorkday, DateTime(2024, 1, 2));
+    });
+
+    test('Calculate Next Occurrence - First Working Day (Jan -> Feb)', () {
+      // Jan 30 to Feb. Feb 1 2024 is Thursday.
+      final lastDate = DateTime(2024, 1, 30);
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: lastDate,
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.firstWorkingDay,
+      );
+      expect(next, DateTime(2024, 2, 1));
+    });
+
+    test('Directional Holiday Shift - First Working Day (Jan 1 Holiday)', () {
+      // Jan 1, 2024 is Monday (Holiday).
+      // First Working Day should move FORWARD to Jan 2.
+      final holidays = [DateTime(2024, 1, 1)];
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: DateTime(2023, 12, 1),
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.firstWorkingDay,
+        holidays: holidays,
+      );
+      expect(next, DateTime(2024, 1, 2));
+    });
+
+    test('Directional Holiday Shift - Last Working Day (Jan 31 Holiday)', () {
+      // Jan 31, 2024 is Wednesday (Holiday).
+      // Last Working Day should move BACKWARD to Jan 30.
+      final holidays = [DateTime(2024, 1, 31)];
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: DateTime(2023, 12, 1),
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.lastWorkingDay,
+        holidays: holidays,
+      );
+      expect(next, DateTime(2024, 1, 30));
+    });
+
+    test('Directional Holiday Shift - Fixed Date (Jan 1 Holiday)', () {
+      // Rent on 1st. Jan 1 is holiday.
+      // Fixed Date should move FORWARD to Jan 2 (to avoid jumping into previous month).
+      final holidays = [DateTime(2024, 1, 1)];
+      final next = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: DateTime(2023, 12, 1),
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.fixedDate,
+        adjustForHolidays: true,
+        holidays: holidays,
+      );
+      expect(next, DateTime(2024, 1, 2));
+    });
   });
 }

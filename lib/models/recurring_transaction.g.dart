@@ -34,13 +34,16 @@ class RecurringTransactionAdapter extends TypeAdapter<RecurringTransaction> {
       selectedWeekday: (fields[12] as num?)?.toInt(),
       adjustForHolidays: fields[13] == null ? false : fields[13] as bool,
       profileId: fields[14] == null ? 'default' : fields[14] as String,
+      type: fields[15] == null
+          ? TransactionType.expense
+          : fields[15] as TransactionType,
     );
   }
 
   @override
   void write(BinaryWriter writer, RecurringTransaction obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -70,7 +73,9 @@ class RecurringTransactionAdapter extends TypeAdapter<RecurringTransaction> {
       ..writeByte(13)
       ..write(obj.adjustForHolidays)
       ..writeByte(14)
-      ..write(obj.profileId);
+      ..write(obj.profileId)
+      ..writeByte(15)
+      ..write(obj.type);
   }
 
   @override
@@ -148,6 +153,8 @@ class ScheduleTypeAdapter extends TypeAdapter<ScheduleType> {
         return ScheduleType.lastDayOfMonth;
       case 5:
         return ScheduleType.lastWorkingDay;
+      case 6:
+        return ScheduleType.firstWorkingDay;
       default:
         return ScheduleType.fixedDate;
     }
@@ -168,6 +175,8 @@ class ScheduleTypeAdapter extends TypeAdapter<ScheduleType> {
         writer.writeByte(4);
       case ScheduleType.lastWorkingDay:
         writer.writeByte(5);
+      case ScheduleType.firstWorkingDay:
+        writer.writeByte(6);
     }
   }
 

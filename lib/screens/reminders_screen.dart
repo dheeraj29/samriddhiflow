@@ -536,32 +536,76 @@ class RemindersScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 36,
-                  child: ElevatedButton.icon(
-                    icon: PureIcons.payment(size: 16),
-                    label: const Text('PAY NOW'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withValues(alpha: 0.5)),
+                        ),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Skip Cycle?'),
+                              content: Text(
+                                  'Advance "${r.title}" to the next cycle without recording a transaction?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('CANCEL')),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('SKIP')),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await ref
+                                .read(storageServiceProvider)
+                                .advanceRecurringTransactionDate(r.id);
+                            ref.invalidate(recurringTransactionsProvider);
+                          }
+                        },
+                        child:
+                            const Text('SKIP', style: TextStyle(fontSize: 12)),
+                      ),
                     ),
-                    onPressed: () {
-                      final txn = Transaction.create(
-                        title: r.title,
-                        amount: r.amount,
-                        date: DateTime.now(),
-                        type: TransactionType.expense,
-                        category: r.category,
-                        accountId: r.accountId,
-                      );
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => AddTransactionScreen(
-                                  transactionToEdit: txn, recurringId: r.id)));
-                    },
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        icon: PureIcons.payment(size: 16),
+                        label: const Text('PAY NOW'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: () {
+                          final txn = Transaction.create(
+                            title: r.title,
+                            amount: r.amount,
+                            date: DateTime.now(),
+                            type: r.type,
+                            category: r.category,
+                            accountId: r.accountId,
+                          );
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => AddTransactionScreen(
+                                      transactionToEdit: txn,
+                                      recurringId: r.id)));
+                        },
+                      ),
+                    ),
+                  ],
                 )
               ],
             ),

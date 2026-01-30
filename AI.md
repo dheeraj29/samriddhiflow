@@ -91,12 +91,16 @@ graph TD
     *   **Option 2: Reduce EMI:** Tenure remains the same; EMI is recalculated.
 *   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
-## 4. Current Status (v1.21.0)
+## 4. Current Status (v1.22.0)
 *   **Stable:** Core financial logic, cloud sync, and security features are fully operational.
-*   **Recent Updates (v1.21.0):**
+*   **Recent Updates (v1.22.0):**
+    *   **Recurring Payment Skip**: Added a "Skip" option in the Reminders screen to advance cycles without recording transactions.
+    *   **First Working Day Logic**: Implemented "First Working Day of Month" schedule type with full holiday/weekend awareness.
+    *   **Month Jump Fix**: Resolved a critical bug where Jan 30 payments would skip February and jump to March.
+    *   **Test Environment**: Fixed `dart:js_interop` crashes during local testing via conditional imports.
+    *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability.
     *   **Credit Card Fix**: Standardized the **Billing Day** as a Billed day (inclusive); centralized rollover logic in `accountsProvider` to ensure zero-gap processing across all profiles.
     *   **Backup Persistence**: Updated Cloud Sync to preserve all app settings (rollover timestamps, budget, etc.).
-    *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability via browser `blur` events.
     *   **Code Quality**: Applied project-wide `dart fix` and synchronized `AI.md` with active project state.
 
 ## 5. Build Instructions

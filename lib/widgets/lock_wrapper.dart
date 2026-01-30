@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../screens/app_lock_screen.dart';
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
-import 'dart:js_interop';
+import '../utils/js_helper.dart';
 
 class LockWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -28,23 +27,12 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
 
     // iOS PWA Reliability: Listen for browser-level blur event
     if (kIsWeb) {
-      web.window.addEventListener(
-          'blur',
-          ((web.Event event) => _handleBrowserBlur()).toJS
-              as web.EventListener);
-      web.window.addEventListener(
-          'focus',
-          ((web.Event event) => _handleBrowserFocus()).toJS
-              as web.EventListener);
+      setupBrowserBlurListener(() {
+        if (mounted) {
+          setState(() => _isObscured = true);
+        }
+      });
     }
-  }
-
-  void _handleBrowserBlur() {
-    if (mounted) setState(() => _isObscured = true);
-  }
-
-  void _handleBrowserFocus() {
-    if (mounted) setState(() => _isObscured = false);
   }
 
   @override

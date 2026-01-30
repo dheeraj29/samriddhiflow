@@ -24,21 +24,36 @@ class RecurrenceUtils {
     }
 
     // 2. Apply Holiday Adjustment (only if required)
-    // "Schedule a day earlier if it lands on a holiday/weekend"
     if (adjustForHolidays) {
-      candidate = adjustDateForHolidays(candidate, holidays);
+      bool moveForward = true;
+      if ([
+        ScheduleType.lastDayOfMonth,
+        ScheduleType.lastWorkingDay,
+        ScheduleType.lastWeekend
+      ].contains(scheduleType)) {
+        moveForward = false;
+      } else if (scheduleType == ScheduleType.fixedDate && candidate.day > 1) {
+        // Move backward for interior fixed dates to stay in month and match legacy behavior
+        moveForward = false;
+      }
+      candidate =
+          adjustDateForHolidays(candidate, holidays, moveForward: moveForward);
     }
 
     return candidate;
   }
 
-  static DateTime adjustDateForHolidays(
-      DateTime date, List<DateTime> holidays) {
+  static DateTime adjustDateForHolidays(DateTime date, List<DateTime> holidays,
+      {bool moveForward = false}) {
     DateTime adjusted = date;
     int safeGuard = 0;
-    // Recursively move back if lands on Weekend OR Holiday
+    // Recursively move if lands on Weekend OR Holiday
     while (_isHolidayOrWeekend(adjusted, holidays) && safeGuard < 30) {
-      adjusted = adjusted.subtract(const Duration(days: 1));
+      if (moveForward) {
+        adjusted = adjusted.add(const Duration(days: 1));
+      } else {
+        adjusted = adjusted.subtract(const Duration(days: 1));
+      }
       safeGuard++;
     }
     return adjusted;
@@ -102,6 +117,20 @@ class RecurrenceUtils {
         case ScheduleType.specificWeekday:
           if (weekday != null) return date.weekday == weekday;
           return true;
+
+        case ScheduleType.firstWorkingDay:
+          // Check if 'date' is the first working day of the month.
+          if (_isHolidayOrWeekend(date, holidays)) return false;
+
+          // Check if any *previous* days in the month are working days
+          DateTime temp = date.subtract(const Duration(days: 1));
+          while (temp.month == date.month) {
+            if (!_isHolidayOrWeekend(temp, holidays)) {
+              return false; // Found an earlier working day
+            }
+            temp = temp.subtract(const Duration(days: 1));
+          }
+          return true;
       }
     }
 
@@ -126,24 +155,23 @@ class RecurrenceUtils {
     } else if (frequency == Frequency.weekly) {
       next = lastDate.add(Duration(days: 7 * interval));
     } else if (frequency == Frequency.monthly) {
-      // Use startDate.day to prevent drift if lastDate was adjusted
-      int targetDay = startDate?.day ?? lastDate.day;
-      if (scheduleType == ScheduleType.fixedDate) {
-        // Create next month candidate using targetDay
-        // Handle month overflow (e.g. Jan 31 -> Feb 28)
-        int nextMonth = lastDate.month + interval;
-        int nextYear = lastDate.year;
-        // Normalize month/year
-        while (nextMonth > 12) {
-          nextMonth -= 12;
-          nextYear++;
-        }
+      // 1. Calculate Target Month/Year correctly (prevents leap-year/short-month skips)
+      int nextMonth = lastDate.month + interval;
+      int nextYear = lastDate.year;
+      while (nextMonth > 12) {
+        nextMonth -= 12;
+        nextYear++;
+      }
 
+      if (scheduleType == ScheduleType.fixedDate) {
+        int targetDay = startDate?.day ?? lastDate.day;
         int maxDays = DateTime(nextYear, nextMonth + 1, 0).day;
         next = DateTime(
             nextYear, nextMonth, targetDay > maxDays ? maxDays : targetDay);
       } else {
-        next = DateTime(lastDate.year, lastDate.month + interval, lastDate.day);
+        // For other types (lastDay, lastWorkingDay, specificWeekday),
+        // we start at the 1st of the target month and let logic below snap it.
+        next = DateTime(nextYear, nextMonth, 1);
       }
     } else if (frequency == Frequency.yearly) {
       next = DateTime(lastDate.year + interval, lastDate.month, lastDate.day);
@@ -175,11 +203,28 @@ class RecurrenceUtils {
       while (next.weekday != selectedWeekday) {
         next = next.add(const Duration(days: 1));
       }
+    } else if (scheduleType == ScheduleType.firstWorkingDay) {
+      // Start at the 1st of the next cycle month, then move forward if holiday/weekend
+      next = DateTime(next.year, next.month, 1);
+      while (_isHolidayOrWeekend(next, holidays)) {
+        next = next.add(const Duration(days: 1));
+      }
     }
 
     // 3. Apply Holiday Adjustments
     if (adjustForHolidays) {
-      next = adjustDateForHolidays(next, holidays);
+      bool moveForward = true;
+      if ([
+        ScheduleType.lastDayOfMonth,
+        ScheduleType.lastWorkingDay,
+        ScheduleType.lastWeekend
+      ].contains(scheduleType)) {
+        moveForward = false;
+      } else if (scheduleType == ScheduleType.fixedDate && next.day > 1) {
+        // Stay in month by moving backward
+        moveForward = false;
+      }
+      next = adjustDateForHolidays(next, holidays, moveForward: moveForward);
     }
 
     return next;
@@ -227,6 +272,15 @@ class RecurrenceUtils {
       // but here we simply use the helper
       while (_isHolidayOrWeekend(cursor, holidays)) {
         cursor = cursor.subtract(const Duration(days: 1));
+      }
+      return cursor;
+    } else if (rt.scheduleType == ScheduleType.firstWorkingDay) {
+      // Recalculate First Working Day
+      DateTime base =
+          DateTime(rt.nextExecutionDate.year, rt.nextExecutionDate.month, 1);
+      DateTime cursor = base;
+      while (_isHolidayOrWeekend(cursor, holidays)) {
+        cursor = cursor.add(const Duration(days: 1));
       }
       return cursor;
     }

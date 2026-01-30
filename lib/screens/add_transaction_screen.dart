@@ -565,6 +565,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                     ScheduleType.lastWeekend,
                                     ScheduleType.lastDayOfMonth,
                                     ScheduleType.lastWorkingDay,
+                                    ScheduleType.firstWorkingDay,
                                     ScheduleType.specificWeekday
                                   ].contains(s);
                                 })
@@ -762,6 +763,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           selectedWeekday: _selectedWeekday,
           adjustForHolidays: _adjustForHolidays,
           profileId: profileId,
+          type: _type,
         );
         await storage.saveRecurringTransaction(recurring);
       }
@@ -786,6 +788,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         return 'Last Day of Month';
       case ScheduleType.lastWorkingDay:
         return 'Last Working Day of Month';
+      case ScheduleType.firstWorkingDay:
+        return 'First Working Day of Month';
     }
   }
 
