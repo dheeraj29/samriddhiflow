@@ -43,10 +43,9 @@ class LoansScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final loan = loans[index];
               final currencyLocale = ref.watch(currencyProvider);
-              final schedule = ref
-                  .watch(loanServiceProvider)
-                  .calculateAmortizationSchedule(loan);
-              final remainingMonths = schedule.length;
+              final tenure =
+                  ref.watch(loanServiceProvider).calculateRemainingTenure(loan);
+              final remainingMonths = tenure.months.ceil();
 
               return Card(
                 child: ListTile(

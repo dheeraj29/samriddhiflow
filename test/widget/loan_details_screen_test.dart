@@ -40,6 +40,8 @@ void main() {
 
     when(() => mockLoanService.calculateAmortizationSchedule(any()))
         .thenReturn([]);
+    when(() => mockLoanService.calculateRemainingTenure(any()))
+        .thenReturn((months: 0.0, days: 0));
   });
 
   Widget createWidgetUnderTest(Loan loan) {

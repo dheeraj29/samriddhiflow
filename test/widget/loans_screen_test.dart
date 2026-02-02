@@ -32,6 +32,9 @@ void main() {
     when(() => mockLoanService.calculateAmortizationSchedule(any())).thenReturn(
       List<Map<String, dynamic>>.empty(),
     );
+    when(() => mockLoanService.calculateRemainingTenure(any())).thenReturn(
+      (months: 0.0, days: 0),
+    );
   });
 
   Widget createWidgetUnderTest({AsyncValue<List<Loan>>? overrideValue}) {
@@ -86,6 +89,9 @@ void main() {
                 'principal': 4900.0,
                 'balance': 200000.0 - (index * 4900.0),
               }),
+    );
+    when(() => mockLoanService.calculateRemainingTenure(any())).thenReturn(
+      (months: 60.0, days: 1800),
     );
 
     await tester.pumpWidget(ProviderScope(

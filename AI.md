@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v1.21.0
+**Current Version:** v1.25.0
 
 ## 2. Architecture
 
@@ -99,7 +99,7 @@ graph TD
     *   **Month Jump Fix**: Resolved a critical bug where Jan 30 payments would skip February and jump to March.
     *   **Test Environment**: Fixed `dart:js_interop` crashes during local testing via conditional imports.
     *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability.
-    *   **Unified UI Components**: Created shared `TransactionListItem` widget and refactored Dashboard, Transactions, and Recycle Bin screens for consistent UI/UX.
+    *   **Unified UI Components**: Created shared `TransactionListItem` widget and refactored Dashboard, Transactions, Loans, and Recycle Bin screens for consistent UI/UX.
     *   **Logic Centralization**:
         *   Moved Credit Card unbilled calculation to `BillingHelper.calculateUnbilledAmount`.
         *   Moved Loan remaining tenure logic to `LoanService.calculateRemainingTenure`.
