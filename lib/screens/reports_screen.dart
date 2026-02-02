@@ -173,32 +173,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                         contentPadding: EdgeInsets.symmetric(
                                             horizontal: 10),
                                         border: OutlineInputBorder()),
-                                    items: const [
-                                      DropdownMenuItem(
-                                          value: '30',
-                                          child: Text('30 Days',
-                                              overflow: TextOverflow.ellipsis)),
-                                      DropdownMenuItem(
-                                          value: '90',
-                                          child: Text('90 Days',
-                                              overflow: TextOverflow.ellipsis)),
-                                      DropdownMenuItem(
-                                          value: '365',
-                                          child: Text('Last Year',
-                                              overflow: TextOverflow.ellipsis)),
-                                      DropdownMenuItem(
-                                          value: 'month',
-                                          child: Text('Month',
-                                              overflow: TextOverflow.ellipsis)),
-                                      DropdownMenuItem(
-                                          value: 'year',
-                                          child: Text('Year',
-                                              overflow: TextOverflow.ellipsis)),
-                                      DropdownMenuItem(
-                                          value: 'all',
-                                          child: Text('All Time',
-                                              overflow: TextOverflow.ellipsis)),
-                                    ],
+                                    items: [
+                                      {'val': '30', 'label': '30 Days'},
+                                      {'val': '90', 'label': '90 Days'},
+                                      {'val': '365', 'label': 'Last Year'},
+                                      {'val': 'month', 'label': 'Month'},
+                                      {'val': 'year', 'label': 'Year'},
+                                      {'val': 'all', 'label': 'All Time'},
+                                    ].map((opt) {
+                                      return DropdownMenuItem<String>(
+                                        value: opt['val'],
+                                        child: Text(opt['label']!,
+                                            overflow: TextOverflow.ellipsis),
+                                      );
+                                    }).toList(),
                                     onChanged: (v) =>
                                         setState(() => _timeFilterMode = v!),
                                   ),

@@ -21,11 +21,25 @@ final showCreditUsageProvider =
     NotifierProvider<CreditUsageVisibilityNotifier, bool>(
         CreditUsageVisibilityNotifier.new);
 
-class AccountsScreen extends ConsumerWidget {
+class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountsScreen> createState() => _AccountsScreenState();
+}
+
+class _AccountsScreenState extends ConsumerState<AccountsScreen> {
+  bool _compactView = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default is short form (true)
+    _compactView = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
 
@@ -34,6 +48,15 @@ class AccountsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Accounts'),
         actions: [
+          IconButton(
+            icon: _compactView
+                ? PureIcons.listExtended(size: 20)
+                : PureIcons.listCompact(size: 20),
+            tooltip: _compactView
+                ? 'Switch to Extended Numbers'
+                : 'Switch to Compact Numbers',
+            onPressed: () => setState(() => _compactView = !_compactView),
+          ),
           IconButton(
             icon: Icon(
               ref.watch(showCreditUsageProvider)
@@ -88,6 +111,17 @@ class AccountsScreen extends ConsumerWidget {
                 totalLimit > 0 ? (totalUsage / totalLimit) * 100 : 0.0;
             final available =
                 totalLimit > totalUsage ? totalLimit - totalUsage : 0.0;
+
+            // Use user's preferred currency for summary, or default to generic if mixed currencies logic is complex.
+            // Assuming generic or profile currency.
+            final profileCurrency = ref.watch(currencyProvider);
+
+            String format(double val) {
+              if (_compactView) {
+                return CurrencyUtils.getSmartFormat(val, profileCurrency);
+              }
+              return CurrencyUtils.getFormatter(profileCurrency).format(val);
+            }
 
             summaryWidget = Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -156,7 +190,7 @@ class AccountsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            CurrencyUtils.formatCurrency(totalUsage),
+                            format(totalUsage),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -182,7 +216,7 @@ class AccountsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            CurrencyUtils.formatCurrency(totalLimit),
+                            format(totalLimit),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -218,7 +252,7 @@ class AccountsScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Available: ${CurrencyUtils.formatCurrency(available)}',
+                        'Available: ${format(available)}',
                         style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 12,
@@ -272,6 +306,7 @@ class AccountsScreen extends ConsumerWidget {
     return AccountCard(
       account: acc,
       unbilledAmount: unbilled,
+      compactView: _compactView,
       onTap: () => _showAccountOptions(context, ref, acc),
     );
   }

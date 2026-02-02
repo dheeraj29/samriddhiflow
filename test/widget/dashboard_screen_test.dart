@@ -6,6 +6,7 @@ import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/screens/dashboard_screen.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 
@@ -62,12 +63,14 @@ void main() {
   });
 
   Widget createWidgetUnderTest(
-      {List<Account> accounts = const [], String profileId = 'default'}) {
+      {List<Account> accounts = const [],
+      List<Transaction> transactions = const [],
+      String profileId = 'default'}) {
     return ProviderScope(
       overrides: [
         notificationServiceProvider.overrideWithValue(mockNotificationService),
         accountsProvider.overrideWith((ref) => Stream.value(accounts)),
-        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        transactionsProvider.overrideWith((ref) => Stream.value(transactions)),
         loansProvider.overrideWith((ref) => Stream.value([])),
         txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
         backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
@@ -122,11 +125,37 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest(accounts: accounts));
     await tester.pumpAndSettle();
 
-    // 1000 - 200 = 800
     expect(find.textContaining('800'), findsWidgets);
     expect(find.textContaining('Assets:'), findsWidgets);
     expect(find.textContaining('1'), findsWidgets); // Relaxed for 1,000
     expect(find.textContaining('Debt:'), findsWidgets);
     expect(find.textContaining('200'), findsWidgets);
+  });
+
+  testWidgets('DashboardScreen shows recent transactions', (tester) async {
+    final t1 = Transaction.create(
+        title: 'Groceries',
+        amount: 50,
+        type: TransactionType.expense,
+        accountId: '1',
+        category: 'Food',
+        date: DateTime.now());
+
+    await tester.pumpWidget(createWidgetUnderTest(
+      accounts: [
+        Account(
+            id: '1',
+            name: 'Cash',
+            balance: 100,
+            type: AccountType.wallet,
+            profileId: 'default')
+      ],
+      transactions: [t1],
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Groceries'), findsOneWidget);
+    // Depending on formatting logic, might find -50 or similar.
+    // Let's verify presence of the item.
   });
 }

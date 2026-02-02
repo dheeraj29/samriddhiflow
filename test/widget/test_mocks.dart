@@ -121,7 +121,7 @@ class MockStorageService extends StorageService implements Mock {
   @override
   int getMaturityWarningDays() => 7;
   @override
-  Future<void> checkCreditCardRollovers() async {}
+  Future<void> checkCreditCardRollovers({DateTime? nowOverride}) async {}
   @override
   Future<void> saveAccount(Account account) async {
     saveAccountCalled = true;

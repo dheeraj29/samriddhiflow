@@ -1,0 +1,254 @@
+[
+    {
+        "name": "Salary",
+        "usage": "income",
+        "tag": "directTax",
+        "iconCode": 60271
+    },
+    {
+        "name": "Property Rental",
+        "usage": "income",
+        "tag": "directTax",
+        "iconCode": 63723
+    },
+    {
+        "name": "Divestment",
+        "usage": "income",
+        "tag": "capitalGain",
+        "iconCode": 62446
+    },
+    {
+        "name": "Saving Interest",
+        "usage": "income",
+        "tag": "directTax",
+        "iconCode": 58091
+    },
+    {
+        "name": "Dividend",
+        "usage": "income",
+        "tag": "directTax",
+        "iconCode": 62446
+    },
+    {
+        "name": "Family Gift",
+        "usage": "income",
+        "tag": "taxFree",
+        "iconCode": 59569
+    },
+    {
+        "name": "Gift",
+        "usage": "income",
+        "tag": "directTax",
+        "iconCode": 59569
+    },
+    {
+        "name": "Cashback",
+        "usage": "income",
+        "tag": "none",
+        "iconCode": 60001
+    },
+    {
+        "name": "Gadgets",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 57777
+    },
+    {
+        "name": "Clothes",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61854
+    },
+    {
+        "name": "Bank loan",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 60271
+    },
+    {
+        "name": "Insurance",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61853
+    },
+    {
+        "name": "Festival",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 60008
+    },
+    {
+        "name": "Snacks",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58746
+    },
+    {
+        "name": "Beauty",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 60236
+    },
+    {
+        "name": "Service Charges",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61283
+    },
+    {
+        "name": "Food",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58732
+    },
+    {
+        "name": "Toys",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58162
+    },
+    {
+        "name": "Entertainment",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 60008
+    },
+    {
+        "name": "Others",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59924
+    },
+    {
+        "name": "Investment",
+        "usage": "expense",
+        "tag": "budgetFree",
+        "iconCode": 61330
+    },
+    {
+        "name": "Groceries",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61335
+    },
+    {
+        "name": "Rent",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61283
+    },
+    {
+        "name": "Travel",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59082
+    },
+    {
+        "name": "Health",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 57813
+    },
+    {
+        "name": "Gas",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58694
+    },
+    {
+        "name": "Utility Bill",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59568
+    },
+    {
+        "name": "Pharmacy",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58704
+    },
+    {
+        "name": "Maid",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61695
+    },
+    {
+        "name": "Care Taker",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 60225
+    },
+    {
+        "name": "Repairs",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59497
+    },
+    {
+        "name": "Salon",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61341
+    },
+    {
+        "name": "Laundry",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58024
+    },
+    {
+        "name": "Vegetables",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61335
+    },
+    {
+        "name": "Fruits",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 57616
+    },
+    {
+        "name": "Meat",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59458
+    },
+    {
+        "name": "School",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59404
+    },
+    {
+        "name": "Subscriptions",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 57444
+    },
+    {
+        "name": "Services",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 59498
+    },
+    {
+        "name": "Movies",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 57388
+    },
+    {
+        "name": "Hospital",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 58696
+    },
+    {
+        "name": "Shopping",
+        "usage": "expense",
+        "tag": "none",
+        "iconCode": 61900
+    }
+]

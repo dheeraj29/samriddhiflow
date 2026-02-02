@@ -9,9 +9,13 @@ import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 
+import 'package:flutter/services.dart';
+
 class MockHiveInterface extends Mock implements HiveInterface {}
 
 class MockBox<T> extends Mock implements Box<T> {}
+
+class MockAssetBundle extends Mock implements AssetBundle {}
 
 class AccountFake extends Fake implements Account {}
 
@@ -37,6 +41,7 @@ void main() {
 
   late StorageService storageService;
   late MockHiveInterface mockHive;
+  late MockAssetBundle mockBundle;
   late MockBox<Account> mockAccountBox;
   late MockBox<Profile> mockProfileBox;
   late MockBox<Transaction> mockTransactionBox;
@@ -47,6 +52,7 @@ void main() {
 
   setUp(() {
     mockHive = MockHiveInterface();
+    mockBundle = MockAssetBundle();
     mockAccountBox = MockBox<Account>();
     mockProfileBox = MockBox<Profile>();
     mockTransactionBox = MockBox<Transaction>();
@@ -55,7 +61,19 @@ void main() {
     mockCategoryBox = MockBox<Category>();
     mockSettingsBox = MockBox<dynamic>();
 
-    storageService = StorageService(mockHive);
+    // Mock bundle response with minimal valid JSON
+    when(() => mockBundle.loadString(any())).thenAnswer((_) async => '''
+      [
+        {
+          "name": "Salary",
+          "usage": "income",
+          "tag": "directTax",
+          "iconCode": 60271
+        }
+      ]
+    ''');
+
+    storageService = StorageService(mockHive, mockBundle);
 
     // Default behavior for boxes
     // Explicit behavior for each mock box to avoid generic type issues in loops
@@ -453,7 +471,28 @@ void main() {
   });
 
   group('StorageService - Category Operations', () {
-    test('getCategories creates defaults if empty', () {
+    test('getCategories creates defaults if empty', () async {
+      // Setup for init() to skip opening boxes (assumed open) but load JSON
+      when(() => mockHive.isBoxOpen(any())).thenReturn(true);
+      // Ensure specific boxes queried in init are returned
+      when(() => mockHive.box<Profile>(StorageService.boxProfiles))
+          .thenReturn(mockProfileBox);
+      when(() => mockHive.box<Category>(StorageService.boxCategories))
+          .thenReturn(mockCategoryBox);
+      when(() => mockHive.box(StorageService.boxSettings))
+          .thenReturn(mockSettingsBox);
+
+      // Mocks for Init logic
+      when(() => mockProfileBox.isEmpty)
+          .thenReturn(false); // Skip profile creation
+      when(() => mockCategoryBox.isEmpty).thenReturn(
+          false); // Skip category creation in init (we want getCategories to do it)
+      // Actually if we set it false, init skips.
+      // But getCategories checks _getByProfile which calls box.values
+      // We set values to [] below, so _getByProfile returns [].
+
+      await storageService.init();
+
       when(() => mockCategoryBox.values).thenReturn([]);
 
       final result = storageService.getCategories();
@@ -510,6 +549,109 @@ void main() {
 
       expect(rt.nextExecutionDate.month, 2);
       verify(() => mockRecurringBox.put('r1', rt)).called(1);
+    });
+  });
+
+  group('StorageService - Billing & Rollover', () {
+    test('checkCreditCardRollovers triggers rollover and updates balance',
+        () async {
+      final acc = Account(
+        id: 'cc1',
+        name: 'CC',
+        type: AccountType.creditCard,
+        billingCycleDay: 1,
+        balance: 1000.0,
+        profileId: 'default',
+      );
+
+      // Setup: Last rollover was Jan 1, 2024
+      final lastRollover = DateTime(2024, 1, 1);
+      final now = DateTime(2024, 2, 5); // Current date is Feb 5 (Cycle Feb 1)
+
+      // Transactions in the billing period (Jan 1 - Feb 1)
+      final txn = Transaction(
+        id: 't1',
+        title: 'Expense',
+        amount: 500.0,
+        date: DateTime(2024, 1, 15),
+        type: TransactionType.expense,
+        accountId: 'cc1',
+        profileId: 'default',
+        category: 'Food',
+      );
+
+      when(() => mockAccountBox.values).thenReturn([acc]);
+      when(() => mockSettingsBox.get('last_rollover_cc1'))
+          .thenReturn(lastRollover.millisecondsSinceEpoch);
+      when(() => mockTransactionBox.values).thenReturn([txn]);
+
+      // Allow saving updated account and settings
+      when(() => mockAccountBox.put(any(), any())).thenAnswer((_) async {});
+      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+
+      await storageService.checkCreditCardRollovers(nowOverride: now);
+
+      // Verify Balance Updated (1000 + 500 = 1500)
+      expect(acc.balance, 1500.0);
+
+      // Verify Settings Updated (New cycle start: Feb 1)
+      final expectedCycleStart = DateTime(2024, 2, 1);
+      verify(() => mockSettingsBox.put(
+              'last_rollover_cc1', expectedCycleStart.millisecondsSinceEpoch))
+          .called(1);
+    });
+  });
+
+  group('StorageService - Holiday Operations', () {
+    test('addHoliday adds unique holiday and revalidates recurring', () async {
+      when(() => mockSettingsBox.get('holidays', defaultValue: []))
+          .thenReturn(<DateTime>[]);
+      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+      when(() => mockRecurringBox.values)
+          .thenReturn([]); // No recurring to validate
+
+      final date = DateTime(2024, 1, 1);
+      await storageService.addHoliday(date);
+
+      verify(() => mockSettingsBox.put('holidays', [date])).called(1);
+    });
+
+    test('removeHoliday removes holiday', () async {
+      final date = DateTime(2024, 1, 1);
+      // Use a mutable list for mocks to allow removeWhere if logic uses the same reference,
+      // but usually service gets a fresh copy or modifies the one returned.
+      // StorageService: getHolidays() -> returns mapped list.
+      // Then modifies it and puts it back.
+
+      when(() => mockSettingsBox.get('holidays', defaultValue: [])).thenReturn(
+          [date]); // Return dynamic list usually, but here DateTime list
+      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+      when(() => mockRecurringBox.values).thenReturn([]);
+
+      await storageService.removeHoliday(date);
+
+      // Verify put checks: empty list
+      verify(() => mockSettingsBox.put(any(), []));
+    });
+  });
+
+  group('StorageService - Data Cleanup', () {
+    test('clearAllData deletes everything for active profile', () async {
+      // Setup mocked data
+      when(() => mockAccountBox.values).thenReturn([
+        Account(
+            id: 'a1', name: 'A', profileId: 'default', type: AccountType.wallet)
+      ]);
+      when(() => mockTransactionBox.values).thenReturn([]);
+      when(() => mockLoanBox.values).thenReturn([]);
+      when(() => mockRecurringBox.values).thenReturn([]);
+      when(() => mockCategoryBox.values).thenReturn([]);
+      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+
+      await storageService.clearAllData();
+
+      verify(() => mockAccountBox.delete('a1')).called(1);
+      verify(() => mockSettingsBox.put('txnsSinceBackup', 0)).called(1);
     });
   });
 }

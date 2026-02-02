@@ -1,5 +1,5 @@
 class AppConstants {
   static const String appName = 'Samriddhi Flow';
   static const String appTagline = 'Your Premium Finance Companion';
-  static const String appVersion = 'v1.26.0';
+  static const String appVersion = 'v1.28.0';
 }

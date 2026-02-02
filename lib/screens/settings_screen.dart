@@ -22,6 +22,7 @@ import 'login_screen.dart';
 import '../utils/ui_utils.dart';
 import '../widgets/common_dialogs.dart';
 import '../widgets/category_manager_dialog.dart';
+import '../services/repair_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -297,7 +298,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const RecycleBinScreen())),
         ),
+        ListTile(
+          title: const Text('Repair Data'),
+          subtitle: const Text('Fix data consistency issues'),
+          leading: const Icon(Icons.build_circle, color: Colors.amber),
+          onTap: () => _showRepairDialog(context),
+        ),
       ],
+    );
+  }
+
+  void _showRepairDialog(BuildContext parentContext) {
+    final jobs = ref.read(repairServiceProvider).jobs;
+    showDialog(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Data Repair'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: jobs.length,
+            itemBuilder: (itemContext, index) {
+              final job = jobs[index];
+              return ListTile(
+                title: Text(job.name),
+                subtitle: Text(job.description),
+                trailing: const Icon(Icons.play_arrow, color: Colors.blue),
+                onTap: () async {
+                  Navigator.pop(dialogContext);
+                  // Show loading or progress?
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                      const SnackBar(content: Text('Running repair...')));
+
+                  try {
+                    final int count = await job.run(ref);
+                    if (mounted) {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
+                          content: Text(
+                              '${job.name}: Successfully repaired $count items.')));
+                      // Invalidate providers to reflect changes
+                      ref.invalidate(accountsProvider);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
+                          content: Text('Repair Failed: $e'),
+                          backgroundColor: Colors.red));
+                    }
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close')),
+        ],
+      ),
     );
   }
 
@@ -1176,45 +1238,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // --- DIALOGS (Existing Logic) ---
 
   void _showCurrencyDialog() async {
+    const currencies = [
+      {'code': 'en_IN', 'label': 'Indian Rupee (₹)'},
+      {'code': 'en_US', 'label': 'US Dollar (\$)'},
+      {'code': 'en_GB', 'label': 'British Pound (£)'},
+      {'code': 'en_EU', 'label': 'Euro (€)'},
+    ];
+
     await showDialog(
-        context: context,
-        builder: (context) => SimpleDialog(
-              title: const Text('Select Currency'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () {
-                    ref.read(currencyProvider.notifier).setCurrency('en_IN');
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Indian Rupee (₹)',
-                      style: AppTheme.offlineSafeTextStyle),
-                ),
-                SimpleDialogOption(
-                  onPressed: () {
-                    ref.read(currencyProvider.notifier).setCurrency('en_US');
-                    Navigator.pop(context);
-                  },
-                  child: const Text('US Dollar (\$)',
-                      style: AppTheme.offlineSafeTextStyle),
-                ),
-                SimpleDialogOption(
-                  onPressed: () {
-                    ref.read(currencyProvider.notifier).setCurrency('en_GB');
-                    Navigator.pop(context);
-                  },
-                  child: const Text('British Pound (£)',
-                      style: AppTheme.offlineSafeTextStyle),
-                ),
-                SimpleDialogOption(
-                  onPressed: () {
-                    ref.read(currencyProvider.notifier).setCurrency('en_EU');
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Euro (€)',
-                      style: AppTheme.offlineSafeTextStyle),
-                ),
-              ],
-            ));
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Select Currency'),
+        children: currencies.map((c) {
+          return SimpleDialogOption(
+            onPressed: () {
+              ref.read(currencyProvider.notifier).setCurrency(c['code']!);
+              Navigator.pop(context);
+            },
+            child: Text(c['label']!, style: AppTheme.offlineSafeTextStyle),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   Future<bool> _showVerifyPinDialog(BuildContext context) async {

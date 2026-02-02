@@ -108,5 +108,44 @@ void main() {
     // Testing specialized flow might be limited without abstracting GoogleSignIn.
     // But we can test the general structure if we can inject dependencies or mock statics.
     // AuthService uses `FirebaseAuth.instance` if no injection, but we injected mockAuth.
+    test('signInWithGoogle - Already Logged In - Success', () async {
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reload()).thenAnswer((_) async {});
+
+      final result = await authService.signInWithGoogle(MockRef());
+
+      expect(result.status, AuthStatus.success);
+      verify(() => mockUser.reload()).called(1);
+    });
+
+    test('signInWithGoogle - Already Logged In - Network Error (Allowed)',
+        () async {
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reload())
+          .thenThrow(FirebaseAuthException(code: 'network-request-failed'));
+
+      final result = await authService.signInWithGoogle(MockRef());
+
+      expect(result.status, AuthStatus.success);
+      verify(() => mockUser.reload()).called(1);
+    });
+
+    test('reLoadUser - Success', () async {
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reload()).thenAnswer((_) async {});
+
+      final mockRef = MockRef();
+      // Stub ref.read to return false (not logout requested)
+      when(() => mockRef.read(any())).thenReturn(false);
+
+      await authService.reloadUser(mockRef);
+
+      verify(() => mockUser.reload()).called(1);
+    });
+
+    // We can't easily test the web-specific signInWithRedirect flow here
+    // because of the hardcoded GoogleAuthProvider and kIsWeb check
+    // without extensive refactoring or platform mocking.
+    // However, the above tests cover the session validation logic which is critical.
   });
 }

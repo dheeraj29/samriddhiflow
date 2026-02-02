@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
@@ -12,7 +14,10 @@ import '../utils/currency_utils.dart';
 
 class StorageService {
   final HiveInterface _hive;
-  StorageService([HiveInterface? hive]) : _hive = hive ?? Hive;
+  final AssetBundle _bundle;
+  StorageService([HiveInterface? hive, AssetBundle? bundle])
+      : _hive = hive ?? Hive,
+        _bundle = bundle ?? rootBundle;
 
   static const String boxAccounts = 'accounts';
   static const String boxTransactions = 'transactions';
@@ -23,6 +28,9 @@ class StorageService {
   static const String boxCategories = 'categories_v3';
 
   Future<void> init() async {
+    // Load default categories JSON into memory
+    await _loadDefaultCategoriesJson();
+
     if (!_hive.isBoxOpen(boxAccounts)) {
       await _hive.openBox<Account>(boxAccounts);
     }
@@ -61,11 +69,30 @@ class StorageService {
         }
       } else {
         // Initial defaults
+        // Cache should be loaded by now if init() completed fully.
+        // If not, we await loading here (just in case migration happens before cache is ready, though init handles flow).
+        if (_defaultCategoryCache.isEmpty) {
+          await _loadDefaultCategoriesJson();
+        }
         final defaults = _getDefaultCategories('default');
         for (var c in defaults) {
           await cBox.put(c.id, c);
         }
       }
+    }
+  }
+
+  List<Map<String, dynamic>> _defaultCategoryCache = [];
+
+  Future<void> _loadDefaultCategoriesJson() async {
+    try {
+      final jsonString =
+          await _bundle.loadString('assets/data/default_categories.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      _defaultCategoryCache = List<Map<String, dynamic>>.from(jsonList);
+    } catch (e) {
+      DebugLogger().log('Error loading default categories: $e');
+      // Fallback empty or handle critical error
     }
   }
 
@@ -245,7 +272,7 @@ class StorageService {
   // --- Rollover Logic ---
   static bool _isCheckingRollover = false;
 
-  Future<void> checkCreditCardRollovers() async {
+  Future<void> checkCreditCardRollovers({DateTime? nowOverride}) async {
     if (_isCheckingRollover) return;
     _isCheckingRollover = true;
 
@@ -253,7 +280,7 @@ class StorageService {
       final accountsBox = _hive.box<Account>(boxAccounts);
       final accounts = accountsBox.values.toList(); // Run for ALL profiles
       final settingsBox = _hive.box(boxSettings);
-      final now = DateTime.now();
+      final now = nowOverride ?? DateTime.now();
 
       for (var acc in accounts) {
         if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
@@ -687,269 +714,30 @@ class StorageService {
   }
 
   List<Category> _getDefaultCategories(String profileId) {
-    final defaultData = [
-      // Income
-      {
-        'name': 'Salary',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.directTax,
-        'iconCode': 0xeb6f
-      },
-      {
-        'name': 'Property Rental',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.directTax,
-        'iconCode': 0xf8eb
-      },
-      {
-        'name': 'Divestment',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.capitalGain,
-        'iconCode': 0xf3ee
-      },
-      {
-        'name': 'Saving Interest',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.directTax,
-        'iconCode': 0xe2eb
-      },
-      {
-        'name': 'Dividend',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.directTax,
-        'iconCode': 0xf3ee
-      },
-      {
-        'name': 'Family Gift',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.taxFree,
-        'iconCode': 0xe8b1
-      },
-      {
-        'name': 'Gift',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.directTax,
-        'iconCode': 0xe8b1
-      },
-      {
-        'name': 'Cashback',
-        'usage': CategoryUsage.income,
-        'tag': CategoryTag.none,
-        'iconCode': 0xea61
-      },
+    if (_defaultCategoryCache.isEmpty) {
+      // Emergency fallback if JSON failed or init didn't run (should not happen in prod flow)
+      DebugLogger().log('Warning: Default categories cache is empty.');
+      return [];
+    }
 
-      // Expense
-      {
-        'name': 'Gadgets',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe1b1
-      },
-      {
-        'name': 'Clothes',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xf19e
-      },
-      {
-        'name': 'Bank loan',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xeb6f
-      },
-      {
-        'name': 'Insurance',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xf19d
-      },
-      {
-        'name': 'Festival',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xea68
-      },
-      {
-        'name': 'Snacks',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe57a
-      },
-      {
-        'name': 'Beauty',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xeb4c
-      },
-      {
-        'name': 'Service Charges',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xef63
-      },
-      {
-        'name': 'Food',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe56c
-      },
-      {
-        'name': 'Toys',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe332
-      },
-      {
-        'name': 'Entertainment',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xea68
-      },
-      {
-        'name': 'Others',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xea14
-      },
-      {
-        'name': 'Investment',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.budgetFree,
-        'iconCode': 0xef92
-      },
-      {
-        'name': 'Groceries',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xef97
-      },
-      {
-        'name': 'Rent',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xef63
-      },
-      {
-        'name': 'Travel',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe6ca
-      },
-      {
-        'name': 'Health',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe1d5
-      },
-      {
-        'name': 'Gas',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe546
-      },
-      {
-        'name': 'Utility Bill',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe8b0
-      },
-      {
-        'name': 'Pharmacy',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe550
-      },
-      {
-        'name': 'Maid',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xf0ff
-      },
-      {
-        'name': 'Care Taker',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xeb41
-      },
-      {
-        'name': 'Repairs',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe869
-      },
-      {
-        'name': 'Salon',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xef9d
-      },
-      {
-        'name': 'Laundry',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe2a8
-      },
-      {
-        'name': 'Vegetables',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xef97
-      },
-      {
-        'name': 'Fruits',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe110
-      },
-      {
-        'name': 'Meat',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe842
-      },
-      {
-        'name': 'School',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe80c
-      },
-      {
-        'name': 'Subscriptions',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe064
-      },
-      {
-        'name': 'Services',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe86a
-      },
-      {
-        'name': 'Movies',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe02c
-      },
-      {
-        'name': 'Hospital',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xe548
-      },
-      {
-        'name': 'Shopping',
-        'usage': CategoryUsage.expense,
-        'tag': CategoryTag.none,
-        'iconCode': 0xf1cc
-      },
-    ];
+    return _defaultCategoryCache.map((data) {
+      final usageStr = data['usage'];
+      final tagStr = data['tag'];
 
-    return defaultData.map((data) {
+      CategoryUsage usage = CategoryUsage.values.firstWhere(
+        (e) => e.name == usageStr,
+        orElse: () => CategoryUsage.expense,
+      );
+
+      CategoryTag tag = CategoryTag.values.firstWhere(
+        (e) => e.name == tagStr,
+        orElse: () => CategoryTag.none,
+      );
+
       return Category.create(
         name: data['name'] as String,
-        usage: data['usage'] as CategoryUsage,
-        tag: data['tag'] as CategoryTag? ?? CategoryTag.none,
+        usage: usage,
+        tag: tag,
         iconCode: data['iconCode'] as int,
         profileId: profileId,
       );
@@ -1184,5 +972,28 @@ class StorageService {
 
     // Reset backup counter
     await resetTxnsSinceBackup();
+  }
+
+  Future<int> repairAccountCurrencies(String defaultCurrency) async {
+    if (!_hive.isBoxOpen(boxAccounts)) return 0;
+    final box = _hive.box<Account>(boxAccounts);
+    int repairedCount = 0;
+    for (var key in box.keys) {
+      final account = box.get(key);
+      if (account != null) {
+        bool needsRepair = false;
+        // Check for null or empty currency
+        if (account.currency.trim().isEmpty) {
+          account.currency = defaultCurrency;
+          needsRepair = true;
+        }
+
+        if (needsRepair) {
+          await box.put(key, account);
+          repairedCount++;
+        }
+      }
+    }
+    return repairedCount;
   }
 }

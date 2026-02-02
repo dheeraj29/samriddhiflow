@@ -10,13 +10,22 @@ class AccountCard extends ConsumerWidget {
   final Account account;
   final VoidCallback? onTap;
   final double unbilledAmount;
+  final bool compactView;
 
   const AccountCard({
     super.key,
     required this.account,
     this.onTap,
     this.unbilledAmount = 0,
+    this.compactView = true,
   });
+
+  String _format(double value) {
+    if (compactView) {
+      return CurrencyUtils.getSmartFormat(value, account.currency);
+    }
+    return CurrencyUtils.getFormatter(account.currency).format(value);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,8 +82,7 @@ class AccountCard extends ConsumerWidget {
                 // Balance Display
                 if (account.type == AccountType.creditCard) ...[
                   Text(
-                    CurrencyUtils.getFormatter(account.currency)
-                        .format(account.balance + unbilledAmount),
+                    _format(account.balance + unbilledAmount),
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -93,8 +101,7 @@ class AccountCard extends ConsumerWidget {
                   ),
                 ] else
                   Text(
-                    CurrencyUtils.getFormatter(account.currency)
-                        .format(account.balance),
+                    _format(account.balance),
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -132,7 +139,7 @@ class AccountCard extends ConsumerWidget {
             Text('Used ${((percent * 100).toInt())}%',
                 style: const TextStyle(color: Colors.white70, fontSize: 10)),
             Text(
-              'Limit: ${NumberFormat.compact().format(limit)}',
+              'Limit: ${compactView ? NumberFormat.compact().format(limit) : CurrencyUtils.getFormatter(account.currency).format(limit)}',
               style: const TextStyle(color: Colors.white70, fontSize: 10),
             ),
           ],
@@ -158,7 +165,7 @@ class AccountCard extends ConsumerWidget {
           color: Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(4)),
       child: Text(
-        '$label: ${CurrencyUtils.getFormatter(currency).format(val)}',
+        '$label: ${_format(val)}',
         style: const TextStyle(color: Colors.white70, fontSize: 9),
       ),
     );

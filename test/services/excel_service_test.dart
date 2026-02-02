@@ -108,30 +108,21 @@ void main() {
           greaterThan(1)); // Header + 1 Row
     });
 
-    test('Import Data - Handles Empty File', () async {
-      when(() => mockFileService.pickFile(
-              allowedExtensions: any(named: 'allowedExtensions')))
-          .thenAnswer((_) async => null);
-
-      final result = await excelService.importData();
-      expect(result['status'], -1); // Cancelled
-    });
-
-    test('Import Data - Basic Parsing Success', () async {
-      // 1. Create a mock Excel file
+    test('Import Data - Auto-Creates Account', () async {
       final excel = Excel.createExcel();
       final sheet = excel['Transactions'];
       sheet.appendRow([
         TextCellValue('Title'),
         TextCellValue('Amount'),
-        TextCellValue('Date')
-      ]); // Header
-      sheet.appendRow([
-        TextCellValue('Coffee'),
-        const IntCellValue(100),
-        TextCellValue('2024-01-01')
+        TextCellValue('Date'),
+        TextCellValue('Account Name')
       ]);
-
+      sheet.appendRow([
+        TextCellValue('Salary'),
+        const IntCellValue(50000),
+        TextCellValue('2024-01-01'),
+        TextCellValue('New Bank') // Should trigger account creation
+      ]);
       final bytes = excel.save();
 
       when(() => mockFileService.pickFile(
@@ -139,25 +130,61 @@ void main() {
           .thenAnswer(
               (_) async => bytes != null ? Uint8List.fromList(bytes) : null);
 
+      await excelService.importData(fileBytes: bytes);
+
+      verify(() => mockStorage.saveAccount(any(
+              that: isA<Account>().having((a) => a.name, 'name', 'New Bank'))))
+          .called(1);
+    });
+
+    test('Import Data - Skips Self Transfer', () async {
+      when(() => mockStorage.getAccounts()).thenReturn([
+        Account(
+            id: 'a1',
+            name: 'Bank',
+            type: AccountType.savings,
+            profileId: 'default')
+      ]);
       when(() => mockStorage.getAllAccounts()).thenReturn([
         Account(
             id: 'a1',
-            name: 'Default Account',
+            name: 'Bank',
             type: AccountType.savings,
             profileId: 'default')
       ]);
 
+      final excel = Excel.createExcel();
+      final sheet = excel['Transactions'];
+      sheet.appendRow([
+        TextCellValue('Title'),
+        TextCellValue('Amount'),
+        TextCellValue('Type'),
+        TextCellValue('Account ID'),
+        TextCellValue('To Account ID')
+      ]);
+      sheet.appendRow([
+        TextCellValue('Self Xfer'),
+        const IntCellValue(100),
+        TextCellValue('transfer'),
+        TextCellValue('a1'),
+        TextCellValue('a1')
+      ]);
+      final bytes = excel.save();
+
       final result = await excelService.importData(fileBytes: bytes);
 
-      // Since our mock setup might not have necessary headers for exact column mapping (it uses fuzzy match),
-      // we need to ensure minimal headers match logic in ExcelService.
-      // E.g. Title, Amount, Date are standard.
-      // But Account ID/Name resolving is strict.
-      // If mocking pickFile, we pass bytes directly mostly.
+      expect(result['skipped_selftransfer'], 1);
+      // verify no transaction saved?
+      // saveTransactions is called with list. List should be empty.
+      verify(() => mockStorage.saveTransactions(any(that: isEmpty),
+          applyImpact: any(named: 'applyImpact'))).called(1);
+    });
 
-      // Let's rely on the result being handled without crash at least.
-      // Status != -4 (Error)
-      expect(result['status'], isNot(-4));
+    test('Import Data - Handles Invalid File', () async {
+      // Pass random bytes
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final result = await excelService.importData(fileBytes: bytes);
+      expect(result['status'], -4);
     });
   });
 }

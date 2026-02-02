@@ -203,11 +203,16 @@ void main() {
     // Summary is hidden by default
     expect(find.text('Total Credit Usage'), findsNothing);
 
-    // Toggle visibility
+    // Toggle visibility (Show Credit Usage)
     await tester.tap(find.byIcon(Icons.visibility_off));
     await tester.pumpAndSettle();
 
     expect(find.text('Total Credit Usage'), findsOneWidget);
+
+    // Switch to Extended View to check exact numbers
+    await tester.tap(find.byTooltip('Switch to Extended Numbers'));
+    await tester.pumpAndSettle();
+
     expect(find.text('20.0% Used'), findsOneWidget);
     expect(find.text('Available: ₹4,000.00'), findsOneWidget);
   });
@@ -273,6 +278,10 @@ void main() {
 
     // Toggle on
     await tester.tap(find.byIcon(Icons.visibility_off));
+    await tester.pumpAndSettle();
+
+    // Switch to Extended View to check exact numbers
+    await tester.tap(find.byTooltip('Switch to Extended Numbers'));
     await tester.pumpAndSettle();
 
     expect(find.text('Total Credit Usage'), findsOneWidget);
