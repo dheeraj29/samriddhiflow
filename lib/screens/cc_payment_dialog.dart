@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for FilteringTextInputFormatter
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../utils/currency_utils.dart';
-import '../widgets/pure_icons.dart';
-import '../theme/app_theme.dart';
+import '../widgets/form_utils.dart';
 
 class RecordCCPaymentDialog extends ConsumerStatefulWidget {
   final Account creditCardAccount;
@@ -21,7 +18,7 @@ class RecordCCPaymentDialog extends ConsumerStatefulWidget {
 class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   final _amountController = TextEditingController();
   DateTime _date = DateTime.now();
-  String _sourceAccountId = 'none';
+  String _sourceAccountId = 'manual';
 
   @override
   void initState() {
@@ -48,18 +45,10 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                FormUtils.buildAmountField(
                   controller: _amountController,
-                  decoration: InputDecoration(
-                    labelText: 'Payment Amount',
-                    prefixText:
-                        '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
-                    prefixStyle: AppTheme.offlineSafeTextStyle,
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
-                  ],
+                  currency: ref.watch(currencyProvider),
+                  label: 'Payment Amount',
                 ),
                 const SizedBox(height: 16),
                 accountsAsync.when(
@@ -69,55 +58,23 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                             a.id != widget.creditCardAccount.id &&
                             a.type != AccountType.creditCard)
                         .toList();
-                    final allIds = ['none', ...sourceAccounts.map((a) => a.id)];
-                    final safeValue = allIds.contains(_sourceAccountId)
-                        ? _sourceAccountId
-                        : 'none';
 
-                    return DropdownButtonFormField<String>(
-                      initialValue: safeValue,
-                      decoration: const InputDecoration(
-                        labelText: 'Pay From Account',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: <DropdownMenuItem<String>>[
-                        const DropdownMenuItem<String>(
-                            value: 'none', child: Text('No Account (Manual)')),
-                        ...sourceAccounts.map((a) => DropdownMenuItem<String>(
-                              value: a.id,
-                              child: Text(
-                                  '${a.name} (${CurrencyUtils.getFormatter(a.currency, compact: true).format(a.balance)})'),
-                            )),
-                      ],
+                    return FormUtils.buildAccountSelector(
+                      value: _sourceAccountId,
+                      accounts: sourceAccounts,
                       onChanged: (v) => setState(() => _sourceAccountId = v!),
-                      // Validator removed to allow Manual
+                      label: 'Pay From Account',
                     );
                   },
                   loading: () => const CircularProgressIndicator(),
                   error: (_, __) => const Text('Error loading accounts'),
                 ),
                 const SizedBox(height: 16),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _date,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) setState(() => _date = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Payment Date',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: PureIcons.calendar(),
-                    ),
-                    child: Text(
-                      DateFormat('yyyy-MM-dd').format(_date),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
+                FormUtils.buildDatePickerField(
+                  context: context,
+                  selectedDate: _date,
+                  onDateTarget: (picked) => setState(() => _date = picked),
+                  label: 'Payment Date',
                 ),
               ],
             ),
@@ -141,7 +98,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                     type: TransactionType.transfer,
                     category: 'Credit Card Bill',
                     accountId:
-                        _sourceAccountId == 'none' ? null : _sourceAccountId,
+                        _sourceAccountId == 'manual' ? null : _sourceAccountId,
                     toAccountId: widget.creditCardAccount.id,
                   );
 

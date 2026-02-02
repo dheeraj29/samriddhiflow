@@ -116,11 +116,10 @@ class StorageService {
 
     // 2. Delete Accounts & Rollover Metadata
     final accBox = _hive.box<Account>(boxAccounts);
-    final settingsBox = _hive.box(boxSettings);
     final accountsToDelete =
         accBox.values.where((a) => a.profileId == profileId).toList();
     for (var a in accountsToDelete) {
-      await settingsBox.delete('last_rollover_${a.id}');
+      await _cleanupAccountMetadata(a.id);
       await accBox.delete(a.id);
     }
 
@@ -202,10 +201,12 @@ class StorageService {
       }
     }
     await box.delete(id);
+    await _cleanupAccountMetadata(id);
+  }
 
-    // Metadata Cleanup: Delete rollover timestamp
+  Future<void> _cleanupAccountMetadata(String accountId) async {
     final settingsBox = _hive.box(boxSettings);
-    await settingsBox.delete('last_rollover_$id');
+    await settingsBox.delete('last_rollover_$accountId');
   }
 
   // --- Transaction Operations ---
@@ -339,58 +340,14 @@ class StorageService {
   Future<void> saveTransaction(Transaction transaction,
       {bool applyImpact = true, DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions);
-    final accountsBox = _hive.box<Account>(boxAccounts);
-
     final existingTxn = box.get(transaction.id);
 
     if (applyImpact) {
-      if (existingTxn != null && !existingTxn.isDeleted) {
-        // Impact of Source Account
-        if (existingTxn.accountId != null) {
-          final oldAccFrom = accountsBox.get(existingTxn.accountId);
-          if (oldAccFrom != null) {
-            _applyTransactionImpact(oldAccFrom, existingTxn,
-                isReversal: true, isSource: true, now: now);
-            await _hive
-                .box<Account>(boxAccounts)
-                .put(oldAccFrom.id, oldAccFrom);
-          }
-        }
-        // Impact of Target Account
-        if (existingTxn.type == TransactionType.transfer &&
-            existingTxn.toAccountId != null) {
-          final oldAccTo = accountsBox.get(existingTxn.toAccountId);
-          if (oldAccTo != null) {
-            _applyTransactionImpact(oldAccTo, existingTxn,
-                isReversal: true, isSource: false, now: now);
-            await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
-          }
-        }
-      }
-
-      if (!transaction.isDeleted) {
-        // Impact of Source Account
-        if (transaction.accountId != null) {
-          final newAccFrom = accountsBox.get(transaction.accountId);
-          if (newAccFrom != null) {
-            _applyTransactionImpact(newAccFrom, transaction,
-                isReversal: false, isSource: true, now: now);
-            await _hive
-                .box<Account>(boxAccounts)
-                .put(newAccFrom.id, newAccFrom);
-          }
-        }
-        // Impact of Target Account
-        if (transaction.type == TransactionType.transfer &&
-            transaction.toAccountId != null) {
-          final newAccTo = accountsBox.get(transaction.toAccountId);
-          if (newAccTo != null) {
-            _applyTransactionImpact(newAccTo, transaction,
-                isReversal: false, isSource: false, now: now);
-            await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
-          }
-        }
-      }
+      await _handleTransactionImpacts(
+        oldTxn: existingTxn,
+        newTxn: transaction,
+        now: now,
+      );
     }
 
     await box.put(transaction.id, transaction);
@@ -400,58 +357,73 @@ class StorageService {
   Future<void> saveTransactions(List<Transaction> transactions,
       {bool applyImpact = true, DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions);
-    final accountsBox = _hive.box<Account>(boxAccounts);
-
     final Map<dynamic, Transaction> batch = {};
+
     for (var txn in transactions) {
       if (applyImpact) {
-        // Apply Logic
         final existingTxn = box.get(txn.id);
-        if (existingTxn != null && !existingTxn.isDeleted) {
-          if (existingTxn.accountId != null) {
-            final oldAcc = accountsBox.get(existingTxn.accountId);
-            if (oldAcc != null) {
-              _applyTransactionImpact(oldAcc, existingTxn,
-                  isReversal: true, isSource: true, now: now);
-              await _hive.box<Account>(boxAccounts).put(oldAcc.id, oldAcc);
-            }
-          }
-          if (existingTxn.type == TransactionType.transfer &&
-              existingTxn.toAccountId != null) {
-            final oldAccTo = accountsBox.get(existingTxn.toAccountId);
-            if (oldAccTo != null) {
-              _applyTransactionImpact(oldAccTo, existingTxn,
-                  isReversal: true, isSource: false, now: now);
-              await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
-            }
-          }
-        }
-
-        if (!txn.isDeleted) {
-          if (txn.accountId != null) {
-            final newAcc = accountsBox.get(txn.accountId);
-            if (newAcc != null) {
-              _applyTransactionImpact(newAcc, txn,
-                  isReversal: false, isSource: true, now: now);
-              await _hive.box<Account>(boxAccounts).put(newAcc.id, newAcc);
-            }
-          }
-          if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
-            final newAccTo = accountsBox.get(txn.toAccountId);
-            if (newAccTo != null) {
-              _applyTransactionImpact(newAccTo, txn,
-                  isReversal: false, isSource: false, now: now);
-              await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
-            }
-          }
-        }
-      } // End applyImpact
-
+        await _handleTransactionImpacts(
+          oldTxn: existingTxn,
+          newTxn: txn,
+          now: now,
+        );
+      }
       batch[txn.id] = txn;
     }
 
     await box.putAll(batch);
     await _incrementBackupCounter();
+  }
+
+  /// Reconciles account balance impacts when saving, deleting, or restoring a transaction.
+  Future<void> _handleTransactionImpacts({
+    Transaction? oldTxn,
+    Transaction? newTxn,
+    DateTime? now,
+  }) async {
+    final accountsBox = _hive.box<Account>(boxAccounts);
+
+    // 1. Reverse old impact if it was active
+    if (oldTxn != null && !oldTxn.isDeleted) {
+      if (oldTxn.accountId != null) {
+        final acc = accountsBox.get(oldTxn.accountId);
+        if (acc != null) {
+          _applyTransactionImpact(acc, oldTxn,
+              isReversal: true, isSource: true, now: now);
+          await accountsBox.put(acc.id, acc);
+        }
+      }
+      if (oldTxn.type == TransactionType.transfer &&
+          oldTxn.toAccountId != null) {
+        final accTo = accountsBox.get(oldTxn.toAccountId);
+        if (accTo != null) {
+          _applyTransactionImpact(accTo, oldTxn,
+              isReversal: true, isSource: false, now: now);
+          await accountsBox.put(accTo.id, accTo);
+        }
+      }
+    }
+
+    // 2. Apply new impact if it is active
+    if (newTxn != null && !newTxn.isDeleted) {
+      if (newTxn.accountId != null) {
+        final acc = accountsBox.get(newTxn.accountId);
+        if (acc != null) {
+          _applyTransactionImpact(acc, newTxn,
+              isReversal: false, isSource: true, now: now);
+          await accountsBox.put(acc.id, acc);
+        }
+      }
+      if (newTxn.type == TransactionType.transfer &&
+          newTxn.toAccountId != null) {
+        final accTo = accountsBox.get(newTxn.toAccountId);
+        if (accTo != null) {
+          _applyTransactionImpact(accTo, newTxn,
+              isReversal: false, isSource: false, now: now);
+          await accountsBox.put(accTo.id, accTo);
+        }
+      }
+    }
   }
 
   void _applyTransactionImpact(Account acc, Transaction txn,
@@ -529,30 +501,12 @@ class StorageService {
       final txn = box.get(id);
       if (txn == null || txn.isDeleted) return;
 
-      // 1. Mark as deleted immediately for UI reactivity
+      // 1. Apply reversals before marking as deleted
+      await _handleTransactionImpacts(oldTxn: txn, newTxn: null);
+
+      // 2. Mark as deleted
       txn.isDeleted = true;
-      await _hive.box<Transaction>(boxTransactions).put(txn.id, txn);
-
-      // 2. Apply reverses if account-linked
-      if (txn.accountId != null) {
-        final accountsBox = _hive.box<Account>(boxAccounts);
-        final accFrom = accountsBox.get(txn.accountId);
-
-        if (accFrom != null) {
-          _applyTransactionImpact(accFrom, txn,
-              isReversal: true, isSource: true);
-          await _hive.box<Account>(boxAccounts).put(accFrom.id, accFrom);
-        }
-
-        if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
-          final accTo = accountsBox.get(txn.toAccountId);
-          if (accTo != null) {
-            _applyTransactionImpact(accTo, txn,
-                isReversal: true, isSource: false);
-            await _hive.box<Account>(boxAccounts).put(accTo.id, accTo);
-          }
-        }
-      }
+      await box.put(txn.id, txn);
     } catch (e) {
       DebugLogger().log("StorageService: deleteTransaction error: $e");
     }
@@ -594,27 +548,16 @@ class StorageService {
     final box = _hive.box<Transaction>(boxTransactions);
     final txn = box.get(id);
     if (txn != null && txn.isDeleted) {
+      // 1. Apply impacts before marking as restored
+      // (Wait, if we apply impacts of "restored" txn, we need it to be not deleted)
+      // Actually, it's better to just pass the modified txn as 'newTxn'
+      // but 'oldTxn' should be the deleted version.
+      // But _handleTransactionImpacts checks !txn.isDeleted.
+
+      // Let's modify it to be:
       txn.isDeleted = false;
-      await _hive.box<Transaction>(boxTransactions).put(txn.id, txn);
-
-      final accountsBox = _hive.box<Account>(boxAccounts);
-      final accFrom =
-          txn.accountId != null ? accountsBox.get(txn.accountId) : null;
-
-      if (accFrom != null) {
-        _applyTransactionImpact(accFrom, txn,
-            isReversal: false, isSource: true);
-        await _hive.box<Account>(boxAccounts).put(accFrom.id, accFrom);
-
-        if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
-          final accTo = accountsBox.get(txn.toAccountId);
-          if (accTo != null) {
-            _applyTransactionImpact(accTo, txn,
-                isReversal: false, isSource: false);
-            await _hive.box<Account>(boxAccounts).put(accTo.id, accTo);
-          }
-        }
-      }
+      await box.put(txn.id, txn);
+      await _handleTransactionImpacts(oldTxn: null, newTxn: txn);
     }
   }
 

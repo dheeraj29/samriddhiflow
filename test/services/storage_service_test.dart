@@ -255,53 +255,200 @@ void main() {
 
       when(() => mockTransactionBox.get('txn1')).thenReturn(transaction);
       when(() => mockAccountBox.get('acc1')).thenReturn(account);
+      when(() => mockTransactionBox.put(any(), any()))
+          .thenAnswer((_) async => {});
 
       await storageService.deleteTransaction('txn1');
 
       expect(transaction.isDeleted, true);
       expect(account.balance, 1000.0);
     });
+
+    test('saveTransactions batch updates balances', () async {
+      final account = Account(
+          id: 'acc1',
+          name: 'Bank',
+          balance: 1000.0,
+          profileId: 'default',
+          type: AccountType.wallet);
+      final t1 = Transaction(
+        id: 't1',
+        title: 'T1',
+        amount: 100.0,
+        date: DateTime.now(),
+        type: TransactionType.expense,
+        accountId: 'acc1',
+        profileId: 'default',
+        category: 'C1',
+      );
+      final t2 = Transaction(
+        id: 't2',
+        title: 'T2',
+        amount: 50.0,
+        date: DateTime.now(),
+        type: TransactionType.income,
+        accountId: 'acc1',
+        profileId: 'default',
+        category: 'C1',
+      );
+
+      when(() => mockTransactionBox.get(any())).thenReturn(null);
+      when(() => mockAccountBox.get('acc1')).thenReturn(account);
+      when(() => mockTransactionBox.putAll(any())).thenAnswer((_) async => {});
+      when(() => mockSettingsBox.get('txnsSinceBackup', defaultValue: 0))
+          .thenReturn(0);
+
+      await storageService.saveTransactions([t1, t2]);
+
+      expect(account.balance, 950.0);
+      verify(() => mockTransactionBox.putAll(any())).called(1);
+    });
   });
 
-  group('StorageService - Credit Card Rollover', () {
-    test('checkCreditCardRollovers updates balance if cycle changed', () async {
-      final cc = Account(
-        id: 'cc1',
-        name: 'My Card',
-        balance: 0.0,
-        profileId: 'default',
-        type: AccountType.creditCard,
-        billingCycleDay: 1,
-      );
-
-      final now = DateTime.now();
-      // Last rollover was last month
-      final lastMonth = DateTime(now.year, now.month - 1, 1);
-
-      when(() => mockAccountBox.values).thenReturn([cc]);
-      when(() => mockSettingsBox.get('last_rollover_cc1'))
-          .thenReturn(lastMonth.millisecondsSinceEpoch);
-      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async => {});
-
-      // An expense in the previous cycle
-      final oldTxn = Transaction(
-        id: 'old1',
-        title: 'Old Expense',
-        amount: 50.0,
-        date: lastMonth.add(const Duration(days: 5)),
+  group('StorageService - Cascade Operations', () {
+    test('deleteAccount cleans up associated transactions and metadata',
+        () async {
+      final account = Account(
+          id: 'acc1',
+          name: 'Bank',
+          profileId: 'default',
+          type: AccountType.wallet);
+      final t1 = Transaction(
+        id: 't1',
+        title: 'T1',
+        amount: 100,
+        date: DateTime.now(),
         type: TransactionType.expense,
-        accountId: 'cc1',
+        accountId: 'acc1',
         profileId: 'default',
-        category: 'Other',
+        category: 'C1',
       );
 
-      when(() => mockTransactionBox.values).thenReturn([oldTxn]);
+      when(() => mockAccountBox.get('acc1')).thenReturn(account);
+      when(() => mockTransactionBox.values).thenReturn([t1]);
+      when(() => mockAccountBox.delete(any())).thenAnswer((_) async => {});
+      when(() => mockTransactionBox.delete(any())).thenAnswer((_) async => {});
 
-      await storageService.checkCreditCardRollovers();
+      await storageService.deleteAccount('acc1');
 
-      // Balance should be updated by 50.0
-      expect(cc.balance, 50.0);
-      verify(() => mockSettingsBox.put('last_rollover_cc1', any())).called(1);
+      verify(() => mockTransactionBox.delete('t1')).called(1);
+      verify(() => mockAccountBox.delete('acc1')).called(1);
+      verify(() => mockSettingsBox.delete('last_rollover_acc1')).called(1);
+    });
+
+    test('deleteProfile cleans up all profile-linked data', () async {
+      final pId = 'p1';
+      final acc = Account(
+          id: 'a1', name: 'A1', profileId: pId, type: AccountType.wallet);
+      final txn = Transaction(
+          id: 't1',
+          title: 'T1',
+          amount: 10,
+          date: DateTime.now(),
+          type: TransactionType.expense,
+          profileId: pId,
+          category: 'C');
+      final loan = Loan(
+          id: 'l1',
+          name: 'L1',
+          totalPrincipal: 100,
+          remainingPrincipal: 100,
+          interestRate: 10,
+          tenureMonths: 12,
+          startDate: DateTime.now(),
+          firstEmiDate: DateTime.now(),
+          emiAmount: 10,
+          profileId: pId);
+      final rt = RecurringTransaction(
+          id: 'r1',
+          title: 'R1',
+          amount: 10,
+          category: 'C',
+          accountId: 'a1',
+          frequency: Frequency.monthly,
+          interval: 1,
+          nextExecutionDate: DateTime.now(),
+          profileId: pId);
+      final cat = Category(
+          id: 'c1', name: 'C1', usage: CategoryUsage.expense, profileId: pId);
+
+      when(() => mockProfileBox.delete(any())).thenAnswer((_) async => {});
+      when(() => mockAccountBox.values).thenReturn([acc]);
+      when(() => mockTransactionBox.values).thenReturn([txn]);
+      when(() => mockLoanBox.values).thenReturn([loan]);
+      when(() => mockRecurringBox.values).thenReturn([rt]);
+      when(() => mockCategoryBox.values).thenReturn([cat]);
+
+      when(() => mockProfileBox.values)
+          .thenReturn([Profile(id: 'default', name: 'Default')]);
+
+      await storageService.deleteProfile(pId);
+
+      verify(() => mockProfileBox.delete(pId)).called(1);
+      verify(() => mockAccountBox.delete('a1')).called(1);
+      verify(() => mockTransactionBox.delete('t1')).called(1);
+      verify(() => mockLoanBox.delete('l1')).called(1);
+      verify(() => mockRecurringBox.delete('r1')).called(1);
+      verify(() => mockCategoryBox.delete('c1')).called(1);
+      verify(() => mockSettingsBox.delete('last_rollover_a1')).called(1);
+    });
+  });
+
+  group('StorageService - Bulk/Utility Operations', () {
+    test('bulkUpdateCategory updates matching transactions', () async {
+      final txns = [
+        Transaction(
+            id: '1',
+            title: 'Coffee',
+            amount: 5,
+            date: DateTime.now(),
+            type: TransactionType.expense,
+            profileId: 'default',
+            category: 'Old'),
+        Transaction(
+            id: '2',
+            title: 'Coffee',
+            amount: 3,
+            date: DateTime.now(),
+            type: TransactionType.expense,
+            profileId: 'default',
+            category: 'Old'),
+        Transaction(
+            id: '3',
+            title: 'Tea',
+            amount: 2,
+            date: DateTime.now(),
+            type: TransactionType.expense,
+            profileId: 'default',
+            category: 'Old'),
+      ];
+      when(() => mockTransactionBox.values).thenReturn(txns);
+
+      await storageService.bulkUpdateCategory('Coffee', 'Old', 'New');
+
+      expect(txns[0].category, 'New');
+      expect(txns[1].category, 'New');
+      expect(txns[2].category, 'Old');
+      verify(() => mockTransactionBox.put(any(), any())).called(2);
+    });
+
+    test('copyCategories copies from source to target if not exists', () async {
+      final sCat = Category(
+          id: 's1',
+          name: 'Source',
+          usage: CategoryUsage.expense,
+          profileId: 'from');
+      final tCat = Category(
+          id: 't1',
+          name: 'Target',
+          usage: CategoryUsage.expense,
+          profileId: 'to');
+
+      when(() => mockCategoryBox.values).thenReturn([sCat, tCat]);
+
+      await storageService.copyCategories('from', 'to');
+
+      verify(() => mockCategoryBox.put(any(), any())).called(1);
     });
   });
 

@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for FilteringTextInputFormatter
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../providers.dart';
 import '../models/account.dart';
 import '../models/loan.dart';
 import '../models/transaction.dart';
 import '../utils/currency_utils.dart';
-import '../widgets/pure_icons.dart';
-import '../theme/app_theme.dart';
+import '../widgets/form_utils.dart';
 
 class RecordLoanPaymentDialog extends ConsumerStatefulWidget {
   final Loan loan;
@@ -71,54 +68,26 @@ class _RecordLoanPaymentDialogState
               ),
             ],
           ),
-          TextField(
+          FormUtils.buildAmountField(
             controller: _amountController,
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              prefixText:
-                  '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
-              prefixStyle: AppTheme.offlineSafeTextStyle,
-            ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
-            ],
+            currency: ref.watch(currencyProvider),
           ),
           const SizedBox(height: 16),
-          // Account Selector
           ref.watch(accountsProvider).when(
                 data: (accounts) {
-                  // Deduplicate by ID to be extra safe
                   final uniqueAccountsMap = <String, Account>{};
                   for (var a in accounts) {
                     uniqueAccountsMap[a.id] = a;
                   }
-                  final uniqueAccounts = uniqueAccountsMap.values.toList();
+                  final savingsAccounts = uniqueAccountsMap.values
+                      .where((a) => a.type == AccountType.savings)
+                      .toList();
 
-                  final allIds = ['manual', ...uniqueAccounts.map((a) => a.id)];
-                  final safeValue = allIds.contains(_selectedAccountId)
-                      ? _selectedAccountId
-                      : 'manual';
-
-                  return DropdownButtonFormField<String>(
-                    initialValue: safeValue,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Account (Optional)',
-                      border: OutlineInputBorder(),
-                      helperText: 'Select to deduct from account balance',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: 'manual', child: Text('No Account (Manual)')),
-                      ...uniqueAccounts
-                          .where((a) => a.type == AccountType.savings)
-                          .map((a) => DropdownMenuItem<String>(
-                                value: a.id,
-                                child: Text(
-                                    '${a.name} (${_formatAccountBalance(a)})'),
-                              )),
-                    ],
+                  return FormUtils.buildAccountSelector(
+                    value: _selectedAccountId,
+                    accounts: savingsAccounts,
                     onChanged: (v) => setState(() => _selectedAccountId = v!),
+                    label: 'Payment Account (Optional)',
                   );
                 },
                 loading: () => const CircularProgressIndicator(),
@@ -126,27 +95,11 @@ class _RecordLoanPaymentDialogState
               ),
           const SizedBox(height: 16),
           // Date Picker
-          InkWell(
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _date,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now().add(const Duration(days: 365)),
-              );
-              if (picked != null) setState(() => _date = picked);
-            },
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Payment Date',
-                border: const OutlineInputBorder(),
-                prefixIcon: PureIcons.calendar(),
-              ),
-              child: Text(
-                DateFormat('yyyy-MM-dd').format(_date),
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
+          FormUtils.buildDatePickerField(
+            context: context,
+            selectedDate: _date,
+            onDateTarget: (picked) => setState(() => _date = picked),
+            label: 'Payment Date',
           ),
           const SizedBox(height: 8),
           if (_type == LoanTransactionType.prepayment) ...[
@@ -313,13 +266,5 @@ class _RecordLoanPaymentDialogState
         ),
       ],
     );
-  }
-
-  String _formatAccountBalance(Account a) {
-    if (a.type == AccountType.creditCard && a.creditLimit != null) {
-      final avail = a.creditLimit! - a.balance;
-      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
-    }
-    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
   }
 }
