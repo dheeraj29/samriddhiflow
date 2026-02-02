@@ -290,19 +290,13 @@ class AccountsScreen extends ConsumerWidget {
       final allTxns = ref.watch(transactionsProvider).value ?? [];
       final relevantTxns = allTxns.where((t) =>
           !t.isDeleted &&
-          (t.accountId == acc.id || t.toAccountId == acc.id) &&
+          t.accountId == acc.id &&
           BillingHelper.isUnbilled(t.date, now, acc.billingCycleDay!));
 
       for (var t in relevantTxns) {
-        if (t.accountId == acc.id) {
-          if (t.type == TransactionType.expense) unbilled += t.amount;
-          if (t.type == TransactionType.income) unbilled -= t.amount;
-          if (t.type == TransactionType.transfer) unbilled += t.amount;
-        } else if (t.toAccountId == acc.id &&
-            t.type == TransactionType.transfer) {
-          // Payment to credit card - reduces unbilled if made in current cycle
-          unbilled -= t.amount;
-        }
+        if (t.type == TransactionType.expense) unbilled += t.amount;
+        if (t.type == TransactionType.income) unbilled -= t.amount;
+        if (t.type == TransactionType.transfer) unbilled += t.amount;
       }
     }
 

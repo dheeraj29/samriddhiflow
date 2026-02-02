@@ -77,7 +77,7 @@ class StatefulMockStorage extends MockStorageService {
 
   @override
   Future<void> saveTransaction(Transaction txn,
-      {bool applyImpact = true}) async {
+      {bool applyImpact = true, DateTime? now}) async {
     transactions.add(txn);
     if (applyImpact && txn.accountId != null) {
       final acc = accounts.firstWhere((a) => a.id == txn.accountId);

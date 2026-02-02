@@ -54,7 +54,7 @@ class LocalMockStorage extends StorageService {
 
   @override
   Future<void> saveTransactions(List<Transaction> txns,
-      {bool applyImpact = true}) async {
+      {bool applyImpact = true, DateTime? now}) async {
     savedTransactions.addAll(txns);
   }
 

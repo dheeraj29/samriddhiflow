@@ -15,6 +15,7 @@ import '../models/account.dart';
 import '../models/category.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
+import '../utils/billing_helper.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
 
@@ -247,24 +248,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             double assets = 0;
             double debt = 0;
 
+            final allTxns = ref.watch(transactionsProvider).value ?? [];
+            final now = DateTime.now();
+
             for (var acc in accounts) {
-              if (acc.type == AccountType.creditCard) {
-                // For Credit Cards, positive balance is Debt
-                if (acc.balance > 0) {
-                  debt += acc.balance;
+              double unbilled = 0;
+              if (acc.type == AccountType.creditCard &&
+                  acc.billingCycleDay != null) {
+                final cycleStart =
+                    BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+                final relevantTxns = allTxns.where((t) =>
+                    !t.isDeleted &&
+                    t.accountId == acc.id &&
+                    DateTime(t.date.year, t.date.month, t.date.day)
+                        .isAfter(cycleStart));
+
+                for (var t in relevantTxns) {
+                  if (t.type == TransactionType.expense) unbilled += t.amount;
+                  if (t.type == TransactionType.income) unbilled -= t.amount;
+                  if (t.type == TransactionType.transfer) unbilled += t.amount;
                 }
-                // CC Balance reduces Net Worth (assuming positive balance = owed)
-                netWorth -= acc.balance;
+              }
+
+              if (acc.type == AccountType.creditCard) {
+                // For Credit Cards, positive balance + unbilled is Debt
+                final totalOwed = acc.balance + unbilled;
+                if (totalOwed > 0) {
+                  debt += totalOwed;
+                }
+                // CC Balance + Unbilled reduces Net Worth (assuming positive balance = owed)
+                netWorth -= totalOwed;
               } else {
                 // For other accounts (Savings, Cash), balance is Asset
-                // Negative balance reduces Net Worth but is NOT counted in 'Debt' pill
-                // per user request (e.g. overdraft or loan payment from savings)
                 netWorth += acc.balance;
 
                 if (acc.balance >= 0) {
                   assets += acc.balance;
                 }
-                // If negative, it reduces Net Worth (handled above) but doesn't add to 'Assets'
               }
             }
 

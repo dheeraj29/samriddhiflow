@@ -188,9 +188,17 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         if (_isObscured)
           Positioned.fill(
             child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: const Center(
-                child: Icon(Icons.lock, size: 80, color: Colors.grey),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF000000)
+                  : const Color(0xFFFFFFFF),
+              child: Center(
+                child: Icon(
+                  Icons.lock,
+                  size: 80,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white10
+                      : Colors.black12,
+                ),
               ),
             ),
           ),

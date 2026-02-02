@@ -337,7 +337,7 @@ class StorageService {
   }
 
   Future<void> saveTransaction(Transaction transaction,
-      {bool applyImpact = true}) async {
+      {bool applyImpact = true, DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions);
     final accountsBox = _hive.box<Account>(boxAccounts);
 
@@ -350,7 +350,7 @@ class StorageService {
           final oldAccFrom = accountsBox.get(existingTxn.accountId);
           if (oldAccFrom != null) {
             _applyTransactionImpact(oldAccFrom, existingTxn,
-                isReversal: true, isSource: true);
+                isReversal: true, isSource: true, now: now);
             await _hive
                 .box<Account>(boxAccounts)
                 .put(oldAccFrom.id, oldAccFrom);
@@ -362,7 +362,7 @@ class StorageService {
           final oldAccTo = accountsBox.get(existingTxn.toAccountId);
           if (oldAccTo != null) {
             _applyTransactionImpact(oldAccTo, existingTxn,
-                isReversal: true, isSource: false);
+                isReversal: true, isSource: false, now: now);
             await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
           }
         }
@@ -374,7 +374,7 @@ class StorageService {
           final newAccFrom = accountsBox.get(transaction.accountId);
           if (newAccFrom != null) {
             _applyTransactionImpact(newAccFrom, transaction,
-                isReversal: false, isSource: true);
+                isReversal: false, isSource: true, now: now);
             await _hive
                 .box<Account>(boxAccounts)
                 .put(newAccFrom.id, newAccFrom);
@@ -386,7 +386,7 @@ class StorageService {
           final newAccTo = accountsBox.get(transaction.toAccountId);
           if (newAccTo != null) {
             _applyTransactionImpact(newAccTo, transaction,
-                isReversal: false, isSource: false);
+                isReversal: false, isSource: false, now: now);
             await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
           }
         }
@@ -398,7 +398,7 @@ class StorageService {
   }
 
   Future<void> saveTransactions(List<Transaction> transactions,
-      {bool applyImpact = true}) async {
+      {bool applyImpact = true, DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions);
     final accountsBox = _hive.box<Account>(boxAccounts);
 
@@ -412,7 +412,7 @@ class StorageService {
             final oldAcc = accountsBox.get(existingTxn.accountId);
             if (oldAcc != null) {
               _applyTransactionImpact(oldAcc, existingTxn,
-                  isReversal: true, isSource: true);
+                  isReversal: true, isSource: true, now: now);
               await _hive.box<Account>(boxAccounts).put(oldAcc.id, oldAcc);
             }
           }
@@ -421,7 +421,7 @@ class StorageService {
             final oldAccTo = accountsBox.get(existingTxn.toAccountId);
             if (oldAccTo != null) {
               _applyTransactionImpact(oldAccTo, existingTxn,
-                  isReversal: true, isSource: false);
+                  isReversal: true, isSource: false, now: now);
               await _hive.box<Account>(boxAccounts).put(oldAccTo.id, oldAccTo);
             }
           }
@@ -432,7 +432,7 @@ class StorageService {
             final newAcc = accountsBox.get(txn.accountId);
             if (newAcc != null) {
               _applyTransactionImpact(newAcc, txn,
-                  isReversal: false, isSource: true);
+                  isReversal: false, isSource: true, now: now);
               await _hive.box<Account>(boxAccounts).put(newAcc.id, newAcc);
             }
           }
@@ -440,7 +440,7 @@ class StorageService {
             final newAccTo = accountsBox.get(txn.toAccountId);
             if (newAccTo != null) {
               _applyTransactionImpact(newAccTo, txn,
-                  isReversal: false, isSource: false);
+                  isReversal: false, isSource: false, now: now);
               await _hive.box<Account>(boxAccounts).put(newAccTo.id, newAccTo);
             }
           }
@@ -455,16 +455,17 @@ class StorageService {
   }
 
   void _applyTransactionImpact(Account acc, Transaction txn,
-      {required bool isReversal, required bool isSource}) {
+      {required bool isReversal, required bool isSource, DateTime? now}) {
     double amount = txn.amount;
     if (isReversal) amount = -amount;
 
     bool skipBalanceUpdate = false;
     if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
-      final now = DateTime.now();
+      final effectiveNow = now ?? DateTime.now();
       // If the transaction is "Unbilled" (belongs to current cycle), we skip updating the balance
       // because the balance only represents "Billed" amounts.
-      if (BillingHelper.isUnbilled(txn.date, now, acc.billingCycleDay!)) {
+      if (BillingHelper.isUnbilled(
+          txn.date, effectiveNow, acc.billingCycleDay!)) {
         if (txn.type == TransactionType.expense ||
             (txn.type == TransactionType.transfer && isSource)) {
           skipBalanceUpdate = true;
