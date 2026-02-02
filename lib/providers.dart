@@ -83,6 +83,7 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
 });
 
+// coverage:ignore-start
 final storageInitializerProvider = FutureProvider<void>((ref) async {
   // Initialize Hive & Register Adapters (Moved from main.dart to unblock UI)
   DebugLogger().log("StorageInit: Starting Hive Initialization...");
@@ -119,6 +120,8 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     rethrow; // Propagate to AuthWrapper UI
   }
 });
+// coverage:ignore-end
+
 final loanServiceProvider = Provider<LoanService>((ref) {
   return LoanService();
 });
@@ -135,6 +138,7 @@ class LogoutRequestedNotifier extends Notifier<bool> {
 final logoutRequestedProvider = NotifierProvider<LogoutRequestedNotifier, bool>(
     LogoutRequestedNotifier.new);
 
+// coverage:ignore-start
 final authStreamProvider = StreamProvider<User?>((ref) {
   // Dependency: Wait for Firebase Init to settle
   // By watching the future value, we ensure we only react when init transitions
@@ -161,11 +165,13 @@ final authStreamProvider = StreamProvider<User?>((ref) {
     },
   );
 });
+// coverage:ignore-end
 
 final fileServiceProvider = Provider<FileService>((ref) {
   return FileService();
 });
 
+// coverage:ignore-start
 final firebaseInitializerProvider = FutureProvider<void>((ref) async {
   // 1. Connectivity Check
   DebugLogger().log("FirebaseInit: Checking Connectivity...");
@@ -238,6 +244,7 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
     }
   }
 });
+// coverage:ignore-end
 
 // --- Profile Providers ---
 

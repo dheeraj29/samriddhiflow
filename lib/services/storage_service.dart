@@ -115,45 +115,23 @@ class StorageService {
     await _hive.box<Profile>(boxProfiles).delete(profileId);
 
     // 2. Delete Accounts & Rollover Metadata
-    final accBox = _hive.box<Account>(boxAccounts);
-    final accountsToDelete =
-        accBox.values.where((a) => a.profileId == profileId).toList();
-    for (var a in accountsToDelete) {
-      await _cleanupAccountMetadata(a.id);
-      await accBox.delete(a.id);
-    }
+    await _deleteItemsByProfile<Account>(
+      boxAccounts,
+      profileId,
+      onBeforeDelete: (a) => _cleanupAccountMetadata(a.id),
+    );
 
     // 3. Delete Transactions
-    final txnBox = _hive.box<Transaction>(boxTransactions);
-    final txnsToDelete =
-        txnBox.values.where((t) => t.profileId == profileId).toList();
-    for (var t in txnsToDelete) {
-      await txnBox.delete(t.id);
-    }
+    await _deleteItemsByProfile<Transaction>(boxTransactions, profileId);
 
     // 4. Delete Loans
-    final loanBox = _hive.box<Loan>(boxLoans);
-    final loansToDelete =
-        loanBox.values.where((l) => l.profileId == profileId).toList();
-    for (var l in loansToDelete) {
-      await loanBox.delete(l.id);
-    }
+    await _deleteItemsByProfile<Loan>(boxLoans, profileId);
 
     // 5. Delete Recurring
-    final recBox = _hive.box<RecurringTransaction>(boxRecurring);
-    final recToDelete =
-        recBox.values.where((rt) => rt.profileId == profileId).toList();
-    for (var rt in recToDelete) {
-      await recBox.delete(rt.id);
-    }
+    await _deleteItemsByProfile<RecurringTransaction>(boxRecurring, profileId);
 
     // 6. Delete Categories
-    final catBox = _hive.box<Category>(boxCategories);
-    final catsToDelete =
-        catBox.values.where((c) => c.profileId == profileId).toList();
-    for (var c in catsToDelete) {
-      await catBox.delete(c.id);
-    }
+    await _deleteItemsByProfile<Category>(boxCategories, profileId);
 
     // 7. If active profile was deleted, switch to another one
     if (getActiveProfileId() == profileId) {
@@ -161,22 +139,54 @@ class StorageService {
       if (profiles.isNotEmpty) {
         await setActiveProfileId(profiles.first.id);
       } else {
-        // Should not happen as we always have default, but for safety:
         await setActiveProfileId('default');
       }
     }
   }
 
-  // --- Account Operations ---
-  List<Account> getAccounts() {
-    final profileId = getActiveProfileId();
-    return _hive
-        .box<Account>(boxAccounts)
-        .values
-        .whereType<Account>()
-        .where((a) => a.profileId == profileId)
-        .toList();
+  Future<void> _deleteItemsByProfile<T>(String boxName, String profileId,
+      {Future<void> Function(T)? onBeforeDelete}) async {
+    final box = _hive.box<T>(boxName);
+    // Values is an iterable, we enable 'cast' if needed via dynamic check or strict type
+    // Since we can't easily rely on a common interface for 'profileId' without mixins,
+    // we use dynamic access safely as done in _getByProfile
+    final itemsToDelete = box.values.where((item) {
+      try {
+        return (item as dynamic).profileId == profileId;
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+
+    for (var item in itemsToDelete) {
+      if (onBeforeDelete != null) {
+        await onBeforeDelete(item);
+      }
+      final id = (item as dynamic).id;
+      await box.delete(id);
+    }
   }
+
+  // --- Account Operations ---
+  // --- Private Helpers ---
+  List<T> _getByProfile<T>(String boxName) {
+    final profileId = getActiveProfileId();
+    return _hive.box<T>(boxName).values.where((item) {
+      if (item is Account) return item.profileId == profileId;
+      if (item is Transaction) return item.profileId == profileId;
+      if (item is Loan) return item.profileId == profileId;
+      if (item is RecurringTransaction) return item.profileId == profileId;
+      if (item is Category) return item.profileId == profileId;
+      try {
+        return (item as dynamic).profileId == profileId;
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+  }
+
+  // --- Account Operations ---
+  List<Account> getAccounts() => _getByProfile<Account>(boxAccounts);
 
   List<Account> getAllAccounts() {
     return _hive.box<Account>(boxAccounts).values.whereType<Account>().toList();
@@ -211,11 +221,8 @@ class StorageService {
 
   // --- Transaction Operations ---
   List<Transaction> getTransactions() {
-    final profileId = getActiveProfileId();
-    final box = _hive.box<Transaction>(boxTransactions);
-    final list = box.values
-        .whereType<Transaction>()
-        .where((t) => !t.isDeleted && t.profileId == profileId)
+    final list = _getByProfile<Transaction>(boxTransactions)
+        .where((t) => !t.isDeleted)
         .toList();
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
@@ -230,11 +237,8 @@ class StorageService {
   }
 
   List<Transaction> getDeletedTransactions() {
-    final profileId = getActiveProfileId();
-    final box = _hive.box<Transaction>(boxTransactions);
-    return box.values
-        .whereType<Transaction>()
-        .where((t) => t.isDeleted && t.profileId == profileId)
+    return _getByProfile<Transaction>(boxTransactions)
+        .where((t) => t.isDeleted)
         .toList();
   }
 
@@ -275,10 +279,6 @@ class StorageService {
             final txnBox = _hive.box<Transaction>(boxTransactions);
 
             // Fetch txns: (lastRollover, currentCycleStart]
-            // We use exclusive start because the last rollover timestamp
-            // marks the point we've already processed.
-            // We use inclusive end because the user considers the billing day
-            // itself as part of the billed period.
             final txns = txnBox.values
                 .where((t) =>
                     !t.isDeleted &&
@@ -299,7 +299,6 @@ class StorageService {
             }
 
             // Also check if CC was the TARGET of a transfer (payment)
-            // Payments reduce the balance.
             final payments = txnBox.values
                 .where((t) =>
                     !t.isDeleted &&
@@ -375,7 +374,6 @@ class StorageService {
     await _incrementBackupCounter();
   }
 
-  /// Reconciles account balance impacts when saving, deleting, or restoring a transaction.
   Future<void> _handleTransactionImpacts({
     Transaction? oldTxn,
     Transaction? newTxn,
@@ -383,99 +381,94 @@ class StorageService {
   }) async {
     final accountsBox = _hive.box<Account>(boxAccounts);
 
-    // 1. Reverse old impact if it was active
-    if (oldTxn != null && !oldTxn.isDeleted) {
-      if (oldTxn.accountId != null) {
-        final acc = accountsBox.get(oldTxn.accountId);
+    Future<void> processImpact(Transaction? txn, bool isReversal) async {
+      if (txn == null || txn.isDeleted) return;
+
+      // Source Account
+      if (txn.accountId != null) {
+        final acc = accountsBox.get(txn.accountId);
         if (acc != null) {
-          _applyTransactionImpact(acc, oldTxn,
-              isReversal: true, isSource: true, now: now);
+          _applyTransactionImpact(acc, txn,
+              isReversal: isReversal, isSource: true, now: now);
           await accountsBox.put(acc.id, acc);
         }
       }
-      if (oldTxn.type == TransactionType.transfer &&
-          oldTxn.toAccountId != null) {
-        final accTo = accountsBox.get(oldTxn.toAccountId);
+
+      // Target Account (for Transfers)
+      if (txn.type == TransactionType.transfer && txn.toAccountId != null) {
+        final accTo = accountsBox.get(txn.toAccountId);
         if (accTo != null) {
-          _applyTransactionImpact(accTo, oldTxn,
-              isReversal: true, isSource: false, now: now);
+          _applyTransactionImpact(accTo, txn,
+              isReversal: isReversal, isSource: false, now: now);
           await accountsBox.put(accTo.id, accTo);
         }
       }
     }
 
-    // 2. Apply new impact if it is active
-    if (newTxn != null && !newTxn.isDeleted) {
-      if (newTxn.accountId != null) {
-        final acc = accountsBox.get(newTxn.accountId);
-        if (acc != null) {
-          _applyTransactionImpact(acc, newTxn,
-              isReversal: false, isSource: true, now: now);
-          await accountsBox.put(acc.id, acc);
-        }
-      }
-      if (newTxn.type == TransactionType.transfer &&
-          newTxn.toAccountId != null) {
-        final accTo = accountsBox.get(newTxn.toAccountId);
-        if (accTo != null) {
-          _applyTransactionImpact(accTo, newTxn,
-              isReversal: false, isSource: false, now: now);
-          await accountsBox.put(accTo.id, accTo);
-        }
-      }
-    }
+    // 1. Reverse old impact
+    await processImpact(oldTxn, true);
+
+    // 2. Apply new impact
+    await processImpact(newTxn, false);
   }
 
   void _applyTransactionImpact(Account acc, Transaction txn,
       {required bool isReversal, required bool isSource, DateTime? now}) {
     double amount = txn.amount;
-    if (isReversal) amount = -amount;
 
     bool skipBalanceUpdate = false;
     if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
       final effectiveNow = now ?? DateTime.now();
-      // If the transaction is "Unbilled" (belongs to current cycle), we skip updating the balance
-      // because the balance only represents "Billed" amounts.
       if (BillingHelper.isUnbilled(
           txn.date, effectiveNow, acc.billingCycleDay!)) {
+        // Skip updates for unbilled expenses/transfers-out on CC
+        // Because CC balance only tracks "Billed" debt + "Unbilled" is virtual until rollover
+        // Wait, current logic:
+        // Expense: Skip if unbilled.
+        // Transfer (Source): Skip if unbilled.
+        // Income: Skip if unbilled.
+        // Transfer (Target - Payment): NEVER Skip.
+
         if (txn.type == TransactionType.expense ||
-            (txn.type == TransactionType.transfer && isSource)) {
+            (txn.type == TransactionType.transfer && isSource) ||
+            txn.type == TransactionType.income) {
           skipBalanceUpdate = true;
         }
-        if (txn.type == TransactionType.income) skipBalanceUpdate = true;
       }
 
       if (!isSource && txn.type == TransactionType.transfer) {
-        // Transfers TO the credit card (payments) are always billed immediately
-        // to reduce the outstanding balance.
+        // Payment to CC -> Always apply
         skipBalanceUpdate = false;
       }
     }
 
     if (skipBalanceUpdate) return;
 
+    // Calculate Net Worth Impact
+    // Expense: -amount
+    // Income: +amount
+    // Transfer (Source): -amount
+    // Transfer (Target): +amount
+    double impact = 0.0;
     if (txn.type == TransactionType.expense) {
-      if (acc.type == AccountType.creditCard) {
-        acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + amount);
-      } else {
-        acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance - amount);
-      }
+      impact = -amount;
     } else if (txn.type == TransactionType.income) {
-      if (acc.type == AccountType.creditCard) {
-        acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance - amount);
-      } else {
-        acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + amount);
-      }
+      impact = amount;
     } else if (txn.type == TransactionType.transfer) {
-      if (isSource) {
-        acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance - amount);
-      } else {
-        if (acc.type == AccountType.creditCard) {
-          acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance - amount);
-        } else {
-          acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + amount);
-        }
-      }
+      impact = isSource ? -amount : amount;
+    }
+
+    // Reverse if needed (e.g. deleting a transaction)
+    if (isReversal) impact = -impact;
+
+    // Apply to Account
+    // Credit Cards track LIABILITY (Positive Balance = Debt)
+    // So Expense (-100 Net Worth) means Debt INCREASES (+100 Balance)
+    // We invert the Net Worth Impact for Credit Cards.
+    if (acc.type == AccountType.creditCard) {
+      acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance - impact);
+    } else {
+      acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + impact);
     }
   }
 
@@ -567,14 +560,7 @@ class StorageService {
   }
 
   // --- Loan Operations ---
-  List<Loan> getLoans() {
-    final profileId = getActiveProfileId();
-    return _hive
-        .box<Loan>(boxLoans)
-        .values
-        .where((l) => l.profileId == profileId)
-        .toList();
-  }
+  List<Loan> getLoans() => _getByProfile<Loan>(boxLoans);
 
   List<Loan> getAllLoans() {
     return _hive.box<Loan>(boxLoans).values.whereType<Loan>().toList();
@@ -590,14 +576,8 @@ class StorageService {
   }
 
   // --- Recurring Operations ---
-  List<RecurringTransaction> getRecurring() {
-    final profileId = getActiveProfileId();
-    return _hive
-        .box<RecurringTransaction>(boxRecurring)
-        .values
-        .where((rt) => rt.profileId == profileId)
-        .toList();
-  }
+  List<RecurringTransaction> getRecurring() =>
+      _getByProfile<RecurringTransaction>(boxRecurring);
 
   List<RecurringTransaction> getAllRecurring() {
     return _hive
@@ -637,13 +617,12 @@ class StorageService {
 
   // --- Category Operations ---
   List<Category> getCategories() {
-    final profileId = getActiveProfileId();
-    final box = _hive.box<Category>(boxCategories);
-    final profileCategories =
-        box.values.where((c) => c.profileId == profileId).toList();
+    final profileCategories = _getByProfile<Category>(boxCategories);
 
     if (profileCategories.isEmpty) {
       // Create defaults for this profile
+      final profileId = getActiveProfileId();
+      final box = _hive.box<Category>(boxCategories);
       final defaults = _getDefaultCategories(profileId);
       for (var c in defaults) {
         box.put(c.id, c);
@@ -708,229 +687,273 @@ class StorageService {
   }
 
   List<Category> _getDefaultCategories(String profileId) {
-    return [
+    final defaultData = [
       // Income
-      Category.create(
-          name: 'Salary',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.directTax,
-          iconCode: 0xeb6f,
-          profileId: profileId),
-      Category.create(
-          name: 'Property Rental',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.directTax,
-          iconCode: 0xf8eb,
-          profileId: profileId),
-      Category.create(
-          name: 'Divestment',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.capitalGain,
-          iconCode: 0xf3ee,
-          profileId: profileId),
-      Category.create(
-          name: 'Saving Interest',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.directTax,
-          iconCode: 0xe2eb,
-          profileId: profileId),
-      Category.create(
-          name: 'Dividend',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.directTax,
-          iconCode: 0xf3ee,
-          profileId: profileId),
-      Category.create(
-          name: 'Family Gift',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.taxFree,
-          iconCode: 0xe8b1,
-          profileId: profileId),
-      Category.create(
-          name: 'Gift',
-          usage: CategoryUsage.income,
-          tag: CategoryTag.directTax,
-          iconCode: 0xe8b1,
-          profileId: profileId),
+      {
+        'name': 'Salary',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.directTax,
+        'iconCode': 0xeb6f
+      },
+      {
+        'name': 'Property Rental',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.directTax,
+        'iconCode': 0xf8eb
+      },
+      {
+        'name': 'Divestment',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.capitalGain,
+        'iconCode': 0xf3ee
+      },
+      {
+        'name': 'Saving Interest',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.directTax,
+        'iconCode': 0xe2eb
+      },
+      {
+        'name': 'Dividend',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.directTax,
+        'iconCode': 0xf3ee
+      },
+      {
+        'name': 'Family Gift',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.taxFree,
+        'iconCode': 0xe8b1
+      },
+      {
+        'name': 'Gift',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.directTax,
+        'iconCode': 0xe8b1
+      },
+      {
+        'name': 'Cashback',
+        'usage': CategoryUsage.income,
+        'tag': CategoryTag.none,
+        'iconCode': 0xea61
+      },
 
       // Expense
-      Category.create(
-          name: 'Gadgets',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe1b1, // Devices
-          profileId: profileId),
-      Category.create(
-          name: 'Clothes',
-          usage: CategoryUsage.expense,
-          iconCode: 0xf19e, // Checkroom
-          profileId: profileId),
-      Category.create(
-          name: 'Bank loan',
-          usage: CategoryUsage.expense,
-          iconCode: 0xeb6f,
-          profileId: profileId),
-      Category.create(
-          name: 'Insurance',
-          usage: CategoryUsage.expense,
-          iconCode: 0xf19d, // Policy
-          profileId: profileId),
-      Category.create(
-          name: 'Cashback',
-          usage: CategoryUsage.income,
-          iconCode: 0xea61, // Paid
-          profileId: profileId),
-      Category.create(
-          name: 'Festival',
-          usage: CategoryUsage.expense,
-          iconCode: 0xea68,
-          profileId: profileId),
-      Category.create(
-          name: 'Snacks',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe57a, // Fastfood
-          profileId: profileId),
-      Category.create(
-          name: 'Beauty',
-          usage: CategoryUsage.expense,
-          iconCode: 0xeb4c, // Spa / Beauty
-          profileId: profileId),
-      Category.create(
-          name: 'Service Charges',
-          usage: CategoryUsage.expense,
-          iconCode: 0xef63,
-          profileId: profileId),
-      Category.create(
-          name: 'Food',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe56c, // Restaurant
-          profileId: profileId),
-      Category.create(
-          name: 'Toys',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe332,
-          profileId: profileId),
-      Category.create(
-          name: 'Entertainment',
-          usage: CategoryUsage.expense,
-          iconCode: 0xea68,
-          profileId: profileId),
-      Category.create(
-          name: 'Others',
-          usage: CategoryUsage.expense,
-          iconCode: 0xea14,
-          profileId: profileId),
-      Category.create(
-          name: 'Investment',
-          usage: CategoryUsage.expense,
-          tag: CategoryTag.budgetFree,
-          iconCode: 0xef92,
-          profileId: profileId),
-      Category.create(
-          name: 'Groceries',
-          usage: CategoryUsage.expense,
-          iconCode: 0xef97,
-          profileId: profileId),
-      Category.create(
-          name: 'Rent',
-          usage: CategoryUsage.expense,
-          iconCode: 0xef63,
-          profileId: profileId),
-      Category.create(
-          name: 'Travel',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe6ca,
-          profileId: profileId),
-      Category.create(
-          name: 'Health',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe1d5,
-          profileId: profileId),
-      Category.create(
-          name: 'Gas',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe546,
-          profileId: profileId),
-      Category.create(
-          name: 'Utility Bill',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe8b0,
-          profileId: profileId),
-      Category.create(
-          name: 'Pharmacy',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe550,
-          profileId: profileId),
-      Category.create(
-          name: 'Maid',
-          usage: CategoryUsage.expense,
-          iconCode: 0xf0ff,
-          profileId: profileId),
-      Category.create(
-          name: 'Care Taker',
-          usage: CategoryUsage.expense,
-          iconCode: 0xeb41,
-          profileId: profileId),
-      Category.create(
-          name: 'Repairs',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe869,
-          profileId: profileId),
-      Category.create(
-          name: 'Salon',
-          usage: CategoryUsage.expense,
-          iconCode: 0xef9d,
-          profileId: profileId),
-      Category.create(
-          name: 'Laundry',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe2a8,
-          profileId: profileId),
-      Category.create(
-          name: 'Vegetables',
-          usage: CategoryUsage.expense,
-          iconCode: 0xef97,
-          profileId: profileId),
-      Category.create(
-          name: 'Fruits',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe110,
-          profileId: profileId),
-      Category.create(
-          name: 'Meat',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe842,
-          profileId: profileId),
-      Category.create(
-          name: 'School',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe80c,
-          profileId: profileId),
-      Category.create(
-          name: 'Subscriptions',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe064,
-          profileId: profileId),
-      Category.create(
-          name: 'Services',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe86a,
-          profileId: profileId),
-      Category.create(
-          name: 'Movies',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe02c,
-          profileId: profileId),
-      Category.create(
-          name: 'Hospital',
-          usage: CategoryUsage.expense,
-          iconCode: 0xe548,
-          profileId: profileId),
-      Category.create(
-          name: 'Shopping',
-          usage: CategoryUsage.expense,
-          iconCode: 0xf1cc,
-          profileId: profileId),
+      {
+        'name': 'Gadgets',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe1b1
+      },
+      {
+        'name': 'Clothes',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xf19e
+      },
+      {
+        'name': 'Bank loan',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xeb6f
+      },
+      {
+        'name': 'Insurance',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xf19d
+      },
+      {
+        'name': 'Festival',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xea68
+      },
+      {
+        'name': 'Snacks',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe57a
+      },
+      {
+        'name': 'Beauty',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xeb4c
+      },
+      {
+        'name': 'Service Charges',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xef63
+      },
+      {
+        'name': 'Food',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe56c
+      },
+      {
+        'name': 'Toys',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe332
+      },
+      {
+        'name': 'Entertainment',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xea68
+      },
+      {
+        'name': 'Others',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xea14
+      },
+      {
+        'name': 'Investment',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.budgetFree,
+        'iconCode': 0xef92
+      },
+      {
+        'name': 'Groceries',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xef97
+      },
+      {
+        'name': 'Rent',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xef63
+      },
+      {
+        'name': 'Travel',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe6ca
+      },
+      {
+        'name': 'Health',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe1d5
+      },
+      {
+        'name': 'Gas',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe546
+      },
+      {
+        'name': 'Utility Bill',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe8b0
+      },
+      {
+        'name': 'Pharmacy',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe550
+      },
+      {
+        'name': 'Maid',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xf0ff
+      },
+      {
+        'name': 'Care Taker',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xeb41
+      },
+      {
+        'name': 'Repairs',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe869
+      },
+      {
+        'name': 'Salon',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xef9d
+      },
+      {
+        'name': 'Laundry',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe2a8
+      },
+      {
+        'name': 'Vegetables',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xef97
+      },
+      {
+        'name': 'Fruits',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe110
+      },
+      {
+        'name': 'Meat',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe842
+      },
+      {
+        'name': 'School',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe80c
+      },
+      {
+        'name': 'Subscriptions',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe064
+      },
+      {
+        'name': 'Services',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe86a
+      },
+      {
+        'name': 'Movies',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe02c
+      },
+      {
+        'name': 'Hospital',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xe548
+      },
+      {
+        'name': 'Shopping',
+        'usage': CategoryUsage.expense,
+        'tag': CategoryTag.none,
+        'iconCode': 0xf1cc
+      },
     ];
+
+    return defaultData.map((data) {
+      return Category.create(
+        name: data['name'] as String,
+        usage: data['usage'] as CategoryUsage,
+        tag: data['tag'] as CategoryTag? ?? CategoryTag.none,
+        iconCode: data['iconCode'] as int,
+        profileId: profileId,
+      );
+    }).toList();
   }
 
   // --- Other Settings ---

@@ -23,8 +23,6 @@ import '../utils/ui_utils.dart';
 import '../widgets/common_dialogs.dart';
 import '../widgets/category_manager_dialog.dart';
 
-// --- JS Interop Definitions ---
-
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -68,361 +66,76 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          // --- APPEARANCE SECTION ---
-          UIUtils.buildSectionHeader('Appearance', showDivider: false),
-          ListTile(
-            title: const Text('Theme Mode'),
-            subtitle: Text(ref.watch(themeModeProvider).name.toUpperCase()),
-            leading: Icon(
-              ref.watch(themeModeProvider) == ThemeMode.dark
-                  ? Icons.dark_mode
-                  : ref.watch(themeModeProvider) == ThemeMode.light
-                      ? Icons.light_mode
-                      : Icons.brightness_auto,
-              color: Colors.amber,
-            ),
-            trailing: DropdownButton<ThemeMode>(
-              value: ref.watch(themeModeProvider),
-              onChanged: (ThemeMode? newValue) {
-                if (newValue != null) {
-                  ref.read(themeModeProvider.notifier).setThemeMode(newValue);
-                }
-              },
-              items: const [
-                DropdownMenuItem(
-                    value: ThemeMode.system, child: Text('System')),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-              ],
-            ),
-          ),
+          _buildAppearanceSection(),
           const Divider(),
-
-          // --- CLOUD SECTION ---
-          UIUtils.buildSectionHeader('Cloud & Sync'),
-          _buildCloudSection(context, user),
+          _buildCloudSectionHeader(context, user),
           const Divider(),
-
-          // --- DATA MANAGEMENT ---
-          UIUtils.buildSectionHeader('Data Management'),
-          ListTile(
-            title: const Text('Export Data to Excel'),
-            subtitle: const Text('Backup all transactions (.xlsx)'),
-            leading: PureIcons.download(color: AppTheme.primary),
-            onTap: _exportLocalFile,
-          ),
-          ListTile(
-            title: const Text('Restore Data from Excel (Local)'),
-            subtitle: const Text('Restore from local backup file'),
-            leading: PureIcons.upload(color: Colors.green),
-            onTap: _importLocalFile,
-          ),
-          ListTile(
-            title: const Text('Recycle Bin'),
-            subtitle: const Text('Restore deleted transactions'),
-            leading: PureIcons.recycleBin(color: Colors.red),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const RecycleBinScreen())),
-          ),
+          _buildDataManagementSection(context),
           const Divider(),
-
-          // --- FEATURE MANAGEMENT ---
-          UIUtils.buildSectionHeader('Feature Management'),
-          ListTile(
-            title: const Text('Manage Recurring Payments'),
-            subtitle: const Text('View or delete automated payments'),
-            leading: PureIcons.refresh(color: Colors.orange),
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const RecurringManagerScreen())),
-          ),
-          ListTile(
-            title: const Text('Holiday Manager'),
-            subtitle: const Text('Configure non-working days'),
-            leading: PureIcons.calendar(color: Colors.red),
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const HolidayManagerScreen())),
-          ),
-          ListTile(
-            title: const Text('Manage Categories'),
-            subtitle: const Text('Add, edit, or delete categories'),
-            leading: PureIcons.icon(Icons.category, color: Colors.blue),
-            onTap: () => showDialog(
-              context: context,
-              builder: (context) => const CategoryManagerDialog(),
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Smart Calculator'),
-            subtitle: const Text('Enable Quick Sum Tracker on transactions'),
-            secondary: PureIcons.calculate(color: Colors.teal),
-            value: ref.watch(smartCalculatorEnabledProvider),
-            onChanged: (_) =>
-                ref.read(smartCalculatorEnabledProvider.notifier).toggle(),
-          ),
+          _buildFeatureManagementSection(context),
           const Divider(),
-
-          UIUtils.buildSectionHeader('Profile Management'),
-          ref.watch(profilesProvider).when(
-                data: (profiles) => Column(
-                  children: profiles.map((p) {
-                    final isActive = p.id == ref.watch(activeProfileIdProvider);
-                    return ListTile(
-                      title: Text(p.name),
-                      subtitle: Text(isActive ? 'Active' : 'Tap to switch'),
-                      leading: CircleAvatar(
-                        backgroundColor: isActive
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey[300],
-                        child: PureIcons.person(
-                            color: isActive ? Colors.white : Colors.grey),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: PureIcons.copy(),
-                            tooltip: 'Copy Categories from another profile',
-                            onPressed: () =>
-                                _showCopyCategoriesDialog(context, ref, p.id),
-                          ),
-                          if (profiles.length > 1 && !isActive)
-                            IconButton(
-                              icon: PureIcons.deleteOutlined(color: Colors.red),
-                              onPressed: () =>
-                                  _showDeleteProfileDialog(context, ref, p),
-                            ),
-                        ],
-                      ),
-                      onTap: isActive
-                          ? null
-                          : () {
-                              ref
-                                  .read(activeProfileIdProvider.notifier)
-                                  .setProfile(p.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text("Switched to ${p.name}")));
-                            },
-                    );
-                  }).toList(),
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => ListTile(title: Text('Error: $e')),
-              ),
-          ListTile(
-            title: const Text('Add New Profile'),
-            leading: PureIcons.addCircle(color: Colors.blue),
-            onTap: () => CommonDialogs.showTextFieldDialog(
-              context: context,
-              title: "Create Profile",
-              labelText: "Profile Name",
-              hintText: "Enter name (e.g. Business)",
-              initialValue: "",
-              saveLabel: "CREATE",
-              onSave: (val) async {
-                if (val.trim().isEmpty) return;
-                final newProfile = Profile(
-                  id: const Uuid().v4(),
-                  name: val.trim(),
-                );
-                await ref.read(storageServiceProvider).saveProfile(newProfile);
-                ref.invalidate(profilesProvider);
-              },
-            ),
-          ),
-
+          _buildProfileManagementSection(context),
           const Divider(),
-          UIUtils.buildSectionHeader('Preferences'),
-          ListTile(
-            title: const Text('Currency'),
-            subtitle: Text(
-                'Current: ${ref.watch(currencyProvider) == 'en_IN' ? 'Indian Rupee (₹)' : ref.watch(currencyProvider) == 'en_GB' ? 'British Pound (£)' : ref.watch(currencyProvider) == 'en_EU' ? 'Euro (€)' : 'US Dollar (\$)'}'),
-            leading: PureIcons.money(color: Colors.green),
-            onTap: _showCurrencyDialog,
-          ),
-          ListTile(
-            title: const Text('Monthly Budget'),
-            subtitle: Text(
-                'Limit: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(ref.watch(monthlyBudgetProvider))}'),
-            leading: PureIcons.reports(color: Colors.blue),
-            onTap: () => CommonDialogs.showTextFieldDialog(
-              context: context,
-              title: "Set Monthly Budget",
-              labelText: "Amount",
-              prefixText:
-                  '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
-              initialValue: ref.read(monthlyBudgetProvider).toString(),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-              ],
-              onSave: (val) {
-                final amount = double.tryParse(val) ?? 0;
-                ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
-              },
-            ),
-          ),
-          ListTile(
-            title: const Text('Backup Reminder'),
-            subtitle: Text(
-                'Remind after every ${ref.watch(backupThresholdProvider)} transactions'),
-            leading: PureIcons.sync(color: Colors.purple),
-            onTap: () => CommonDialogs.showTextFieldDialog(
-              context: context,
-              title: "Backup Interval",
-              labelText: "Number of transactions",
-              helperText: "Default: 20",
-              initialValue: ref.read(backupThresholdProvider).toString(),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onSave: (val) {
-                final threshold = int.tryParse(val) ?? 20;
-                ref
-                    .read(backupThresholdProvider.notifier)
-                    .setThreshold(threshold);
-              },
-            ),
-          ),
-
-          // --- AUTHENTICATION ---
+          _buildPreferencesSection(context),
           if (user != null && !ref.watch(isOfflineProvider)) ...[
             const Divider(),
-            UIUtils.buildSectionHeader('Authentication'),
-            ListTile(
-              title: const Text('Logout'),
-              leading: PureIcons.logout(color: Colors.red),
-              onTap: () => UIUtils.handleLogout(context, ref),
-            ),
+            _buildAuthSection(context),
           ],
-
           const Divider(),
-          UIUtils.buildSectionHeader('Security'),
-          SwitchListTile(
-            title: const Text('App Lock (PIN)'),
-            subtitle: const Text('Require PIN on startup/resume'),
-            secondary: PureIcons.lock(color: Colors.grey),
-            value: _isAppLockEnabled,
-            onChanged: (val) async {
-              if (val) {
-                _showSetPinDialog(context);
-              } else {
-                final verified = await _showVerifyPinDialog(context);
-                if (verified) {
-                  setState(() => _isAppLockEnabled = false);
-                  await ref
-                      .read(storageServiceProvider)
-                      .setAppLockEnabled(false);
-                }
-              }
-            },
-          ),
-          if (_isAppLockEnabled)
-            ListTile(
-              title: const Text('Change PIN'),
-              leading: PureIcons.security(size: 20),
-              onTap: () => _showSetPinDialog(context),
-            ),
-
+          _buildSecuritySection(context),
           const Divider(),
-          UIUtils.buildSectionHeader('App Information'),
-          ListTile(
-            title: const Text('Update Application'),
-            subtitle: const Text('Clear cache and reload latest version'),
-            leading: const Icon(Icons.system_update_rounded,
-                color: Colors.blueAccent),
-            onTap: _updateApplication,
-          ),
-          ListTile(
-            title: const Text('About'),
-            subtitle: const Text(AppConstants.appVersion),
-            leading: PureIcons.info(size: 20),
-            onTap: () =>
-                UIUtils.showCommonAboutDialog(context, AppConstants.appVersion),
-          ),
-
-          // PWA Install Button
-          if (_installPrompt != null) ...[
-            const Divider(),
-            ListTile(
-              title: const Text('Install App'),
-              subtitle: const Text('Add to Home Screen for Offline use'),
-              leading: const Icon(Icons.install_mobile, color: Colors.blue),
-              onTap: () async {
-                if (_installPrompt != null) {
-                  await ConnectivityPlatform.triggerInstallPrompt(
-                      _installPrompt!);
-                  setState(() => _installPrompt = null);
-                }
-              },
-            ),
-          ] else if (kIsWeb &&
-              (defaultTargetPlatform == TargetPlatform.iOS ||
-                  defaultTargetPlatform == TargetPlatform.macOS)) ...[
-            const Divider(),
-            ListTile(
-              title: const Text('Install on iPhone'),
-              subtitle: const Text('Tap "Share" → "Add to Home Screen"'),
-              leading: const Icon(Icons.ios_share, color: Colors.blue),
-              onTap: () => showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text("Install on iPhone"),
-                  content: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("To install this app for offline use:\n"),
-                      ListTile(
-                        leading: Icon(Icons.ios_share),
-                        title: Text('1. Tap the Share button'),
-                      ),
-                      ListTile(
-                        leading: Icon(Icons.add_box_outlined),
-                        title:
-                            Text('2. Scroll down and tap "Add to Home Screen"'),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text("OK")),
-                  ],
-                ),
-              ),
-            ),
-          ],
-
-          if (user != null && !ref.watch(isOfflineProvider)) ...[
-            const Divider(),
-            UIUtils.buildSectionHeader('Danger Zone', showDivider: false),
-            ListTile(
-              title: const Text('Clear Cloud Data (Keep Account)',
-                  style: TextStyle(color: Colors.orange)),
-              subtitle: const Text('Remove cloud backup, keep account active'),
-              leading: PureIcons.cloudOff(size: 20, color: Colors.orange),
-              onTap: _clearCloudDataFlow,
-            ),
-            ListTile(
-              title: const Text('Deactivate & Wipe Cloud Data',
-                  style: TextStyle(color: Colors.red)),
-              subtitle: const Text('Move back to Local-Only mode'),
-              leading: PureIcons.deleteForever(color: Colors.red),
-              onTap: _deactivateAccountFlow,
-            ),
-          ],
+          _buildAppInfoSection(context),
         ],
       ),
     );
   }
 
+  Widget _buildAppearanceSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Appearance', showDivider: false),
+        ListTile(
+          title: const Text('Theme Mode'),
+          subtitle: Text(ref.watch(themeModeProvider).name.toUpperCase()),
+          leading: Icon(
+            ref.watch(themeModeProvider) == ThemeMode.dark
+                ? Icons.dark_mode
+                : ref.watch(themeModeProvider) == ThemeMode.light
+                    ? Icons.light_mode
+                    : Icons.brightness_auto,
+            color: Colors.amber,
+          ),
+          trailing: DropdownButton<ThemeMode>(
+            value: ref.watch(themeModeProvider),
+            onChanged: (ThemeMode? newValue) {
+              if (newValue != null) {
+                ref.read(themeModeProvider.notifier).setThemeMode(newValue);
+              }
+            },
+            items: const [
+              DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+              DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+              DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCloudSectionHeader(BuildContext context, dynamic user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Cloud & Sync'),
+        _buildCloudSection(context, user),
+      ],
+    );
+  }
+
   Widget _buildCloudSection(BuildContext context, dynamic user) {
     if (user == null) {
-      // Check if we are actually logged in but just offline/disconnected (Hive check)
       bool isOfflineLoggedIn = false;
       try {
         if (Hive.isBoxOpen('settings')) {
@@ -557,6 +270,349 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDataManagementSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Data Management'),
+        ListTile(
+          title: const Text('Export Data to Excel'),
+          subtitle: const Text('Backup all transactions (.xlsx)'),
+          leading: PureIcons.download(color: AppTheme.primary),
+          onTap: _exportLocalFile,
+        ),
+        ListTile(
+          title: const Text('Restore Data from Excel (Local)'),
+          subtitle: const Text('Restore from local backup file'),
+          leading: PureIcons.upload(color: Colors.green),
+          onTap: _importLocalFile,
+        ),
+        ListTile(
+          title: const Text('Recycle Bin'),
+          subtitle: const Text('Restore deleted transactions'),
+          leading: PureIcons.recycleBin(color: Colors.red),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const RecycleBinScreen())),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureManagementSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Feature Management'),
+        ListTile(
+          title: const Text('Manage Recurring Payments'),
+          subtitle: const Text('View or delete automated payments'),
+          leading: PureIcons.refresh(color: Colors.orange),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const RecurringManagerScreen())),
+        ),
+        ListTile(
+          title: const Text('Holiday Manager'),
+          subtitle: const Text('Configure non-working days'),
+          leading: PureIcons.calendar(color: Colors.red),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const HolidayManagerScreen())),
+        ),
+        ListTile(
+          title: const Text('Manage Categories'),
+          subtitle: const Text('Add, edit, or delete categories'),
+          leading: PureIcons.icon(Icons.category, color: Colors.blue),
+          onTap: () => showDialog(
+            context: context,
+            builder: (context) => const CategoryManagerDialog(),
+          ),
+        ),
+        SwitchListTile(
+          title: const Text('Smart Calculator'),
+          subtitle: const Text('Enable Quick Sum Tracker on transactions'),
+          secondary: PureIcons.calculate(color: Colors.teal),
+          value: ref.watch(smartCalculatorEnabledProvider),
+          onChanged: (_) =>
+              ref.read(smartCalculatorEnabledProvider.notifier).toggle(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileManagementSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Profile Management'),
+        ref.watch(profilesProvider).when(
+              data: (profiles) => Column(
+                children: profiles.map((p) {
+                  final isActive = p.id == ref.watch(activeProfileIdProvider);
+                  return ListTile(
+                    title: Text(p.name),
+                    subtitle: Text(isActive ? 'Active' : 'Tap to switch'),
+                    leading: CircleAvatar(
+                      backgroundColor: isActive
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey[300],
+                      child: PureIcons.person(
+                          color: isActive ? Colors.white : Colors.grey),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: PureIcons.copy(),
+                          tooltip: 'Copy Categories from another profile',
+                          onPressed: () =>
+                              _showCopyCategoriesDialog(context, ref, p.id),
+                        ),
+                        if (profiles.length > 1 && !isActive)
+                          IconButton(
+                            icon: PureIcons.deleteOutlined(color: Colors.red),
+                            onPressed: () =>
+                                _showDeleteProfileDialog(context, ref, p),
+                          ),
+                      ],
+                    ),
+                    onTap: isActive
+                        ? null
+                        : () {
+                            ref
+                                .read(activeProfileIdProvider.notifier)
+                                .setProfile(p.id);
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text("Switched to ${p.name}")));
+                          },
+                  );
+                }).toList(),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => ListTile(title: Text('Error: $e')),
+            ),
+        ListTile(
+          title: const Text('Add New Profile'),
+          leading: PureIcons.addCircle(color: Colors.blue),
+          onTap: () => CommonDialogs.showTextFieldDialog(
+            context: context,
+            title: "Create Profile",
+            labelText: "Profile Name",
+            hintText: "Enter name (e.g. Business)",
+            initialValue: "",
+            saveLabel: "CREATE",
+            onSave: (val) async {
+              if (val.trim().isEmpty) return;
+              final newProfile = Profile(
+                id: const Uuid().v4(),
+                name: val.trim(),
+              );
+              await ref.read(storageServiceProvider).saveProfile(newProfile);
+              ref.invalidate(profilesProvider);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreferencesSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Preferences'),
+        ListTile(
+          title: const Text('Currency'),
+          subtitle: Text(
+              'Current: ${ref.watch(currencyProvider) == 'en_IN' ? 'Indian Rupee (₹)' : ref.watch(currencyProvider) == 'en_GB' ? 'British Pound (£)' : ref.watch(currencyProvider) == 'en_EU' ? 'Euro (€)' : 'US Dollar (\$)'}'),
+          leading: PureIcons.money(color: Colors.green),
+          onTap: _showCurrencyDialog,
+        ),
+        ListTile(
+          title: const Text('Monthly Budget'),
+          subtitle: Text(
+              'Limit: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(ref.watch(monthlyBudgetProvider))}'),
+          leading: PureIcons.reports(color: Colors.blue),
+          onTap: () => CommonDialogs.showTextFieldDialog(
+            context: context,
+            title: "Set Monthly Budget",
+            labelText: "Amount",
+            prefixText:
+                '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
+            initialValue: ref.read(monthlyBudgetProvider).toString(),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+            ],
+            onSave: (val) {
+              final amount = double.tryParse(val) ?? 0;
+              ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Backup Reminder'),
+          subtitle: Text(
+              'Remind after every ${ref.watch(backupThresholdProvider)} transactions'),
+          leading: PureIcons.sync(color: Colors.purple),
+          onTap: () => CommonDialogs.showTextFieldDialog(
+            context: context,
+            title: "Backup Interval",
+            labelText: "Number of transactions",
+            helperText: "Default: 20",
+            initialValue: ref.read(backupThresholdProvider).toString(),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onSave: (val) {
+              final threshold = int.tryParse(val) ?? 20;
+              ref
+                  .read(backupThresholdProvider.notifier)
+                  .setThreshold(threshold);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Authentication'),
+        ListTile(
+          title: const Text('Logout'),
+          leading: PureIcons.logout(color: Colors.red),
+          onTap: () => UIUtils.handleLogout(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSecuritySection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Security'),
+        SwitchListTile(
+          title: const Text('App Lock (PIN)'),
+          subtitle: const Text('Require PIN on startup/resume'),
+          secondary: PureIcons.lock(color: Colors.grey),
+          value: _isAppLockEnabled,
+          onChanged: (val) async {
+            if (val) {
+              _showSetPinDialog(context);
+            } else {
+              final verified = await _showVerifyPinDialog(context);
+              if (verified) {
+                setState(() => _isAppLockEnabled = false);
+                await ref.read(storageServiceProvider).setAppLockEnabled(false);
+              }
+            }
+          },
+        ),
+        if (_isAppLockEnabled)
+          ListTile(
+            title: const Text('Change PIN'),
+            leading: PureIcons.security(size: 20),
+            onTap: () => _showSetPinDialog(context),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAppInfoSection(BuildContext context) {
+    final user = ref.watch(authStreamProvider).value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('App Information'),
+        ListTile(
+          title: const Text('Update Application'),
+          subtitle: const Text('Clear cache and reload latest version'),
+          leading:
+              const Icon(Icons.system_update_rounded, color: Colors.blueAccent),
+          onTap: _updateApplication,
+        ),
+        ListTile(
+          title: const Text('About'),
+          subtitle: const Text(AppConstants.appVersion),
+          leading: PureIcons.info(size: 20),
+          onTap: () =>
+              UIUtils.showCommonAboutDialog(context, AppConstants.appVersion),
+        ),
+        if (_installPrompt != null) ...[
+          const Divider(),
+          ListTile(
+            title: const Text('Install App'),
+            subtitle: const Text('Add to Home Screen for Offline use'),
+            leading: const Icon(Icons.install_mobile, color: Colors.blue),
+            onTap: () async {
+              if (_installPrompt != null) {
+                await ConnectivityPlatform.triggerInstallPrompt(
+                    _installPrompt!);
+                setState(() => _installPrompt = null);
+              }
+            },
+          ),
+        ] else if (kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.macOS)) ...[
+          const Divider(),
+          ListTile(
+            title: const Text('Install on iPhone'),
+            subtitle: const Text('Tap "Share" → "Add to Home Screen"'),
+            leading: const Icon(Icons.ios_share, color: Colors.blue),
+            onTap: () => showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text("Install on iPhone"),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("To install this app for offline use:\n"),
+                    ListTile(
+                      leading: Icon(Icons.ios_share),
+                      title: Text('1. Tap the Share button'),
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.add_box_outlined),
+                      title:
+                          Text('2. Scroll down and tap "Add to Home Screen"'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text("OK")),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (user != null && !ref.watch(isOfflineProvider)) ...[
+          const Divider(),
+          UIUtils.buildSectionHeader('Danger Zone', showDivider: false),
+          ListTile(
+            title: const Text('Clear Cloud Data (Keep Account)',
+                style: TextStyle(color: Colors.orange)),
+            subtitle: const Text('Remove cloud backup, keep account active'),
+            leading: PureIcons.cloudOff(size: 20, color: Colors.orange),
+            onTap: _clearCloudDataFlow,
+          ),
+          ListTile(
+            title: const Text('Deactivate & Wipe Cloud Data',
+                style: TextStyle(color: Colors.red)),
+            subtitle: const Text('Move back to Local-Only mode'),
+            leading: PureIcons.deleteForever(color: Colors.red),
+            onTap: _deactivateAccountFlow,
+          ),
+        ],
+      ],
     );
   }
 

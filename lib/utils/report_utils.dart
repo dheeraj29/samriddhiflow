@@ -1,7 +1,20 @@
 import '../models/transaction.dart';
 import '../models/category.dart';
+import 'dart:ui';
 
 class ReportUtils {
+  static Color getChartColor(int index) {
+    const List<Color> palette = [
+      Color(0xFF4CAF50),
+      Color(0xFF2196F3),
+      Color(0xFFFFC107),
+      Color(0xFFE91E63),
+      Color(0xFF9C27B0),
+      Color(0xFF00BCD4),
+    ];
+    return palette[index % palette.length];
+  }
+
   static Map<String, double> aggregateByCategory({
     required List<Transaction> transactions,
     required TransactionType type,

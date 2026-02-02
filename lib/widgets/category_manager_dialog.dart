@@ -89,7 +89,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<CategoryUsage>(
-                        value: _usage,
+                        initialValue: _usage,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Usage',
@@ -109,7 +109,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<CategoryTag>(
-                        value: _tag,
+                        initialValue: _tag,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Tag',

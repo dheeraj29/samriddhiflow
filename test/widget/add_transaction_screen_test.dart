@@ -68,6 +68,7 @@ void main() {
         categoriesProvider.overrideWith(() => MockCategoriesNotifier([
               Category(id: '1', name: 'General', usage: CategoryUsage.both),
               Category(id: '2', name: 'Food', usage: CategoryUsage.expense),
+              Category(id: '3', name: 'Salary', usage: CategoryUsage.income),
             ])),
       ],
       child: const MaterialApp(
@@ -137,5 +138,72 @@ void main() {
         that: isA<Transaction>()
             .having((t) => t.title, 'title', 'Lunch')
             .having((t) => t.amount, 'amount', 150.0)))).called(1);
+  });
+  testWidgets('AddTransactionScreen switches type to Income', (tester) async {
+    when(() => mockStorageService.getCategories()).thenReturn([
+      Category(id: '1', name: 'General', usage: CategoryUsage.both),
+      Category(id: '3', name: 'Salary', usage: CategoryUsage.income),
+    ]);
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    // Verify default is Expense (Red color usually, or check ToggleButton)
+    // Finding ToggleButtons is tricky, we can find by verify specific text is selected
+    // For simplicity, let's tap 'Income'
+    final incomeButton = find.text('Income');
+    await tester.tap(incomeButton);
+    await tester.pumpAndSettle();
+
+    // Verify UI updates - e.g. check if a known Income category is available or check internal state if possible
+    // Here we just verify it doesn't crash and functionality attempts to save as Income
+
+    // Fill Title
+    await tester.enterText(
+        find.ancestor(
+            of: find.text('Description'), matching: find.byType(TextFormField)),
+        'Paycheck');
+
+    // Fill Amount
+    await tester.enterText(
+        find.ancestor(
+            of: find.text('Amount'), matching: find.byType(TextFormField)),
+        '5000');
+
+    // Mock save
+    when(() => mockStorageService.saveTransaction(any()))
+        .thenAnswer((_) async {});
+
+    // Save
+    final saveButton = find.widgetWithText(ElevatedButton, 'Save Transaction');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorageService.saveTransaction(any(
+        that: isA<Transaction>()
+            .having((t) => t.type, 'type', TransactionType.income)))).called(1);
+  });
+
+  testWidgets('AddTransactionScreen validates zero amount', (tester) async {
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.ancestor(
+            of: find.text('Description'), matching: find.byType(TextFormField)),
+        'Zero Item');
+
+    await tester.enterText(
+        find.ancestor(
+            of: find.text('Amount'), matching: find.byType(TextFormField)),
+        '0');
+
+    final saveButton = find.widgetWithText(ElevatedButton, 'Save Transaction');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Invalid Amount'), findsOneWidget);
   });
 }

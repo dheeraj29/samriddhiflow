@@ -44,7 +44,7 @@ class FormUtils {
         : (allowManual ? 'manual' : accounts.first.id);
 
     return DropdownButtonFormField<String>(
-      value: safeValue,
+      initialValue: safeValue,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),

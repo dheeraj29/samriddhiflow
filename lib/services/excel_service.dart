@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart';
+import 'package:uuid/uuid.dart';
 import 'storage_service.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
@@ -6,7 +7,6 @@ import '../models/loan.dart';
 import '../models/category.dart';
 import '../models/profile.dart';
 import '../utils/currency_utils.dart';
-import 'package:uuid/uuid.dart';
 import 'file_service.dart';
 import '../utils/excel_utils.dart';
 
@@ -235,14 +235,12 @@ class ExcelService {
     try {
       if (fileBytes == null) {
         final bytes = await _fileService.pickFile(allowedExtensions: ['xlsx']);
-
         if (bytes == null) {
           resultCounts['status'] = -1;
           return resultCounts;
         }
         fileBytes = bytes;
       }
-
       excel = Excel.decodeBytes(fileBytes);
     } catch (_) {
       resultCounts['status'] = -4;
@@ -251,554 +249,36 @@ class ExcelService {
 
     bool foundAnyValidSection = false;
     final Map<String, List<LoanTransaction>> loanTxnsMap = {};
+    final existingAccounts = _storage.getAccounts(); // Pass ref to keep updated
 
-    // Mapping helper
-    int findColumn(List<Data?> headerRow, List<String> possibleNames) {
-      // Pass 1: Exact Match (High Priority)
-      for (var name in possibleNames) {
-        final target = name
-            .toLowerCase()
-            .replaceAll(' ', '')
-            .replaceAll('_', '')
-            .replaceAll('-', '');
-        for (int i = 0; i < headerRow.length; i++) {
-          final cell = headerRow[i];
-          if (cell == null) continue;
-          final header = ExcelUtils.getCellValue(cell)
-              .toLowerCase()
-              .replaceAll(' ', '')
-              .replaceAll('_', '')
-              .replaceAll('-', '');
-          if (header == target) return i;
-        }
-      }
-
-      // Pass 2: Partial Match (Fallback)
-      for (var name in possibleNames) {
-        final target = name
-            .toLowerCase()
-            .replaceAll(' ', '')
-            .replaceAll('_', '')
-            .replaceAll('-', '');
-        for (int i = 0; i < headerRow.length; i++) {
-          final cell = headerRow[i];
-          if (cell == null) continue;
-          final header = ExcelUtils.getCellValue(cell)
-              .toLowerCase()
-              .replaceAll(' ', '')
-              .replaceAll('_', '')
-              .replaceAll('-', '');
-          if (header.contains(target) || target.contains(header)) {
-            if (header.length > 2 || target == header) return i;
-          }
-        }
-      }
-      return -1;
-    }
-
-    // 0. Pre-process Profiles if present
+    // 0. Pre-process Profiles
     if (excel.tables.containsKey('Profiles')) {
-      final profSheet = excel.tables['Profiles']!;
-      if (profSheet.maxRows > 1) {
-        final profHeaders = profSheet.rows.first;
-        final idIdx = findColumn(profHeaders, ['id']);
-        final nameIdx = findColumn(profHeaders, ['name']);
-        final localeIdx = findColumn(profHeaders, ['currencylocale', 'locale']);
-        final budgetIdx = findColumn(profHeaders, ['monthlybudget', 'budget']);
-
-        final existingProfiles =
-            _storage.getProfiles().map((p) => p.id).toSet();
-
-        for (var row in profSheet.rows.skip(1)) {
-          final id = idIdx != -1 ? ExcelUtils.getCellValue(row[idIdx]) : '';
-          if (id.isEmpty || existingProfiles.contains(id)) continue;
-          final name = nameIdx != -1
-              ? ExcelUtils.getCellValue(row[nameIdx])
-              : 'Restored Profile';
-          final profile = Profile(
-            id: id,
-            name: name,
-            currencyLocale: localeIdx != -1
-                ? ExcelUtils.getCellValue(row[localeIdx])
-                : 'en_IN',
-            monthlyBudget: budgetIdx != -1
-                ? double.tryParse(ExcelUtils.getCellValue(row[budgetIdx])) ??
-                    0.0
-                : 0.0,
-          );
-          await _storage.saveProfile(profile);
-          resultCounts['profiles'] = resultCounts['profiles']! + 1;
-        }
-      }
+      await _importProfiles(excel.tables['Profiles']!, resultCounts);
     }
 
     // Process Sheets
     for (var table in excel.tables.keys) {
       final sheet = excel.tables[table]!;
       if (sheet.maxRows <= 1) continue;
-
-      final headerRow = sheet.rows.first;
-      final rows = sheet.rows.skip(1).toList();
       final sheetName = table.toUpperCase();
 
       if (sheetName.contains('LOAN') && sheetName.contains('TRANSACTION')) {
-        final loanIdIdx = findColumn(headerRow, ['loanid']);
-        final idIdx = findColumn(headerRow, ['id', 'txnid']);
-        final dateIdx = findColumn(headerRow, ['date']);
-        final typeIdx = findColumn(headerRow, ['type']);
-        final amountIdx = findColumn(headerRow, ['amount']);
-        final prinIdx = findColumn(headerRow, ['principalcomponent']);
-        final intIdx = findColumn(headerRow, ['interestcomponent']);
-        final resIdx = findColumn(headerRow, ['resultantprincipal']);
-
-        if (loanIdIdx != -1) {
-          foundAnyValidSection = true;
-          for (var row in rows) {
-            try {
-              if (row.length <= loanIdIdx) continue;
-              final loanId = ExcelUtils.getCellValue(row[loanIdIdx]);
-              if (loanId.isEmpty) continue;
-
-              final id = idIdx != -1 && idIdx < row.length
-                  ? ExcelUtils.getCellValue(row[idIdx])
-                  : const Uuid().v4();
-              if (id.isEmpty) continue;
-
-              final dateStr = dateIdx != -1 && dateIdx < row.length
-                  ? ExcelUtils.getCellValue(row[dateIdx])
-                  : '';
-              final date = DateTime.tryParse(dateStr) ?? DateTime.now();
-
-              final typeStr = typeIdx != -1 && typeIdx < row.length
-                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
-                  : 'emi';
-
-              final amount = amountIdx != -1 && amountIdx < row.length
-                  ? double.tryParse(ExcelUtils.getCellValue(row[amountIdx])) ??
-                      0
-                  : 0.0;
-
-              final pComp = prinIdx != -1 && prinIdx < row.length
-                  ? double.tryParse(ExcelUtils.getCellValue(row[prinIdx])) ?? 0
-                  : 0.0;
-
-              final iComp = intIdx != -1 && intIdx < row.length
-                  ? double.tryParse(ExcelUtils.getCellValue(row[intIdx])) ?? 0
-                  : 0.0;
-
-              final resPrin = resIdx != -1 && resIdx < row.length
-                  ? double.tryParse(ExcelUtils.getCellValue(row[resIdx])) ?? 0
-                  : 0.0;
-
-              final txn = LoanTransaction(
-                id: id.isEmpty ? const Uuid().v4() : id,
-                date: date,
-                amount: amount,
-                type: LoanTransactionType.values.firstWhere(
-                    (e) => e.name.toLowerCase() == typeStr,
-                    orElse: () => LoanTransactionType.emi),
-                principalComponent: pComp,
-                interestComponent: iComp,
-                resultantPrincipal: resPrin,
-              );
-
-              if (!loanTxnsMap.containsKey(loanId)) {
-                loanTxnsMap[loanId] = [];
-              }
-              loanTxnsMap[loanId]!.add(txn);
-              resultCounts['loanTransactions'] =
-                  resultCounts['loanTransactions']! + 1;
-            } catch (_) {}
-          }
-        }
+        foundAnyValidSection = true;
+        await _importLoanTransactions(sheet, resultCounts, loanTxnsMap);
       } else if (sheetName.contains('ACCOUNT')) {
-        final existingAccounts =
-            _storage.getAccounts().map((e) => e.id).toSet();
-        final idIdx = findColumn(headerRow, ['id', 'accountid', 'accid']);
-        final nameIdx = findColumn(headerRow, ['name', 'accountname', 'title']);
-        final typeIdx = findColumn(headerRow, ['type', 'accounttype']);
-        final balanceIdx = findColumn(headerRow, ['balance', 'amount']);
-        final currIdx = findColumn(headerRow, ['currency']);
-        final limitIdx = findColumn(headerRow, ['creditlimit', 'limit']);
-        final billingIdx =
-            findColumn(headerRow, ['billingcycleday', 'billingday']);
-        final dueIdx =
-            findColumn(headerRow, ['paymentduedateday', 'duedateday']);
-
-        if (nameIdx != -1) {
-          foundAnyValidSection = true;
-          for (var row in rows) {
-            try {
-              if (row.length <= nameIdx) continue;
-              final id = idIdx != -1 && idIdx < row.length
-                  ? ExcelUtils.getCellValue(row[idIdx])
-                  : '';
-              if (id.isNotEmpty && existingAccounts.contains(id)) continue;
-
-              final name = ExcelUtils.getCellValue(row[nameIdx]);
-              if (name.isEmpty) continue;
-
-              final typeStr = typeIdx != -1 && typeIdx < row.length
-                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
-                  : 'savings';
-              final balance = balanceIdx != -1 && balanceIdx < row.length
-                  ? CurrencyUtils.roundTo2Decimals(double.tryParse(
-                          ExcelUtils.getCellValue(row[balanceIdx])
-                              .replaceAll(',', '')) ??
-                      0.0)
-                  : 0.0;
-
-              final acc = Account(
-                id: id.isEmpty ? const Uuid().v4() : id,
-                name: name,
-                type: AccountType.values.firstWhere(
-                    (e) => e.name.toLowerCase() == typeStr,
-                    orElse: () => AccountType.savings),
-                balance: balance,
-                currency: currIdx != -1 && currIdx < row.length
-                    ? ExcelUtils.getCellValue(row[currIdx])
-                    : '',
-                creditLimit: limitIdx != -1 && limitIdx < row.length
-                    ? double.tryParse(ExcelUtils.getCellValue(row[limitIdx]))
-                    : null,
-                billingCycleDay: billingIdx != -1 && billingIdx < row.length
-                    ? int.tryParse(ExcelUtils.getCellValue(row[billingIdx]))
-                    : null,
-                paymentDueDateDay: dueIdx != -1 && dueIdx < row.length
-                    ? int.tryParse(ExcelUtils.getCellValue(row[dueIdx]))
-                    : null,
-                profileId: findColumn(headerRow, ['profileid']) != -1 &&
-                        findColumn(headerRow, ['profileid']) < row.length
-                    ? ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['profileid'])])
-                    : activeProfileId,
-              );
-              await _storage.saveAccount(acc);
-              resultCounts['accounts'] = resultCounts['accounts']! + 1;
-            } catch (_) {}
-          }
-        }
+        foundAnyValidSection = true;
+        await _importAccounts(
+            sheet, resultCounts, activeProfileId, existingAccounts);
       } else if (sheetName.contains('LOAN')) {
-        final existingLoans = _storage.getLoans().map((e) => e.id).toSet();
-        final idIdx = findColumn(headerRow, ['id', 'loanid']);
-        final nameIdx = findColumn(headerRow, ['name', 'loanname']);
-
-        if (nameIdx != -1) {
-          foundAnyValidSection = true;
-          for (var row in rows) {
-            try {
-              if (row.length <= nameIdx) continue;
-              final id = idIdx != -1 && idIdx < row.length
-                  ? ExcelUtils.getCellValue(row[idIdx])
-                  : '';
-              if (id.isNotEmpty && existingLoans.contains(id)) continue;
-
-              final name = ExcelUtils.getCellValue(row[nameIdx]);
-              if (name.isEmpty) continue;
-
-              final loan = Loan(
-                id: id.isEmpty ? const Uuid().v4() : id,
-                name: name,
-                type: LoanType.values.firstWhere(
-                    (e) =>
-                        e.name.toLowerCase() ==
-                        (findColumn(headerRow, ['type']) != -1
-                            ? ExcelUtils.getCellValue(
-                                    row[findColumn(headerRow, ['type'])])
-                                .toLowerCase()
-                            : 'personal'),
-                    orElse: () => LoanType.personal),
-                totalPrincipal: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        ExcelUtils.getCellValue(row[findColumn(
-                                headerRow, ['totalprincipal', 'principal'])])
-                            .replaceAll(',', '')) ??
-                    0.0),
-                remainingPrincipal: CurrencyUtils.roundTo2Decimals(
-                    double.tryParse(ExcelUtils.getCellValue(row[findColumn(
-                                headerRow, ['remainingprincipal', 'balance'])])
-                            .replaceAll(',', '')) ??
-                        0.0),
-                interestRate: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        ExcelUtils.getCellValue(row[findColumn(
-                                headerRow, ['interestrate', 'rate'])])
-                            .replaceAll(',', '')) ??
-                    0.0),
-                tenureMonths: int.tryParse(ExcelUtils.getCellValue(row[
-                        findColumn(headerRow, ['tenuremonths', 'tenure'])])) ??
-                    0,
-                emiAmount: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        ExcelUtils.getCellValue(row[
-                                findColumn(headerRow, ['emiamount', 'emi'])])
-                            .replaceAll(',', '')) ??
-                    0.0),
-                emiDay: int.tryParse(ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['emiday', 'day'])])) ??
-                    1,
-                startDate: DateTime.tryParse(ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['startdate', 'date'])])) ??
-                    DateTime.now(),
-                firstEmiDate: DateTime.tryParse(ExcelUtils.getCellValue(row[
-                        findColumn(
-                            headerRow, ['firstemidate', 'firstdate'])])) ??
-                    DateTime.now(),
-                accountId: findColumn(headerRow, ['accountid']) != -1
-                    ? ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['accountid'])])
-                    : null,
-                transactions: [],
-                profileId: findColumn(headerRow, ['profileid']) != -1 &&
-                        findColumn(headerRow, ['profileid']) < row.length
-                    ? ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['profileid'])])
-                    : activeProfileId,
-              );
-              if (loan.accountId?.isEmpty ?? false) loan.accountId = null;
-              await _storage.saveLoan(loan);
-              resultCounts['loans'] = resultCounts['loans']! + 1;
-            } catch (_) {}
-          }
-        }
+        foundAnyValidSection = true;
+        await _importLoans(sheet, resultCounts, activeProfileId);
       } else if (sheetName.contains('CATEGOR')) {
-        final existingCats = _storage
-            .getCategories()
-            .map((c) => c.name.toLowerCase().trim())
-            .toSet();
-        final nameIdx = findColumn(headerRow, ['name', 'categoryname']);
-
-        if (nameIdx != -1) {
-          foundAnyValidSection = true;
-          for (var row in rows) {
-            try {
-              if (row.length <= nameIdx) continue;
-              final name = ExcelUtils.getCellValue(row[nameIdx]);
-              if (name.isEmpty || existingCats.contains(name.toLowerCase())) {
-                continue;
-              }
-
-              final usageStr = findColumn(headerRow, ['usage', 'type']) != -1
-                  ? ExcelUtils.getCellValue(
-                          row[findColumn(headerRow, ['usage', 'type'])])
-                      .toLowerCase()
-                  : 'both';
-              final tagStr = findColumn(headerRow, ['tag']) != -1
-                  ? ExcelUtils.getCellValue(row[findColumn(headerRow, ['tag'])])
-                      .toLowerCase()
-                  : 'none';
-
-              final cat = Category(
-                id: findColumn(headerRow, ['id']) != -1 &&
-                        ExcelUtils.getCellValue(
-                                row[findColumn(headerRow, ['id'])])
-                            .isNotEmpty
-                    ? ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['id'])])
-                    : const Uuid().v4(),
-                name: name,
-                usage: CategoryUsage.values.firstWhere(
-                    (e) => e.name.toLowerCase() == usageStr,
-                    orElse: () => CategoryUsage.both),
-                tag: CategoryTag.values.firstWhere(
-                    (e) => e.name.toLowerCase() == tagStr,
-                    orElse: () => CategoryTag.none),
-                iconCode: findColumn(headerRow, ['iconcode']) != -1
-                    ? int.tryParse(ExcelUtils.getCellValue(
-                            row[findColumn(headerRow, ['iconcode'])])) ??
-                        0
-                    : 0,
-                profileId: findColumn(headerRow, ['profileid']) != -1 &&
-                        findColumn(headerRow, ['profileid']) < row.length
-                    ? ExcelUtils.getCellValue(
-                        row[findColumn(headerRow, ['profileid'])])
-                    : activeProfileId,
-              );
-              await _storage.addCategory(cat);
-              resultCounts['categories'] = resultCounts['categories']! + 1;
-            } catch (_) {}
-          }
-        }
+        foundAnyValidSection = true;
+        await _importCategories(sheet, resultCounts, activeProfileId);
       } else if (sheetName.contains('TRANSACTION')) {
-        final accounts = _storage.getAccounts();
-
-        // 1. Resolve Column Indices ONCE (Performance & Safety Refactor)
-        final titleIdx = findColumn(
-            headerRow, ['title', 'description', 'narration', 'payee']);
-        final amountIdx = findColumn(headerRow, ['amount', 'sum', 'value']);
-
-        final idIdx = findColumn(headerRow, ['id']);
-        final dateIdx = findColumn(headerRow, ['date', 'datetime', 'time']);
-        final typeIdx =
-            findColumn(headerRow, ['type', 'transactiontype', 'txntype']);
-        final catIdx = findColumn(headerRow, ['category', 'cat']);
-        final accIdIdx = findColumn(headerRow, ['accountid', 'accid']);
-        final accNameIdx = findColumn(headerRow, ['accountname', 'account']);
-        final toAccIdx = findColumn(headerRow, ['toaccountid', 'toaccount']);
-        final loanIdIdx = findColumn(headerRow, ['loanid']);
-        final recurIdx = findColumn(
-            headerRow, ['isrecurring', 'isrecurringinstance', 'recurring']);
-        final delIdx = findColumn(headerRow, ['isdeleted', 'deleted']);
-        final gainIdx = findColumn(headerRow, ['gainamount', 'gain']);
-        final tenureIdx = findColumn(headerRow,
-            ['holdingtenuremonths', 'holdingtenure', 'tenuremonths', 'tenure']);
-        final profileIdx = findColumn(headerRow, ['profileid']);
-
-        if (titleIdx != -1 && amountIdx != -1) {
-          foundAnyValidSection = true;
-          final List<Transaction> transactionsToSave = [];
-          for (var row in rows) {
-            try {
-              // Basic Length Check
-              if (row.length <= titleIdx || row.length <= amountIdx) continue;
-
-              final title = ExcelUtils.getCellValue(row[titleIdx]);
-              if (title.isEmpty) continue;
-
-              final amount = CurrencyUtils.roundTo2Decimals(double.tryParse(
-                      ExcelUtils.getCellValue(row[amountIdx])
-                          .replaceAll(',', '')) ??
-                  0.0);
-
-              // Safe extractions
-              final id = (idIdx != -1 && idIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[idIdx])
-                  : const Uuid().v4();
-
-              final dateStr = (dateIdx != -1 && dateIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[dateIdx])
-                  : null;
-              final date = (dateStr != null && dateStr.isNotEmpty)
-                  ? (DateTime.tryParse(dateStr) ?? DateTime.now())
-                  : DateTime.now();
-
-              final typeStr = (typeIdx != -1 && typeIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
-                  : 'expense'; // Default
-
-              final category = (catIdx != -1 && catIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[catIdx])
-                  : 'Miscellaneous';
-
-              final accountId = (accIdIdx != -1 && accIdIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[accIdIdx])
-                  : '';
-
-              final accountName = (accNameIdx != -1 && accNameIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[accNameIdx])
-                  : 'Default Account';
-
-              // Account Resolution
-              String finalAccountId = accountId;
-              if (finalAccountId.isEmpty ||
-                  finalAccountId.toLowerCase() == 'manual' ||
-                  !accounts.any((a) => a.id == finalAccountId)) {
-                if (accounts.any(
-                    (a) => a.name.toLowerCase() == accountName.toLowerCase())) {
-                  finalAccountId = accounts
-                      .firstWhere((a) =>
-                          a.name.toLowerCase() == accountName.toLowerCase())
-                      .id;
-                } else if (accountName.isNotEmpty &&
-                    accountName.toLowerCase() != 'unknown') {
-                  final newAcc = Account.create(
-                      name: accountName,
-                      type: AccountType.savings,
-                      initialBalance: 0.0,
-                      profileId: activeProfileId);
-                  await _storage.saveAccount(newAcc);
-                  accounts.add(newAcc);
-                  finalAccountId = newAcc.id;
-                } else if (accounts.isNotEmpty) {
-                  finalAccountId = accounts.first.id;
-                }
-              }
-
-              final toAccountId = (toAccIdx != -1 && toAccIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[toAccIdx])
-                  : null;
-
-              final loanId = (loanIdIdx != -1 && loanIdIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[loanIdIdx])
-                  : null;
-
-              final isRecurring = (recurIdx != -1 && recurIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[recurIdx]).toLowerCase() ==
-                      'true'
-                  : false;
-
-              final isDeleted = (delIdx != -1 && delIdx < row.length)
-                  ? ExcelUtils.getCellValue(row[delIdx]).toLowerCase() == 'true'
-                  : false;
-
-              final gainAmount = (gainIdx != -1 && gainIdx < row.length)
-                  ? double.tryParse(ExcelUtils.getCellValue(row[gainIdx]))
-                  : null;
-
-              final holdingTenure = (tenureIdx != -1 && tenureIdx < row.length)
-                  ? int.tryParse(ExcelUtils.getCellValue(row[tenureIdx]))
-                  : null;
-
-              // Type Logic & Icon Fix
-              final isTransferAuto = typeStr.contains('transfer') ||
-                  (toAccountId != null && toAccountId.isNotEmpty);
-              final finalType = typeStr.contains('income')
-                  ? TransactionType.income
-                  : isTransferAuto
-                      ? TransactionType.transfer
-                      : TransactionType.expense;
-
-              // Debug Counters
-              if (finalType == TransactionType.income) {
-                resultCounts['type_income'] =
-                    (resultCounts['type_income'] ?? 0) + 1;
-              }
-              if (finalType == TransactionType.expense) {
-                resultCounts['type_expense'] =
-                    (resultCounts['type_expense'] ?? 0) + 1;
-              }
-              if (finalType == TransactionType.transfer) {
-                resultCounts['type_transfer'] =
-                    (resultCounts['type_transfer'] ?? 0) + 1;
-              }
-
-              final txn = Transaction(
-                id: id.isEmpty ? const Uuid().v4() : id,
-                title: title,
-                amount: amount.abs(),
-                date: date,
-                type: finalType,
-                category: category,
-                accountId: finalAccountId,
-                toAccountId: toAccountId?.isEmpty == true
-                    ? null
-                    : toAccountId, // Clean up empty strings
-                loanId: loanId?.isEmpty == true ? null : loanId,
-                isRecurringInstance: isRecurring,
-                isDeleted: isDeleted,
-                gainAmount: gainAmount,
-                holdingTenureMonths: holdingTenure,
-                profileId: (profileIdx != -1 && profileIdx < row.length)
-                    ? ExcelUtils.getCellValue(row[profileIdx])
-                    : activeProfileId,
-              );
-
-              // Skip Self-Transfers
-              if (txn.type == TransactionType.transfer &&
-                  txn.accountId != null &&
-                  txn.accountId == txn.toAccountId) {
-                resultCounts['skipped_selftransfer'] =
-                    (resultCounts['skipped_selftransfer'] ?? 0) + 1;
-                continue;
-              }
-
-              transactionsToSave.add(txn);
-              resultCounts['transactions'] = resultCounts['transactions']! + 1;
-            } catch (e) {
-              resultCounts['skipped_error'] =
-                  (resultCounts['skipped_error'] ?? 0) + 1;
-            }
-          }
-          await _storage.saveTransactions(transactionsToSave,
-              applyImpact: false);
-        }
+        foundAnyValidSection = true;
+        await _importTransactions(
+            sheet, resultCounts, activeProfileId, existingAccounts);
       }
     }
 
@@ -822,13 +302,452 @@ class ExcelService {
           resultCounts['loans']! +
           resultCounts['categories']! +
           resultCounts['transactions']!;
-      if (total == 0) {
-        resultCounts['status'] = 0;
-      } else {
-        resultCounts['status'] = 1;
-      }
+      resultCounts['status'] = total == 0 ? 0 : 1;
     }
 
     return resultCounts;
+  }
+
+  Future<void> _importProfiles(
+      Sheet sheet, Map<String, int> resultCounts) async {
+    if (sheet.maxRows <= 1) return;
+    final headers = sheet.rows.first;
+    final idIdx = ExcelUtils.findColumn(headers, ['id']);
+    final nameIdx = ExcelUtils.findColumn(headers, ['name']);
+    final localeIdx =
+        ExcelUtils.findColumn(headers, ['currencylocale', 'locale']);
+    final budgetIdx =
+        ExcelUtils.findColumn(headers, ['monthlybudget', 'budget']);
+
+    final existingProfiles = _storage.getProfiles().map((p) => p.id).toSet();
+
+    for (var row in sheet.rows.skip(1)) {
+      final id = idIdx != -1 ? ExcelUtils.getCellValue(row[idIdx]) : '';
+      if (id.isEmpty || existingProfiles.contains(id)) continue;
+
+      final name = nameIdx != -1
+          ? ExcelUtils.getCellValue(row[nameIdx])
+          : 'Restored Profile';
+      final profile = Profile(
+        id: id,
+        name: name,
+        currencyLocale:
+            localeIdx != -1 ? ExcelUtils.getCellValue(row[localeIdx]) : 'en_IN',
+        monthlyBudget: budgetIdx != -1
+            ? double.tryParse(ExcelUtils.getCellValue(row[budgetIdx])) ?? 0.0
+            : 0.0,
+      );
+      await _storage.saveProfile(profile);
+      resultCounts['profiles'] = resultCounts['profiles']! + 1;
+    }
+  }
+
+  Future<void> _importAccounts(Sheet sheet, Map<String, int> resultCounts,
+      String activeProfileId, List<Account> existingAccountsMutex) async {
+    final headers = sheet.rows.first;
+    final existingIds = existingAccountsMutex.map((e) => e.id).toSet();
+
+    final idIdx = ExcelUtils.findColumn(headers, ['id', 'accountid', 'accid']);
+    final nameIdx =
+        ExcelUtils.findColumn(headers, ['name', 'accountname', 'title']);
+    if (nameIdx == -1) return;
+
+    final typeIdx = ExcelUtils.findColumn(headers, ['type', 'accounttype']);
+    final balanceIdx = ExcelUtils.findColumn(headers, ['balance', 'amount']);
+    final currIdx = ExcelUtils.findColumn(headers, ['currency']);
+    final limitIdx = ExcelUtils.findColumn(headers, ['creditlimit', 'limit']);
+    final billingIdx =
+        ExcelUtils.findColumn(headers, ['billingcycleday', 'billingday']);
+    final dueIdx =
+        ExcelUtils.findColumn(headers, ['paymentduedateday', 'duedateday']);
+    final profileIdx = ExcelUtils.findColumn(headers, ['profileid']);
+
+    for (var row in sheet.rows.skip(1)) {
+      try {
+        if (row.length <= nameIdx) continue;
+        final id = idIdx != -1 && idIdx < row.length
+            ? ExcelUtils.getCellValue(row[idIdx])
+            : '';
+        if (id.isNotEmpty && existingIds.contains(id)) continue;
+
+        final name = ExcelUtils.getCellValue(row[nameIdx]);
+        if (name.isEmpty) continue;
+
+        final typeStr = typeIdx != -1 && typeIdx < row.length
+            ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
+            : 'savings';
+        final balance = balanceIdx != -1 && balanceIdx < row.length
+            ? CurrencyUtils.roundTo2Decimals(double.tryParse(
+                    ExcelUtils.getCellValue(row[balanceIdx])
+                        .replaceAll(',', '')) ??
+                0.0)
+            : 0.0;
+
+        final acc = Account(
+          id: id.isEmpty ? const Uuid().v4() : id,
+          name: name,
+          type: AccountType.values.firstWhere(
+              (e) => e.name.toLowerCase() == typeStr,
+              orElse: () => AccountType.savings),
+          balance: balance,
+          currency: currIdx != -1 && currIdx < row.length
+              ? ExcelUtils.getCellValue(row[currIdx])
+              : '',
+          creditLimit: limitIdx != -1 && limitIdx < row.length
+              ? double.tryParse(ExcelUtils.getCellValue(row[limitIdx]))
+              : null,
+          billingCycleDay: billingIdx != -1 && billingIdx < row.length
+              ? int.tryParse(ExcelUtils.getCellValue(row[billingIdx]))
+              : null,
+          paymentDueDateDay: dueIdx != -1 && dueIdx < row.length
+              ? int.tryParse(ExcelUtils.getCellValue(row[dueIdx]))
+              : null,
+          profileId: profileIdx != -1 && profileIdx < row.length
+              ? ExcelUtils.getCellValue(row[profileIdx])
+              : activeProfileId,
+        );
+        await _storage.saveAccount(acc);
+        existingAccountsMutex.add(acc); // Keep generic list updated
+        resultCounts['accounts'] = resultCounts['accounts']! + 1;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _importLoans(Sheet sheet, Map<String, int> resultCounts,
+      String activeProfileId) async {
+    final headers = sheet.rows.first;
+    final existingLoans = _storage.getLoans().map((e) => e.id).toSet();
+
+    final idIdx = ExcelUtils.findColumn(headers, ['id', 'loanid']);
+    final nameIdx = ExcelUtils.findColumn(headers, ['name', 'loanname']);
+    if (nameIdx == -1) return;
+
+    final typeIdx = ExcelUtils.findColumn(headers, ['type']);
+    final principalIdx =
+        ExcelUtils.findColumn(headers, ['totalprincipal', 'principal']);
+    final remPrincipalIdx =
+        ExcelUtils.findColumn(headers, ['remainingprincipal', 'balance']);
+    final rateIdx = ExcelUtils.findColumn(headers, ['interestrate', 'rate']);
+    final tenureIdx =
+        ExcelUtils.findColumn(headers, ['tenuremonths', 'tenure']);
+    final emiIdx = ExcelUtils.findColumn(headers, ['emiamount', 'emi']);
+    final emiDayIdx = ExcelUtils.findColumn(headers, ['emiday', 'day']);
+    final startIdx = ExcelUtils.findColumn(headers, ['startdate', 'date']);
+    final firstEmiIdx =
+        ExcelUtils.findColumn(headers, ['firstemidate', 'firstdate']);
+    final accIdIdx = ExcelUtils.findColumn(headers, ['accountid']);
+    final profileIdx = ExcelUtils.findColumn(headers, ['profileid']);
+
+    for (var row in sheet.rows.skip(1)) {
+      try {
+        if (row.length <= nameIdx) continue;
+        final id = idIdx != -1 && idIdx < row.length
+            ? ExcelUtils.getCellValue(row[idIdx])
+            : '';
+        if (id.isNotEmpty && existingLoans.contains(id)) continue;
+
+        final name = ExcelUtils.getCellValue(row[nameIdx]);
+        if (name.isEmpty) continue;
+
+        final loan = Loan(
+          id: id.isEmpty ? const Uuid().v4() : id,
+          name: name,
+          type: LoanType.values.firstWhere(
+              (e) =>
+                  e.name.toLowerCase() ==
+                  (typeIdx != -1
+                      ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
+                      : 'personal'),
+              orElse: () => LoanType.personal),
+          totalPrincipal: principalIdx != -1
+              ? ExcelUtils.getDoubleValue(row[principalIdx])
+              : 0.0,
+          remainingPrincipal: remPrincipalIdx != -1
+              ? ExcelUtils.getDoubleValue(row[remPrincipalIdx])
+              : 0.0,
+          interestRate:
+              rateIdx != -1 ? ExcelUtils.getDoubleValue(row[rateIdx]) : 0.0,
+          tenureMonths: tenureIdx != -1
+              ? int.tryParse(ExcelUtils.getCellValue(row[tenureIdx])) ?? 0
+              : 0,
+          emiAmount:
+              emiIdx != -1 ? ExcelUtils.getDoubleValue(row[emiIdx]) : 0.0,
+          emiDay: emiDayIdx != -1
+              ? int.tryParse(ExcelUtils.getCellValue(row[emiDayIdx])) ?? 1
+              : 1,
+          startDate: ExcelUtils.getDateTimeValue(
+                  startIdx != -1 ? row[startIdx] : null) ??
+              DateTime.now(),
+          firstEmiDate: ExcelUtils.getDateTimeValue(
+                  firstEmiIdx != -1 ? row[firstEmiIdx] : null) ??
+              DateTime.now(),
+          accountId:
+              accIdIdx != -1 ? ExcelUtils.getCellValue(row[accIdIdx]) : null,
+          transactions: [],
+          profileId: profileIdx != -1 && profileIdx < row.length
+              ? ExcelUtils.getCellValue(row[profileIdx])
+              : activeProfileId,
+        );
+        if (loan.accountId?.isEmpty ?? false) loan.accountId = null;
+        await _storage.saveLoan(loan);
+        resultCounts['loans'] = resultCounts['loans']! + 1;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _importCategories(Sheet sheet, Map<String, int> resultCounts,
+      String activeProfileId) async {
+    final headers = sheet.rows.first;
+    final existingCats = _storage
+        .getCategories()
+        .map((c) => c.name.toLowerCase().trim())
+        .toSet();
+
+    final nameIdx = ExcelUtils.findColumn(headers, ['name', 'categoryname']);
+    if (nameIdx == -1) return;
+
+    final usageIdx = ExcelUtils.findColumn(headers, ['usage', 'type']);
+    final tagIdx = ExcelUtils.findColumn(headers, ['tag']);
+    final idIdx = ExcelUtils.findColumn(headers, ['id']);
+    final iconIdx = ExcelUtils.findColumn(headers, ['iconcode']);
+    final profileIdx = ExcelUtils.findColumn(headers, ['profileid']);
+
+    for (var row in sheet.rows.skip(1)) {
+      try {
+        if (row.length <= nameIdx) continue;
+        final name = ExcelUtils.getCellValue(row[nameIdx]);
+        if (name.isEmpty || existingCats.contains(name.toLowerCase())) continue;
+
+        final usageStr = usageIdx != -1
+            ? ExcelUtils.getCellValue(row[usageIdx]).toLowerCase()
+            : 'both';
+        final tagStr = tagIdx != -1
+            ? ExcelUtils.getCellValue(row[tagIdx]).toLowerCase()
+            : 'none';
+
+        final cat = Category(
+          id: idIdx != -1 && ExcelUtils.getCellValue(row[idIdx]).isNotEmpty
+              ? ExcelUtils.getCellValue(row[idIdx])
+              : const Uuid().v4(),
+          name: name,
+          usage: CategoryUsage.values.firstWhere(
+              (e) => e.name.toLowerCase() == usageStr,
+              orElse: () => CategoryUsage.both),
+          tag: CategoryTag.values.firstWhere(
+              (e) => e.name.toLowerCase() == tagStr,
+              orElse: () => CategoryTag.none),
+          iconCode: iconIdx != -1
+              ? int.tryParse(ExcelUtils.getCellValue(row[iconIdx])) ?? 0
+              : 0,
+          profileId: profileIdx != -1 && profileIdx < row.length
+              ? ExcelUtils.getCellValue(row[profileIdx])
+              : activeProfileId,
+        );
+        await _storage.addCategory(cat);
+        resultCounts['categories'] = resultCounts['categories']! + 1;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _importTransactions(Sheet sheet, Map<String, int> resultCounts,
+      String activeProfileId, List<Account> accounts) async {
+    final headers = sheet.rows.first;
+    final titleIdx = ExcelUtils.findColumn(
+        headers, ['title', 'description', 'narration', 'payee']);
+    final amountIdx =
+        ExcelUtils.findColumn(headers, ['amount', 'sum', 'value']);
+
+    if (titleIdx == -1 || amountIdx == -1) return;
+
+    final idIdx = ExcelUtils.findColumn(headers, ['id']);
+    final dateIdx =
+        ExcelUtils.findColumn(headers, ['date', 'datetime', 'time']);
+    final typeIdx =
+        ExcelUtils.findColumn(headers, ['type', 'transactiontype', 'txntype']);
+    final catIdx = ExcelUtils.findColumn(headers, ['category', 'cat']);
+    final accIdIdx = ExcelUtils.findColumn(headers, ['accountid', 'accid']);
+    final accNameIdx =
+        ExcelUtils.findColumn(headers, ['accountname', 'account']);
+    final toAccIdx =
+        ExcelUtils.findColumn(headers, ['toaccountid', 'toaccount']);
+    final loanIdIdx = ExcelUtils.findColumn(headers, ['loanid']);
+    final recurIdx = ExcelUtils.findColumn(
+        headers, ['isrecurring', 'isrecurringinstance', 'recurring']);
+    final delIdx = ExcelUtils.findColumn(headers, ['isdeleted', 'deleted']);
+    final gainIdx = ExcelUtils.findColumn(headers, ['gainamount', 'gain']);
+    final tenureIdx = ExcelUtils.findColumn(headers,
+        ['holdingtenuremonths', 'holdingtenure', 'tenuremonths', 'tenure']);
+    final profileIdx = ExcelUtils.findColumn(headers, ['profileid']);
+
+    final List<Transaction> transactionsToSave = [];
+
+    for (var row in sheet.rows.skip(1)) {
+      try {
+        if (row.length <= titleIdx || row.length <= amountIdx) continue;
+
+        final title = ExcelUtils.getCellValue(row[titleIdx]);
+        if (title.isEmpty) continue;
+
+        final amount = ExcelUtils.getDoubleValue(row[amountIdx]);
+
+        final typeStr = typeIdx != -1 && typeIdx < row.length
+            ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
+            : 'expense';
+
+        final accountName = accNameIdx != -1 && accNameIdx < row.length
+            ? ExcelUtils.getCellValue(row[accNameIdx])
+            : 'Default Account';
+
+        String finalAccountId = accIdIdx != -1 && accIdIdx < row.length
+            ? ExcelUtils.getCellValue(row[accIdIdx])
+            : '';
+
+        // Account Resolution Logic
+        if (finalAccountId.isEmpty ||
+            finalAccountId.toLowerCase() == 'manual' ||
+            !accounts.any((a) => a.id == finalAccountId)) {
+          final matchedAcc = accounts.firstWhere(
+              (a) => a.name.toLowerCase() == accountName.toLowerCase(),
+              orElse: () => Account.empty());
+
+          if (matchedAcc.id.isNotEmpty) {
+            finalAccountId = matchedAcc.id;
+          } else if (accountName.isNotEmpty &&
+              accountName.toLowerCase() != 'unknown') {
+            final newAcc = Account.create(
+                name: accountName,
+                type: AccountType.savings,
+                initialBalance: 0.0,
+                profileId: activeProfileId);
+            await _storage.saveAccount(newAcc);
+            accounts.add(newAcc);
+            finalAccountId = newAcc.id;
+          } else if (accounts.isNotEmpty) {
+            finalAccountId = accounts.first.id;
+          }
+        }
+
+        final toAccountId = toAccIdx != -1 && toAccIdx < row.length
+            ? ExcelUtils.getCellValue(row[toAccIdx])
+            : null;
+
+        // Type Logic
+        final isTransferAuto = typeStr.contains('transfer') ||
+            (toAccountId != null && toAccountId.isNotEmpty);
+        final finalType = typeStr.contains('income')
+            ? TransactionType.income
+            : isTransferAuto
+                ? TransactionType.transfer
+                : TransactionType.expense;
+
+        String finalId = idIdx != -1
+            ? ExcelUtils.getCellValue(row[idIdx])
+            : const Uuid().v4();
+        if (finalId.isEmpty) finalId = const Uuid().v4();
+
+        final txn = Transaction(
+          id: finalId,
+          title: title,
+          amount: amount.abs(),
+          date: ExcelUtils.getDateTimeValue(
+                  dateIdx != -1 ? row[dateIdx] : null) ??
+              DateTime.now(),
+          type: finalType,
+          category: catIdx != -1
+              ? ExcelUtils.getCellValue(row[catIdx])
+              : 'Miscellaneous',
+          accountId: finalAccountId,
+          toAccountId: toAccountId?.isEmpty == true ? null : toAccountId,
+          loanId:
+              loanIdIdx != -1 ? ExcelUtils.getCellValue(row[loanIdIdx]) : null,
+          isRecurringInstance: recurIdx != -1 && recurIdx < row.length
+              ? ExcelUtils.getCellValue(row[recurIdx]).toLowerCase() == 'true'
+              : false,
+          isDeleted: delIdx != -1 && delIdx < row.length
+              ? ExcelUtils.getCellValue(row[delIdx]).toLowerCase() == 'true'
+              : false,
+          gainAmount:
+              gainIdx != -1 ? ExcelUtils.getDoubleValue(row[gainIdx]) : null,
+          holdingTenureMonths: tenureIdx != -1
+              ? int.tryParse(ExcelUtils.getCellValue(row[tenureIdx]))
+              : null,
+          profileId: profileIdx != -1 && profileIdx < row.length
+              ? ExcelUtils.getCellValue(row[profileIdx])
+              : activeProfileId,
+        );
+
+        if (txn.type == TransactionType.transfer &&
+            txn.accountId != null &&
+            txn.accountId == txn.toAccountId) {
+          resultCounts['skipped_selftransfer'] =
+              (resultCounts['skipped_selftransfer'] ?? 0) + 1;
+          continue;
+        }
+
+        transactionsToSave.add(txn);
+        resultCounts['transactions'] = resultCounts['transactions']! + 1;
+      } catch (_) {
+        resultCounts['skipped_error'] =
+            (resultCounts['skipped_error'] ?? 0) + 1;
+      }
+    }
+    await _storage.saveTransactions(transactionsToSave, applyImpact: false);
+  }
+
+  Future<void> _importLoanTransactions(
+      Sheet sheet,
+      Map<String, int> resultCounts,
+      Map<String, List<LoanTransaction>> loanTxnsMap) async {
+    final headers = sheet.rows.first;
+    final loanIdIdx = ExcelUtils.findColumn(headers, ['loanid']);
+    if (loanIdIdx == -1) return;
+
+    final idIdx = ExcelUtils.findColumn(headers, ['id', 'txnid']);
+    final dateIdx = ExcelUtils.findColumn(headers, ['date']);
+    final typeIdx = ExcelUtils.findColumn(headers, ['type']);
+    final amountIdx = ExcelUtils.findColumn(headers, ['amount']);
+    final prinIdx = ExcelUtils.findColumn(headers, ['principalcomponent']);
+    final intIdx = ExcelUtils.findColumn(headers, ['interestcomponent']);
+    final resIdx = ExcelUtils.findColumn(headers, ['resultantprincipal']);
+
+    for (var row in sheet.rows.skip(1)) {
+      try {
+        if (row.length <= loanIdIdx) continue;
+        final loanId = ExcelUtils.getCellValue(row[loanIdIdx]);
+        if (loanId.isEmpty) continue;
+
+        final typeStr = typeIdx != -1 && typeIdx < row.length
+            ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
+            : 'emi';
+
+        final rawId = idIdx != -1 ? ExcelUtils.getCellValue(row[idIdx]) : '';
+        final validId = rawId.isEmpty ? const Uuid().v4() : rawId;
+
+        final txn = LoanTransaction(
+          id: validId,
+          date: ExcelUtils.getDateTimeValue(
+                  dateIdx != -1 ? row[dateIdx] : null) ??
+              DateTime.now(),
+          amount:
+              amountIdx != -1 ? ExcelUtils.getDoubleValue(row[amountIdx]) : 0.0,
+          type: LoanTransactionType.values.firstWhere(
+              (e) => e.name.toLowerCase() == typeStr,
+              orElse: () => LoanTransactionType.emi),
+          principalComponent:
+              prinIdx != -1 ? ExcelUtils.getDoubleValue(row[prinIdx]) : 0.0,
+          interestComponent:
+              intIdx != -1 ? ExcelUtils.getDoubleValue(row[intIdx]) : 0.0,
+          resultantPrincipal:
+              resIdx != -1 ? ExcelUtils.getDoubleValue(row[resIdx]) : 0.0,
+        );
+
+        if (!loanTxnsMap.containsKey(loanId)) {
+          loanTxnsMap[loanId] = [];
+        }
+        loanTxnsMap[loanId]!.add(txn);
+        resultCounts['loanTransactions'] =
+            resultCounts['loanTransactions']! + 1;
+      } catch (_) {}
+    }
   }
 }

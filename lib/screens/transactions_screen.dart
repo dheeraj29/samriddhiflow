@@ -16,12 +16,16 @@ class TransactionsScreen extends ConsumerStatefulWidget {
   final TimeRange? initialRange;
   final String? initialAccountId;
   final TransactionType? initialType;
-  const TransactionsScreen(
-      {super.key,
-      this.initialCategory,
-      this.initialRange,
-      this.initialAccountId,
-      this.initialType});
+  final DateTimeRange? initialCustomRange;
+
+  const TransactionsScreen({
+    super.key,
+    this.initialCategory,
+    this.initialRange,
+    this.initialAccountId,
+    this.initialType,
+    this.initialCustomRange,
+  });
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -45,6 +49,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     _category = widget.initialCategory;
     _selectedAccountId = widget.initialAccountId;
     _typeFilter = widget.initialType;
+    _customRange = widget.initialCustomRange;
+    if (_customRange != null && widget.initialRange == null) {
+      _range = TimeRange.custom;
+    }
   }
 
   @override

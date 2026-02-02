@@ -32,13 +32,39 @@ class ExcelUtils {
   }
 
   static int findColumn(List<Data?> headerRow, List<String> possibleNames) {
-    for (int i = 0; i < headerRow.length; i++) {
-      final name = getCellValue(headerRow[i]).toLowerCase();
-      if (possibleNames.any((n) => name == n.toLowerCase())) {
-        return i;
+    // Pass 1: Exact Match (High Priority)
+    for (var name in possibleNames) {
+      final target = _normalize(name);
+      for (int i = 0; i < headerRow.length; i++) {
+        final cell = headerRow[i];
+        if (cell == null) continue;
+        final header = _normalize(getCellValue(cell));
+        if (header == target) return i;
+      }
+    }
+
+    // Pass 2: Partial Match (Fallback)
+    for (var name in possibleNames) {
+      final target = _normalize(name);
+      for (int i = 0; i < headerRow.length; i++) {
+        final cell = headerRow[i];
+        if (cell == null) continue;
+        final header = _normalize(getCellValue(cell));
+        if (header.contains(target) || target.contains(header)) {
+          // Avoid creating false positives with very short strings like "id" matching "valid"
+          if (header.length > 2 || target == header) return i;
+        }
       }
     }
     return -1;
+  }
+
+  static String _normalize(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '');
   }
 
   static List<String> profileToRow(Profile p) => [p.id, p.name];

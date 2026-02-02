@@ -99,7 +99,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // 2. Verify Dialog is open
-    expect(find.text('Exclude Categories'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text('Filter Categories')),
+        findsOneWidget);
 
     // 3. Check Order
     // We expect "Zebra" (5000) to be FIRST (higher), "Apple" (100) to be SECOND (lower).

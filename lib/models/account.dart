@@ -80,6 +80,14 @@ class Account extends HiveObject {
     );
   }
 
+  factory Account.empty() {
+    return Account(
+      id: '',
+      name: '',
+      type: AccountType.savings,
+    );
+  }
+
   double calculateBilledAmount(List<Transaction> allTransactions) {
     if (type != AccountType.creditCard || billingCycleDay == null) {
       return balance;
