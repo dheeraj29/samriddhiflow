@@ -20,6 +20,7 @@ class FileService {
   /// On Windows: Saves to the Downloads folder.
   /// On Android: Requests permissions and saves to the Downloads/Documents folder.
   Future<String?> saveFile(String fileName, List<int> bytes) async {
+// coverage:ignore-start
     if (kIsWeb) {
       return _saveFileWeb(fileName, bytes);
     } else if (Platform.isWindows) {
@@ -27,6 +28,7 @@ class FileService {
     } else if (Platform.isAndroid) {
       return _saveFileAndroid(fileName, bytes);
     }
+// coverage:ignore-end
     return null;
   }
 
@@ -44,6 +46,7 @@ class FileService {
     return null;
   }
 
+// coverage:ignore-start
   // --- PRIVATE WEB LOGIC ---
   Future<String> _saveFileWeb(String fileName, List<int> bytes) async {
     return ConnectivityPlatform.saveFileWeb(fileName, bytes);
@@ -90,4 +93,5 @@ class FileService {
       throw Exception("Android save failed: $e");
     }
   }
+// coverage:ignore-end
 }

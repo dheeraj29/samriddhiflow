@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../theme/app_theme.dart';
-import '../models/category.dart';
 import '../models/profile.dart';
 import 'package:uuid/uuid.dart';
 
@@ -20,6 +19,9 @@ import 'recurring_manager_screen.dart';
 import 'holiday_manager_screen.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
+import '../utils/ui_utils.dart';
+import '../widgets/common_dialogs.dart';
+import '../widgets/category_manager_dialog.dart';
 
 // --- JS Interop Definitions ---
 
@@ -45,23 +47,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final storage = ref.read(storageServiceProvider);
     _isAppLockEnabled = storage.isAppLockEnabled();
 
+// coverage:ignore-start
     // Listen for PWA Install Prompt (Web Only)
     if (kIsWeb) {
-      if (kIsWeb) {
-        ConnectivityPlatform.listenForInstallPrompt((event) {
-          setState(() {
-            _installPrompt = event;
-          });
+      ConnectivityPlatform.listenForInstallPrompt((event) {
+        setState(() {
+          _installPrompt = event;
         });
-      }
+      });
     }
+// coverage:ignore-end
   }
 
   @override
   Widget build(BuildContext context) {
-    // Non-Blocking UI: Settings should load immediately.
-    // We try to get the user from the stream. If loading/error, user is null.
-    // This allows "Local Settings" to be usable even if "Cloud Sync" is initializing.
     final user = ref.watch(authStreamProvider).value;
 
     return Scaffold(
@@ -70,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           // --- APPEARANCE SECTION ---
-          _buildSectionHeader(context, 'Appearance'),
+          UIUtils.buildSectionHeader('Appearance', showDivider: false),
           ListTile(
             title: const Text('Theme Mode'),
             subtitle: Text(ref.watch(themeModeProvider).name.toUpperCase()),
@@ -100,12 +99,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
 
           // --- CLOUD SECTION ---
-          _buildSectionHeader(context, 'Cloud & Sync'),
+          UIUtils.buildSectionHeader('Cloud & Sync'),
           _buildCloudSection(context, user),
           const Divider(),
 
           // --- DATA MANAGEMENT ---
-          _buildSectionHeader(context, 'Data Management'),
+          UIUtils.buildSectionHeader('Data Management'),
           ListTile(
             title: const Text('Export Data to Excel'),
             subtitle: const Text('Backup all transactions (.xlsx)'),
@@ -128,7 +127,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
 
           // --- FEATURE MANAGEMENT ---
-          _buildSectionHeader(context, 'Feature Management'),
+          UIUtils.buildSectionHeader('Feature Management'),
           ListTile(
             title: const Text('Manage Recurring Payments'),
             subtitle: const Text('View or delete automated payments'),
@@ -153,7 +152,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: PureIcons.icon(Icons.category, color: Colors.blue),
             onTap: () => showDialog(
               context: context,
-              builder: (context) => _CategoryManagerDialog(),
+              builder: (context) => const CategoryManagerDialog(),
             ),
           ),
           SwitchListTile(
@@ -166,7 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
-          _buildSectionHeader(context, 'Profile Management'),
+          UIUtils.buildSectionHeader('Profile Management'),
           ref.watch(profilesProvider).when(
                 data: (profiles) => Column(
                   children: profiles.map((p) {
@@ -217,11 +216,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             title: const Text('Add New Profile'),
             leading: PureIcons.addCircle(color: Colors.blue),
-            onTap: () => _showAddProfileDialog(context, ref),
+            onTap: () => CommonDialogs.showTextFieldDialog(
+              context: context,
+              title: "Create Profile",
+              labelText: "Profile Name",
+              hintText: "Enter name (e.g. Business)",
+              initialValue: "",
+              saveLabel: "CREATE",
+              onSave: (val) async {
+                if (val.trim().isEmpty) return;
+                final newProfile = Profile(
+                  id: const Uuid().v4(),
+                  name: val.trim(),
+                );
+                await ref.read(storageServiceProvider).saveProfile(newProfile);
+                ref.invalidate(profilesProvider);
+              },
+            ),
           ),
 
           const Divider(),
-          _buildSectionHeader(context, 'Preferences'),
+          UIUtils.buildSectionHeader('Preferences'),
           ListTile(
             title: const Text('Currency'),
             subtitle: Text(
@@ -234,61 +249,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text(
                 'Limit: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(ref.watch(monthlyBudgetProvider))}'),
             leading: PureIcons.reports(color: Colors.blue),
-            onTap: _showBudgetDialog,
+            onTap: () => CommonDialogs.showTextFieldDialog(
+              context: context,
+              title: "Set Monthly Budget",
+              labelText: "Amount",
+              prefixText:
+                  '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
+              initialValue: ref.read(monthlyBudgetProvider).toString(),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              ],
+              onSave: (val) {
+                final amount = double.tryParse(val) ?? 0;
+                ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+              },
+            ),
           ),
           ListTile(
             title: const Text('Backup Reminder'),
             subtitle: Text(
                 'Remind after every ${ref.watch(backupThresholdProvider)} transactions'),
             leading: PureIcons.sync(color: Colors.purple),
-            onTap: () => _showBackupThresholdDialog(context, ref),
+            onTap: () => CommonDialogs.showTextFieldDialog(
+              context: context,
+              title: "Backup Interval",
+              labelText: "Number of transactions",
+              helperText: "Default: 20",
+              initialValue: ref.read(backupThresholdProvider).toString(),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onSave: (val) {
+                final threshold = int.tryParse(val) ?? 20;
+                ref
+                    .read(backupThresholdProvider.notifier)
+                    .setThreshold(threshold);
+              },
+            ),
           ),
 
           // --- AUTHENTICATION ---
-          // Only show logout if ONLINE
           if (user != null && !ref.watch(isOfflineProvider)) ...[
             const Divider(),
-            _buildSectionHeader(context, 'Authentication'),
+            UIUtils.buildSectionHeader('Authentication'),
             ListTile(
               title: const Text('Logout'),
               leading: PureIcons.logout(color: Colors.red),
-              onTap: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Logout"),
-                    content: const Text("Do you really want to logout?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("CANCEL"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: TextButton.styleFrom(
-                            foregroundColor:
-                                Theme.of(context).colorScheme.error),
-                        child: const Text("LOGOUT"),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  // Await logout to ensure state clearing
-                  await ref.read(authServiceProvider).signOut(ref);
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                }
-              },
+              onTap: () => UIUtils.handleLogout(context, ref),
             ),
           ],
 
           const Divider(),
-          _buildSectionHeader(context, 'Security'),
+          UIUtils.buildSectionHeader('Security'),
           SwitchListTile(
             title: const Text('App Lock (PIN)'),
             subtitle: const Text('Require PIN on startup/resume'),
@@ -316,7 +329,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
 
           const Divider(),
-          _buildSectionHeader(context, 'App Information'),
+          UIUtils.buildSectionHeader('App Information'),
           ListTile(
             title: const Text('Update Application'),
             subtitle: const Text('Clear cache and reload latest version'),
@@ -325,12 +338,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: _updateApplication,
           ),
           ListTile(
-            title: const Text('App Version'),
+            title: const Text('About'),
             subtitle: const Text(AppConstants.appVersion),
             leading: PureIcons.info(size: 20),
+            onTap: () =>
+                UIUtils.showCommonAboutDialog(context, AppConstants.appVersion),
           ),
 
-          // PWA Install Button (Only visible if prompt is captured)
+          // PWA Install Button
           if (_installPrompt != null) ...[
             const Divider(),
             ListTile(
@@ -384,7 +399,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           if (user != null && !ref.watch(isOfflineProvider)) ...[
             const Divider(),
-            _buildSectionHeader(context, 'Danger Zone', color: Colors.red),
+            UIUtils.buildSectionHeader('Danger Zone', showDivider: false),
             ListTile(
               title: const Text('Clear Cloud Data (Keep Account)',
                   style: TextStyle(color: Colors.orange)),
@@ -401,23 +416,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  // --- CLOUD UI ---
-  Widget _buildSectionHeader(BuildContext context, String title,
-      {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: color ?? Theme.of(context).colorScheme.primary,
-          letterSpacing: 1.2,
-        ),
       ),
     );
   }
@@ -564,6 +562,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // --- ACTIONS ---
 
+// coverage:ignore-start
   Future<void> _updateApplication() async {
     if (ref.read(isOfflineProvider)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -695,6 +694,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     }
   }
+// coverage:ignore-end
 
   Future<void> _exportLocalFile() async {
     // 1. Check Connectivity
@@ -1161,108 +1161,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ));
   }
 
-  void _showBudgetDialog() async {
-    final controller =
-        TextEditingController(text: ref.read(monthlyBudgetProvider).toString());
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set Monthly Budget'),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-          ],
-          decoration: InputDecoration(
-            labelText: 'Amount',
-            prefixText:
-                '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () {
-                final val = double.tryParse(controller.text) ?? 0;
-                ref.read(monthlyBudgetProvider.notifier).setBudget(val);
-                Navigator.pop(context);
-              },
-              child: const Text('Save')),
-        ],
-      ),
-    );
-  }
-
-  void _showBackupThresholdDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController(
-        text: ref.read(backupThresholdProvider).toString());
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Backup Interval'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-              labelText: 'Number of transactions', helperText: 'Default: 20'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () {
-                final val = int.tryParse(controller.text) ?? 20;
-                ref.read(backupThresholdProvider.notifier).setThreshold(val);
-                Navigator.pop(context);
-              },
-              child: const Text('Save')),
-        ],
-      ),
-    );
-  }
-
-  void _showAddProfileDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Create Profile"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: "Profile Name",
-            hintText: "Enter name (e.g. Business)",
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              final newProfile = Profile(
-                id: const Uuid().v4(),
-                name: controller.text.trim(),
-              );
-              await ref.read(storageServiceProvider).saveProfile(newProfile);
-              ref.invalidate(profilesProvider);
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text("CREATE"),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<bool> _showVerifyPinDialog(BuildContext context) async {
     final controller = TextEditingController();
     final result = await showDialog<bool>(
@@ -1469,286 +1367,5 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       );
     });
-  }
-}
-
-class _CategoryManagerDialog extends StatefulWidget {
-  @override
-  State<_CategoryManagerDialog> createState() => _CategoryManagerDialogState();
-}
-
-class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
-  final TextEditingController _controller = TextEditingController();
-  CategoryUsage _usage = CategoryUsage.expense;
-  CategoryTag _tag = CategoryTag.none;
-  int _iconCode = 0xe5c7;
-  String? _editingCategoryId;
-  final ScrollController _iconScrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _iconScrollController.dispose();
-    super.dispose();
-  }
-
-  final List<int> _iconOptions = [
-    0xe332,
-    0xea68,
-    0xea14,
-    0xef92,
-    0xef97,
-    0xef63,
-    0xe6ca,
-    0xe1d5,
-    0xe546,
-    0xe8b0,
-    0xe550,
-    0xf0ff,
-    0xeb41, // pets
-    0xe869, // gift
-    0xe2a8, // beauty
-    0xe110, // home
-    0xe842, // shopping
-    0xe02c, // movies
-    0xe8b1, // family/handshake
-    0xe5c7, // add
-    0xe548,
-    0xeb6f,
-    0xf8eb,
-    0xf3ee,
-    0xe2eb,
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final allCategories = ref.watch(categoriesProvider);
-        final usedIcons =
-            allCategories.map((c) => c.iconCode).where((c) => c != 0).toSet();
-        final currentIconOptions = {..._iconOptions, ...usedIcons}.toList();
-
-        final filteredCategories = allCategories.where((c) {
-          if (_usage == CategoryUsage.both) return true;
-          return c.usage == CategoryUsage.both || c.usage == _usage;
-        }).toList();
-
-        return AlertDialog(
-          title: const Text('Manage Categories'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _controller,
-                  decoration: const InputDecoration(
-                      labelText: 'Category Name', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<CategoryUsage>(
-                        initialValue: _usage,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Usage',
-                          border: OutlineInputBorder(),
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: CategoryUsage.values
-                            .map((u) => DropdownMenuItem(
-                                value: u,
-                                child: Text(u.name.toUpperCase(),
-                                    style: const TextStyle(fontSize: 13))))
-                            .toList(),
-                        onChanged: (v) => setState(() => _usage = v!),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<CategoryTag>(
-                        initialValue: _tag,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Tag',
-                          border: OutlineInputBorder(),
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: CategoryTag.values
-                            .map((t) => DropdownMenuItem(
-                                value: t,
-                                child: Text(t.name.toUpperCase(),
-                                    style: const TextStyle(fontSize: 13))))
-                            .toList(),
-                        onChanged: (v) => setState(() => _tag = v!),
-                      ),
-                    ),
-                  ],
-                ),
-                const Text("Select Icon",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 60, // Taller to accommodate scrollbar
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    controller: _iconScrollController,
-                    child: ListView.builder(
-                      controller: _iconScrollController,
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(bottom: 12),
-                      itemCount: currentIconOptions.length,
-                      itemBuilder: (context, index) {
-                        final code = currentIconOptions[index];
-                        final isSelected = _iconCode == code;
-                        return GestureDetector(
-                          onTap: () => setState(() => _iconCode = code),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFF6C63FF)
-                                      .withValues(alpha: 0.1)
-                                  : Colors.transparent,
-                              border: Border.all(
-                                  color: isSelected
-                                      ? const Color(0xFF6C63FF)
-                                      : Colors.grey.withValues(alpha: 0.3)),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: PureIcons.categoryIcon(code,
-                                color: isSelected
-                                    ? const Color(0xFF6C63FF)
-                                    : Colors.blueGrey),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    if (_controller.text.isNotEmpty) {
-                      if (_editingCategoryId != null) {
-                        ref.read(categoriesProvider.notifier).updateCategory(
-                              _editingCategoryId!,
-                              name: _controller.text,
-                              usage: _usage,
-                              tag: _tag,
-                              iconCode: _iconCode,
-                            );
-                      } else {
-                        ref.read(categoriesProvider.notifier).addCategory(
-                              Category.create(
-                                  name: _controller.text,
-                                  usage: _usage,
-                                  tag: _tag,
-                                  iconCode: _iconCode),
-                            );
-                      }
-
-                      _controller.clear();
-                      setState(() {
-                        _usage = CategoryUsage.expense;
-                        _tag = CategoryTag.none;
-                        _iconCode = 0xe5c7;
-                        _editingCategoryId = null;
-                      });
-                    }
-                  },
-                  icon: _editingCategoryId != null
-                      ? PureIcons.save()
-                      : PureIcons.add(),
-                  label: Text(_editingCategoryId != null
-                      ? 'Update Category'
-                      : 'Add Category'),
-                  style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 40)),
-                ),
-                if (_editingCategoryId != null) ...[
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () {
-                      _controller.clear();
-                      setState(() {
-                        _usage = CategoryUsage.expense;
-                        _tag = CategoryTag.none;
-                        _iconCode = 0xe5c7;
-                        _editingCategoryId = null;
-                      });
-                    },
-                    child: const Text('Cancel Edit'),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                const Divider(),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: filteredCategories.length,
-                    itemBuilder: (context, index) {
-                      final c = filteredCategories[index];
-                      return ListTile(
-                        leading: c.iconCode != 0
-                            ? PureIcons.categoryIcon(c.iconCode,
-                                color: Colors.blueGrey)
-                            : PureIcons.icon(Icons.category_outlined,
-                                size: 18, color: Colors.blue),
-                        title: Text(c.name),
-                        subtitle: Text(
-                            '${c.usage.name.toUpperCase()}${c.tag != CategoryTag.none ? ' • ${_getTagLabel(c.tag)}' : ''}'),
-                        onTap: () {
-                          setState(() {
-                            _controller.text = c.name;
-                            _usage = c.usage;
-                            _tag = c.tag;
-                            _iconCode = c.iconCode;
-                            _editingCategoryId = c.id;
-                          });
-                        },
-                        trailing: IconButton(
-                          icon: PureIcons.deleteOutlined(
-                              size: 18, color: Colors.red),
-                          onPressed: () => ref
-                              .read(categoriesProvider.notifier)
-                              .removeCategory(c.id),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close')),
-          ],
-        );
-      },
-    );
-  }
-
-  String _getTagLabel(CategoryTag tag) {
-    switch (tag) {
-      case CategoryTag.none:
-        return '';
-      case CategoryTag.capitalGain:
-        return 'Capital Gain';
-      case CategoryTag.directTax:
-        return 'Direct Tax';
-      case CategoryTag.budgetFree:
-        return 'Budget Free';
-      case CategoryTag.taxFree:
-        return 'Tax Free';
-    }
   }
 }

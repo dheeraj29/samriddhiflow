@@ -11,6 +11,16 @@ class AppTheme {
   static const Color error = Color(0xFFFF5252);
   static const Color success = Color(0xFF4CAF50);
 
+  static const List<Color> chartPalette = [
+    Color(0xFF6C63FF), // Primary
+    Color(0xFF00BFA6), // Secondary
+    Color(0xFFFFB74D), // Orange
+    Color(0xFF4FC3F7), // Light Blue
+    Color(0xFF9575CD), // Purple
+    Color(0xFFFF8A65), // Deep Orange
+    Color(0xFFAED581), // Light Green
+  ];
+
   static const TextStyle offlineSafeTextStyle = TextStyle(
     fontFamily: 'AppFont', // Bundled Asset (Roboto)
     fontFamilyFallback: ['sans-serif'],

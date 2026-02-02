@@ -8,22 +8,12 @@ import '../models/profile.dart';
 import '../utils/currency_utils.dart';
 import 'package:uuid/uuid.dart';
 import 'file_service.dart';
+import '../utils/excel_utils.dart';
 
 class ExcelService {
   final StorageService _storage;
   final FileService _fileService;
   ExcelService(this._storage, this._fileService);
-
-  String _getVal(Data? cell) {
-    if (cell == null || cell.value == null) return '';
-    final val = cell.value;
-    if (val is TextCellValue) return val.value.text?.trim() ?? '';
-    if (val is IntCellValue) return val.value.toString();
-    if (val is DoubleCellValue) return val.value.toString();
-    if (val is BoolCellValue) return val.value.toString();
-    if (val is DateCellValue) return val.toString().trim();
-    return val.toString().trim();
-  }
 
   Future<List<int>> exportData({bool allProfiles = false}) async {
     final excel = Excel.createExcel();
@@ -274,7 +264,7 @@ class ExcelService {
         for (int i = 0; i < headerRow.length; i++) {
           final cell = headerRow[i];
           if (cell == null) continue;
-          final header = _getVal(cell)
+          final header = ExcelUtils.getCellValue(cell)
               .toLowerCase()
               .replaceAll(' ', '')
               .replaceAll('_', '')
@@ -293,7 +283,7 @@ class ExcelService {
         for (int i = 0; i < headerRow.length; i++) {
           final cell = headerRow[i];
           if (cell == null) continue;
-          final header = _getVal(cell)
+          final header = ExcelUtils.getCellValue(cell)
               .toLowerCase()
               .replaceAll(' ', '')
               .replaceAll('_', '')
@@ -320,16 +310,20 @@ class ExcelService {
             _storage.getProfiles().map((p) => p.id).toSet();
 
         for (var row in profSheet.rows.skip(1)) {
-          final id = idIdx != -1 ? _getVal(row[idIdx]) : '';
+          final id = idIdx != -1 ? ExcelUtils.getCellValue(row[idIdx]) : '';
           if (id.isEmpty || existingProfiles.contains(id)) continue;
-          final name =
-              nameIdx != -1 ? _getVal(row[nameIdx]) : 'Restored Profile';
+          final name = nameIdx != -1
+              ? ExcelUtils.getCellValue(row[nameIdx])
+              : 'Restored Profile';
           final profile = Profile(
             id: id,
             name: name,
-            currencyLocale: localeIdx != -1 ? _getVal(row[localeIdx]) : 'en_IN',
+            currencyLocale: localeIdx != -1
+                ? ExcelUtils.getCellValue(row[localeIdx])
+                : 'en_IN',
             monthlyBudget: budgetIdx != -1
-                ? double.tryParse(_getVal(row[budgetIdx])) ?? 0.0
+                ? double.tryParse(ExcelUtils.getCellValue(row[budgetIdx])) ??
+                    0.0
                 : 0.0,
           );
           await _storage.saveProfile(profile);
@@ -362,37 +356,38 @@ class ExcelService {
           for (var row in rows) {
             try {
               if (row.length <= loanIdIdx) continue;
-              final loanId = _getVal(row[loanIdIdx]);
+              final loanId = ExcelUtils.getCellValue(row[loanIdIdx]);
               if (loanId.isEmpty) continue;
 
               final id = idIdx != -1 && idIdx < row.length
-                  ? _getVal(row[idIdx])
+                  ? ExcelUtils.getCellValue(row[idIdx])
                   : const Uuid().v4();
               if (id.isEmpty) continue;
 
               final dateStr = dateIdx != -1 && dateIdx < row.length
-                  ? _getVal(row[dateIdx])
+                  ? ExcelUtils.getCellValue(row[dateIdx])
                   : '';
               final date = DateTime.tryParse(dateStr) ?? DateTime.now();
 
               final typeStr = typeIdx != -1 && typeIdx < row.length
-                  ? _getVal(row[typeIdx]).toLowerCase()
+                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
                   : 'emi';
 
               final amount = amountIdx != -1 && amountIdx < row.length
-                  ? double.tryParse(_getVal(row[amountIdx])) ?? 0
+                  ? double.tryParse(ExcelUtils.getCellValue(row[amountIdx])) ??
+                      0
                   : 0.0;
 
               final pComp = prinIdx != -1 && prinIdx < row.length
-                  ? double.tryParse(_getVal(row[prinIdx])) ?? 0
+                  ? double.tryParse(ExcelUtils.getCellValue(row[prinIdx])) ?? 0
                   : 0.0;
 
               final iComp = intIdx != -1 && intIdx < row.length
-                  ? double.tryParse(_getVal(row[intIdx])) ?? 0
+                  ? double.tryParse(ExcelUtils.getCellValue(row[intIdx])) ?? 0
                   : 0.0;
 
               final resPrin = resIdx != -1 && resIdx < row.length
-                  ? double.tryParse(_getVal(row[resIdx])) ?? 0
+                  ? double.tryParse(ExcelUtils.getCellValue(row[resIdx])) ?? 0
                   : 0.0;
 
               final txn = LoanTransaction(
@@ -435,19 +430,21 @@ class ExcelService {
           for (var row in rows) {
             try {
               if (row.length <= nameIdx) continue;
-              final id =
-                  idIdx != -1 && idIdx < row.length ? _getVal(row[idIdx]) : '';
+              final id = idIdx != -1 && idIdx < row.length
+                  ? ExcelUtils.getCellValue(row[idIdx])
+                  : '';
               if (id.isNotEmpty && existingAccounts.contains(id)) continue;
 
-              final name = _getVal(row[nameIdx]);
+              final name = ExcelUtils.getCellValue(row[nameIdx]);
               if (name.isEmpty) continue;
 
               final typeStr = typeIdx != -1 && typeIdx < row.length
-                  ? _getVal(row[typeIdx]).toLowerCase()
+                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
                   : 'savings';
               final balance = balanceIdx != -1 && balanceIdx < row.length
                   ? CurrencyUtils.roundTo2Decimals(double.tryParse(
-                          _getVal(row[balanceIdx]).replaceAll(',', '')) ??
+                          ExcelUtils.getCellValue(row[balanceIdx])
+                              .replaceAll(',', '')) ??
                       0.0)
                   : 0.0;
 
@@ -459,20 +456,21 @@ class ExcelService {
                     orElse: () => AccountType.savings),
                 balance: balance,
                 currency: currIdx != -1 && currIdx < row.length
-                    ? _getVal(row[currIdx])
+                    ? ExcelUtils.getCellValue(row[currIdx])
                     : '',
                 creditLimit: limitIdx != -1 && limitIdx < row.length
-                    ? double.tryParse(_getVal(row[limitIdx]))
+                    ? double.tryParse(ExcelUtils.getCellValue(row[limitIdx]))
                     : null,
                 billingCycleDay: billingIdx != -1 && billingIdx < row.length
-                    ? int.tryParse(_getVal(row[billingIdx]))
+                    ? int.tryParse(ExcelUtils.getCellValue(row[billingIdx]))
                     : null,
                 paymentDueDateDay: dueIdx != -1 && dueIdx < row.length
-                    ? int.tryParse(_getVal(row[dueIdx]))
+                    ? int.tryParse(ExcelUtils.getCellValue(row[dueIdx]))
                     : null,
                 profileId: findColumn(headerRow, ['profileid']) != -1 &&
                         findColumn(headerRow, ['profileid']) < row.length
-                    ? _getVal(row[findColumn(headerRow, ['profileid'])])
+                    ? ExcelUtils.getCellValue(
+                        row[findColumn(headerRow, ['profileid'])])
                     : activeProfileId,
               );
               await _storage.saveAccount(acc);
@@ -490,11 +488,12 @@ class ExcelService {
           for (var row in rows) {
             try {
               if (row.length <= nameIdx) continue;
-              final id =
-                  idIdx != -1 && idIdx < row.length ? _getVal(row[idIdx]) : '';
+              final id = idIdx != -1 && idIdx < row.length
+                  ? ExcelUtils.getCellValue(row[idIdx])
+                  : '';
               if (id.isNotEmpty && existingLoans.contains(id)) continue;
 
-              final name = _getVal(row[nameIdx]);
+              final name = ExcelUtils.getCellValue(row[nameIdx]);
               if (name.isEmpty) continue;
 
               final loan = Loan(
@@ -504,49 +503,53 @@ class ExcelService {
                     (e) =>
                         e.name.toLowerCase() ==
                         (findColumn(headerRow, ['type']) != -1
-                            ? _getVal(row[findColumn(headerRow, ['type'])])
+                            ? ExcelUtils.getCellValue(
+                                    row[findColumn(headerRow, ['type'])])
                                 .toLowerCase()
                             : 'personal'),
                     orElse: () => LoanType.personal),
                 totalPrincipal: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        _getVal(row[findColumn(
+                        ExcelUtils.getCellValue(row[findColumn(
                                 headerRow, ['totalprincipal', 'principal'])])
                             .replaceAll(',', '')) ??
                     0.0),
                 remainingPrincipal: CurrencyUtils.roundTo2Decimals(
-                    double.tryParse(_getVal(row[findColumn(
+                    double.tryParse(ExcelUtils.getCellValue(row[findColumn(
                                 headerRow, ['remainingprincipal', 'balance'])])
                             .replaceAll(',', '')) ??
                         0.0),
                 interestRate: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        _getVal(row[findColumn(
+                        ExcelUtils.getCellValue(row[findColumn(
                                 headerRow, ['interestrate', 'rate'])])
                             .replaceAll(',', '')) ??
                     0.0),
-                tenureMonths: int.tryParse(_getVal(row[
+                tenureMonths: int.tryParse(ExcelUtils.getCellValue(row[
                         findColumn(headerRow, ['tenuremonths', 'tenure'])])) ??
                     0,
                 emiAmount: CurrencyUtils.roundTo2Decimals(double.tryParse(
-                        _getVal(row[
+                        ExcelUtils.getCellValue(row[
                                 findColumn(headerRow, ['emiamount', 'emi'])])
                             .replaceAll(',', '')) ??
                     0.0),
-                emiDay: int.tryParse(_getVal(
+                emiDay: int.tryParse(ExcelUtils.getCellValue(
                         row[findColumn(headerRow, ['emiday', 'day'])])) ??
                     1,
-                startDate: DateTime.tryParse(_getVal(
+                startDate: DateTime.tryParse(ExcelUtils.getCellValue(
                         row[findColumn(headerRow, ['startdate', 'date'])])) ??
                     DateTime.now(),
-                firstEmiDate: DateTime.tryParse(_getVal(row[findColumn(
-                        headerRow, ['firstemidate', 'firstdate'])])) ??
+                firstEmiDate: DateTime.tryParse(ExcelUtils.getCellValue(row[
+                        findColumn(
+                            headerRow, ['firstemidate', 'firstdate'])])) ??
                     DateTime.now(),
                 accountId: findColumn(headerRow, ['accountid']) != -1
-                    ? _getVal(row[findColumn(headerRow, ['accountid'])])
+                    ? ExcelUtils.getCellValue(
+                        row[findColumn(headerRow, ['accountid'])])
                     : null,
                 transactions: [],
                 profileId: findColumn(headerRow, ['profileid']) != -1 &&
                         findColumn(headerRow, ['profileid']) < row.length
-                    ? _getVal(row[findColumn(headerRow, ['profileid'])])
+                    ? ExcelUtils.getCellValue(
+                        row[findColumn(headerRow, ['profileid'])])
                     : activeProfileId,
               );
               if (loan.accountId?.isEmpty ?? false) loan.accountId = null;
@@ -567,23 +570,28 @@ class ExcelService {
           for (var row in rows) {
             try {
               if (row.length <= nameIdx) continue;
-              final name = _getVal(row[nameIdx]);
+              final name = ExcelUtils.getCellValue(row[nameIdx]);
               if (name.isEmpty || existingCats.contains(name.toLowerCase())) {
                 continue;
               }
 
               final usageStr = findColumn(headerRow, ['usage', 'type']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['usage', 'type'])])
+                  ? ExcelUtils.getCellValue(
+                          row[findColumn(headerRow, ['usage', 'type'])])
                       .toLowerCase()
                   : 'both';
               final tagStr = findColumn(headerRow, ['tag']) != -1
-                  ? _getVal(row[findColumn(headerRow, ['tag'])]).toLowerCase()
+                  ? ExcelUtils.getCellValue(row[findColumn(headerRow, ['tag'])])
+                      .toLowerCase()
                   : 'none';
 
               final cat = Category(
                 id: findColumn(headerRow, ['id']) != -1 &&
-                        _getVal(row[findColumn(headerRow, ['id'])]).isNotEmpty
-                    ? _getVal(row[findColumn(headerRow, ['id'])])
+                        ExcelUtils.getCellValue(
+                                row[findColumn(headerRow, ['id'])])
+                            .isNotEmpty
+                    ? ExcelUtils.getCellValue(
+                        row[findColumn(headerRow, ['id'])])
                     : const Uuid().v4(),
                 name: name,
                 usage: CategoryUsage.values.firstWhere(
@@ -593,13 +601,14 @@ class ExcelService {
                     (e) => e.name.toLowerCase() == tagStr,
                     orElse: () => CategoryTag.none),
                 iconCode: findColumn(headerRow, ['iconcode']) != -1
-                    ? int.tryParse(_getVal(
+                    ? int.tryParse(ExcelUtils.getCellValue(
                             row[findColumn(headerRow, ['iconcode'])])) ??
                         0
                     : 0,
                 profileId: findColumn(headerRow, ['profileid']) != -1 &&
                         findColumn(headerRow, ['profileid']) < row.length
-                    ? _getVal(row[findColumn(headerRow, ['profileid'])])
+                    ? ExcelUtils.getCellValue(
+                        row[findColumn(headerRow, ['profileid'])])
                     : activeProfileId,
               );
               await _storage.addCategory(cat);
@@ -640,39 +649,40 @@ class ExcelService {
               // Basic Length Check
               if (row.length <= titleIdx || row.length <= amountIdx) continue;
 
-              final title = _getVal(row[titleIdx]);
+              final title = ExcelUtils.getCellValue(row[titleIdx]);
               if (title.isEmpty) continue;
 
               final amount = CurrencyUtils.roundTo2Decimals(double.tryParse(
-                      _getVal(row[amountIdx]).replaceAll(',', '')) ??
+                      ExcelUtils.getCellValue(row[amountIdx])
+                          .replaceAll(',', '')) ??
                   0.0);
 
               // Safe extractions
               final id = (idIdx != -1 && idIdx < row.length)
-                  ? _getVal(row[idIdx])
+                  ? ExcelUtils.getCellValue(row[idIdx])
                   : const Uuid().v4();
 
               final dateStr = (dateIdx != -1 && dateIdx < row.length)
-                  ? _getVal(row[dateIdx])
+                  ? ExcelUtils.getCellValue(row[dateIdx])
                   : null;
               final date = (dateStr != null && dateStr.isNotEmpty)
                   ? (DateTime.tryParse(dateStr) ?? DateTime.now())
                   : DateTime.now();
 
               final typeStr = (typeIdx != -1 && typeIdx < row.length)
-                  ? _getVal(row[typeIdx]).toLowerCase()
+                  ? ExcelUtils.getCellValue(row[typeIdx]).toLowerCase()
                   : 'expense'; // Default
 
               final category = (catIdx != -1 && catIdx < row.length)
-                  ? _getVal(row[catIdx])
+                  ? ExcelUtils.getCellValue(row[catIdx])
                   : 'Miscellaneous';
 
               final accountId = (accIdIdx != -1 && accIdIdx < row.length)
-                  ? _getVal(row[accIdIdx])
+                  ? ExcelUtils.getCellValue(row[accIdIdx])
                   : '';
 
               final accountName = (accNameIdx != -1 && accNameIdx < row.length)
-                  ? _getVal(row[accNameIdx])
+                  ? ExcelUtils.getCellValue(row[accNameIdx])
                   : 'Default Account';
 
               // Account Resolution
@@ -702,27 +712,28 @@ class ExcelService {
               }
 
               final toAccountId = (toAccIdx != -1 && toAccIdx < row.length)
-                  ? _getVal(row[toAccIdx])
+                  ? ExcelUtils.getCellValue(row[toAccIdx])
                   : null;
 
               final loanId = (loanIdIdx != -1 && loanIdIdx < row.length)
-                  ? _getVal(row[loanIdIdx])
+                  ? ExcelUtils.getCellValue(row[loanIdIdx])
                   : null;
 
               final isRecurring = (recurIdx != -1 && recurIdx < row.length)
-                  ? _getVal(row[recurIdx]).toLowerCase() == 'true'
+                  ? ExcelUtils.getCellValue(row[recurIdx]).toLowerCase() ==
+                      'true'
                   : false;
 
               final isDeleted = (delIdx != -1 && delIdx < row.length)
-                  ? _getVal(row[delIdx]).toLowerCase() == 'true'
+                  ? ExcelUtils.getCellValue(row[delIdx]).toLowerCase() == 'true'
                   : false;
 
               final gainAmount = (gainIdx != -1 && gainIdx < row.length)
-                  ? double.tryParse(_getVal(row[gainIdx]))
+                  ? double.tryParse(ExcelUtils.getCellValue(row[gainIdx]))
                   : null;
 
               final holdingTenure = (tenureIdx != -1 && tenureIdx < row.length)
-                  ? int.tryParse(_getVal(row[tenureIdx]))
+                  ? int.tryParse(ExcelUtils.getCellValue(row[tenureIdx]))
                   : null;
 
               // Type Logic & Icon Fix
@@ -765,7 +776,7 @@ class ExcelService {
                 gainAmount: gainAmount,
                 holdingTenureMonths: holdingTenure,
                 profileId: (profileIdx != -1 && profileIdx < row.length)
-                    ? _getVal(row[profileIdx])
+                    ? ExcelUtils.getCellValue(row[profileIdx])
                     : activeProfileId,
               );
 

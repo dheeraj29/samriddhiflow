@@ -7,7 +7,6 @@ import 'settings_screen.dart';
 import '../utils/debug_logger.dart';
 import 'transactions_screen.dart';
 import 'reports_screen.dart';
-import 'login_screen.dart';
 import 'reminders_screen.dart';
 import '../models/transaction.dart';
 import '../models/account.dart';
@@ -18,6 +17,7 @@ import '../utils/billing_helper.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
+import '../utils/ui_utils.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -118,38 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ref.watch(isLoggedInProvider)) &&
               !ref.watch(isOfflineProvider))
             IconButton(
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Logout"),
-                    content: const Text("Do you really want to logout?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("CANCEL"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: TextButton.styleFrom(
-                            foregroundColor:
-                                Theme.of(context).colorScheme.error),
-                        child: const Text("LOGOUT"),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  // Await logout to ensure state clearing
-                  await ref.read(authServiceProvider).signOut(ref);
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                }
-              },
+              onPressed: () => UIUtils.handleLogout(context, ref),
               icon: PureIcons.logout(),
               tooltip: 'Logout',
             ),
