@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category.dart';
 import '../providers.dart';
+import 'pure_icons.dart';
 
 class CategoryManagerDialog extends StatefulWidget {
   const CategoryManagerDialog({super.key});
@@ -158,8 +159,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                                         : Colors.grey),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                  IconData(code, fontFamily: 'MaterialIcons'),
+                              child: Icon(PureIcons.categoryIconData(code),
                                   size: 24),
                             ),
                           ),
@@ -215,8 +215,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                     itemBuilder: (context, index) {
                       final cat = filteredCategories[index];
                       return ListTile(
-                        leading: Icon(
-                            IconData(cat.iconCode, fontFamily: 'MaterialIcons'),
+                        leading: Icon(PureIcons.categoryIconData(cat.iconCode),
                             size: 20),
                         title: Text(cat.name,
                             style: const TextStyle(fontSize: 14)),
