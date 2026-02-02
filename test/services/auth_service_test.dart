@@ -70,30 +70,29 @@ void main() {
       final mockRef = MockRef();
       final mockNotifier = MockLogoutNotifier();
 
-      // Stub the property access "notifier"
-      // Wait, provider.notifier returns the Notifier/Controller.
-      // ref.read(provider.notifier) returns the controller.
-      // So ref.read(...) -> mockNotifier.
-
       // Mock ref.read to return our notifier
       when(() => mockRef.read(any())).thenReturn(mockNotifier);
 
-      // Mock checking
-      // The code uses .value = true?
-      // If logoutRequestedProvider is a StateProvider, .notifier gives StateController.
-      // StateController has .state. Does it have .value?
-      // Code says .value. Maybe it's a ValueNotifier?
-      // Let's assume the code is correct.
-      // If code uses .value, mock must support .value setter.
-      // Mocking a setter: when(() => mock.value = true).thenReturn(null);
+      // Stub value setter (bool has only two states)
+      when(() {
+        mockNotifier.value = true;
+      }).thenReturn(null);
+      when(() {
+        mockNotifier.value = false;
+      }).thenReturn(null);
 
       when(() => mockAuth.signOut()).thenAnswer((_) async {});
 
       // Execute with our custom mock ref
       await authService.signOut(mockRef);
 
+      // Allow "unawaited" future to run on the event loop
+      await Future.delayed(Duration.zero);
+      await Future.delayed(const Duration(milliseconds: 50));
+
       // Verify
       verify(() => mockAuth.signOut()).called(1);
+      verify(() => mockNotifier.value = true).called(1);
     });
 
     test('Delete Account', () async {
