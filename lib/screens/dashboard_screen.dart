@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'add_transaction_screen.dart';
 import 'loans_screen.dart';
 import 'accounts_screen.dart';
@@ -18,6 +17,7 @@ import '../feature_providers.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
+import '../widgets/transaction_list_item.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -253,21 +253,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
             for (var acc in accounts) {
               double unbilled = 0;
-              if (acc.type == AccountType.creditCard &&
-                  acc.billingCycleDay != null) {
-                final cycleStart =
-                    BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-                final relevantTxns = allTxns.where((t) =>
-                    !t.isDeleted &&
-                    t.accountId == acc.id &&
-                    DateTime(t.date.year, t.date.month, t.date.day)
-                        .isAfter(cycleStart));
-
-                for (var t in relevantTxns) {
-                  if (t.type == TransactionType.expense) unbilled += t.amount;
-                  if (t.type == TransactionType.income) unbilled -= t.amount;
-                  if (t.type == TransactionType.transfer) unbilled += t.amount;
-                }
+              if (acc.type == AccountType.creditCard) {
+                unbilled =
+                    BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
               }
 
               if (acc.type == AccountType.creditCard) {
@@ -376,22 +364,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       if (loans.isNotEmpty && totalLoanLiability > 0) ...[
                         const SizedBox(height: 8),
                         Builder(builder: (context) {
-                          // Calculate max end date
-                          final maxEndDate = loans
-                              .map((l) => l.startDate
-                                  .add(Duration(days: l.tenureMonths * 30)))
-                              .reduce((a, b) => a.isAfter(b) ? a : b);
-                          final daysLeft =
-                              maxEndDate.difference(DateTime.now()).inDays;
+                          final tenure = ref
+                              .read(loanServiceProvider)
+                              .calculateMaxRemainingTenure(loans);
 
-                          if (daysLeft <= 0) return const SizedBox();
+                          if (tenure.days <= 0) return const SizedBox();
 
                           return Row(
                             children: [
                               const SizedBox(
                                   width: 36), // Indent to align with text
                               Text(
-                                'Debt Free in ~${(daysLeft / 30).toStringAsFixed(1)} months ($daysLeft days)',
+                                'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.orange.withValues(alpha: 0.8),
@@ -710,131 +694,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           itemCount: transactions.length > 5 ? 5 : transactions.length,
           itemBuilder: (context, index) {
             final txn = transactions[index];
-            final accName = txn.accountId == null
-                ? "Manual"
-                : accounts.any((a) => a.id == txn.accountId)
-                    ? accounts.firstWhere((a) => a.id == txn.accountId).name
-                    : "Deleted Account";
 
-            final catObj = categories.cast<Category?>().firstWhere(
-                (c) => c?.name == txn.category,
-                orElse: () => categories.isNotEmpty ? categories.first : null);
-            final isCapitalGain = catObj?.tag == CategoryTag.capitalGain;
-
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: txn.type == TransactionType.income
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : txn.type == TransactionType.transfer
-                        ? Colors.blue.withValues(alpha: 0.1)
-                        : Colors.redAccent.withValues(alpha: 0.1),
-                child: txn.type == TransactionType.income
-                    ? PureIcons.income(size: 18)
-                    : txn.type == TransactionType.transfer
-                        ? PureIcons.transfer(size: 18)
-                        : PureIcons.expense(size: 18),
-              ),
-              title: Text(txn.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Builder(builder: (context) {
-                    final datePart =
-                        DateFormat('MMM dd, yyyy • hh:mm a').format(txn.date);
-                    String metadata;
-                    if (txn.type == TransactionType.transfer) {
-                      final toName = txn.toAccountId == null
-                          ? "Manual"
-                          : accounts.any((a) => a.id == txn.toAccountId)
-                              ? accounts
-                                  .firstWhere((a) => a.id == txn.toAccountId)
-                                  .name
-                              : "Deleted Account";
-                      metadata = '$accName -> $toName';
-                    } else {
-                      metadata = '${txn.category} • $accName';
-                    }
-                    return Text(
-                      '$datePart • $metadata',
-                      style: const TextStyle(fontSize: 12),
-                    );
-                  }),
-                  if (isCapitalGain &&
-                      (txn.gainAmount != null ||
-                          txn.holdingTenureMonths != null))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2.0),
-                      child: Row(
-                        children: [
-                          if (txn.gainAmount != null) ...[
-                            Text(
-                              '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: txn.gainAmount! >= 0
-                                    ? Colors.green
-                                    : Colors.redAccent,
-                              ),
-                            ),
-                            SmartCurrencyText(
-                              value: txn.gainAmount!.abs(),
-                              locale: currencyLocale,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: txn.gainAmount! >= 0
-                                    ? Colors.green
-                                    : Colors.redAccent,
-                              ),
-                            ),
-                          ] else if (isCapitalGain) ...[
-                            const Text(
-                              'Profit: ',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            SmartCurrencyText(
-                              value: 0,
-                              locale: currencyLocale,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                          if (txn.gainAmount != null &&
-                              txn.holdingTenureMonths != null)
-                            const Text(' • ', style: TextStyle(fontSize: 11)),
-                          if (txn.holdingTenureMonths != null)
-                            Text(
-                              'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              trailing: SmartCurrencyText(
-                value: txn.amount,
-                locale: currencyLocale,
-                prefix: txn.type == TransactionType.income ? "+" : "-",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: txn.type == TransactionType.income
-                      ? Colors.green
-                      : Colors.redAccent,
-                ),
-              ),
+            return TransactionListItem(
+              txn: txn,
+              currencyLocale: currencyLocale,
+              accounts: accounts,
+              categories: categories,
+              compactView: true,
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        AddTransactionScreen(transactionToEdit: txn),
+                  ),
+                );
+                if (result == true) {
+                  // Refreshing is handled by the providers
+                }
+              },
             );
           },
         );
@@ -942,13 +820,5 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
-  }
-
-  String _formatTenure(int months) {
-    if (months < 12) return '$months mos';
-    final years = months ~/ 12;
-    final remainingMonths = months % 12;
-    if (remainingMonths == 0) return '$years ${years == 1 ? "yr" : "yrs"}';
-    return '$years ${years == 1 ? "yr" : "yrs"} $remainingMonths ${remainingMonths == 1 ? "mo" : "mos"}';
   }
 }

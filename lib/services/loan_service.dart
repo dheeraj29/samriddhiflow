@@ -353,4 +353,37 @@ class LoanService {
     // Return unpaid interest
     return (totalAccrued - totalInterestPaid).clamp(0, double.infinity);
   }
+
+  /// Calculates how many months/days are left in the loan.
+  /// Returns a record with {months, days}.
+  ({double months, int days}) calculateRemainingTenure(Loan loan) {
+    if (loan.remainingPrincipal <= 0) return (months: 0, days: 0);
+
+    if (loan.type == LoanType.gold) {
+      final maturityDate =
+          loan.startDate.add(Duration(days: loan.tenureMonths * 30));
+      final daysLeft = maturityDate.difference(DateTime.now()).inDays;
+      if (daysLeft <= 0) return (months: 0, days: 0);
+      return (months: daysLeft / 30.0, days: daysLeft);
+    } else {
+      final schedule = calculateAmortizationSchedule(loan);
+      final monthsLeft = schedule.length;
+      return (months: monthsLeft.toDouble(), days: monthsLeft * 30);
+    }
+  }
+
+  /// Calculates the maximum remaining duration across all loans.
+  ({double months, int days}) calculateMaxRemainingTenure(List<Loan> loans) {
+    if (loans.isEmpty) return (months: 0, days: 0);
+
+    int maxDays = 0;
+    for (final loan in loans) {
+      final tenure = calculateRemainingTenure(loan);
+      if (tenure.days > maxDays) {
+        maxDays = tenure.days;
+      }
+    }
+
+    return (months: maxDays / 30.0, days: maxDays);
+  }
 }

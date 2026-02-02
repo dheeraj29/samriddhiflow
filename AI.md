@@ -99,6 +99,10 @@ graph TD
     *   **Month Jump Fix**: Resolved a critical bug where Jan 30 payments would skip February and jump to March.
     *   **Test Environment**: Fixed `dart:js_interop` crashes during local testing via conditional imports.
     *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability.
+    *   **Unified UI Components**: Created shared `TransactionListItem` widget and refactored Dashboard, Transactions, and Recycle Bin screens for consistent UI/UX.
+    *   **Logic Centralization**:
+        *   Moved Credit Card unbilled calculation to `BillingHelper.calculateUnbilledAmount`.
+        *   Moved Loan remaining tenure logic to `LoanService.calculateRemainingTenure`.
     *   **Credit Card Fix**: Standardized the **Billing Day** as a Billed day (inclusive); centralized rollover logic in `accountsProvider` to ensure zero-gap processing across all profiles.
     *   **Backup Persistence**: Updated Cloud Sync to preserve all app settings (rollover timestamps, budget, etc.).
     *   **Code Quality**: Applied project-wide `dart fix` and synchronized `AI.md` with active project state.

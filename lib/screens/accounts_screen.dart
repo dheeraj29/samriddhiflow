@@ -8,7 +8,6 @@ import '../models/account.dart';
 import '../widgets/account_card.dart';
 import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
-import '../models/transaction.dart';
 import '../widgets/pure_icons.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
@@ -80,30 +79,9 @@ class AccountsScreen extends ConsumerWidget {
 
             for (var card in creditCards) {
               totalLimit += card.creditLimit ?? 0;
-
-              double billed = card.balance;
-              double unbilled = 0;
-
-              if (card.billingCycleDay != null) {
-                final cycleStart =
-                    BillingHelper.getCycleStart(now, card.billingCycleDay!);
-                final relevantTxns = allTxns.where((t) =>
-                    !t.isDeleted &&
-                    t.accountId == card.id &&
-                    DateTime(t.date.year, t.date.month, t.date.day)
-                        .isAfter(cycleStart));
-
-                for (var t in relevantTxns) {
-                  if (t.type == TransactionType.expense) unbilled += t.amount;
-                  if (t.type == TransactionType.income) unbilled -= t.amount;
-                  if (t.type == TransactionType.transfer &&
-                      t.accountId == card.id) {
-                    unbilled += t.amount;
-                  }
-                }
-              }
-
-              totalUsage += (billed + unbilled);
+              final unbilled =
+                  BillingHelper.calculateUnbilledAmount(card, allTxns, now);
+              totalUsage += (card.balance + unbilled);
             }
 
             final utilization =
@@ -285,19 +263,10 @@ class AccountsScreen extends ConsumerWidget {
 
   Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
     double unbilled = 0;
-    if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+    if (acc.type == AccountType.creditCard) {
       final now = DateTime.now();
       final allTxns = ref.watch(transactionsProvider).value ?? [];
-      final relevantTxns = allTxns.where((t) =>
-          !t.isDeleted &&
-          t.accountId == acc.id &&
-          BillingHelper.isUnbilled(t.date, now, acc.billingCycleDay!));
-
-      for (var t in relevantTxns) {
-        if (t.type == TransactionType.expense) unbilled += t.amount;
-        if (t.type == TransactionType.income) unbilled -= t.amount;
-        if (t.type == TransactionType.transfer) unbilled += t.amount;
-      }
+      unbilled = BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
     }
 
     return AccountCard(

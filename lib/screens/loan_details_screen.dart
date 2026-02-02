@@ -86,10 +86,10 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 currentLoan.totalPrincipal
             : 0.0;
 
-        final monthsPaid = currentLoan.transactions
-            .where((t) => t.type == LoanTransactionType.emi)
-            .length;
-        final remainingMonths = schedule.length;
+        final remainingTenure =
+            loanService.calculateRemainingTenure(currentLoan);
+        final remainingMonths = remainingTenure.months.ceil();
+        final remainingDays = remainingTenure.days;
 
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -271,8 +271,10 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                                   ],
                                 ),
                               ),
-                              _buildStat('Paid', '${monthsPaid}m'),
-                              _buildStat('Left', '${remainingMonths}m'),
+                              _buildStat('Paid',
+                                  '${currentLoan.transactions.where((t) => t.type == LoanTransactionType.emi).length}m'),
+                              _buildStat('Left',
+                                  '${remainingMonths}m ${remainingDays}d'),
                             ],
                           ),
                           const SizedBox(height: 16),

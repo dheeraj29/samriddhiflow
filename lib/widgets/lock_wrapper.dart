@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../screens/app_lock_screen.dart';
-import 'package:flutter/foundation.dart';
-import '../utils/js_helper.dart';
 
 class LockWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -17,22 +15,12 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _isFallbackMode = false;
-  bool _isObscured = false; // For privacy screen
   DateTime? _backgroundTimestamp; // For delayed lock
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // iOS PWA Reliability: Listen for browser-level blur event
-    if (kIsWeb) {
-      setupBrowserBlurListener(() {
-        if (mounted) {
-          setState(() => _isObscured = true);
-        }
-      });
-    }
   }
 
   @override
@@ -70,14 +58,11 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       // App is going to background or app switcher
-      // 1. Show Privacy Screen immediately
-      setState(() => _isObscured = true);
-
-      // 2. Record timestamp for delayed lock
+      // Record timestamp for delayed lock
       _backgroundTimestamp = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
       // App is back
-      // 1. Check duration
+      // Check duration
       if (_backgroundTimestamp != null) {
         final duration = DateTime.now().difference(_backgroundTimestamp!);
         if (duration.inMinutes >= 1) {
@@ -91,9 +76,6 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         }
         _backgroundTimestamp = null;
       }
-
-      // 2. Hide Privacy Screen (reveal content or lock screen)
-      setState(() => _isObscured = false);
     }
   }
 
@@ -118,20 +100,6 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     // Safety: If storage JUST finished but listener hasn't fired yet,
     // we do a one-time sync check to prevent that 1-frame glitch.
     final storage = ref.read(storageServiceProvider);
-    final user = ref.read(authServiceProvider).currentUser;
-    final shouldBeLocked = user != null &&
-        storage.isAppLockEnabled() &&
-        storage.getAppPin() != null;
-
-    // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
-    // But setState during build is tricky, so we rely on the flags.
-    // We only force _isLocked to true if it hasn't been verified yet and we KNOW it should be.
-    // But setState during build is tricky, so we rely on the flags.
-
-    // FIX: Do not override _isLocked with shouldBeLocked.
-    // Initial lock is handled by _checkInitialLock and lifecycle observer.
-    // Overriding here causes immediate re-lock after successful unlock callback.
-    // final effectiveLocked = (shouldBeLocked && !_isLocked && !_isFallbackMode) ? true : _isLocked;
 
     // Watch Auth State - if user logs in VIA FALLBACK, we can unlock
     ref.listen(authStreamProvider, (previous, next) {
@@ -179,31 +147,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       return widget.child;
     }
 
-    return Stack(
-      children: [
-        // 1. The main app content (maybe locked)
-        _buildContent(),
-
-        // 2. Privacy Overlay (Obscures everything when backgrounded)
-        if (_isObscured)
-          Positioned.fill(
-            child: Container(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF000000)
-                  : const Color(0xFFFFFFFF),
-              child: Center(
-                child: Icon(
-                  Icons.lock,
-                  size: 80,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white10
-                      : Colors.black12,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    return _buildContent();
   }
 
   Widget _buildContent() {

@@ -4,6 +4,8 @@ import '../providers.dart';
 import '../models/transaction.dart';
 import '../widgets/pure_icons.dart';
 
+import '../widgets/transaction_list_item.dart';
+
 class RecycleBinScreen extends ConsumerStatefulWidget {
   const RecycleBinScreen({super.key});
 
@@ -15,6 +17,9 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
   @override
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
+    final currencyLocale = ref.watch(currencyProvider);
+    final accounts = ref.watch(accountsProvider).value ?? [];
+    final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -35,10 +40,13 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
             itemCount: deleted.length,
             itemBuilder: (context, index) {
               final txn = deleted[index];
-              return ListTile(
-                title: Text(txn.title,
-                    style: const TextStyle(
-                        decoration: TextDecoration.lineThrough)),
+              return TransactionListItem(
+                txn: txn,
+                currencyLocale: currencyLocale,
+                accounts: accounts,
+                categories: categories,
+                showLineThrough: true,
+                onTap: () {}, // No action on tap in recycle bin for now
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

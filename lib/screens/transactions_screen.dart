@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../models/transaction.dart';
-import '../models/account.dart';
 import '../models/category.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/transaction_filter.dart';
 import 'add_transaction_screen.dart';
 import '../widgets/pure_icons.dart';
+import '../widgets/transaction_list_item.dart';
 import '../utils/transaction_filter_utils.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
@@ -198,9 +198,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           final txn = filtered[index];
                           final isSelected = _selectedIds.contains(txn.id);
 
-                          final catObj = catMap[txn.category];
-                          final isCapitalGain =
-                              catObj?.tag == CategoryTag.capitalGain;
+                          final currencyLocaleStr =
+                              currencyLocale; // for clarity
 
                           final isIncomingTransfer =
                               _selectedAccountId != null &&
@@ -208,20 +207,18 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   txn.toAccountId == _selectedAccountId &&
                                   txn.accountId != txn.toAccountId;
 
-                          return ListTile(
-                            selected: isSelected,
+                          return TransactionListItem(
+                            txn: txn,
+                            currencyLocale: currencyLocaleStr,
+                            accounts: accounts,
+                            categories: allCategories,
+                            compactView: _compactView,
+                            isSelectionMode: _isSelectionMode,
+                            isSelected: isSelected,
+                            currentAccountIdFilter: _selectedAccountId,
                             onTap: () {
                               if (_isSelectionMode) {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedIds.remove(txn.id);
-                                    if (_selectedIds.isEmpty) {
-                                      _isSelectionMode = false;
-                                    }
-                                  } else {
-                                    _selectedIds.add(txn.id);
-                                  }
-                                });
+                                _toggleSelection(txn.id);
                               } else {
                                 Navigator.push(
                                   context,
@@ -240,159 +237,39 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                 });
                               }
                             },
-                            leading: _isSelectionMode
-                                ? Checkbox(
-                                    value: _selectedIds.contains(txn.id),
-                                    onChanged: (v) => _toggleSelection(txn.id),
+                            onSelectionChanged: (v) => _toggleSelection(txn.id),
+                            trailing: !_isSelectionMode
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SmartCurrencyText(
+                                        value: txn.amount,
+                                        locale: currencyLocaleStr,
+                                        initialCompact: _compactView,
+                                        prefix: txn.type ==
+                                                    TransactionType.income ||
+                                                isIncomingTransfer
+                                            ? "+"
+                                            : "-",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: txn.type ==
+                                                      TransactionType.income ||
+                                                  isIncomingTransfer
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: PureIcons.deleteOutlined(
+                                            size: 20, color: Colors.grey),
+                                        onPressed: () =>
+                                            _confirmSingleDelete(context, txn),
+                                      ),
+                                    ],
                                   )
-                                : CircleAvatar(
-                                    backgroundColor: txn.type ==
-                                                TransactionType.income ||
-                                            isIncomingTransfer
-                                        ? Colors.green.withValues(alpha: 0.1)
-                                        : (txn.type == TransactionType.transfer
-                                            ? Colors.blue.withValues(alpha: 0.1)
-                                            : Colors.red
-                                                .withValues(alpha: 0.1)),
-                                    child: txn.type == TransactionType.income
-                                        ? PureIcons.income(size: 18)
-                                        : (txn.type == TransactionType.transfer
-                                            ? PureIcons.transfer(size: 18)
-                                            : PureIcons.expense(size: 18)),
-                                  ),
-                            title: Text(txn.title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Builder(builder: (context) {
-                                  // Helper to get account name
-                                  String getAccName(String? id) {
-                                    if (id == null) return 'Manual';
-                                    return accountsAsync.value
-                                            ?.firstWhere((a) => a.id == id,
-                                                orElse: () => Account(
-                                                    id: 'del',
-                                                    name: 'Deleted',
-                                                    type: AccountType.savings,
-                                                    balance: 0,
-                                                    profileId: ''))
-                                            .name ??
-                                        'Manual';
-                                  }
-
-                                  String subtitleText;
-                                  if (txn.type == TransactionType.transfer) {
-                                    subtitleText =
-                                        '${getAccName(txn.accountId)} -> ${getAccName(txn.toAccountId)}';
-                                  } else {
-                                    subtitleText =
-                                        '${txn.category} • ${getAccName(txn.accountId)}';
-                                  }
-
-                                  return Text(
-                                    '${DateFormat('MMM dd, yyyy • hh:mm a').format(txn.date)} • $subtitleText',
-                                    style: const TextStyle(fontSize: 12),
-                                  );
-                                }),
-                                if (isCapitalGain &&
-                                    (txn.gainAmount != null ||
-                                        txn.holdingTenureMonths != null))
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2.0),
-                                    child: Row(
-                                      children: [
-                                        if (txn.gainAmount != null) ...[
-                                          Text(
-                                            '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: txn.gainAmount! >= 0
-                                                  ? Colors.green
-                                                  : Colors.redAccent,
-                                            ),
-                                          ),
-                                          SmartCurrencyText(
-                                            value: txn.gainAmount!.abs(),
-                                            locale: currencyLocale,
-                                            initialCompact: _compactView,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: txn.gainAmount! >= 0
-                                                  ? Colors.green
-                                                  : Colors.redAccent,
-                                            ),
-                                          ),
-                                        ] else if (isCapitalGain) ...[
-                                          const Text(
-                                            'Profit: ',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                          SmartCurrencyText(
-                                            value: 0,
-                                            locale: currencyLocale,
-                                            initialCompact: _compactView,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                        if (txn.gainAmount != null &&
-                                            txn.holdingTenureMonths != null)
-                                          const Text(' • ',
-                                              style: TextStyle(fontSize: 11)),
-                                        if (txn.holdingTenureMonths != null)
-                                          Text(
-                                            'Held: ${_formatTenure(txn.holdingTenureMonths!)}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SmartCurrencyText(
-                                  value: txn.amount,
-                                  locale: currencyLocale,
-                                  initialCompact: _compactView,
-                                  prefix: txn.type == TransactionType.income ||
-                                          isIncomingTransfer
-                                      ? "+"
-                                      : "-",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: txn.type == TransactionType.income ||
-                                            isIncomingTransfer
-                                        ? Colors.green
-                                        : Colors.red,
-                                  ),
-                                ),
-                                if (!_isSelectionMode) ...[
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: PureIcons.deleteOutlined(
-                                        size: 20, color: Colors.grey),
-                                    onPressed: () =>
-                                        _confirmSingleDelete(context, txn),
-                                  ),
-                                ],
-                              ],
-                            ),
+                                : null,
                           );
                         },
                       ),
@@ -503,13 +380,5 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         _selectedIds.add(id);
       }
     });
-  }
-
-  String _formatTenure(int months) {
-    if (months < 12) return '$months mos';
-    final years = months ~/ 12;
-    final remainingMonths = months % 12;
-    if (remainingMonths == 0) return '$years ${years == 1 ? "yr" : "yrs"}';
-    return '$years ${years == 1 ? "yr" : "yrs"} $remainingMonths ${remainingMonths == 1 ? "mo" : "mos"}';
   }
 }
