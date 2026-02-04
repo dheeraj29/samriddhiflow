@@ -91,8 +91,13 @@ graph TD
     *   **Option 2: Reduce EMI:** Tenure remains the same; EMI is recalculated.
 *   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
-## 4. Current Status (v1.22.0)
+## 4. Current Status (v1.29.0)
 *   **Stable:** Core financial logic, cloud sync, and security features are fully operational.
+*   **Recent Updates (v1.29.0):**
+    *   **Test Suite Refinement**: Consolidated duplicate test files (Auth, Calendar, Reports) to improve maintenance.
+    *   **Mocking Infrastructure**: Centralized storage and service mocks in `test_mocks.dart` with standard defaults (`setupStorageDefaults`).
+    *   **Widget Stability**: Stabilized `ReportsScreen`, `SettingsScreen`, and dialog tests by addressing animation timeouts and element discovery issues (ActionChip).
+    *   **Coverage Baseline**: Established verified 100% coverage for core utility files and high coverage for critical UI components.
 *   **Recent Updates (v1.22.0):**
     *   **Recurring Payment Skip**: Added a "Skip" option in the Reminders screen to advance cycles without recording transactions.
     *   **First Working Day Logic**: Implemented "First Working Day of Month" schedule type with full holiday/weekend awareness.
@@ -117,12 +122,19 @@ graph TD
     *   **Code Quality**: Applied project-wide `dart fix` and synchronized `AI.md` with active project state.
 
 ## 5. Build Instructions
-Run: `flutter build web --no-web-resources-cdn --release`
+Run: `build_pwa.bat`
 *   **Note:** This command ensures that web resources are bundled locally for full offline capability.
 
 ## 6. Testing
 Execute: `flutter test`
-Archive 100% coverage target for core business logic and critical UI screens.
+Target: **100% coverage** for core business logic and critical UI screens.
+
+### Coverage Rules
+1.  **Maintenance**: Every modification MUST maintain or increase the coverage percentage of the modified files.
+2. **Baselines**: The current project coverage baseline is **72.87%** (Filtered). Every modification MUST maintain or increase the coverage percentage of the modified files.
+3.  **Sanity**: Unit tests MUST be consolidated (avoid `_unit_test.dart` fragmentation). Merge redundant test files immediately.
+4.  **Mocks**: Use `test_mocks.dart` for shared service and provider mocks. Use `setupStorageDefaults(mockStorage)` to apply standard stubs and fallbacks.
+5.  **Aesthetics**: Tests involving charts (PieChart) should use explicit `tester.pump(Duration)` instead of `pumpAndSettle` to avoid animation timeouts.
 
 ## 7. Future Roadmap
 *   **Tax Engine:** Tax calculation and assessment features (Indian Regime).

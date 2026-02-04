@@ -12,6 +12,7 @@ class NetworkUtils {
     // 1. Try Standard Plugin
     try {
       // 0. Web Optimization: Trust navigator.onLine (Synchronous & Reliable)
+      // coverage:ignore-start
       if (kIsWeb) {
         if (!ConnectivityPlatform.checkWebOnline()) {
           DebugLogger()
@@ -19,6 +20,7 @@ class NetworkUtils {
           return true;
         }
       }
+      // coverage:ignore-end
 
       final results = await Connectivity()
           .checkConnectivity()
@@ -36,6 +38,7 @@ class NetworkUtils {
       }
     } catch (e) {
       // 2. Fallback for Web/PWA
+      // coverage:ignore-start
       if (kIsWeb) {
         final isMissingPlugin =
             e.toString().contains("MissingPluginException") ||
@@ -57,6 +60,7 @@ class NetworkUtils {
           }
         }
       }
+      // coverage:ignore-end
       DebugLogger().log("NetworkUtils Exception: $e");
     }
 
@@ -67,9 +71,11 @@ class NetworkUtils {
   /// Extra check for actual internet reachability (beyond just interface status).
   /// This helps detect DNS resolution delays or captive portals on iOS.
   static Future<bool> hasActualInternet() async {
+    // coverage:ignore-start
     if (kIsWeb) {
       return ConnectivityPlatform.checkActualWebReachability();
     }
+    // coverage:ignore-end
     // For non-web, standard connectivity is usually enough or we'd use a package.
     return true;
   }

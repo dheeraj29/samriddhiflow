@@ -54,25 +54,27 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
           const SizedBox(height: 16),
           const Text('Recalculation Mode:',
               style: TextStyle(fontWeight: FontWeight.bold)),
-          RadioListTile<bool>(
-            title: const Text('Adjust EMI'),
-            subtitle: const Text(
-                'Keep Tenure constant.\nMonthly payment will change.'),
-            value: false,
+          RadioGroup<bool>(
             groupValue: _updateTenure,
             onChanged: (v) {
               if (v != null) setState(() => _updateTenure = v);
             },
-          ),
-          RadioListTile<bool>(
-            title: const Text('Adjust Tenure'),
-            subtitle:
-                const Text('Keep EMI constant.\nLoan duration will change.'),
-            value: true,
-            groupValue: _updateTenure,
-            onChanged: (v) {
-              if (v != null) setState(() => _updateTenure = v);
-            },
+            child: const Column(
+              children: [
+                RadioListTile<bool>.adaptive(
+                  title: Text('Adjust EMI'),
+                  subtitle: Text(
+                      'Keep Tenure constant.\nMonthly payment will change.'),
+                  value: false,
+                ),
+                RadioListTile<bool>.adaptive(
+                  title: Text('Adjust Tenure'),
+                  subtitle: Text(
+                      'Keep EMI constant.\nLoan duration will change.'),
+                  value: true,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -90,7 +92,7 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
                 effectiveDate: _selectedDate,
                 updateTenure: _updateTenure,
               );
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context);
               }
             }

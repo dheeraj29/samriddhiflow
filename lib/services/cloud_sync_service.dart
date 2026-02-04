@@ -12,10 +12,14 @@ import '../models/profile.dart';
 class CloudSyncService {
   final CloudStorageInterface _cloudStorage;
   final StorageService _storageService;
+  final FirebaseAuth? _firebaseAuth;
 
-  CloudSyncService(this._cloudStorage, this._storageService);
+  CloudSyncService(this._cloudStorage, this._storageService,
+      {FirebaseAuth? firebaseAuth})
+      : _firebaseAuth = firebaseAuth;
 
   FirebaseAuth? get _auth {
+    if (_firebaseAuth != null) return _firebaseAuth;
     try {
       if (Firebase.apps.isNotEmpty) return FirebaseAuth.instance;
     } catch (_) {}

@@ -82,7 +82,7 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
 
             if (newEmi > 0) {
               await _handleRecalculate(newEmi, newTenure);
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             }
           },
           child: const Text('Update'),

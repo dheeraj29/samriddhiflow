@@ -39,34 +39,32 @@ class _RecordLoanPaymentDialogState
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: RadioListTile<LoanTransactionType>(
-                  title: const Text('EMI'),
-                  value: LoanTransactionType.emi,
-                  groupValue: _type,
-                  contentPadding: EdgeInsets.zero,
-                  onChanged: (v) => setState(() {
-                    _type = v!;
-                    _amountController.text =
-                        widget.loan.emiAmount.toStringAsFixed(2);
-                  }),
+          RadioGroup<LoanTransactionType>(
+            groupValue: _type,
+            onChanged: (v) => setState(() {
+              _type = v!;
+              _amountController.text = _type == LoanTransactionType.emi
+                  ? widget.loan.emiAmount.toStringAsFixed(2)
+                  : '';
+            }),
+            child: const Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<LoanTransactionType>.adaptive(
+                    title: Text('EMI'),
+                    value: LoanTransactionType.emi,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: RadioListTile<LoanTransactionType>(
-                  title: const Text('Prepayment'),
-                  value: LoanTransactionType.prepayment,
-                  groupValue: _type,
-                  contentPadding: EdgeInsets.zero,
-                  onChanged: (v) => setState(() {
-                    _type = v!;
-                    _amountController.text = '';
-                  }),
+                Expanded(
+                  child: RadioListTile<LoanTransactionType>.adaptive(
+                    title: Text('Prepayment'),
+                    value: LoanTransactionType.prepayment,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           FormUtils.buildAmountField(
             controller: _amountController,
@@ -106,29 +104,29 @@ class _RecordLoanPaymentDialogState
             const SizedBox(height: 8),
             const Text('Prepayment Effect:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            Row(
-              children: [
-                Expanded(
-                  child: RadioListTile<bool>(
-                    title: const Text('Reduce Tenure',
-                        style: TextStyle(fontSize: 12)),
-                    value: true,
-                    groupValue: _reduceTenure,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (v) => setState(() => _reduceTenure = v!),
+            RadioGroup<bool>(
+              groupValue: _reduceTenure,
+              onChanged: (v) => setState(() => _reduceTenure = v!),
+              child: const Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<bool>.adaptive(
+                      title: Text('Reduce Tenure',
+                          style: TextStyle(fontSize: 12)),
+                      value: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: RadioListTile<bool>(
-                    title: const Text('Reduce EMI',
-                        style: TextStyle(fontSize: 12)),
-                    value: false,
-                    groupValue: _reduceTenure,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (v) => setState(() => _reduceTenure = v!),
+                  Expanded(
+                    child: RadioListTile<bool>.adaptive(
+                      title: Text('Reduce EMI',
+                          style: TextStyle(fontSize: 12)),
+                      value: false,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
           Text(
@@ -256,7 +254,7 @@ class _RecordLoanPaymentDialogState
               ref.invalidate(transactionsProvider);
               ref.invalidate(loansProvider);
 
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Payment Recorded')));

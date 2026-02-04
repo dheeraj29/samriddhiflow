@@ -658,14 +658,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               children: [
                 Icon(Icons.trending_up, color: Colors.blue[700]),
                 const SizedBox(width: 8),
-                Text(
-                  _type == ReportType.income
-                      ? 'Capital Gains (Realized)'
-                      : 'Capital Losses (Realized)',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.blue[800]),
+                Flexible(
+                  child: Text(
+                    _type == ReportType.income
+                        ? 'Capital Gains (Realized)'
+                        : 'Capital Losses (Realized)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.blue[800]),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

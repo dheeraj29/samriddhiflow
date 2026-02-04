@@ -126,7 +126,8 @@ final loanServiceProvider = Provider<LoanService>((ref) {
   return LoanService();
 });
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
+  final storage = ref.watch(storageServiceProvider);
+  return AuthService(FirebaseAuth.instance, storage);
 });
 
 class LogoutRequestedNotifier extends Notifier<bool> {

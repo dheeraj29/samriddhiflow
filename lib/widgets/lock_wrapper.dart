@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clock/clock.dart';
 import '../providers.dart';
 import '../screens/app_lock_screen.dart';
 
@@ -59,12 +60,13 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         state == AppLifecycleState.hidden) {
       // App is going to background or app switcher
       // Record timestamp for delayed lock
-      _backgroundTimestamp = DateTime.now();
+      _backgroundTimestamp = clock.now();
     } else if (state == AppLifecycleState.resumed) {
       // App is back
       // Check duration
       if (_backgroundTimestamp != null) {
-        final duration = DateTime.now().difference(_backgroundTimestamp!);
+        final now = clock.now();
+        final duration = now.difference(_backgroundTimestamp!);
         if (duration.inMinutes >= 1) {
           // Time exceeded, Lock!
           try {
@@ -72,7 +74,9 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
             if (storage.isAppLockEnabled() && storage.getAppPin() != null) {
               setState(() => _isLocked = true);
             }
-          } catch (_) {}
+          } catch (_) {
+            // Storage not ready or error, ignore
+          }
         }
         _backgroundTimestamp = null;
       }

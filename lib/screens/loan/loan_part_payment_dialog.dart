@@ -78,7 +78,11 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
             final amount = double.tryParse(_amountController.text);
             if (amount != null && amount > 0) {
               await _handlePartPayment(amount);
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Part principal payment successful.')));
+              }
             }
           },
         )

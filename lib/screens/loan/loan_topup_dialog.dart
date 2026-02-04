@@ -62,23 +62,27 @@ class _LoanTopupDialogState extends ConsumerState<LoanTopupDialog> {
           const SizedBox(height: 16),
           const Text('Recalculation Mode:',
               style: TextStyle(fontWeight: FontWeight.bold)),
-          RadioListTile<bool>(
-            title: const Text('Adjust EMI'),
-            subtitle: const Text('Keep Tenure constant. EMI will increase.'),
-            value: false,
+          RadioGroup<bool>(
             groupValue: _updateTenure,
             onChanged: (v) {
               if (v != null) setState(() => _updateTenure = v);
             },
-          ),
-          RadioListTile<bool>(
-            title: const Text('Adjust Tenure'),
-            subtitle: const Text('Keep EMI constant. Tenure will increase.'),
-            value: true,
-            groupValue: _updateTenure,
-            onChanged: (v) {
-              if (v != null) setState(() => _updateTenure = v);
-            },
+            child: const Column(
+              children: [
+                RadioListTile<bool>.adaptive(
+                  title: Text('Adjust EMI'),
+                  subtitle:
+                      Text('Keep Tenure constant. EMI will increase.'),
+                  value: false,
+                ),
+                RadioListTile<bool>.adaptive(
+                  title: Text('Adjust Tenure'),
+                  subtitle:
+                      Text('Keep EMI constant. Tenure will increase.'),
+                  value: true,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -98,7 +102,7 @@ class _LoanTopupDialogState extends ConsumerState<LoanTopupDialog> {
                 updateTenure: _updateTenure,
                 accounts: ref.read(accountsProvider).value ?? [],
               );
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context);
               }
             }

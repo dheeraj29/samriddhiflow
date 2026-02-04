@@ -22,7 +22,12 @@ class SmartCurrencyText extends ConsumerStatefulWidget {
     this.initialCompact,
     this.prefix,
     this.suffix,
+    this.overflow,
+    this.maxLines,
   });
+
+  final TextOverflow? overflow;
+  final int? maxLines;
 
   @override
   ConsumerState<SmartCurrencyText> createState() => _SmartCurrencyTextState();
@@ -57,6 +62,8 @@ class _SmartCurrencyTextState extends ConsumerState<SmartCurrencyText> {
           key: ValueKey(displayText),
           style: widget.style?.merge(AppTheme.offlineSafeTextStyle) ??
               AppTheme.offlineSafeTextStyle,
+          overflow: widget.overflow,
+          maxLines: widget.maxLines,
         ),
       ),
     );

@@ -220,14 +220,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Account: ${user.email ?? "User"}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Text('Cloud Synchronization Active',
-                      style: TextStyle(color: Colors.green, fontSize: 12)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Account: ${user.email ?? "User"}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis),
+                    const Text('Cloud Synchronization Active',
+                        style: TextStyle(color: Colors.green, fontSize: 12)),
+                  ],
+                ),
               ),
             ],
           ),
@@ -333,8 +336,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   try {
                     final int count = await job.run(ref);
-                    if (mounted) {
-                      // ignore: use_build_context_synchronously
+                    if (context.mounted) {
                       ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
                           content: Text(
                               '${job.name}: Successfully repaired $count items.')));
@@ -342,8 +344,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.invalidate(accountsProvider);
                     }
                   } catch (e) {
-                    if (mounted) {
-                      // ignore: use_build_context_synchronously
+                    if (context.mounted) {
                       ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
                           content: Text('Repair Failed: $e'),
                           backgroundColor: Colors.red));
@@ -961,7 +962,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .showSnackBar(const SnackBar(content: Text('Error reading file.')));
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("Import Error: $e")));
       }

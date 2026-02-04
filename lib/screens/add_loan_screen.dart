@@ -6,6 +6,7 @@ import '../providers.dart';
 import '../models/loan.dart';
 import '../models/account.dart';
 import '../utils/currency_utils.dart';
+import '../services/loan_service.dart';
 import '../theme/app_theme.dart';
 
 class AddLoanScreen extends ConsumerStatefulWidget {
@@ -414,7 +415,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     );
   }
 
-  void _updateEMI(loanService, {bool excludeTenure = false}) {
+  void _updateEMI(LoanService loanService, {bool excludeTenure = false}) {
     if (_type == LoanType.gold) return; // Skip for Gold Loan
     if (_principal > 0 && _rate >= 0 && _tenure > 0) {
       final emi = loanService.calculateEMI(
@@ -435,7 +436,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     }
   }
 
-  void _updateTenure(loanService, {bool excludeEMI = false}) {
+  void _updateTenure(LoanService loanService, {bool excludeEMI = false}) {
     if (_type == LoanType.gold) return;
     if (_principal > 0 && _rate >= 0 && _calculatedEMI > 0) {
       final tenure = loanService.calculateTenureForEMI(
@@ -460,7 +461,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     }
   }
 
-  void _updateRate(loanService) {
+  void _updateRate(LoanService loanService) {
     if (_type == LoanType.gold) return;
     if (_principal > 0 && _tenure > 0 && _calculatedEMI > 0) {
       final rate = loanService.calculateRateForEMITenure(
@@ -508,7 +509,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
       );
 
       await storage.saveLoan(newLoan);
-      final _ = ref.refresh(loansProvider);
+      ref.invalidate(loansProvider);
 
       if (mounted) Navigator.pop(context);
     }

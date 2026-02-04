@@ -45,6 +45,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       final nudges = await service.checkNudges();
       if (nudges.isNotEmpty && mounted) {
         for (final nudge in nudges) {
+          if (!mounted) break;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(nudge),
             duration: const Duration(seconds: 5),
@@ -153,9 +154,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Recent Transactions',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: Text('Recent Transactions',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis),
+                      ),
                       TextButton(
                           onPressed: () => Navigator.push(
                               context,
@@ -288,11 +292,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          _buildStatPill('Assets', assets, currencyLocale,
-                              color: Colors.greenAccent),
-                          const SizedBox(width: 12),
-                          _buildStatPill('Debt', debt, currencyLocale,
-                              color: Colors.redAccent),
+                          Expanded(
+                            child: _buildStatPill(
+                                'Assets', assets, currencyLocale,
+                                color: Colors.greenAccent),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildStatPill('Debt', debt, currencyLocale,
+                                color: Colors.redAccent),
+                          ),
                         ],
                       )
                     ],
@@ -382,16 +391,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: [
           PureIcons.income(color: color, size: 16),
           const SizedBox(width: 4),
-          Text('$label: ',
+          Flexible(
+            child: Text('$label: ',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+                overflow: TextOverflow.ellipsis),
+          ),
+          Flexible(
+            child: SmartCurrencyText(
+              value: value,
+              locale: locale,
               style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12)),
-          SmartCurrencyText(
-            value: value,
-            locale: locale,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ],
       ),

@@ -2,18 +2,18 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 Future<void> main() async {
-  print('🎨 Material Symbols Subsetter 🎨');
+  stdout.writeln('🎨 Material Symbols Subsetter 🎨');
 
   final sourceFile = File('lib/widgets/pure_icons.dart');
   final targetFile = File('assets/fonts/MaterialSymbolsOutlined.ttf');
 
   if (!await sourceFile.exists()) {
-    print('❌ Error: lib/widgets/pure_icons.dart not found.');
+    stdout.writeln('❌ Error: lib/widgets/pure_icons.dart not found.');
     exit(1);
   }
 
   // 1. Scan for Codepoints
-  print('   Scanning pure_icons.dart...');
+  stdout.writeln('   Scanning pure_icons.dart...');
   final content = await sourceFile.readAsString();
 
   // Regex for 0xe123 or 0xE123 format
@@ -30,11 +30,11 @@ Future<void> main() async {
   }
 
   if (codepoints.isEmpty) {
-    print('⚠️ No icon codepoints found!');
+    stdout.writeln('⚠️ No icon codepoints found!');
     exit(0);
   }
 
-  print('   Found ${codepoints.length} unique icons.');
+  stdout.writeln('   Found ${codepoints.length} unique icons.');
 
   // 2. Construct API URL
   // We need to pass the actual characters, url-encoded.
@@ -48,7 +48,7 @@ Future<void> main() async {
   final cssUrl =
       'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400&text=$textParam';
 
-  print('   Fetching font metadata...');
+  stdout.writeln('   Fetching font metadata...');
 
   // 3. Get CSS to find the font file URL
   // We use a specific UA to ask for TTF if possible, but Google often gives woff2.
@@ -65,8 +65,8 @@ Future<void> main() async {
     );
 
     if (cssResponse.statusCode != 200) {
-      print('❌ API Error: ${cssResponse.statusCode}');
-      print(cssResponse.body);
+      stdout.writeln('❌ API Error: ${cssResponse.statusCode}');
+      stdout.writeln(cssResponse.body);
       exit(1);
     }
 
@@ -76,13 +76,13 @@ Future<void> main() async {
     final urlMatch = urlRegex.firstMatch(cssResponse.body);
 
     if (urlMatch == null) {
-      print('❌ Could not find font URL in CSS response.');
-      print(cssResponse.body);
+      stdout.writeln('❌ Could not find font URL in CSS response.');
+      stdout.writeln(cssResponse.body);
       exit(1);
     }
 
     final fontUrl = urlMatch.group(1)!;
-    print('   Downloading font...');
+    stdout.writeln('   Downloading font...');
 
     // 4. Download Font
     final fontResponse = await client.get(Uri.parse(fontUrl));
@@ -96,18 +96,19 @@ Future<void> main() async {
       // BUT if it is WOFF2, we should probably output a note.
 
       await targetFile.writeAsBytes(bytes);
-      print(
+      stdout.writeln(
           '✅ Saved to ${targetFile.path} (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
 
       // Verify size reduction
       if (bytes.length > 500 * 1024) {
-        print('⚠️ Warning: File size is large. Verify subsetting worked.');
+        stdout.writeln(
+            '⚠️ Warning: File size is large. Verify subsetting worked.');
       }
     } else {
-      print('❌ Failed download: ${fontResponse.statusCode}');
+      stdout.writeln('❌ Failed download: ${fontResponse.statusCode}');
     }
   } catch (e) {
-    print('❌ Error: $e');
+    stdout.writeln('❌ Error: $e');
   } finally {
     client.close();
   }

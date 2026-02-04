@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'providers.dart';
 import 'services/excel_service.dart';
 import 'services/firestore_storage_service.dart';
@@ -12,7 +13,8 @@ import 'services/notification_service.dart';
 final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   final storage = ref.watch(storageServiceProvider);
   final firestoreStorage = FirestoreStorageService();
-  return CloudSyncService(firestoreStorage, storage);
+  return CloudSyncService(firestoreStorage, storage,
+      firebaseAuth: FirebaseAuth.instance);
 });
 
 final excelServiceProvider = Provider<ExcelService>((ref) {

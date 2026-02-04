@@ -624,7 +624,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         );
         await storage.saveAccount(newAccount);
       }
-      ref.refresh(accountsProvider);
+      ref.invalidate(accountsProvider);
       if (mounted) Navigator.pop(context);
     }
   }

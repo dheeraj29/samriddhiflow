@@ -441,7 +441,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12)),
           child: Row(
             children: [
@@ -474,29 +474,27 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           },
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: RadioListTile<bool>.adaptive(
-                title: const Text('Reduce Tenure'),
-                value: true,
-                groupValue: _reduceTenure,
-                onChanged: (v) {
-                  if (v != null) setState(() => _reduceTenure = v);
-                },
+        RadioGroup<bool>(
+          groupValue: _reduceTenure,
+          onChanged: (v) {
+            if (v != null) setState(() => _reduceTenure = v);
+          },
+          child: const Row(
+            children: [
+              Expanded(
+                child: RadioListTile<bool>.adaptive(
+                  title: Text('Reduce Tenure'),
+                  value: true,
+                ),
               ),
-            ),
-            Expanded(
-              child: RadioListTile<bool>.adaptive(
-                title: const Text('Reduce EMI'),
-                value: false,
-                groupValue: _reduceTenure,
-                onChanged: (v) {
-                  if (v != null) setState(() => _reduceTenure = v);
-                },
+              Expanded(
+                child: RadioListTile<bool>.adaptive(
+                  title: Text('Reduce EMI'),
+                  value: false,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         if (_isSimulating && _prepaymentAmount > 0) ...[
           const Divider(),
@@ -710,7 +708,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
       await ref.read(storageServiceProvider).deleteLoan(currentLoan.id);
       ref.invalidate(loansProvider);
       ref.invalidate(transactionsProvider);
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
       }
     }

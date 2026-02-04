@@ -41,7 +41,9 @@ class _LoanRenameDialogState extends ConsumerState<LoanRenameDialog> {
               widget.loan.name = _controller.text;
               await storage.saveLoan(widget.loan);
               ref.invalidate(loansProvider);
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             }
           },
           child: const Text('Save'),

@@ -104,14 +104,13 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
                   await storage.saveTransaction(txn);
 
-                  final _ = ref.refresh(accountsProvider);
-                  final __ = ref.refresh(transactionsProvider);
+                  ref.invalidate(accountsProvider);
+                  ref.invalidate(transactionsProvider);
 
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Payment Recorded')));
-                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Payment Recorded')));
                 }
               },
               child: const Text('Confirm'),

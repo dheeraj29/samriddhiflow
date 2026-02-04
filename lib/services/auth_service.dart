@@ -7,14 +7,16 @@ import '../utils/connectivity_platform.dart';
 import 'firebase_web_safe.dart';
 
 import '../utils/debug_logger.dart';
+import 'storage_service.dart';
 import '../providers.dart';
 import '../firebase_options.dart' as prod;
 import '../firebase_options_debug.dart' as dev;
 
 class AuthService {
   final FirebaseAuth? _injectedAuth;
+  final StorageService? _storageService;
 
-  AuthService([this._injectedAuth]);
+  AuthService([this._injectedAuth, this._storageService]);
 
   FirebaseAuth? get _auth {
     if (_injectedAuth != null) return _injectedAuth;
@@ -138,9 +140,10 @@ class AuthService {
       }
 
       // Optimization: Flag that we are logged in for next startup
-      // We process this directly here to ensure it's saved before we return success
       try {
-        if (Hive.isBoxOpen('settings')) {
+        if (_storageService != null) {
+          await _storageService.setAuthFlag(true);
+        } else if (Hive.isBoxOpen('settings')) {
           await Hive.box('settings').put('isLoggedIn', true);
         }
       } catch (_) {}
@@ -167,7 +170,9 @@ class AuthService {
       ref.read(logoutRequestedProvider.notifier).value = true;
 
       // 2. Clear local session flag instantly
-      if (Hive.isBoxOpen('settings')) {
+      if (_storageService != null) {
+        await _storageService.setAuthFlag(false);
+      } else if (Hive.isBoxOpen('settings')) {
         await Hive.box('settings').put('isLoggedIn', false);
       }
 
@@ -214,7 +219,9 @@ class AuthService {
         final result = await auth.getRedirectResult();
         if (result.user != null) {
           DebugLogger().log("AuthService: Redirect Success");
-          if (Hive.isBoxOpen('settings')) {
+          if (_storageService != null) {
+            await _storageService.setAuthFlag(true);
+          } else if (Hive.isBoxOpen('settings')) {
             await Hive.box('settings').put('isLoggedIn', true);
           }
           if (ref != null) {
@@ -223,7 +230,9 @@ class AuthService {
         } else if (auth.currentUser != null) {
           DebugLogger().log(
               "AuthService: User already restored in currentUser fallback.");
-          if (Hive.isBoxOpen('settings')) {
+          if (_storageService != null) {
+            await _storageService.setAuthFlag(true);
+          } else if (Hive.isBoxOpen('settings')) {
             await Hive.box('settings').put('isLoggedIn', true);
           }
           if (ref != null) {

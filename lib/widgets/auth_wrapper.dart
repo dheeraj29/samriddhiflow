@@ -5,7 +5,6 @@ import '../utils/network_utils.dart';
 import '../utils/debug_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../navigator_key.dart';
@@ -30,6 +29,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Timer? _verificationSafetyTimer;
   Timer? _slowConnectionTimer;
   Timer? _bootGraceTimer;
+  Timer? _autoHealTimer;
 
   @override
   void initState() {
@@ -91,12 +91,27 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _verificationSafetyTimer?.cancel();
     _slowConnectionTimer?.cancel();
     _bootGraceTimer?.cancel();
+    _autoHealTimer?.cancel();
     super.dispose();
   }
 
   void _initSafeListeners() {
     // 1. Initial Connectivity Check
     _checkInitialConnectivity();
+  }
+
+  void _setupAutoHealTimer() {
+    _autoHealTimer?.cancel();
+    _autoHealTimer = Timer(const Duration(seconds: 15), () async {
+      if (mounted && _hasVerificationTimedOut && !ref.read(isOfflineProvider)) {
+        final hasInternet = await NetworkUtils.hasActualInternet();
+        if (hasInternet && mounted) {
+          DebugLogger().log(
+              "AuthWrapper: Background Reachability Detected. Auto-healing...");
+          ref.invalidate(firebaseInitializerProvider);
+        }
+      }
+    });
   }
 
   Future<void> _checkInitialConnectivity() async {
@@ -199,26 +214,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // says we are Online, we should periodically check if ACTUAL internet
     // has finally arrived (DNS settled).
     if (_hasVerificationTimedOut && !ref.watch(isOfflineProvider)) {
-      Future.delayed(const Duration(seconds: 15), () async {
-        if (mounted &&
-            _hasVerificationTimedOut &&
-            !ref.read(isOfflineProvider)) {
-          final hasInternet = await NetworkUtils.hasActualInternet();
-          if (hasInternet && mounted) {
-            DebugLogger().log(
-                "AuthWrapper: Background Reachability Detected. Auto-healing...");
-            // We set it back to data-path WITHOUT blocking UI
-            // because firebaseInitializerProvider is now invalid and will re-fetch.
-            // But we only clear _hasVerificationTimedOut AFTER success elsewhere
-            // or we do it here and trust the next logic to handle it.
-            // Actually, once it succeeds, the Data path of build() will take over.
-
-            // To prevent blocking UI, we don't clear the flag here yet.
-            // We just trigger the re-init.
-            ref.invalidate(firebaseInitializerProvider);
-          }
-        }
-      });
+      _setupAutoHealTimer();
+    } else {
+      _autoHealTimer?.cancel(); // Cancel if conditions are no longer met
     }
 
     // 2. BACKGROUND VERIFICATION:
@@ -234,8 +232,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         final firebaseInit = ref.read(firebaseInitializerProvider);
+        final isLoggedIn = ref.read(isLoggedInProvider);
+        final user = next.value;
+
+        debugPrint(
+            "DEBUG: Listener fired. BootFinished: $_bootGracePeriodFinished, Redirecting: $_isRedirectingLocal, FirebaseInit: ${firebaseInit.isLoading}, SignOut: ${authService.isSignOutInProgress}");
+
         if (!_bootGracePeriodFinished ||
-            _isRedirectingLocal ||
+            // _isRedirectingLocal should not block logic, it's just a UI state
             firebaseInit
                 .isLoading || // Strict Guard: Wait for initialization to finish
             firebaseInit
@@ -246,17 +250,19 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           return;
         }
 
-        final isOffline = await NetworkUtils.isOffline();
-        final isLoggedIn = ref.read(isLoggedInProvider);
-        final user = next.value;
+        final checkFn = ref.read(connectivityCheckProvider);
+        final isOffline = await checkFn();
+
+        debugPrint(
+            "Ghost Session Check Logic: next.hasValue=${next.hasValue} user=$user isOffline=$isOffline isLoggedIn=$isLoggedIn");
 
         // 3. GHOST SESSION DETECTION (Prompt User instead of Force Logout)
         if (next.hasValue && user == null && !isOffline && isLoggedIn) {
           // Extra Guard: Wait for 30s before flagging it
           await Future.delayed(const Duration(seconds: 30));
-          final stillOffline = await NetworkUtils.isOffline();
+          final stillOffline = await checkFn();
 
-          if (!stillOffline && mounted) {
+          if (!stillOffline && context.mounted) {
             DebugLogger()
                 .log("AuthWrapper: Ghost Session confirmed. Prompting user.");
             // Only show if not already showing a dialog or snackbar loop
@@ -276,9 +282,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
         // 4. AUTO-RESTORE CHECK
         if (next.value != null && isLoggedIn) {
-          // Check if local data is empty (Fresh Install / Cache Clear)
           final storage = ref.read(storageServiceProvider);
-          if (storage.getAccounts().isEmpty) {
+          final accounts = storage.getAccounts();
+          if (accounts.isEmpty) {
             DebugLogger().log(
                 "AuthWrapper: Local data empty. Triggering Auto-Restore...");
 
@@ -602,12 +608,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   Future<void> _ensureOptimisticFlag() async {
     try {
-      if (Hive.isBoxOpen('settings')) {
-        final box = Hive.box('settings');
-        if (box.get('isLoggedIn', defaultValue: false) == false) {
-          DebugLogger().log("AuthWrapper: Setting Optimistic Flag.");
-          await box.put('isLoggedIn', true);
-        }
+      final storage = ref.read(storageServiceProvider);
+      // We rely on StorageService to abstract the underlying box check if needed,
+      // but getAuthFlag() usually returns default false if key missing.
+      if (storage.getAuthFlag() == false) {
+        DebugLogger().log("AuthWrapper: Setting Optimistic Flag.");
+        await storage.setAuthFlag(true);
       }
     } catch (e) {
       DebugLogger().log("AuthWrapper: Failed to set Optimistic Flag: $e");

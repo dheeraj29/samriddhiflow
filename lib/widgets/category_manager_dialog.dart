@@ -151,7 +151,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: _iconCode == code
-                                    ? Colors.blue.withOpacity(0.2)
+                                    ? Colors.blue.withValues(alpha: 0.2)
                                     : null,
                                 border: Border.all(
                                     color: _iconCode == code
