@@ -122,10 +122,6 @@ class Transaction extends HiveObject {
     double? gainAmount,
     String? profileId,
   }) {
-    // Explicitly handle nulls for optional fields if needed?
-    // Usually copyWith doesn't reset to null unless we use a wrapped value.
-    // For now, if passed null, keep existing. To set to null, we'd need another pattern.
-    // Given the test usage (modifying date), this is sufficient.
     return Transaction(
       id: id ?? this.id,
       title: title ?? this.title,

@@ -1,0 +1,1035 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/taxes/tax_config_service.dart';
+import '../../models/taxes/tax_rules.dart';
+import '../../widgets/pure_icons.dart';
+import '../../models/category.dart';
+import '../../providers.dart';
+
+class TaxRulesScreen extends ConsumerStatefulWidget {
+  const TaxRulesScreen({super.key});
+
+  @override
+  ConsumerState<TaxRulesScreen> createState() => _TaxRulesScreenState();
+}
+
+class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
+    with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+
+  int _selectedYear = DateTime.now().year;
+  late TabController _tabController;
+
+  // Controllers
+  late TextEditingController _stdDedSalaryCtrl;
+  late TextEditingController _stdDedHPCtrl;
+  late TextEditingController _stdExempt112ACtrl;
+  late TextEditingController _ltcgRateCtrl;
+  late TextEditingController _stcgRateCtrl;
+  late TextEditingController _winReinvestCtrl;
+  late TextEditingController _rebateLimitCtrl;
+  late TextEditingController _cessRateCtrl;
+  late TextEditingController _maxCGReinvestLimitCtrl;
+  late TextEditingController _maxHPDedLimit;
+  late TextEditingController _limitGratuityCtrl;
+  late TextEditingController _limitLeaveEncashmentCtrl;
+  late TextEditingController _cashGiftLimitCtrl;
+  late TextEditingController _agriThresholdCtrl;
+  late TextEditingController _agriBasicLimitCtrl;
+
+  late TextEditingController _customCountryCtrl;
+
+  // Booleans
+  bool _isCashGiftExempt = false;
+  bool _isStdDedSalaryEnabled = true;
+  bool _isStdDedHPEnabled = true;
+  bool _isCessEnabled = true;
+  bool _isRebateEnabled = true;
+  bool _isLTCGExemption112AEnabled = true;
+  bool _isInsuranceExemptEnabled = true;
+  bool _isInsuranceAggregateLimitEnabled = true;
+  bool _isInsurancePremiumPercentEnabled = true;
+  bool _isRetirementExemptionEnabled = true;
+  bool _isHPMaxInterestEnabled = true;
+  bool _isCGReinvestmentEnabled = true;
+  bool _isCGRatesEnabled = true;
+  bool _isAgriIncomeEnabled = true;
+
+  String _jurisdiction = 'India';
+
+  List<TaxSlab> _slabs = [];
+  Map<String, String> _tagMappings = {};
+  List<TaxMappingRule> _advancedMappings = [];
+  List<TaxExemptionRule> _customExemptions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 6, vsync: this);
+    _loadRulesForYear(_selectedYear);
+  }
+
+  void _loadRulesForYear(int year) {
+    final config = ref.read(taxConfigServiceProvider);
+    final rules = config.getRulesForYear(year);
+
+    _stdDedSalaryCtrl =
+        TextEditingController(text: rules.stdDeductionSalary.toString());
+    _stdDedHPCtrl =
+        TextEditingController(text: rules.standardDeductionRateHP.toString());
+    _stdExempt112ACtrl =
+        TextEditingController(text: rules.stdExemption112A.toString());
+    _ltcgRateCtrl =
+        TextEditingController(text: rules.ltcgRateEquity.toString());
+    _stcgRateCtrl = TextEditingController(text: rules.stcgRate.toString());
+    _winReinvestCtrl =
+        TextEditingController(text: rules.windowGainReinvest.toString());
+    _rebateLimitCtrl =
+        TextEditingController(text: rules.rebateLimit.toString());
+    _cessRateCtrl = TextEditingController(text: rules.cessRate.toString());
+    _maxCGReinvestLimitCtrl =
+        TextEditingController(text: rules.maxCGReinvestLimit.toString());
+    _maxHPDedLimit =
+        TextEditingController(text: rules.maxHPDeductionLimit.toString());
+    _limitGratuityCtrl =
+        TextEditingController(text: rules.limitGratuity.toString());
+    _limitLeaveEncashmentCtrl =
+        TextEditingController(text: rules.limitLeaveEncashment.toString());
+    _cashGiftLimitCtrl =
+        TextEditingController(text: rules.cashGiftExemptionLimit.toString());
+    _agriThresholdCtrl = TextEditingController(
+        text: rules.agricultureIncomeThreshold.toString());
+    _agriBasicLimitCtrl = TextEditingController(
+        text: rules.agricultureBasicExemptionLimit.toString());
+    _customCountryCtrl =
+        TextEditingController(text: rules.customJurisdictionName);
+
+    _isCashGiftExempt = rules.isCashGiftExemptionEnabled;
+    _isStdDedSalaryEnabled = rules.isStdDeductionSalaryEnabled;
+    _isStdDedHPEnabled = rules.isStdDeductionHPEnabled;
+    _isCessEnabled = rules.isCessEnabled;
+    _isRebateEnabled = rules.isRebateEnabled;
+    _isLTCGExemption112AEnabled = rules.isLTCGExemption112AEnabled;
+    _isInsuranceExemptEnabled = rules.isInsuranceExemptionEnabled;
+    _isInsuranceAggregateLimitEnabled = rules.isInsuranceAggregateLimitEnabled;
+    _isInsurancePremiumPercentEnabled = rules.isInsurancePremiumPercentEnabled;
+    _isRetirementExemptionEnabled = rules.isRetirementExemptionEnabled;
+    _isHPMaxInterestEnabled = rules.isHPMaxInterestEnabled;
+    _isCGReinvestmentEnabled = rules.isCGReinvestmentEnabled;
+    _isCGRatesEnabled = rules.isCGRatesEnabled;
+    _isAgriIncomeEnabled = rules.isAgriIncomeEnabled;
+
+    _jurisdiction = rules.jurisdiction == 'India' ? 'India' : 'Custom';
+
+    _slabs = List.from(rules.slabs);
+    _tagMappings = Map.from(rules.tagMappings);
+    _advancedMappings = List.from(rules.advancedTagMappings);
+    _customExemptions = List.from(rules.customExemptions);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _stdDedSalaryCtrl.dispose();
+    _stdDedHPCtrl.dispose();
+    _stdExempt112ACtrl.dispose();
+    _ltcgRateCtrl.dispose();
+    _stcgRateCtrl.dispose();
+    _winReinvestCtrl.dispose();
+    _rebateLimitCtrl.dispose();
+    _cessRateCtrl.dispose();
+    _maxCGReinvestLimitCtrl.dispose();
+    _maxHPDedLimit.dispose();
+    _limitGratuityCtrl.dispose();
+    _limitLeaveEncashmentCtrl.dispose();
+    _cashGiftLimitCtrl.dispose();
+    _agriThresholdCtrl.dispose();
+    _agriBasicLimitCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_formKey.currentState!.validate()) {
+      final config = ref.read(taxConfigServiceProvider);
+      final currentRules = config.getRulesForYear(_selectedYear);
+
+      final newRules = currentRules.copyWith(
+        stdDeductionSalary: double.parse(_stdDedSalaryCtrl.text),
+        standardDeductionRateHP: double.parse(_stdDedHPCtrl.text),
+        stdExemption112A: double.parse(_stdExempt112ACtrl.text),
+        ltcgRateEquity: double.parse(_ltcgRateCtrl.text),
+        stcgRate: double.parse(_stcgRateCtrl.text),
+        windowGainReinvest: int.parse(_winReinvestCtrl.text),
+        rebateLimit: double.parse(_rebateLimitCtrl.text),
+        cessRate: double.parse(_cessRateCtrl.text),
+        maxCGReinvestLimit: double.parse(_maxCGReinvestLimitCtrl.text),
+        maxHPDeductionLimit: double.parse(_maxHPDedLimit.text),
+        limitGratuity: double.parse(_limitGratuityCtrl.text),
+        limitLeaveEncashment: double.parse(_limitLeaveEncashmentCtrl.text),
+        cashGiftExemptionLimit: double.parse(_cashGiftLimitCtrl.text),
+        isCashGiftExemptionEnabled: _isCashGiftExempt,
+        isStdDeductionSalaryEnabled: _isStdDedSalaryEnabled,
+        isStdDeductionHPEnabled: _isStdDedHPEnabled,
+        isCessEnabled: _isCessEnabled,
+        isRebateEnabled: _isRebateEnabled,
+        isLTCGExemption112AEnabled: _isLTCGExemption112AEnabled,
+        isInsuranceExemptionEnabled: _isInsuranceExemptEnabled,
+        isInsuranceAggregateLimitEnabled: _isInsuranceAggregateLimitEnabled,
+        isInsurancePremiumPercentEnabled: _isInsurancePremiumPercentEnabled,
+        isRetirementExemptionEnabled: _isRetirementExemptionEnabled,
+        isHPMaxInterestEnabled: _isHPMaxInterestEnabled,
+        isCGReinvestmentEnabled: _isCGReinvestmentEnabled,
+        isCGRatesEnabled: _isCGRatesEnabled,
+        isAgriIncomeEnabled: _isAgriIncomeEnabled,
+        customJurisdictionName: _customCountryCtrl.text,
+        agricultureIncomeThreshold: double.parse(_agriThresholdCtrl.text),
+        agricultureBasicExemptionLimit: double.parse(_agriBasicLimitCtrl.text),
+        jurisdiction:
+            _jurisdiction == 'Custom' ? _customCountryCtrl.text : _jurisdiction,
+        slabs: _slabs,
+        tagMappings: _tagMappings,
+        advancedTagMappings: _advancedMappings,
+        customExemptions: _customExemptions,
+        // Insurance rules preserved from current or handled in Insurance Screen
+      );
+
+      await config.saveRulesForYear(_selectedYear, newRules);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tax Rules Saved Successfully')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final years = [2023, 2024, 2025, 2026, 2027, 2028];
+    final appBarFgColor =
+        Theme.of(context).appBarTheme.foregroundColor ?? Colors.black;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tax Configuration'),
+        actions: [
+          // Financial Year Dropdown
+          DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _selectedYear,
+              dropdownColor: Theme.of(context).primaryColor,
+              iconEnabledColor: appBarFgColor,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+              selectedItemBuilder: (BuildContext context) {
+                return years.map((int value) {
+                  return Center(
+                    child: Text(
+                      'FY $value-${value + 1}',
+                      style: TextStyle(
+                          color: appBarFgColor, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }).toList();
+              },
+              items: years
+                  .map((y) => DropdownMenuItem(
+                        value: y,
+                        child: Text('FY $y-${y + 1}'),
+                      ))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _selectedYear = val);
+                  _loadRulesForYear(val);
+                }
+              },
+            ),
+          ),
+          // Copy Previous Year
+          IconButton(
+            icon: const Icon(Icons.copy_all),
+            tooltip: 'Copy Rules from Previous Year',
+            onPressed: () {
+              _loadRulesForYear(_selectedYear - 1);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text(
+                      'Values copied from previous year. Click Save to apply.')));
+            },
+          ),
+          // Save
+          IconButton(
+            icon: PureIcons.save(),
+            onPressed: _save,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: const [
+            Tab(text: 'General'),
+            Tab(text: 'Salary'),
+            Tab(text: 'House Prop'),
+            Tab(text: 'Cap Gains'),
+            Tab(text: 'Agri Income'),
+            Tab(text: 'Mappings'),
+          ],
+        ),
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            // TOP LEVEL JURISDICTION
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Tax Jurisdiction',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _jurisdiction,
+                          isDense: true,
+                          items: ['India', 'Custom']
+                              .map((j) =>
+                                  DropdownMenuItem(value: j, child: Text(j)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _jurisdiction = val;
+                                if (val != 'India') {
+                                  _isStdDedSalaryEnabled = false;
+                                  _isStdDedHPEnabled = false;
+                                  _isRebateEnabled = false;
+                                  _isCessEnabled = false;
+                                  _isLTCGExemption112AEnabled = false;
+                                  _isInsuranceExemptEnabled = false;
+                                  _isInsuranceAggregateLimitEnabled = false;
+                                  _isInsurancePremiumPercentEnabled = false;
+                                  _isRetirementExemptionEnabled = false;
+                                  _isHPMaxInterestEnabled = false;
+                                  _isCGReinvestmentEnabled = false;
+                                  _isCGRatesEnabled = false;
+                                  _isAgriIncomeEnabled = false;
+                                }
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_jurisdiction == 'Custom') ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _customCountryCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Country Name',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildGeneralTab(),
+                  _buildSalaryTab(),
+                  _buildHousePropertyTab(),
+                  _buildCapitalGainsTab(),
+                  _buildAgriConfigTab(),
+                  _buildMappingsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGeneralTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionHeader('Tax Rates & Slabs'),
+        SwitchListTile(
+          title: const Text('Enable Rebate (u/s 87A)'),
+          value: _isRebateEnabled,
+          onChanged: (v) => setState(() => _isRebateEnabled = v),
+        ),
+        if (_isRebateEnabled)
+          _buildNumberField('Rebate Limit', _rebateLimitCtrl),
+        SwitchListTile(
+          title: const Text('Enable Health & Edu Cess'),
+          value: _isCessEnabled,
+          onChanged: (v) => setState(() => _isCessEnabled = v),
+        ),
+        if (_isCessEnabled) _buildNumberField('Cess Rate (%)', _cessRateCtrl),
+        SwitchListTile(
+          title: const Text('Enable Cash Gift Exemption (India 50k)'),
+          value: _isCashGiftExempt,
+          onChanged: (v) => setState(() => _isCashGiftExempt = v),
+        ),
+        if (_isCashGiftExempt)
+          _buildNumberField('Cash Gift Exemption Limit', _cashGiftLimitCtrl),
+        const SizedBox(height: 8),
+        _buildSlabsEditor(),
+        const Divider(),
+        _buildSectionHeader('Custom General Exemptions'),
+        _buildCustomExemptionsEditor(),
+        Center(
+          child: TextButton.icon(
+            icon: const Icon(Icons.add),
+            label: const Text('Add Custom Exemption'),
+            onPressed: _addCustomRuleDialog,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMappingsTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addMappingDialog,
+        label: const Text('Add Mapping'),
+        icon: const Icon(Icons.add_link),
+      ),
+      body: _tagMappings.isEmpty
+          ? const Center(child: Text('No mappings defined.'))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text(
+                    'Map Transaction Tags or Descriptions to Tax Heads for auto-assignment.'),
+                const SizedBox(height: 16),
+                ..._tagMappings.entries.map((e) {
+                  return Card(
+                    child: ListTile(
+                      title: Text(e.key), // Tag or Description
+                      subtitle: Text('Maps to: ${e.value}'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          setState(() {
+                            _tagMappings.remove(e.key);
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                }),
+                const Divider(),
+                const Text('Advanced Mappings (CG / Filters)',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ..._advancedMappings.asMap().entries.map((e) {
+                  final i = e.key;
+                  final r = e.value;
+                  return Card(
+                    child: ListTile(
+                      title: Text(r.categoryName),
+                      subtitle: Text(
+                          'Maps to: ${r.taxHead}\nPatterns: ${r.matchDescriptions.join(", ")}${r.minHoldingMonths != null ? "\nMin Holding: ${r.minHoldingMonths} mo" : ""}'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          setState(() {
+                            _advancedMappings.removeAt(i);
+                          });
+                        },
+                      ),
+                      onTap: () => _addMappingDialog(existingRule: r, index: i),
+                    ),
+                  );
+                }),
+              ],
+            ),
+    );
+  }
+
+  void _addMappingDialog({TaxMappingRule? existingRule, int? index}) {
+    bool mapByTag = true;
+    CategoryTag selectedTag = CategoryTag.values.firstWhere(
+        (t) => t != CategoryTag.none,
+        orElse: () => CategoryTag.none);
+    String selectedCat = existingRule?.categoryName ?? '';
+    String selectedHead = existingRule?.taxHead ?? 'salary';
+
+    // Descriptions list for advanced rules
+    List<String> matchDescriptions =
+        existingRule != null ? List.from(existingRule.matchDescriptions) : [];
+    List<String> excludeDescriptions =
+        existingRule != null ? List.from(existingRule.excludeDescriptions) : [];
+
+    final matchDescCtrl = TextEditingController();
+    final excludeDescCtrl = TextEditingController();
+
+    // Min months
+    final minMonthsCtrl = TextEditingController(
+        text: existingRule?.minHoldingMonths?.toString() ?? '');
+    final storage = ref.read(storageServiceProvider);
+    final incomeCategories = storage
+        .getCategories()
+        .where((c) => c.usage == CategoryUsage.income)
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateBuilder) {
+          return AlertDialog(
+            title: const Text('Add Mapping'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioGroup<bool>(
+                    groupValue: mapByTag,
+                    onChanged: (v) => setStateBuilder(() => mapByTag = v!),
+                    child: const Row(
+                      children: [
+                        Expanded(
+                          child: RadioListTile<bool>.adaptive(
+                            title: Text('Tag', style: TextStyle(fontSize: 12)),
+                            value: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        Expanded(
+                          child: RadioListTile<bool>.adaptive(
+                            title: Text('Cat', style: TextStyle(fontSize: 12)),
+                            value: false,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (mapByTag)
+                    DropdownButtonFormField<CategoryTag>(
+                      initialValue: selectedTag,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Tag',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: CategoryTag.values
+                          .where((t) => t != CategoryTag.none)
+                          .map((t) => DropdownMenuItem(
+                                value: t,
+                                child: Text(t.name),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setStateBuilder(() => selectedTag = v);
+                      },
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue:
+                          selectedCat.isEmpty && incomeCategories.isNotEmpty
+                              ? (selectedCat = incomeCategories.first.name)
+                              : selectedCat,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: incomeCategories
+                          .map((c) => DropdownMenuItem(
+                                value: c.name,
+                                child: Text(c.name),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setStateBuilder(() => selectedCat = v);
+                      },
+                    ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedHead,
+                    decoration: const InputDecoration(
+                      labelText: 'Maps to Tax Head',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      'salary',
+                      'houseProp',
+                      'business',
+                      'ltcg',
+                      'stcg',
+                      'dividend',
+                      'other',
+                      'agriIncome'
+                    ]
+                        .map((h) => DropdownMenuItem(value: h, child: Text(h)))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setStateBuilder(() => selectedHead = v);
+                    },
+                  ),
+                  if (selectedHead == 'ltcg' || selectedHead == 'stcg') ...[
+                    const SizedBox(height: 16),
+                    const Text('Advanced Mapping Criteria',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: minMonthsCtrl,
+                      decoration: InputDecoration(
+                        labelText: selectedHead == 'stcg'
+                            ? 'STCG if holding period < (months)'
+                            : (selectedHead == 'ltcg'
+                                ? 'LTCG if holding period >= (months)'
+                                : 'Holding period threshold (months)'),
+                        border: const OutlineInputBorder(),
+                        helperText: 'Leave empty for any period',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: false),
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: matchDescCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Must Match Description',
+                                border: OutlineInputBorder(),
+                                hintText: 'e.g., Sold'),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            if (matchDescCtrl.text.isNotEmpty) {
+                              setStateBuilder(() {
+                                matchDescriptions.add(matchDescCtrl.text);
+                                matchDescCtrl.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    if (matchDescriptions.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        children: matchDescriptions.map((d) {
+                          return Chip(
+                            label:
+                                Text(d, style: const TextStyle(fontSize: 10)),
+                            onDeleted: () => setStateBuilder(
+                                () => matchDescriptions.remove(d)),
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: excludeDescCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Exclude Description',
+                                border: OutlineInputBorder(),
+                                hintText: 'e.g., Transfer'),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            if (excludeDescCtrl.text.isNotEmpty) {
+                              setStateBuilder(() {
+                                excludeDescriptions.add(excludeDescCtrl.text);
+                                excludeDescCtrl.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    if (excludeDescriptions.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        children: excludeDescriptions.map((d) {
+                          return Chip(
+                            label: Text(d,
+                                style: const TextStyle(
+                                    fontSize: 10, color: Colors.red)),
+                            onDeleted: () => setStateBuilder(
+                                () => excludeDescriptions.remove(d)),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () {
+                  setState(() {
+                    if (selectedHead == 'ltcg' || selectedHead == 'stcg') {
+                      final newRule = TaxMappingRule(
+                        categoryName: mapByTag ? selectedTag.name : selectedCat,
+                        taxHead: selectedHead,
+                        matchDescriptions: matchDescriptions,
+                        excludeDescriptions: excludeDescriptions,
+                        minHoldingMonths: int.tryParse(minMonthsCtrl.text),
+                      );
+                      if (index != null) {
+                        _advancedMappings[index] = newRule;
+                      } else {
+                        _advancedMappings.add(newRule);
+                      }
+                    } else {
+                      final key = mapByTag ? selectedTag.name : selectedCat;
+                      if (key.isNotEmpty) {
+                        _tagMappings[key] = selectedHead;
+                      }
+                    }
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSlabsEditor() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Income Slabs',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      setState(() {
+                        _slabs.add(const TaxSlab(double.infinity, 30));
+                      });
+                    }),
+              ],
+            ),
+            ..._slabs.asMap().entries.map((entry) {
+              final index = entry.key;
+              final slab = entry.value;
+              return Row(
+                children: [
+                  const Text('Up to  '),
+                  SizedBox(
+                    width: 100,
+                    child: TextFormField(
+                      initialValue: slab.upto == double.infinity
+                          ? ''
+                          : slab.upto.toStringAsFixed(0),
+                      decoration: InputDecoration(
+                        hintText:
+                            slab.upto == double.infinity ? 'Infinity' : '',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d+\.?\d*')),
+                      ],
+                      onChanged: (val) {
+                        double limit = val.isEmpty
+                            ? double.infinity
+                            : double.tryParse(val) ?? double.infinity;
+                        _slabs[index] = TaxSlab(limit, slab.rate);
+                      },
+                    ),
+                  ),
+                  const Text('  Rate: '),
+                  SizedBox(
+                    width: 60,
+                    child: TextFormField(
+                      initialValue: slab.rate.toString(),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d+\.?\d*')),
+                      ],
+                      onChanged: (val) {
+                        _slabs[index] =
+                            TaxSlab(slab.upto, double.tryParse(val) ?? 0);
+                      },
+                    ),
+                  ),
+                  const Text('%'),
+                  IconButton(
+                      icon: const Icon(Icons.delete, size: 16),
+                      onPressed: () {
+                        setState(() => _slabs.removeAt(index));
+                      }),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              )),
+    );
+  }
+
+  Widget _buildNumberField(String label, TextEditingController controller,
+      {bool isInt = false, String? subtitle}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: subtitle,
+          border: const OutlineInputBorder(),
+        ),
+        keyboardType: TextInputType.numberWithOptions(decimal: !isInt),
+        inputFormatters: [
+          if (isInt)
+            FilteringTextInputFormatter.digitsOnly
+          else
+            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+        ],
+        validator: (val) {
+          if (val == null || val.isEmpty) return 'Required';
+          if (double.tryParse(val) == null) return 'Invalid Number';
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _buildSalaryTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionHeader('Standard Deductions'),
+        SwitchListTile(
+          title: const Text('Enable Standard Deduction'),
+          value: _isStdDedSalaryEnabled,
+          onChanged: (v) => setState(() => _isStdDedSalaryEnabled = v),
+        ),
+        if (_isStdDedSalaryEnabled)
+          _buildNumberField('Standard Deduction (Salary)', _stdDedSalaryCtrl),
+        const Divider(),
+        _buildSectionHeader('Retirement Exemptions'),
+        SwitchListTile(
+          title: const Text('Enable Retirement / Resignation Exemptions'),
+          subtitle: const Text('Gratuity & Leave Encashment'),
+          value: _isRetirementExemptionEnabled,
+          onChanged: (v) => setState(() => _isRetirementExemptionEnabled = v),
+        ),
+        if (_isRetirementExemptionEnabled) ...[
+          _buildNumberField(
+              'Gratuity Exemption Limit (10(10))', _limitGratuityCtrl),
+          _buildNumberField(
+              'Leave Encashment Limit (10(10AA))', _limitLeaveEncashmentCtrl),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHousePropertyTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionHeader('House Property Configuration'),
+        SwitchListTile(
+          title: const Text('Enable 30% Standard Deduction'),
+          value: _isStdDedHPEnabled,
+          onChanged: (v) => setState(() => _isStdDedHPEnabled = v),
+        ),
+        if (_isStdDedHPEnabled)
+          _buildNumberField('Standard Deduction Rate (%)', _stdDedHPCtrl,
+              subtitle: 'Usually 30%'),
+        const Divider(),
+        SwitchListTile(
+          title: const Text('Enable Interest Deduction Cap'),
+          subtitle:
+              const Text('Limit max interest deduction for self-occupied'),
+          value: _isHPMaxInterestEnabled,
+          onChanged: (v) => setState(() => _isHPMaxInterestEnabled = v),
+        ),
+        if (_isHPMaxInterestEnabled)
+          _buildNumberField(
+              'Max Interest Deduction (Self-Occ)', _maxHPDedLimit),
+      ],
+    );
+  }
+
+  Widget _buildCapitalGainsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionHeader('Capital Gains Rates'),
+        SwitchListTile(
+          title: const Text('Enable Special CG Rates'),
+          subtitle: const Text('Use special rates instead of normal slabs'),
+          value: _isCGRatesEnabled,
+          onChanged: (v) => setState(() => _isCGRatesEnabled = v),
+        ),
+        if (_isCGRatesEnabled) ...[
+          _buildNumberField('LTCG Rate (Equity) %', _ltcgRateCtrl),
+          _buildNumberField('STCG Rate (Equity) %', _stcgRateCtrl),
+        ],
+        SwitchListTile(
+          title: const Text('Enable 112A Exemption'),
+          value: _isLTCGExemption112AEnabled,
+          onChanged: (v) => setState(() => _isLTCGExemption112AEnabled = v),
+        ),
+        if (_isLTCGExemption112AEnabled)
+          _buildNumberField(
+              'Standard Exemption 112A (LTCG)', _stdExempt112ACtrl),
+        const Divider(),
+        _buildSectionHeader('Reinvestment Rules'),
+        SwitchListTile(
+          title: const Text('Enable Reinvestment Exemptions'),
+          value: _isCGReinvestmentEnabled,
+          onChanged: (v) => setState(() => _isCGReinvestmentEnabled = v),
+        ),
+        if (_isCGReinvestmentEnabled) ...[
+          _buildNumberField('Reinvestment Window (Years)', _winReinvestCtrl,
+              isInt: true),
+          _buildNumberField(
+              'Max Capital Gain Reinvest Limit', _maxCGReinvestLimitCtrl),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAgriConfigTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildSectionHeader('Agriculture Income Configuration'),
+        SwitchListTile(
+          title: const Text('Enable Partial Integration'),
+          subtitle:
+              const Text('Determines tax using partial integration method'),
+          value: _isAgriIncomeEnabled,
+          onChanged: (v) => setState(() => _isAgriIncomeEnabled = v),
+        ),
+        if (_isAgriIncomeEnabled) ...[
+          const Text(
+              'Partial Integration Method determines tax on Agriculture Income if it exceeds the threshold and non-agri income exceeds basic exemption.'),
+          const SizedBox(height: 16),
+          _buildNumberField('Agriculture Income Threshold', _agriThresholdCtrl,
+              subtitle: 'Default: ₹5,000'),
+          _buildNumberField('Agri Basic Exemption Limit', _agriBasicLimitCtrl,
+              subtitle: 'Default: ₹4,00,000 (Used for Partial Integration)'),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCustomExemptionsEditor() {
+    // Defines custom exemptions displayed in General or Mappings
+    if (_customExemptions.isEmpty) {
+      return const Padding(
+          padding: EdgeInsets.all(8),
+          child: Text('No custom exemptions defined.'));
+    }
+    return Column(
+        children: _customExemptions.asMap().entries.map((e) {
+      final i = e.key;
+      final rule = e.value;
+      return SwitchListTile(
+        title: Text(rule.name),
+        subtitle: Text('${rule.incomeHead} • ${rule.limit}'),
+        value: rule.isEnabled,
+        onChanged: (val) {
+          setState(() {
+            _customExemptions[i] = rule.copyWith(isEnabled: val);
+          });
+        },
+        secondary: IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () => setState(() => _customExemptions.removeAt(i))),
+      );
+    }).toList());
+  }
+
+  void _addCustomRuleDialog() {
+    // Stub for now or implement if strictly needed.
+    final nameCtrl = TextEditingController();
+    final limitCtrl = TextEditingController();
+    String head = 'Salary';
+
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: const Text('Add Custom Exemption'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name')),
+                  TextField(
+                      controller: limitCtrl,
+                      decoration: const InputDecoration(labelText: 'Limit'),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d+\.?\d*')),
+                      ]),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel')),
+                  FilledButton(
+                      onPressed: () {
+                        setState(() {
+                          _customExemptions.add(TaxExemptionRule(
+                              name: nameCtrl.text,
+                              incomeHead: head,
+                              limit: double.tryParse(limitCtrl.text) ?? 0,
+                              isPercentage: false));
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Add'))
+                ]));
+  }
+}

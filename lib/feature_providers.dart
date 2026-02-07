@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'providers.dart';
-import 'services/excel_service.dart';
 import 'services/firestore_storage_service.dart';
 import 'services/cloud_sync_service.dart';
+import 'services/excel_service.dart';
 import 'services/calendar_service.dart';
 import 'services/notification_service.dart';
+import 'services/taxes/tax_config_service.dart';
 
 // --- Heavy Service Providers (Moved for Bundle Optimization) ---
 
 final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   final storage = ref.watch(storageServiceProvider);
+  final taxConfig = ref.watch(taxConfigServiceProvider);
   final firestoreStorage = FirestoreStorageService();
-  return CloudSyncService(firestoreStorage, storage,
+  return CloudSyncService(firestoreStorage, storage, taxConfig,
       firebaseAuth: FirebaseAuth.instance);
 });
 

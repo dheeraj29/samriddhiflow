@@ -6,12 +6,15 @@ import 'services/storage_service.dart';
 import 'utils/network_utils.dart';
 import 'utils/debug_logger.dart';
 import 'services/loan_service.dart';
-import 'models/account.dart';
-import 'models/transaction.dart';
-import 'models/loan.dart';
-import 'models/recurring_transaction.dart';
-import 'models/category.dart';
-import 'models/profile.dart';
+import 'package:samriddhi_flow/models/account.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/models/loan.dart';
+import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/profile.dart';
+import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 
 import 'services/auth_service.dart';
 import 'services/file_service.dart';
@@ -90,22 +93,56 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
   try {
     await Hive.initFlutter();
 
-    // Register Adapters
-    Hive.registerAdapter(AccountAdapter());
-    Hive.registerAdapter(AccountTypeAdapter());
-    Hive.registerAdapter(TransactionAdapter());
-    Hive.registerAdapter(TransactionTypeAdapter());
-    Hive.registerAdapter(LoanAdapter());
-    Hive.registerAdapter(LoanTransactionAdapter());
-    Hive.registerAdapter(LoanTransactionTypeAdapter());
-    Hive.registerAdapter(LoanTypeAdapter());
-    Hive.registerAdapter(RecurringTransactionAdapter());
-    Hive.registerAdapter(FrequencyAdapter());
-    Hive.registerAdapter(ScheduleTypeAdapter());
-    Hive.registerAdapter(CategoryAdapter());
-    Hive.registerAdapter(CategoryUsageAdapter());
-    Hive.registerAdapter(CategoryTagAdapter());
-    Hive.registerAdapter(ProfileAdapter());
+    // Register all Adapters using explicit generic types to avoid 'dynamic' registration conflicts
+    // and fixed 'unknown type' errors during write.
+    // Register all Adapters using explicit generic types to avoid 'dynamic' registration conflicts
+    // and fixed 'unknown type' errors during write. We use override: true to ensure
+    // that even if an adapter was registered (possibly as dynamic in a previous run),
+    // it is now correctly paired with its tight class type.
+    Hive.registerAdapter<Account>(AccountAdapter(), override: true);
+    Hive.registerAdapter<AccountType>(AccountTypeAdapter(), override: true);
+    Hive.registerAdapter<AssetType>(AssetTypeAdapter(), override: true);
+    Hive.registerAdapter<BusinessEntity>(BusinessEntityAdapter(),
+        override: true);
+    Hive.registerAdapter<BusinessType>(BusinessTypeAdapter(), override: true);
+    Hive.registerAdapter<CapitalGainEntry>(CapitalGainEntryAdapter(),
+        override: true);
+    Hive.registerAdapter<Category>(CategoryAdapter(), override: true);
+    Hive.registerAdapter<CategoryTag>(CategoryTagAdapter(), override: true);
+    Hive.registerAdapter<CategoryUsage>(CategoryUsageAdapter(), override: true);
+    Hive.registerAdapter<DividendIncome>(DividendIncomeAdapter(),
+        override: true);
+    Hive.registerAdapter<Frequency>(FrequencyAdapter(), override: true);
+    Hive.registerAdapter<HouseProperty>(HousePropertyAdapter(), override: true);
+    Hive.registerAdapter<InsurancePolicy>(InsurancePolicyAdapter(),
+        override: true);
+    Hive.registerAdapter<InsurancePremiumRule>(InsurancePremiumRuleAdapter(),
+        override: true);
+    Hive.registerAdapter<Loan>(LoanAdapter(), override: true);
+    Hive.registerAdapter<LoanTransaction>(LoanTransactionAdapter(),
+        override: true);
+    Hive.registerAdapter<LoanTransactionType>(LoanTransactionTypeAdapter(),
+        override: true);
+    Hive.registerAdapter<LoanType>(LoanTypeAdapter(), override: true);
+    Hive.registerAdapter<OtherIncome>(OtherIncomeAdapter(), override: true);
+    Hive.registerAdapter<Profile>(ProfileAdapter(), override: true);
+    Hive.registerAdapter<RecurringTransaction>(RecurringTransactionAdapter(),
+        override: true);
+    Hive.registerAdapter<ReinvestmentType>(ReinvestmentTypeAdapter(),
+        override: true);
+    Hive.registerAdapter<SalaryDetails>(SalaryDetailsAdapter(), override: true);
+    Hive.registerAdapter<ScheduleType>(ScheduleTypeAdapter(), override: true);
+    Hive.registerAdapter<TaxExemptionRule>(TaxExemptionRuleAdapter(),
+        override: true);
+    Hive.registerAdapter<TaxMappingRule>(TaxMappingRuleAdapter(),
+        override: true);
+    Hive.registerAdapter<TaxPaymentEntry>(TaxPaymentEntryAdapter(),
+        override: true);
+    Hive.registerAdapter<TaxRules>(TaxRulesAdapter(), override: true);
+    Hive.registerAdapter<TaxSlab>(TaxSlabAdapter(), override: true);
+    Hive.registerAdapter<Transaction>(TransactionAdapter(), override: true);
+    Hive.registerAdapter<TransactionType>(TransactionTypeAdapter(),
+        override: true);
 
     // Open specialized boxes
     await Hive.openBox('sum_tracker');
@@ -569,3 +606,20 @@ class CurrencyFormatNotifier extends Notifier<bool> {
 
 final currencyFormatProvider =
     NotifierProvider<CurrencyFormatNotifier, bool>(CurrencyFormatNotifier.new);
+
+class AppLockIntentNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void lock() => state = true;
+  void reset() => state = false;
+}
+
+final appLockIntentProvider =
+    NotifierProvider<AppLockIntentNotifier, bool>(AppLockIntentNotifier.new);
+
+final appLockStatusProvider = Provider<bool>((ref) {
+  final init = ref.watch(storageInitializerProvider);
+  if (!init.hasValue) return false;
+  final storage = ref.watch(storageServiceProvider);
+  return storage.isAppLockEnabled() && storage.getAppPin() != null;
+});

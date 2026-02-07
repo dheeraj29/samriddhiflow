@@ -11,7 +11,8 @@ import '../models/category.dart';
 import '../models/account.dart';
 import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
-import '../utils/recurrence_utils.dart'; // Added import
+import '../utils/recurrence_utils.dart';
+import '../utils/billing_helper.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final TransactionType initialType;
@@ -352,8 +353,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         value: null, child: Text('No Account (Manual)')),
                     ...sortedAccounts.map((a) => DropdownMenuItem<String?>(
                           value: a.id,
-                          child:
-                              Text('${a.name} (${_formatAccountBalance(a)})'),
+                          child: Text(
+                              '${a.name} (${_formatAccountBalance(a, allTxns)})'),
                         )),
                   ],
                   onChanged: (v) {
@@ -383,7 +384,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           .map((a) => DropdownMenuItem<String?>(
                                 value: a.id,
                                 child: Text(
-                                    '${a.name} (${_formatAccountBalance(a)})'),
+                                    '${a.name} (${_formatAccountBalance(a, allTxns)})'),
                               )),
                     ],
                     onChanged: (v) => setState(() => _toAccountId = v),
@@ -808,10 +809,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
-  String _formatAccountBalance(Account a) {
-    if (a.type == AccountType.creditCard && a.creditLimit != null) {
-      final avail = a.creditLimit! - a.balance;
-      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
+  String _formatAccountBalance(Account a, List<Transaction> allTxns) {
+    if (a.type == AccountType.creditCard) {
+      final now = DateTime.now();
+      final unbilled = BillingHelper.calculateUnbilledAmount(a, allTxns, now);
+      final usage = a.balance + unbilled;
+      return 'Usage: ${CurrencyUtils.getSmartFormat(usage, a.currency)}';
     }
     return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
   }

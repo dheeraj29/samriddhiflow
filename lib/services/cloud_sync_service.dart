@@ -8,13 +8,18 @@ import '../models/loan.dart';
 import '../models/recurring_transaction.dart';
 import '../models/category.dart';
 import '../models/profile.dart';
+import '../models/taxes/insurance_policy.dart';
+import '../models/taxes/tax_rules.dart';
+import 'taxes/tax_config_service.dart';
 
 class CloudSyncService {
   final CloudStorageInterface _cloudStorage;
   final StorageService _storageService;
+  final TaxConfigService _taxConfigService;
   final FirebaseAuth? _firebaseAuth;
 
-  CloudSyncService(this._cloudStorage, this._storageService,
+  CloudSyncService(
+      this._cloudStorage, this._storageService, this._taxConfigService,
       {FirebaseAuth? firebaseAuth})
       : _firebaseAuth = firebaseAuth;
 
@@ -54,7 +59,12 @@ class CloudSyncService {
           .toList(),
       'profiles':
           _storageService.getProfiles().map((e) => _profileToMap(e)).toList(),
-      'settings': _storageService.getAllSettings()
+      'settings': _storageService.getAllSettings(),
+      'insurance_policies':
+          _storageService.getInsurancePolicies().map((e) => e.toMap()).toList(),
+      'tax_rules': _taxConfigService
+          .getAllRules()
+          .map((year, rules) => MapEntry(year.toString(), rules.toMap())),
     };
 
     await _cloudStorage.syncData(user.uid, data);
@@ -120,6 +130,23 @@ class CloudSyncService {
     if (data['settings'] != null) {
       await _storageService
           .saveSettings(Map<String, dynamic>.from(data['settings']));
+    }
+
+    if (data['insurance_policies'] != null) {
+      final List<InsurancePolicy> policies = [];
+      for (var p in (data['insurance_policies'] as List)) {
+        policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
+      }
+      await _storageService.saveInsurancePolicies(policies);
+    }
+
+    if (data['tax_rules'] != null) {
+      final Map<int, TaxRules> taxRules = {};
+      (data['tax_rules'] as Map).forEach((key, val) {
+        final year = int.parse(key.toString());
+        taxRules[year] = TaxRules.fromMap(Map<String, dynamic>.from(val));
+      });
+      await _taxConfigService.restoreAllRules(taxRules);
     }
   }
 

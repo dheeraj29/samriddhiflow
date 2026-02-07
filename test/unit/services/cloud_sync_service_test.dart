@@ -11,7 +11,11 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 
+import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+
 class MockStorageService extends Mock implements StorageService {}
+
+class MockTaxConfigService extends Mock implements TaxConfigService {}
 
 class MockCloudStorageInterface extends Mock implements CloudStorageInterface {}
 
@@ -43,18 +47,20 @@ void main() {
 
   late CloudSyncService cloudSyncService;
   late MockStorageService mockStorage;
+  late MockTaxConfigService mockTaxConfig;
   late MockCloudStorageInterface mockCloud;
   late MockFirebaseAuth mockAuth;
   late MockUser mockUser;
 
   setUp(() {
     mockStorage = MockStorageService();
+    mockTaxConfig = MockTaxConfigService();
     mockCloud = MockCloudStorageInterface();
     mockAuth = MockFirebaseAuth();
     mockUser = MockUser();
 
-    cloudSyncService =
-        CloudSyncService(mockCloud, mockStorage, firebaseAuth: mockAuth);
+    cloudSyncService = CloudSyncService(mockCloud, mockStorage, mockTaxConfig,
+        firebaseAuth: mockAuth);
 
     when(() => mockAuth.currentUser).thenReturn(mockUser);
     when(() => mockUser.uid).thenReturn('user123');
@@ -126,8 +132,9 @@ void main() {
           .thenReturn([Profile(id: 'p1', name: 'P1')]);
       when(() => mockStorage.getAllSettings()).thenReturn({'theme': 'dark'});
 
-      when(() => mockCloud.syncData(any(), any()))
-          .thenAnswer((_) async {});
+      when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
+      when(() => mockTaxConfig.getAllRules()).thenReturn({});
+      when(() => mockCloud.syncData(any(), any())).thenAnswer((_) async {});
 
       await cloudSyncService.syncToCloud();
 
@@ -221,11 +228,13 @@ void main() {
       when(() => mockStorage.saveAccount(any())).thenAnswer((_) async {});
       when(() => mockStorage.addCategory(any())).thenAnswer((_) async {});
       when(() => mockStorage.saveTransaction(any(),
-              applyImpact: any(named: 'applyImpact')))
-          .thenAnswer((_) async {});
+          applyImpact: any(named: 'applyImpact'))).thenAnswer((_) async {});
       when(() => mockStorage.saveLoan(any())).thenAnswer((_) async {});
       when(() => mockStorage.saveRecurringTransaction(any()))
           .thenAnswer((_) async {});
+      when(() => mockStorage.saveInsurancePolicies(any()))
+          .thenAnswer((_) async {});
+      when(() => mockTaxConfig.restoreAllRules(any())).thenAnswer((_) async {});
       when(() => mockStorage.saveSettings(any())).thenAnswer((_) async {});
 
       await cloudSyncService.restoreFromCloud();
@@ -242,8 +251,8 @@ void main() {
     });
 
     test('Edge Cases - Auth Null', () async {
-      final cloudNoAuth = CloudSyncService(
-          mockCloud, mockStorage); // Uses default instance (null in tests)
+      final cloudNoAuth =
+          CloudSyncService(mockCloud, mockStorage, mockTaxConfig);
       expect(() => cloudNoAuth.syncToCloud(), throwsA(isA<Exception>()));
       expect(() => cloudNoAuth.restoreFromCloud(), throwsA(isA<Exception>()));
       expect(() => cloudNoAuth.deleteCloudData(), throwsA(isA<Exception>()));

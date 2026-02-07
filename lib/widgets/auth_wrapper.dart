@@ -124,6 +124,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       final isOffline = await checkFn();
       if (isOffline) {
         DebugLogger().log("AuthWrapper: Offline. Skipping revalidation.");
+        // If we are persistently logged in, mark as "Timed Out" immediately
+        // so we enter Failover Mode (Dashboard) and stay there when network returns.
+        if (ref.read(isLoggedInProvider) && mounted) {
+          setState(() => _hasVerificationTimedOut = true);
+        }
         return;
       }
 

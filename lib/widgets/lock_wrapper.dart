@@ -105,6 +105,15 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     // we do a one-time sync check to prevent that 1-frame glitch.
     final storage = ref.read(storageServiceProvider);
 
+    // Watch for manual lock intent
+    ref.listen(appLockIntentProvider, (previous, next) {
+      if (next == true) {
+        setState(() => _isLocked = true);
+        // Reset intent
+        ref.read(appLockIntentProvider.notifier).reset();
+      }
+    });
+
     // Watch Auth State - if user logs in VIA FALLBACK, we can unlock
     ref.listen(authStreamProvider, (previous, next) {
       if (next.value != null && previous?.value == null && _isFallbackMode) {

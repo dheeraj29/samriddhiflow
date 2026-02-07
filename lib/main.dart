@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme/app_theme.dart';
 import 'screens/settings_screen.dart';
+import 'screens/taxes/tax_dashboard_screen.dart';
 import 'widgets/lock_wrapper.dart';
 import 'navigator_key.dart';
 import 'widgets/auth_wrapper.dart';
@@ -77,6 +78,7 @@ class BudgetApp extends ConsumerWidget {
       themeMode: themeMode,
       routes: {
         '/settings': (context) => const SettingsScreen(),
+        '/taxes': (context) => const TaxDashboardScreen(),
       },
       builder: (context, child) {
         return LockWrapper(

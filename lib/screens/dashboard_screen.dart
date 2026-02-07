@@ -113,6 +113,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             icon: PureIcons.notifications(),
             tooltip: 'Reminders',
           ),
+          if (ref.watch(appLockStatusProvider))
+            IconButton(
+              onPressed: () => ref.read(appLockIntentProvider.notifier).lock(),
+              icon: const Icon(Icons.lock_outline),
+              tooltip: 'Lock App',
+            ),
           // Show logout if logged in (Stream value) OR local offline login flag
           // But only if ONLINE (logout requires connectivity).
           if ((ref.watch(authStreamProvider).value != null ||
@@ -220,6 +226,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             double netWorth = 0;
             double assets = 0;
             double debt = 0;
+            double currentBalance = 0; // Savings + Wallets
 
             final allTxns = ref.watch(transactionsProvider).value ?? [];
             final now = DateTime.now();
@@ -245,6 +252,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                 if (acc.balance >= 0) {
                   assets += acc.balance;
+                }
+
+                if (acc.type == AccountType.savings ||
+                    acc.type == AccountType.wallet) {
+                  currentBalance += acc.balance;
                 }
               }
             }
@@ -288,6 +300,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             color: Colors.white,
                             fontSize: 32,
                             fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Text('Current Balance: ',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                          SmartCurrencyText(
+                            value: currentBalance,
+                            locale: currencyLocale,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -633,8 +661,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 context, Icons.account_balance, 'Loans', Colors.purple),
           ),
           const SizedBox(width: 16),
-          _buildActionItem(
-              context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
+          InkWell(
+            onTap: () => Navigator.pushNamed(context, '/taxes'),
+            child: _buildActionItem(
+                context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
+          ),
         ],
       ),
     );

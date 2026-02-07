@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import '../models/account.dart';
-import '../models/transaction.dart';
-import '../utils/billing_helper.dart';
-import '../utils/recurrence_utils.dart'; // Added import
-import '../models/loan.dart';
-import '../models/recurring_transaction.dart';
-import '../models/category.dart';
-import '../models/profile.dart';
-import '../utils/debug_logger.dart';
-import '../utils/currency_utils.dart';
+import 'package:samriddhi_flow/models/account.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/models/loan.dart';
+import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/profile.dart';
+import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/utils/billing_helper.dart';
+import 'package:samriddhi_flow/utils/recurrence_utils.dart';
+import 'package:samriddhi_flow/utils/debug_logger.dart';
+import 'package:samriddhi_flow/utils/currency_utils.dart';
 
 class StorageService {
   final HiveInterface _hive;
@@ -26,28 +27,20 @@ class StorageService {
   static const String boxSettings = 'settings';
   static const String boxProfiles = 'profiles';
   static const String boxCategories = 'categories_v3';
+  static const String boxInsurancePolicies = 'insurance_policies';
 
   Future<void> init() async {
     // Load default categories JSON into memory
     await _loadDefaultCategoriesJson();
 
-    if (!_hive.isBoxOpen(boxAccounts)) {
-      await _hive.openBox<Account>(boxAccounts);
-    }
-    if (!_hive.isBoxOpen(boxTransactions)) {
-      await _hive.openBox<Transaction>(boxTransactions);
-    }
-    if (!_hive.isBoxOpen(boxLoans)) await _hive.openBox<Loan>(boxLoans);
-    if (!_hive.isBoxOpen(boxRecurring)) {
-      await _hive.openBox<RecurringTransaction>(boxRecurring);
-    }
-    if (!_hive.isBoxOpen(boxSettings)) await _hive.openBox(boxSettings);
-    if (!_hive.isBoxOpen(boxProfiles)) {
-      await _hive.openBox<Profile>(boxProfiles);
-    }
-    if (!_hive.isBoxOpen(boxCategories)) {
-      await _hive.openBox<Category>(boxCategories);
-    }
+    await _safeOpenBox<Account>(boxAccounts);
+    await _safeOpenBox<Transaction>(boxTransactions);
+    await _safeOpenBox<Loan>(boxLoans);
+    await _safeOpenBox<RecurringTransaction>(boxRecurring);
+    await _safeOpenBox(boxSettings);
+    await _safeOpenBox<Profile>(boxProfiles);
+    await _safeOpenBox<Category>(boxCategories);
+    await _safeOpenBox<InsurancePolicy>(boxInsurancePolicies);
 
     // Initial profile
     final pBox = _hive.box<Profile>(boxProfiles);
@@ -69,8 +62,6 @@ class StorageService {
         }
       } else {
         // Initial defaults
-        // Cache should be loaded by now if init() completed fully.
-        // If not, we await loading here (just in case migration happens before cache is ready, though init handles flow).
         if (_defaultCategoryCache.isEmpty) {
           await _loadDefaultCategoriesJson();
         }
@@ -130,7 +121,12 @@ class StorageService {
   }
 
   List<Profile> getProfiles() {
-    return _hive.box<Profile>(boxProfiles).values.whereType<Profile>().toList();
+    return _hive
+        .box<Profile>(boxProfiles)
+        .toMap()
+        .values
+        .whereType<Profile>()
+        .toList();
   }
 
   Future<void> saveProfile(Profile profile) async {
@@ -174,10 +170,8 @@ class StorageService {
   Future<void> _deleteItemsByProfile<T>(String boxName, String profileId,
       {Future<void> Function(T)? onBeforeDelete}) async {
     final box = _hive.box<T>(boxName);
-    // Values is an iterable, we enable 'cast' if needed via dynamic check or strict type
-    // Since we can't easily rely on a common interface for 'profileId' without mixins,
-    // we use dynamic access safely as done in _getByProfile
-    final itemsToDelete = box.values.where((item) {
+    // Use toMap().values to safely handle potentially corrupted or mixed types
+    final itemsToDelete = box.toMap().values.whereType<T>().where((item) {
       try {
         return (item as dynamic).profileId == profileId;
       } catch (_) {
@@ -198,13 +192,14 @@ class StorageService {
   // --- Private Helpers ---
   List<T> _getByProfile<T>(String boxName) {
     final profileId = getActiveProfileId();
-    return _hive.box<T>(boxName).values.where((item) {
-      if (item is Account) return item.profileId == profileId;
-      if (item is Transaction) return item.profileId == profileId;
-      if (item is Loan) return item.profileId == profileId;
-      if (item is RecurringTransaction) return item.profileId == profileId;
-      if (item is Category) return item.profileId == profileId;
+    // Safety: Use toMap().values and whereType<T>() to avoid TypeError if types are mixed
+    return _hive.box<T>(boxName).toMap().values.whereType<T>().where((item) {
       try {
+        if (item is Account) return item.profileId == profileId;
+        if (item is Transaction) return item.profileId == profileId;
+        if (item is Loan) return item.profileId == profileId;
+        if (item is RecurringTransaction) return item.profileId == profileId;
+        if (item is Category) return item.profileId == profileId;
         return (item as dynamic).profileId == profileId;
       } catch (_) {
         return false;
@@ -216,7 +211,12 @@ class StorageService {
   List<Account> getAccounts() => _getByProfile<Account>(boxAccounts);
 
   List<Account> getAllAccounts() {
-    return _hive.box<Account>(boxAccounts).values.whereType<Account>().toList();
+    return _hive
+        .box<Account>(boxAccounts)
+        .toMap()
+        .values
+        .whereType<Account>()
+        .toList();
   }
 
   Future<void> saveAccount(Account account) async {
@@ -226,17 +226,6 @@ class StorageService {
 
   Future<void> deleteAccount(String id) async {
     final box = _hive.box<Account>(boxAccounts);
-    final account = box.get(id);
-    if (account != null && account.type == AccountType.wallet) {
-      // Cascade delete transactions for wallet
-      final txnsBox = _hive.box<Transaction>(boxTransactions);
-      final associatedTxns = txnsBox.values
-          .where((t) => t.accountId == id || t.toAccountId == id)
-          .toList();
-      for (var t in associatedTxns) {
-        await txnsBox.delete(t.id);
-      }
-    }
     await box.delete(id);
     await _cleanupAccountMetadata(id);
   }
@@ -258,6 +247,7 @@ class StorageService {
   List<Transaction> getAllTransactions() {
     return _hive
         .box<Transaction>(boxTransactions)
+        .toMap()
         .values
         .whereType<Transaction>()
         .toList();
@@ -278,7 +268,8 @@ class StorageService {
 
     try {
       final accountsBox = _hive.box<Account>(boxAccounts);
-      final accounts = accountsBox.values.toList(); // Run for ALL profiles
+      // Safety: Use toMap().values.whereType<Account>()
+      final accounts = accountsBox.toMap().values.whereType<Account>().toList();
       final settingsBox = _hive.box(boxSettings);
       final now = nowOverride ?? DateTime.now();
 
@@ -306,7 +297,11 @@ class StorageService {
             final txnBox = _hive.box<Transaction>(boxTransactions);
 
             // Fetch txns: (lastRollover, currentCycleStart]
-            final txns = txnBox.values
+            // Safety: Use toMap().values.whereType<Transaction>()
+            final txns = txnBox
+                .toMap()
+                .values
+                .whereType<Transaction>()
                 .where((t) =>
                     !t.isDeleted &&
                     t.accountId == acc.id &&
@@ -326,7 +321,11 @@ class StorageService {
             }
 
             // Also check if CC was the TARGET of a transfer (payment)
-            final payments = txnBox.values
+            // Safety: Use toMap().values.whereType<Transaction>()
+            final payments = txnBox
+                .toMap()
+                .values
+                .whereType<Transaction>()
                 .where((t) =>
                     !t.isDeleted &&
                     t.type == TransactionType.transfer &&
@@ -536,7 +535,10 @@ class StorageService {
       String title, String category, String excludeId) async {
     final box = _hive.box<Transaction>(boxTransactions);
     final profileId = getActiveProfileId();
-    return box.values
+    return box
+        .toMap()
+        .values
+        .whereType<Transaction>()
         .where((t) =>
             t.profileId == profileId &&
             t.id != excludeId &&
@@ -550,7 +552,10 @@ class StorageService {
       String title, String oldCategory, String newCategory) async {
     final box = _hive.box<Transaction>(boxTransactions);
     final profileId = getActiveProfileId();
-    final toUpdate = box.values
+    final toUpdate = box
+        .toMap()
+        .values
+        .whereType<Transaction>()
         .where((t) =>
             t.profileId == profileId &&
             t.title.trim().toLowerCase() == title.trim().toLowerCase() &&
@@ -590,7 +595,7 @@ class StorageService {
   List<Loan> getLoans() => _getByProfile<Loan>(boxLoans);
 
   List<Loan> getAllLoans() {
-    return _hive.box<Loan>(boxLoans).values.whereType<Loan>().toList();
+    return _hive.box<Loan>(boxLoans).toMap().values.whereType<Loan>().toList();
   }
 
   Future<void> saveLoan(Loan loan) async {
@@ -609,6 +614,7 @@ class StorageService {
   List<RecurringTransaction> getAllRecurring() {
     return _hive
         .box<RecurringTransaction>(boxRecurring)
+        .toMap()
         .values
         .whereType<RecurringTransaction>()
         .toList();
@@ -662,6 +668,7 @@ class StorageService {
   List<Category> getAllCategories() {
     return _hive
         .box<Category>(boxCategories)
+        .toMap()
         .values
         .whereType<Category>()
         .toList();
@@ -694,10 +701,20 @@ class StorageService {
 
   Future<void> copyCategories(String fromId, String toId) async {
     final box = _hive.box<Category>(boxCategories);
-    final source = box.values.where((c) => c.profileId == fromId).toList();
+    final source = box
+        .toMap()
+        .values
+        .whereType<Category>()
+        .where((c) => c.profileId == fromId)
+        .toList();
     // Delete existing categories in target if any? User usually expects "add/sync" or "copy".
     // Let's just add ones that don't exist by name.
-    final target = box.values.where((c) => c.profileId == toId).toList();
+    final target = box
+        .toMap()
+        .values
+        .whereType<Category>()
+        .where((c) => c.profileId == toId)
+        .toList();
 
     for (var s in source) {
       if (!target.any((t) => t.name.toLowerCase() == s.name.toLowerCase())) {
@@ -927,45 +944,81 @@ class StorageService {
     }
   }
 
+  List<InsurancePolicy> getInsurancePolicies() {
+    return _hive.box<InsurancePolicy>(boxInsurancePolicies).values.toList();
+  }
+
+  Box<InsurancePolicy> getInsurancePoliciesBox() {
+    return _hive.box<InsurancePolicy>(boxInsurancePolicies);
+  }
+
+  Future<void> saveInsurancePolicies(List<InsurancePolicy> policies) async {
+    final box = _hive.box<InsurancePolicy>(boxInsurancePolicies);
+    await box.clear();
+    for (var p in policies) {
+      await box.put(p.id, p);
+    }
+  }
+
   Future<void> clearAllData() async {
     final profileId = getActiveProfileId();
 
     // Clear Accounts
     final accBox = _hive.box<Account>(boxAccounts);
-    final accountsToDelete =
-        accBox.values.where((a) => a.profileId == profileId).toList();
+    final accountsToDelete = accBox
+        .toMap()
+        .values
+        .whereType<Account>()
+        .where((a) => a.profileId == profileId)
+        .toList();
     for (var a in accountsToDelete) {
       await accBox.delete(a.id);
     }
 
     // Clear Transactions
     final txnBox = _hive.box<Transaction>(boxTransactions);
-    final txnsToDelete =
-        txnBox.values.where((t) => t.profileId == profileId).toList();
+    final txnsToDelete = txnBox
+        .toMap()
+        .values
+        .whereType<Transaction>()
+        .where((t) => t.profileId == profileId)
+        .toList();
     for (var t in txnsToDelete) {
       await txnBox.delete(t.id);
     }
 
     // Clear Loans
     final loanBox = _hive.box<Loan>(boxLoans);
-    final loansToDelete =
-        loanBox.values.where((l) => l.profileId == profileId).toList();
+    final loansToDelete = loanBox
+        .toMap()
+        .values
+        .whereType<Loan>()
+        .where((l) => l.profileId == profileId)
+        .toList();
     for (var l in loansToDelete) {
       await loanBox.delete(l.id);
     }
 
     // Clear Recurring
     final recBox = _hive.box<RecurringTransaction>(boxRecurring);
-    final recToDelete =
-        recBox.values.where((rt) => rt.profileId == profileId).toList();
+    final recToDelete = recBox
+        .toMap()
+        .values
+        .whereType<RecurringTransaction>()
+        .where((rt) => rt.profileId == profileId)
+        .toList();
     for (var rt in recToDelete) {
       await recBox.delete(rt.id);
     }
 
     // Clear Categories
     final catBox = _hive.box<Category>(boxCategories);
-    final catsToDelete =
-        catBox.values.where((c) => c.profileId == profileId).toList();
+    final catsToDelete = catBox
+        .toMap()
+        .values
+        .whereType<Category>()
+        .where((c) => c.profileId == profileId)
+        .toList();
     for (var c in catsToDelete) {
       await catBox.delete(c.id);
     }
@@ -978,22 +1031,96 @@ class StorageService {
     if (!_hive.isBoxOpen(boxAccounts)) return 0;
     final box = _hive.box<Account>(boxAccounts);
     int repairedCount = 0;
-    for (var key in box.keys) {
-      final account = box.get(key);
-      if (account != null) {
+    final dataMap = box.toMap();
+    for (var key in dataMap.keys) {
+      final value = dataMap[key];
+      if (value is Account) {
         bool needsRepair = false;
-        // Check for null or empty currency
-        if (account.currency.trim().isEmpty) {
-          account.currency = defaultCurrency;
-          needsRepair = true;
+
+        if (value.type == AccountType.wallet) {
+          // Wallets must have a currency
+          if (value.currency.trim().isEmpty) {
+            value.currency = defaultCurrency;
+            needsRepair = true;
+          }
+        } else {
+          // Non-wallets must NOT have a specific currency string (use profile default)
+          if (value.currency.trim().isNotEmpty) {
+            value.currency = '';
+            needsRepair = true;
+          }
         }
 
         if (needsRepair) {
-          await box.put(key, account);
+          await box.put(key, value);
           repairedCount++;
         }
       }
     }
     return repairedCount;
+  }
+
+  /// Safely opens a box of type [T].
+  /// If a [TypeError] occurs (e.g. corrupted data or mixed types), it opens as dynamic,
+  /// identifies misaligned objects, and attempts to repair them.
+  Future<Box<T>> _safeOpenBox<T>(String boxName) async {
+    if (_hive.isBoxOpen(boxName)) return _hive.box<T>(boxName);
+
+    try {
+      DebugLogger().log("StorageService: Opening box '$boxName'...");
+      return await _hive.openBox<T>(boxName);
+    } catch (e) {
+      if (e is TypeError || e.toString().contains('subtype')) {
+        DebugLogger().log(
+            "CRITICAL: TypeError detected opening '$boxName'. Attempting repair...");
+
+        // Open as dynamic to inspect contents
+        final dynamicBox = await _hive.openBox(boxName);
+        final Map<dynamic, dynamic> data = dynamicBox.toMap();
+
+        final List<dynamic> corruptedKeys = [];
+        final Map<String, Profile> rescuedProfiles = {};
+
+        for (var entry in data.entries) {
+          final key = entry.key;
+          final value = entry.value;
+
+          if (value is! T && value != null) {
+            DebugLogger().log(
+                "Found mismatched type in '$boxName': ${value.runtimeType} at key '$key'");
+            corruptedKeys.add(key);
+
+            // Rescue specific types if we are in the wrong box
+            if (value is Profile && boxName == boxAccounts) {
+              rescuedProfiles[value.id] = value;
+            }
+          }
+        }
+
+        if (corruptedKeys.isNotEmpty) {
+          DebugLogger().log(
+              "Removing ${corruptedKeys.length} corrupted/mismatched items from '$boxName'...");
+          for (var key in corruptedKeys) {
+            await dynamicBox.delete(key);
+          }
+        }
+
+        await dynamicBox.close();
+
+        // Handle rescued data
+        if (rescuedProfiles.isNotEmpty) {
+          DebugLogger().log(
+              "Rescuing ${rescuedProfiles.length} profiles found in account box...");
+          final pBox = await _safeOpenBox<Profile>(boxProfiles);
+          for (var p in rescuedProfiles.values) {
+            await pBox.put(p.id, p);
+          }
+        }
+
+        // Retry opening with strict type
+        return await _hive.openBox<T>(boxName);
+      }
+      rethrow;
+    }
   }
 }

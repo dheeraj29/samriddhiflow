@@ -8,23 +8,42 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(AccountAdapter());
     registerAdapter(AccountTypeAdapter());
+    registerAdapter(AssetTypeAdapter());
+    registerAdapter(BusinessEntityAdapter());
+    registerAdapter(BusinessTypeAdapter());
+    registerAdapter(CapitalGainEntryAdapter());
     registerAdapter(CategoryAdapter());
     registerAdapter(CategoryTagAdapter());
     registerAdapter(CategoryUsageAdapter());
+    registerAdapter(DividendIncomeAdapter());
     registerAdapter(FrequencyAdapter());
+    registerAdapter(HousePropertyAdapter());
+    registerAdapter(InsurancePolicyAdapter());
+    registerAdapter(InsurancePremiumRuleAdapter());
     registerAdapter(LoanAdapter());
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());
     registerAdapter(LoanTypeAdapter());
+    registerAdapter(OtherIncomeAdapter());
     registerAdapter(ProfileAdapter());
     registerAdapter(RecurringTransactionAdapter());
+    registerAdapter(ReinvestmentTypeAdapter());
+    registerAdapter(SalaryDetailsAdapter());
     registerAdapter(ScheduleTypeAdapter());
+    registerAdapter(TaxExemptionRuleAdapter());
+    registerAdapter(TaxMappingRuleAdapter());
+    registerAdapter(TaxPaymentEntryAdapter());
+    registerAdapter(TaxRulesAdapter());
+    registerAdapter(TaxSlabAdapter());
     registerAdapter(TransactionAdapter());
     registerAdapter(TransactionTypeAdapter());
   }
@@ -34,17 +53,33 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(AccountAdapter());
     registerAdapter(AccountTypeAdapter());
+    registerAdapter(AssetTypeAdapter());
+    registerAdapter(BusinessEntityAdapter());
+    registerAdapter(BusinessTypeAdapter());
+    registerAdapter(CapitalGainEntryAdapter());
     registerAdapter(CategoryAdapter());
     registerAdapter(CategoryTagAdapter());
     registerAdapter(CategoryUsageAdapter());
+    registerAdapter(DividendIncomeAdapter());
     registerAdapter(FrequencyAdapter());
+    registerAdapter(HousePropertyAdapter());
+    registerAdapter(InsurancePolicyAdapter());
+    registerAdapter(InsurancePremiumRuleAdapter());
     registerAdapter(LoanAdapter());
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());
     registerAdapter(LoanTypeAdapter());
+    registerAdapter(OtherIncomeAdapter());
     registerAdapter(ProfileAdapter());
     registerAdapter(RecurringTransactionAdapter());
+    registerAdapter(ReinvestmentTypeAdapter());
+    registerAdapter(SalaryDetailsAdapter());
     registerAdapter(ScheduleTypeAdapter());
+    registerAdapter(TaxExemptionRuleAdapter());
+    registerAdapter(TaxMappingRuleAdapter());
+    registerAdapter(TaxPaymentEntryAdapter());
+    registerAdapter(TaxRulesAdapter());
+    registerAdapter(TaxSlabAdapter());
     registerAdapter(TransactionAdapter());
     registerAdapter(TransactionTypeAdapter());
   }

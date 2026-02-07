@@ -366,8 +366,49 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 _showAddAccountSheet(context, ref, account: acc);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Account',
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDelete(context, ref, acc);
+              },
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, Account acc) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: Text(
+            'Are you sure you want to delete "${acc.name}"? \n\nExisting transactions will NOT be deleted but will no longer be linked to this account.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(storageServiceProvider).deleteAccount(acc.id);
+              ref.invalidate(accountsProvider);
+              ref.invalidate(transactionsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Account "${acc.name}" deleted.')),
+                );
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
