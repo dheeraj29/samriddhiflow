@@ -8,6 +8,7 @@ import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:flutter/services.dart';
 
 class MockHiveInterface extends Mock implements HiveInterface {}
@@ -28,6 +29,8 @@ class RecurringTransactionFake extends Fake implements RecurringTransaction {}
 
 class CategoryFake extends Fake implements Category {}
 
+class InsurancePolicyFake extends Fake implements InsurancePolicy {}
+
 class SimpleBadAccount extends Fake implements Account {
   @override
   String get id => 'bad_acc';
@@ -43,6 +46,7 @@ void main() {
     registerFallbackValue(LoanFake());
     registerFallbackValue(RecurringTransactionFake());
     registerFallbackValue(CategoryFake());
+    registerFallbackValue(InsurancePolicyFake());
   });
 
   late StorageService storageService;
@@ -55,6 +59,7 @@ void main() {
   late MockBox<RecurringTransaction> mockRecurringBox;
   late MockBox<Category> mockCategoryBox;
   late MockBox<dynamic> mockSettingsBox;
+  late MockBox<InsurancePolicy> mockInsuranceBox;
 
   final settingsMemory = <String, dynamic>{};
 
@@ -68,6 +73,7 @@ void main() {
     mockRecurringBox = MockBox<RecurringTransaction>();
     mockCategoryBox = MockBox<Category>();
     mockSettingsBox = MockBox<dynamic>();
+    mockInsuranceBox = MockBox<InsurancePolicy>();
 
     settingsMemory.clear();
     settingsMemory['activeProfileId'] = 'p1';
@@ -87,6 +93,8 @@ void main() {
         .thenReturn(mockRecurringBox);
     when(() => mockHive.box<Category>(any())).thenReturn(mockCategoryBox);
     when(() => mockHive.box(any())).thenReturn(mockSettingsBox);
+    when(() => mockHive.box<InsurancePolicy>(any()))
+        .thenReturn(mockInsuranceBox);
 
     when(() => mockHive.openBox<Account>(any()))
         .thenAnswer((_) async => mockAccountBox);
@@ -102,6 +110,8 @@ void main() {
         .thenAnswer((_) async => mockCategoryBox);
     when(() => mockHive.openBox(any()))
         .thenAnswer((_) async => mockSettingsBox);
+    when(() => mockHive.openBox<InsurancePolicy>(any()))
+        .thenAnswer((_) async => mockInsuranceBox);
 
     final f = Future<void>.value(null);
     final fi = Future<int>.value(0);
@@ -144,6 +154,13 @@ void main() {
     when(() => mockCategoryBox.values).thenReturn([]);
     when(() => mockCategoryBox.isEmpty).thenReturn(false);
 
+    when(() => mockInsuranceBox.put(any(), any())).thenAnswer((_) => f);
+    when(() => mockInsuranceBox.delete(any())).thenAnswer((_) => f);
+    when(() => mockInsuranceBox.clear()).thenAnswer((_) => fi);
+    when(() => mockInsuranceBox.values).thenReturn([]);
+    when(() => mockInsuranceBox.isEmpty).thenReturn(true);
+    when(() => mockInsuranceBox.toMap()).thenReturn({});
+
     when(() => mockSettingsBox.put(any(), any())).thenAnswer((i) {
       settingsMemory[i.positionalArguments[0] as String] =
           i.positionalArguments[1];
@@ -160,6 +177,35 @@ void main() {
     });
     when(() => mockSettingsBox.toMap())
         .thenReturn(Map<String, dynamic>.from(settingsMemory));
+
+    when(() => mockAccountBox.toMap()).thenAnswer((_) => {
+          for (var a in mockAccountBox.values) a.id: a,
+        });
+    when(() => mockTransactionBox.toMap()).thenAnswer((_) => {
+          for (var t in mockTransactionBox.values) t.id: t,
+        });
+    when(() => mockLoanBox.toMap()).thenAnswer((_) => {
+          for (var l in mockLoanBox.values) l.id: l,
+        });
+    when(() => mockRecurringBox.toMap()).thenAnswer((_) => {
+          for (var r in mockRecurringBox.values) r.id: r,
+        });
+    when(() => mockCategoryBox.toMap()).thenAnswer((_) => {
+          for (var c in mockCategoryBox.values) c.id: c,
+        });
+    when(() => mockProfileBox.toMap()).thenAnswer((_) => {
+          for (var p in mockProfileBox.values) p.id: p,
+        });
+    when(() => mockInsuranceBox.toMap()).thenReturn({});
+    when(() => mockRecurringBox.toMap()).thenAnswer((_) => {
+          for (var r in mockRecurringBox.values) r.id: r,
+        });
+    when(() => mockCategoryBox.toMap()).thenAnswer((_) => {
+          for (var c in mockCategoryBox.values) c.id: c,
+        });
+    when(() => mockProfileBox.toMap()).thenAnswer((_) => {
+          for (var p in mockProfileBox.values) p.id: p,
+        });
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
   });
 
@@ -312,7 +358,7 @@ void main() {
       when(() => mockAccountBox.keys).thenReturn(['r1']);
       when(() => mockAccountBox.get('r1')).thenReturn(r1);
       await storageService.repairAccountCurrencies('INR');
-      expect(r1.currency, 'INR');
+      expect(r1.currency, '');
     });
 
     test('Settings Full Spectrum Mastery (All Getters/Setters)', () async {

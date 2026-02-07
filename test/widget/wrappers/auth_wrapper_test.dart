@@ -138,6 +138,8 @@ void main() {
     // Auth Service stubs
     when(() => mockAuthService.isSignOutInProgress).thenReturn(false);
     when(() => mockStorageService.setAuthFlag(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.isAppLockEnabled()).thenReturn(false);
+    when(() => mockStorageService.getAppPin()).thenReturn('1111');
   });
 
   Widget createAuthWrapper({
