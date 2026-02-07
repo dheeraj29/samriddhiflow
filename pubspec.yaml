@@ -40,7 +40,7 @@ dependencies:
   
   # UI/Charts
   fl_chart: ^1.1.1
-  hive_ce: ^2.17.0
+  hive_ce: ^2.19.3
   hive_ce_flutter: ^2.3.4
   cloud_firestore: ^6.1.1
   connectivity_plus: ^7.0.0
