@@ -2920,7 +2920,7 @@ DA:52,0
 DA:53,0
 DA:54,0
 DA:55,0
-DA:67,4
+DA:67,2
 DA:69,0
 DA:70,0
 DA:71,0
@@ -5334,7 +5334,7 @@ DA:14,2
 DA:17,3
 DA:20,4
 DA:21,2
-DA:25,2
+DA:25,1
 DA:27,2
 DA:28,2
 DA:34,2
@@ -5646,7 +5646,7 @@ LF:312
 LH:236
 end_of_record
 SF:lib\screens\transactions_screen.dart
-DA:21,3
+DA:21,2
 DA:30,3
 DA:31,3
 DA:45,3
@@ -5845,7 +5845,7 @@ LF:195
 LH:117
 end_of_record
 SF:lib\screens\add_transaction_screen.dart
-DA:21,3
+DA:21,2
 DA:28,4
 DA:30,4
 DA:59,4
