@@ -53,7 +53,16 @@ class TaxConfigService {
   Future<void> restoreAllRules(Map<int, TaxRules> data) async {
     await _box.clear();
     for (var entry in data.entries) {
-      await _box.put(entry.key, entry.value);
+      try {
+        await _box.put(entry.key, entry.value);
+      } catch (e) {
+        // Detailed logging to identify the "unknown type" error
+        // likely caused by minified class names not being registered or mismatch
+        print(
+            "CRITICAL RESTORE ERROR: Failed to save TaxRules for Year ${entry.key}");
+        print("Error: $e");
+        rethrow;
+      }
     }
   }
 

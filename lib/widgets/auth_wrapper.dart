@@ -421,6 +421,25 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           error: (e, s) {
             DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
             final isTimeout = e.toString().toLowerCase().contains("timeout");
+
+            // SOFT FAILOVER: If we are already logged in locally, don't show the error screen.
+            // Just show a snackbar and let the user into the app (Offline Mode).
+            if (isPersistentLogin) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text("Connection failed. Switching to Offline Mode."),
+                      backgroundColor: Colors.orange,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              });
+              return _buildAuthStream(context, isPersistentLogin);
+            }
+
             return _buildErrorScreen(
               context,
               title: isTimeout ? "Slow Connection" : "Connection Required",

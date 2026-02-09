@@ -27,6 +27,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _isPrivacyMode = true;
+
   @override
   void initState() {
     super.initState();
@@ -290,31 +292,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Total Net Worth',
-                          style: TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 8),
-                      SmartCurrencyText(
-                        value: netWorth,
-                        locale: currencyLocale,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total Net Worth',
+                              style: TextStyle(color: Colors.white70)),
+                          IconButton(
+                            icon: Icon(
+                              _isPrivacyMode
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => setState(
+                                () => _isPrivacyMode = !_isPrivacyMode),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 8),
+                      const SizedBox(height: 8),
+                      _isPrivacyMode
+                          ? const Text(
+                              '••••••••',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          : SmartCurrencyText(
+                              value: netWorth,
+                              locale: currencyLocale,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold),
+                            ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
                           const Text('Current Balance: ',
                               style: TextStyle(
                                   color: Colors.white70, fontSize: 12)),
-                          SmartCurrencyText(
-                            value: currentBalance,
-                            locale: currencyLocale,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold),
-                          ),
+                          _isPrivacyMode
+                              ? const Text(
+                                  '••••••',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                )
+                              : SmartCurrencyText(
+                                  value: currentBalance,
+                                  locale: currencyLocale,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -323,12 +360,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           Expanded(
                             child: _buildStatPill(
                                 'Assets', assets, currencyLocale,
-                                color: Colors.greenAccent),
+                                color: Colors.greenAccent,
+                                isPrivate: _isPrivacyMode),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildStatPill('Debt', debt, currencyLocale,
-                                color: Colors.redAccent),
+                                color: Colors.redAccent,
+                                isPrivate: _isPrivacyMode),
                           ),
                         ],
                       )
@@ -407,7 +446,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildStatPill(String label, double value, String locale,
-      {required Color color}) {
+      {required Color color, bool isPrivate = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -428,16 +467,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 overflow: TextOverflow.ellipsis),
           ),
           Flexible(
-            child: SmartCurrencyText(
-              value: value,
-              locale: locale,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
+            child: isPrivate
+                ? const Text(
+                    '••••••',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : SmartCurrencyText(
+                    value: value,
+                    locale: locale,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
           ),
         ],
       ),

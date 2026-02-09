@@ -57,6 +57,28 @@ class MockSmartCalcNotifier extends SmartCalculatorEnabledNotifier {
   bool build() => false;
 }
 
+class MockAppLockIntentNotifier extends AppLockIntentNotifier {
+  @override
+  bool build() => false;
+}
+
+class MockCalculatorVisibleNotifier extends CalculatorVisibleNotifier {
+  @override
+  bool build() => false;
+  @override
+  set value(bool v) {} // No-op setter
+}
+
+class MockBudgetNotifier extends BudgetNotifier {
+  @override
+  double build() => 5000.0;
+}
+
+class MockHolidaysNotifier extends HolidaysNotifier {
+  @override
+  List<DateTime> build() => [];
+}
+
 void main() {
   late MockNotificationService mockNotificationService;
 
@@ -86,6 +108,14 @@ void main() {
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
         authStreamProvider.overrideWith((ref) => Stream.value(null)),
+        appLockStatusProvider.overrideWith((ref) => false),
+        appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+        calculatorVisibleProvider
+            .overrideWith(MockCalculatorVisibleNotifier.new),
+        storageInitializerProvider.overrideWith((ref) async {}),
+        monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
+        recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+        holidaysProvider.overrideWith(MockHolidaysNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -127,6 +157,15 @@ void main() {
     ];
 
     await tester.pumpWidget(createWidgetUnderTest(accounts: accounts));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total Net Worth'), findsOneWidget);
+
+    // Initial state is hidden
+    expect(find.text('••••••••'), findsOneWidget);
+
+    // Tap to reveal
+    await tester.tap(find.byIcon(Icons.visibility));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('800'), findsWidgets);
@@ -185,6 +224,14 @@ void main() {
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
         authStreamProvider.overrideWith((ref) => Stream.value(null)),
+        appLockStatusProvider.overrideWith((ref) => false),
+        appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+        calculatorVisibleProvider
+            .overrideWith(MockCalculatorVisibleNotifier.new),
+        storageInitializerProvider.overrideWith((ref) async {}),
+        monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
+        recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+        holidaysProvider.overrideWith(MockHolidaysNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -198,57 +245,59 @@ void main() {
   });
 
   testWidgets('DashboardScreen Quick Actions', (tester) async {
+    // Set a large enough screen to ensure everything renders
+    tester.view.physicalSize = const Size(2000, 4000);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
     // Check navigation for Quick Actions
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.pumpAndSettle();
 
     // Scroll to quick actions
-    // Use widgetWithText to avoid collision with "Income (This Month)"
-    final incomeAction = find.descendant(
-      of: find.byType(SingleChildScrollView),
-      matching: find.text('Income'),
-    );
+    // Use widgetWithText to find the InkWell that wraps the 'Income' text.
+    final incomeAction = find.widgetWithText(InkWell, 'Income');
+
+    // Ensure it's visible before tapping (handles scrolling)
     await tester.ensureVisible(incomeAction);
     await tester.pumpAndSettle();
+
+    expect(incomeAction, findsOneWidget,
+        reason: 'Quick Action Income button not found');
+
     await tester.tap(incomeAction);
     await tester.pumpAndSettle();
-    // Assuming navigator push works. To clean up state we might just pumpWidget again in next tests.
-
-    // Reset
-    await tester.pumpWidget(createWidgetUnderTest());
-    await tester
-        .pumpAndSettle(); // Reset might not work perfectly if we pushed route
-    // But since we can't easily pop, we accept coverage of tap.
   });
 
   testWidgets('DashboardScreen nav items handle taps', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.physicalSize = const Size(2000, 4000);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.pumpAndSettle();
 
-    final accountsIcon = find.byIcon(Icons.account_balance_wallet);
-    if (accountsIcon.evaluate().isNotEmpty) {
-      await tester.ensureVisible(accountsIcon);
-      await tester.tap(accountsIcon);
-      await tester.pumpAndSettle();
-    }
+    // Use Tooltip to find the specific nav item
+    final accountsIcon = find.byTooltip('Accounts');
+    expect(accountsIcon, findsOneWidget, reason: 'Accounts nav item not found');
+
+    await tester.tap(accountsIcon);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('DashboardScreen switches tabs independently', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.physicalSize = const Size(2000, 4000);
+    tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.pumpAndSettle();
 
-    final reportsIcon = find.byIcon(Icons.analytics);
-    if (reportsIcon.evaluate().isNotEmpty) {
-      await tester.ensureVisible(reportsIcon);
-      await tester.tap(reportsIcon);
-      await tester.pumpAndSettle();
-    }
+    // Use Tooltip to find the specific nav item
+    final reportsIcon = find.byTooltip('Reports');
+    expect(reportsIcon, findsOneWidget, reason: 'Reports nav item not found');
+
+    await tester.tap(reportsIcon);
+    await tester.pumpAndSettle();
   });
 }

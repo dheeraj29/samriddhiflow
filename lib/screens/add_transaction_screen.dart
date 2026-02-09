@@ -813,8 +813,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (a.type == AccountType.creditCard) {
       final now = DateTime.now();
       final unbilled = BillingHelper.calculateUnbilledAmount(a, allTxns, now);
-      final usage = a.balance + unbilled;
-      return 'Usage: ${CurrencyUtils.getSmartFormat(usage, a.currency)}';
+      final currentDebt = a.balance + unbilled; // Total amount used
+
+      if (a.creditLimit != null && a.creditLimit! > 0) {
+        final available = a.creditLimit! - currentDebt;
+        return 'Avail: ${CurrencyUtils.getSmartFormat(available, a.currency)}';
+      } else {
+        // Fallback if no limit set
+        return 'Usage: ${CurrencyUtils.getSmartFormat(currentDebt, a.currency)}';
+      }
     }
     return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
   }

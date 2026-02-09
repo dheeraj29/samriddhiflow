@@ -425,17 +425,20 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                  color: Colors.blueGrey.shade50,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.description,
-                      size: 16, color: Colors.blueGrey),
+                  Icon(Icons.description,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Text('Suggested: ${service.suggestITR(data)}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
               ),
             )
@@ -460,7 +463,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             locale: 'en_IN',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color ?? Colors.black,
+              color: color,
             ),
           ),
         ],

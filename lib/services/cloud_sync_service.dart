@@ -92,9 +92,14 @@ class CloudSyncService {
     }
 
     if (data['categories'] != null) {
-      for (var c in (data['categories'] as List)) {
-        await _storageService
-            .addCategory(_mapToCategory(Map<String, dynamic>.from(c)));
+      try {
+        for (var c in (data['categories'] as List)) {
+          await _storageService
+              .addCategory(_mapToCategory(Map<String, dynamic>.from(c)));
+        }
+      } catch (e) {
+        print("Restore Error (Categories): $e");
+        rethrow;
       }
     }
 
@@ -133,20 +138,30 @@ class CloudSyncService {
     }
 
     if (data['insurance_policies'] != null) {
-      final List<InsurancePolicy> policies = [];
-      for (var p in (data['insurance_policies'] as List)) {
-        policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
+      try {
+        final List<InsurancePolicy> policies = [];
+        for (var p in (data['insurance_policies'] as List)) {
+          policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
+        }
+        await _storageService.saveInsurancePolicies(policies);
+      } catch (e) {
+        print("Restore Error (Insurance): $e");
+        rethrow;
       }
-      await _storageService.saveInsurancePolicies(policies);
     }
 
     if (data['tax_rules'] != null) {
-      final Map<int, TaxRules> taxRules = {};
-      (data['tax_rules'] as Map).forEach((key, val) {
-        final year = int.parse(key.toString());
-        taxRules[year] = TaxRules.fromMap(Map<String, dynamic>.from(val));
-      });
-      await _taxConfigService.restoreAllRules(taxRules);
+      try {
+        final Map<int, TaxRules> taxRules = {};
+        (data['tax_rules'] as Map).forEach((key, val) {
+          final year = int.parse(key.toString());
+          taxRules[year] = TaxRules.fromMap(Map<String, dynamic>.from(val));
+        });
+        await _taxConfigService.restoreAllRules(taxRules);
+      } catch (e) {
+        print("Restore Error (TaxRules): $e");
+        rethrow;
+      }
     }
   }
 

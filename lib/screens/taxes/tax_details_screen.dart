@@ -1241,7 +1241,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   Widget _buildSectionTitle(String title) {
     return Text(title,
         style: TextStyle(
-            color: Theme.of(context).primaryColor,
+            color: Theme.of(context).colorScheme.primary,
             fontWeight: FontWeight.bold));
   }
 

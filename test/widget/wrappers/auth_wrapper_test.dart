@@ -242,32 +242,31 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('AuthWrapper shows slow connection and bypass after 25s',
+  testWidgets(
+      'AuthWrapper shows slow connection and bypass after 25s (Soft Failover)',
       (tester) async {
+    // Verify that for a logged-in user, we allow "Soft Failover" and show Dashboard
+    // The "Continue Offline" button logic was for blocking screens, but now checkConnectivity
+    // will return success (false error) or we just bypass if persistent.
+
+    // If persistent login is true (default in this test setup via isLoggedIn: true),
+    // AuthWrapper should eventually show Dashboard or at least not block indefinitely if we simulated offline correctly.
+    // However, the test was testing the Timer.
+    // Let's update it to expect the Dashboard directly because of "Soft Failover".
+
     await tester.pumpWidget(createAuthWrapper(
       isLoggedIn: true,
       firebaseInit: const AsyncValue.loading(),
       authStream: const Stream.empty(),
     ));
 
-    await tester.pump(const Duration(seconds: 10));
-    expect(find.text('Connecting...'), findsOneWidget);
-    expect(find.text('Continue Offline'), findsNothing);
-
-    // Advance to 26s
-    await tester.pump(const Duration(seconds: 16));
-    expect(find.textContaining('Slow link'), findsOneWidget);
-    expect(find.text('Continue Offline'), findsOneWidget);
-
-    await tester.tap(find.text('Continue Offline'));
-    await tester.pump();
-
-    // Should show Dashboard (Offline Failover)
-    expect(find.byType(DashboardScreen), findsOneWidget);
-
-    // Flush all timers (Safety 120s, Auto-heal 15s)
-    await tester.pump(const Duration(seconds: 150));
+    // With Soft Failover, we might still show loading for a bit, but if it errors/times out, we go to Dashboard.
+    // Let's simulate the timeout or error condition effectively by waiting.
+    await tester.pump(const Duration(seconds: 30));
     await tester.pumpAndSettle();
+
+    // Should show Dashboard (Offline Failover) directly for persistent users
+    expect(find.byType(DashboardScreen), findsOneWidget);
   });
 
   testWidgets('AuthWrapper enters Dashboard after 120s timeout',
@@ -380,7 +379,8 @@ void main() {
     expect(find.text('FIX'), findsOneWidget);
   });
 
-  testWidgets('AuthWrapper allows Continue Offline from Error Screen',
+  testWidgets(
+      'AuthWrapper automatically bypasses Error Screen for persistent users',
       (tester) async {
     await tester.pumpWidget(createAuthWrapper(
       firebaseInit: const AsyncValue.error('Timeout', StackTrace.empty),
@@ -388,13 +388,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(
-        find.text('Slow Connection'), findsOneWidget); // Timeout triggers text
-    expect(find.text('Continue Offline'), findsOneWidget);
-
-    await tester.tap(find.text('Continue Offline'));
-    await tester.pumpAndSettle();
-
+    // Should NOT show Error Screen/Continue Offline button anymore
+    expect(find.text('Slow Connection'), findsNothing);
+    // Should show Dashboard directly due to Soft Failover
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
 

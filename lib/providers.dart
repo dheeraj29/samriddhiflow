@@ -15,6 +15,7 @@ import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
+import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 
 import 'services/auth_service.dart';
 import 'services/file_service.dart';
@@ -149,6 +150,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
 
     final storage = ref.watch(storageServiceProvider);
     await storage.init();
+
+    // Initialize TaxConfigService (Fix for LateInitializationError during Sync/Backup)
+    final taxConfig = ref.read(taxConfigServiceProvider);
+    await taxConfig.init();
+
     DebugLogger()
         .log("StorageInit: Hive Initialized & Boxes Opened Successfully.");
   } catch (e) {

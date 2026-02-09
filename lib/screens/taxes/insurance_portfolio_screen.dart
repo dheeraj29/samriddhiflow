@@ -543,7 +543,7 @@ class _InsurancePortfolioScreenState
         .fold(0, (sum, p) => sum + p.annualPremium);
 
     return Card(
-      color: Colors.blueGrey.shade50,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -559,7 +559,8 @@ class _InsurancePortfolioScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('Total Premium', totalPremium, Colors.black),
+                _buildStat('Total Premium', totalPremium,
+                    Theme.of(context).colorScheme.onSurface),
                 _buildStat('Exempt', exemptPremium, Colors.green),
                 _buildStat('Taxable', taxablePremium, Colors.red),
               ],
