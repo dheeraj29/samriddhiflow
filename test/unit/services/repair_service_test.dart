@@ -1,79 +1,70 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:samriddhi_flow/services/repair_service.dart';
-import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/services/repair_service.dart';
+import '../../widget/test_mocks.dart';
 
-class MockStorageService extends Mock implements StorageService {}
-
-// Fake Currency Notifier
-class FakeCurrencyNotifier extends CurrencyNotifier {
-  @override
-  String build() => 'USD';
-}
+class MockRefReader extends Mock implements RefReader {}
 
 void main() {
   late MockStorageService mockStorage;
+  late RepairService repairService;
+  late MockRefReader mockRef;
 
   setUp(() {
     mockStorage = MockStorageService();
-    // Default behaviors
-    when(() => mockStorage.repairAccountCurrencies(any()))
-        .thenAnswer((_) async => 5); // Return 5 repaired
+    repairService = RepairService();
+    mockRef = MockRefReader();
+
+    when(() => mockRef.read(storageServiceProvider)).thenReturn(mockStorage);
   });
 
-  group('RepairJob Logic Tests', () {
-    testWidgets('RepairAccountCurrencyJob calls storage properly',
-        (tester) async {
-      final job = RepairAccountCurrencyJob();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            storageServiceProvider.overrideWithValue(mockStorage),
-            currencyProvider.overrideWith(FakeCurrencyNotifier.new),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: Consumer(builder: (context, ref, _) {
-                return ElevatedButton(
-                  onPressed: () async {
-                    await job.run(ref);
-                  },
-                  child: const Text('Run Job'),
-                );
-              }),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Run Job'));
-      // Pump to process the tap event
-      await tester.pump();
-      // Pump to allow the async microtasks (job.run) to execute
-      // Since job.run interacts with storage which is mocked to return Future.value(5),
-      // simple pump might be enough, but pumpAndSettle is safer for "eventually".
-      await tester.pumpAndSettle();
-
-      verify(() => mockStorage.repairAccountCurrencies('USD')).called(1);
-    });
-  });
-
-  group('RepairService Tests', () {
-    test('Service initializes with default jobs', () {
-      final service = RepairService();
-      expect(service.jobs.length, greaterThanOrEqualTo(1));
-      expect(service.jobs.first, isA<RepairAccountCurrencyJob>());
+  group('RepairService', () {
+    test('jobs list is not empty', () {
+      expect(repairService.jobs, isNotEmpty);
+      expect(repairService.jobs.length, 2);
     });
 
     test('getJob returns correct job', () {
-      final service = RepairService();
-      final job = service.getJob('repair_account_currency');
-      expect(job, isNotNull);
+      final job = repairService.getJob('repair_account_currency');
+      expect(job, isA<RepairAccountCurrencyJob>());
       expect(job.name, 'Repair Account Currency');
+
+      final job2 = repairService.getJob('repair_cc_balances');
+      expect(job2, isA<RepairCreditCardBalanceJob>());
+    });
+
+    test('getJob throws on invalid id', () {
+      expect(() => repairService.getJob('invalid_id'), throwsException);
+    });
+  });
+
+  group('RepairAccountCurrencyJob', () {
+    test('run calls storage.repairAccountCurrencies', () async {
+      final job = RepairAccountCurrencyJob();
+
+      when(() => mockStorage.repairAccountCurrencies(any()))
+          .thenAnswer((_) async => 5);
+      when(() => mockRef.read(currencyProvider)).thenReturn('en_IN');
+
+      final count = await job.run(mockRef);
+
+      verify(() => mockStorage.repairAccountCurrencies('en_IN')).called(1);
+      expect(count, 5);
+    });
+  });
+
+  group('RepairCreditCardBalanceJob', () {
+    test('run calls storage.recalculateCCBalances', () async {
+      final job = RepairCreditCardBalanceJob();
+
+      when(() => mockStorage.recalculateCCBalances())
+          .thenAnswer((_) async => 10);
+
+      final count = await job.run(mockRef);
+
+      verify(() => mockStorage.recalculateCCBalances()).called(1);
+      expect(count, 10);
     });
   });
 }

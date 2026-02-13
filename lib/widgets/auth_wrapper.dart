@@ -286,7 +286,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         // 4. AUTO-RESTORE CHECK
-        if (next.value != null && isLoggedIn) {
+        // Fix: Don't rely on 'isLoggedIn' (local flag) for fresh installs/logins.
+        // If we have a valid firebase user, and local data is empty, we MUST restore.
+        if (next.value != null) {
           final storage = ref.read(storageServiceProvider);
           final accounts = storage.getAccounts();
           if (accounts.isEmpty) {
@@ -306,13 +308,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 // Refresh providers to show data
                 ref.invalidate(accountsProvider);
                 ref.invalidate(transactionsProvider);
+                // Ensure flag is set after successful restore
+                _ensureOptimisticFlag();
               }
             }).catchError((e) {
               DebugLogger().log("AuthWrapper: Auto-Restore failed/skipped: $e");
               // Optional: Show error only if it's not "No cloud data found"
               if (context.mounted && !e.toString().contains("No cloud data")) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Restore Failed: ${e.toString()}")),
+                  SnackBar(content: Text("Restore Info: ${e.toString()}")),
                 );
               }
             });

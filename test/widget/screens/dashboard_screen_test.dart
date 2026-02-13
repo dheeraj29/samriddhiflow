@@ -9,6 +9,7 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
+import 'package:samriddhi_flow/models/dashboard_config.dart';
 
 class MockNotificationService extends Mock implements NotificationService {}
 
@@ -79,6 +80,11 @@ class MockHolidaysNotifier extends HolidaysNotifier {
   List<DateTime> build() => [];
 }
 
+class MockDashboardConfigNotifier extends DashboardConfigNotifier {
+  @override
+  DashboardVisibilityConfig build() => const DashboardVisibilityConfig();
+}
+
 void main() {
   late MockNotificationService mockNotificationService;
 
@@ -116,6 +122,7 @@ void main() {
         monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+        dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -232,6 +239,7 @@ void main() {
         monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+        dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),

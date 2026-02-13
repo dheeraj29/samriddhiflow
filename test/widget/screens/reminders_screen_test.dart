@@ -214,7 +214,8 @@ void main() {
         name: 'HDFC Card',
         type: AccountType.creditCard,
         balance: 3000,
-        billingCycleDay: DateTime.now().day,
+        billingCycleDay:
+            DateTime.now().day > 1 ? DateTime.now().day - 1 : 28, // Past date
         paymentDueDateDay: 20,
       );
 

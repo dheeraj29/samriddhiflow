@@ -1,4 +1,5 @@
 import '../utils/connectivity_platform.dart';
+import '../utils/network_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/services.dart';
@@ -72,6 +73,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           _buildAppearanceSection(),
           const Divider(),
+          _buildDashboardSection(),
+          const Divider(),
           _buildCloudSectionHeader(context, user),
           const Divider(),
           _buildDataManagementSection(context),
@@ -128,6 +131,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildDashboardSection() {
+    final config = ref.watch(dashboardConfigProvider);
+    final notifier = ref.read(dashboardConfigProvider.notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UIUtils.buildSectionHeader('Dashboard Customization'),
+        SwitchListTile(
+          title: const Text('Show Income & Expense'),
+          subtitle: const Text('Display monthly summary cards'),
+          value: config.showIncomeExpense,
+          onChanged: (val) => notifier.updateConfig(showIncomeExpense: val),
+          secondary: const Icon(Icons.analytics_outlined, color: Colors.blue),
+        ),
+        SwitchListTile(
+          title: const Text('Show Budget Indicator'),
+          subtitle: const Text('Display monthly budget progress bar'),
+          value: config.showBudget,
+          onChanged: (val) => notifier.updateConfig(showBudget: val),
+          secondary: const Icon(Icons.pie_chart_outline, color: Colors.green),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCloudSectionHeader(BuildContext context, dynamic user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +203,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 12),
               const SizedBox(height: 12),
               ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Retrying connection...")),
+                    );
+                  }
+                  // Force a network check first
+                  await NetworkUtils.hasActualInternet();
                   ref.invalidate(firebaseInitializerProvider);
                   // refresh offline status check
                   ref.invalidate(isOfflineProvider);
@@ -352,7 +388,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SnackBar(content: Text('Running repair...')));
 
                   try {
-                    final int count = await job.run(ref);
+                    final int count = await job.run(ref.reader);
                     if (context.mounted) {
                       ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
                           content: Text(

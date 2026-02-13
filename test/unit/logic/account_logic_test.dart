@@ -8,33 +8,33 @@ void main() {
       final date = DateTime(2024, 1, 20);
       final cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
-      expect(result, DateTime(2024, 1, 15));
+      expect(result, DateTime(2024, 1, 16));
     });
 
     test('getCycleStart - Date before cycle day', () {
       final date = DateTime(2024, 1, 10);
       final cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
-      expect(result, DateTime(2023, 12, 15));
+      expect(result, DateTime(2023, 12, 16));
     });
 
     test('getCycleStart - Date exactly on cycle day', () {
       final date = DateTime(2024, 1, 15);
       final cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
-      expect(result, DateTime(2024, 1, 15));
+      expect(result, DateTime(2023, 12, 16));
     });
 
     test('getNextCycleStart', () {
-      final start = DateTime(2023, 12, 15);
+      final start = DateTime(2023, 12, 16);
       final next = BillingHelper.getNextCycleStart(start);
-      expect(next, DateTime(2024, 1, 15));
+      expect(next, DateTime(2024, 1, 16));
     });
 
     test('getNextCycleStart - Year boundary', () {
-      final start = DateTime(2023, 12, 15);
+      final start = DateTime(2023, 12, 16);
       final next = BillingHelper.getNextCycleStart(start);
-      expect(next, DateTime(2024, 1, 15)); // December + 1 -> January
+      expect(next, DateTime(2024, 1, 16)); // December + 1 -> January
     });
   });
 

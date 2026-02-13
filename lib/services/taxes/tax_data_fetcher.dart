@@ -24,9 +24,40 @@ class TaxDataFetcher {
   /// Returns warnings for unmapped Income transactions.
   Future<TaxSyncResult> fetchAndAggregate(int year,
       {DateTime? customStart, DateTime? customEnd}) async {
+    // Fetch rules for that year to know FY Start Month
+    final rules = _config.getRulesForYear(year);
+    final startMonth = rules.financialYearStartMonth;
+
     // 1. Define Date Range
-    final start = customStart ?? DateTime(year, 4, 1);
-    final end = customEnd ?? DateTime(year + 1, 3, 31, 23, 59, 59);
+    // If startMonth is 1 (Jan), Range is Jan 1 to Dec 31 of 'year'.
+    // If startMonth is 4 (Apr), Range is Apr 1 'year' to Mar 31 'year+1'.
+    DateTime start;
+    DateTime end;
+
+    if (customStart != null && customEnd != null) {
+      start = customStart;
+      end = customEnd;
+    } else {
+      if (startMonth == 1) {
+        start = DateTime(year, 1, 1);
+        end = DateTime(year, 12, 31, 23, 59, 59);
+      } else {
+        start = DateTime(year, startMonth, 1);
+        end = DateTime(year + 1, startMonth - 1, 0, 23, 59, 59)
+            .add(const Duration(hours: 23, minutes: 59, seconds: 59));
+        // Fix: day 0 is last day of prev month.
+        // Simpler:
+        // end = DateTime(year + 1, startMonth, 1).subtract(const Duration(seconds: 1));
+      }
+
+      // Correct Logic for End Date:
+      if (startMonth == 1) {
+        end = DateTime(year + 1, 1, 1).subtract(const Duration(seconds: 1));
+      } else {
+        end = DateTime(year + 1, startMonth, 1)
+            .subtract(const Duration(seconds: 1));
+      }
+    }
 
     final allTxns = _storage.getAllTransactions();
 
@@ -44,17 +75,16 @@ class TaxDataFetcher {
     }).toList();
 
     // 3. Aggregate by Heads
-    double salaryTotal = 0;
     double businessTotal = 0;
     double rentTotal = 0;
     double agriTotal = 0;
 
     // Dividend Split (Advance Tax Quarters)
-    double divQ1 = 0; // Apr 1 - Jun 15
-    double divQ2 = 0; // Jun 16 - Sep 15
-    double divQ3 = 0; // Sep 16 - Dec 15
-    double divQ4 = 0; // Dec 16 - Mar 15
-    double divQ5 = 0; // Mar 16 - Mar 31
+    double divQ1 = 0;
+    double divQ2 = 0;
+    double divQ3 = 0;
+    double divQ4 = 0;
+    double divQ5 = 0;
 
     List<String> warnings = [];
     List<OtherIncome> individualOtherIncomes = [];
@@ -146,9 +176,7 @@ class TaxDataFetcher {
       }
 
       // Aggregate
-      if (head == 'salary') {
-        salaryTotal += amount;
-      } else if (head == 'houseProp') {
+      if (head == 'houseProp') {
         rentTotal += amount;
       } else if (head == 'business') {
         businessTotal += amount;
@@ -165,29 +193,35 @@ class TaxDataFetcher {
           costOfAcquisition: cost,
         ));
       } else if (head == 'dividend') {
-        // Quarterly Split Logic
         final d = txn.date;
-        // Year is dynamic (start.year), but quarters are fixed relative to start date
-        // Start: Apr 1 (Year) -> End: Mar 31 (Year+1)
-        final y1 = start.year;
-        // Q1: Apr 1 - Jun 15
-        if (d.isBefore(DateTime(y1, 6, 16))) {
+
+        // Dynamic Dividend Split for Advance Tax logic
+        // Q1: Upto 15th of 3rd month (e.g. June 15 if starting April)
+        // Q2: Upto 15th of 6th month (e.g. Sept 15)
+        // Q3: Upto 15th of 9th month (e.g. Dec 15)
+        // Q4: Upto 15th of 12th month (e.g. Mar 15)
+        // Q5: Rest (Mar 16 - Mar 31)
+
+        // Cutoff Dates (using start.month + offset)
+        final q1End =
+            DateTime(start.year, start.month + 2, 16); // Before June 16
+        final q2End =
+            DateTime(start.year, start.month + 5, 16); // Before Sept 16
+        final q3End =
+            DateTime(start.year, start.month + 8, 16); // Before Dec 16
+        final q4End =
+            DateTime(start.year, start.month + 11, 16); // Before Mar 16
+
+        if (d.isBefore(q1End)) {
+          // Q1 approx
           divQ1 += amount;
-        }
-        // Q2: Jun 16 - Sep 15
-        else if (d.isBefore(DateTime(y1, 9, 16))) {
+        } else if (d.isBefore(q2End)) {
           divQ2 += amount;
-        }
-        // Q3: Sep 16 - Dec 15
-        else if (d.isBefore(DateTime(y1, 12, 16))) {
+        } else if (d.isBefore(q3End)) {
           divQ3 += amount;
-        }
-        // Q4: Dec 16 - Mar 15 (Next Year)
-        else if (d.isBefore(DateTime(y1 + 1, 3, 16))) {
+        } else if (d.isBefore(q4End)) {
           divQ4 += amount;
-        }
-        // Q5: Mar 16 - Mar 31
-        else {
+        } else {
           divQ5 += amount;
         }
       } else if (head == 'agriIncome') {
@@ -239,7 +273,11 @@ class TaxDataFetcher {
     }
 
     // Construct Granular Objects
-    final salaryDetails = SalaryDetails(grossSalary: salaryTotal);
+    final salaryDetails = const SalaryDetails(
+      grossSalary: 0,
+      giftsFromEmployer: 0,
+      netSalaryReceived: {},
+    );
 
     final dividendDetails = DividendIncome(
         amountQ1: divQ1,

@@ -14,6 +14,7 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/widgets/auth_wrapper.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
+import 'package:samriddhi_flow/models/dashboard_config.dart';
 
 // Mocks
 class MockAuthService extends Mock implements AuthService {}
@@ -101,6 +102,11 @@ class MockTxnsSinceBackupNotifier extends TxnsSinceBackupNotifier {
   int build() => 0;
 }
 
+class MockDashboardConfigNotifier extends DashboardConfigNotifier {
+  @override
+  DashboardVisibilityConfig build() => const DashboardVisibilityConfig();
+}
+
 void main() {
   // Mocks
   late MockAuthService mockAuthService;
@@ -186,6 +192,7 @@ void main() {
             .overrideWith(MockSmartCalculatorEnabledNotifier.new),
         calculatorVisibleProvider
             .overrideWith(MockCalculatorVisibleNotifier.new),
+        dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
       ],
       child: const MaterialApp(
         home: AuthWrapper(),

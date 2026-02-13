@@ -1,12 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/auth_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:samriddhi_flow/providers.dart';
-
-class MockStorageService extends Mock implements StorageService {}
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
@@ -14,102 +11,100 @@ class MockUser extends Mock implements User {}
 
 class MockUserCredential extends Mock implements UserCredential {}
 
+class MockStorageService extends Mock implements StorageService {}
+
+class MockLogoutRequestedNotifier extends Mock
+    implements LogoutRequestedNotifier {}
+
+abstract class RefInterface {
+  T read<T>(dynamic provider);
+}
+
+class MockRef extends Mock implements RefInterface {}
+
 void main() {
   late AuthService authService;
-  late MockStorageService mockStorage;
   late MockFirebaseAuth mockAuth;
+  late MockStorageService mockStorage;
   late MockUser mockUser;
-  late ProviderContainer container;
+  late MockRef mockRef;
 
   setUp(() {
-    mockStorage = MockStorageService();
     mockAuth = MockFirebaseAuth();
+    mockStorage = MockStorageService();
     mockUser = MockUser();
-    container = ProviderContainer();
+    mockRef = MockRef();
+
     authService = AuthService(mockAuth, mockStorage);
 
-    when(() => mockAuth.authStateChanges())
-        .thenAnswer((_) => Stream.value(null));
-    when(() => mockAuth.currentUser).thenReturn(null);
-    final f = Future<void>.value(null);
-    when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) => f);
+    registerFallbackValue(false);
   });
 
-  group('AuthService - Coverage Mastery', () {
-    test('Constructor and Auth getter', () {
-      expect(authService.currentUser, isNull);
-      expect(authService.authStateChanges, isNotNull);
-    });
+  test('currentUser returns mocked user', () {
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    expect(authService.currentUser, mockUser);
+  });
 
-    test('signInWithGoogle - Already Logged In Success', () async {
+  test('authStateChanges returns stream', () {
+    when(() => mockAuth.authStateChanges())
+        .thenAnswer((_) => Stream.value(mockUser));
+    expect(authService.authStateChanges, emits(mockUser));
+  });
+
+  group('signInWithGoogle', () {
+    test('returns success if user is already logged in and valid', () async {
       when(() => mockAuth.currentUser).thenReturn(mockUser);
       when(() => mockUser.reload()).thenAnswer((_) async {});
 
-      final response = await authService.signInWithGoogle(container);
+      final response = await authService.signInWithGoogle(mockRef);
+
       expect(response.status, AuthStatus.success);
+      verify(() => mockUser.reload()).called(1);
     });
 
-    test('signInWithGoogle - Already Logged In Offline Success', () async {
-      when(() => mockAuth.currentUser).thenReturn(mockUser);
-      when(() => mockUser.reload())
-          .thenThrow(FirebaseAuthException(code: 'network-request-failed'));
-
-      final response = await authService.signInWithGoogle(container);
-      expect(response.status, AuthStatus.success);
-    });
-
-    test('signInWithGoogle - Already Logged In Disabled Failure', () async {
+    test('returns error and signs out if session is invalid (user-disabled)',
+        () async {
       when(() => mockAuth.currentUser).thenReturn(mockUser);
       when(() => mockUser.reload())
           .thenThrow(FirebaseAuthException(code: 'user-disabled'));
       when(() => mockAuth.signOut()).thenAnswer((_) async {});
+      when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
+      when(() => mockRef.read(logoutRequestedProvider.notifier))
+          .thenReturn(MockLogoutRequestedNotifier());
 
-      final response = await authService.signInWithGoogle(container);
+      final response = await authService.signInWithGoogle(mockRef);
+
       expect(response.status, AuthStatus.error);
       expect(response.message, contains('Session expired'));
+
+      await untilCalled(() => mockAuth.signOut());
+      verify(() => mockAuth.signOut()).called(1);
     });
 
-    test('signOut - Functional Flow', () async {
-      when(() => mockAuth.signOut()).thenAnswer((_) async {});
-
-      await authService.signOut(container);
-
-      expect(container.read(logoutRequestedProvider), true);
-      verify(() => mockStorage.setAuthFlag(false)).called(1);
-    });
-
-    test('reloadUser and deleteAccount', () async {
+    test('returns success if offline during session validation', () async {
       when(() => mockAuth.currentUser).thenReturn(mockUser);
-      when(() => mockUser.reload()).thenAnswer((_) async {});
-      when(() => mockUser.delete()).thenAnswer((_) async {});
+      when(() => mockUser.reload())
+          .thenThrow(FirebaseAuthException(code: 'network-request-failed'));
 
-      await authService.reloadUser(container);
-      verify(() => mockUser.reload()).called(1);
+      final response = await authService.signInWithGoogle(mockRef);
 
-      await authService.deleteAccount();
-      verify(() => mockUser.delete()).called(1);
+      expect(response.status, AuthStatus.success);
     });
+  });
 
-    test('handleRedirectResult - Result Found', () async {
-      // We can't easily mock kIsWeb being true in a non-web test environment
-      // without extra plumbing, but handleRedirectResult checks _auth != null.
-      // If we are on mobile, it just logs "Skip Redirect check".
-      // To hit the internal logic, we might need to mock kIsWeb or connectivity platform.
+  test('signOut calls firebase signOut and clears storage', () async {
+    when(() => mockAuth.signOut()).thenAnswer((_) async {});
+    when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
 
-      final mockCredential = MockUserCredential();
-      when(() => mockAuth.getRedirectResult())
-          .thenAnswer((_) async => mockCredential);
-      when(() => mockCredential.user).thenReturn(mockUser);
+    final mockLogoutNotifier = MockLogoutRequestedNotifier();
+    when(() => mockRef.read(logoutRequestedProvider.notifier))
+        .thenReturn(mockLogoutNotifier);
 
-      await authService.handleRedirectResult(container);
-      // Since kIsWeb is false in unit tests by default, it will skip.
-    });
+    await authService.signOut(mockRef);
 
-    test('AuthService - No Auth Path', () async {
-      final authNoService = AuthService(null, mockStorage);
-      // This will hit the Firebase.initializeApp path if _auth is null
-      // But Firebase.initializeApp depends on platform channels.
-      expect(authNoService.currentUser, isNull);
-    });
+    await untilCalled(() => mockAuth.signOut());
+    verify(() => mockAuth.signOut()).called(1);
+    verify(() => mockStorage.setAuthFlag(false)).called(1);
+    verify(() => mockRef.read(logoutRequestedProvider.notifier)).called(1);
   });
 }

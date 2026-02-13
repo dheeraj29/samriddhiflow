@@ -133,6 +133,7 @@ void main() {
       when(() => mockStorage.getAllSettings()).thenReturn({'theme': 'dark'});
 
       when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
       when(() => mockTaxConfig.getAllRules()).thenReturn({});
       when(() => mockCloud.syncData(any(), any())).thenAnswer((_) async {});
 

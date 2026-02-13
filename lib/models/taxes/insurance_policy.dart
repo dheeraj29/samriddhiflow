@@ -3,7 +3,7 @@ import 'package:uuid/uuid.dart';
 
 part 'insurance_policy.g.dart';
 
-@HiveType(typeId: 201)
+@HiveType(typeId: 225)
 class InsurancePolicy {
   InsurancePolicy copyWith({
     String? policyName,

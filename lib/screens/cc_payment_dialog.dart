@@ -19,6 +19,8 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   final _amountController = TextEditingController();
   DateTime _date = DateTime.now();
   String _sourceAccountId = 'manual';
+  bool _isRounded = false;
+  double? _originalAmount;
 
   @override
   void initState() {
@@ -50,7 +52,38 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                   currency: ref.watch(currencyProvider),
                   label: 'Payment Amount',
                 ),
-                const SizedBox(height: 16),
+                CheckboxListTile(
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title:
+                      const Text('Round Off', style: TextStyle(fontSize: 14)),
+                  subtitle: const Text('Round to nearest ₹1',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  value: _isRounded,
+                  onChanged: (v) {
+                    setState(() {
+                      _isRounded = v ?? false;
+                      if (_isRounded) {
+                        _originalAmount =
+                            double.tryParse(_amountController.text) ?? 0;
+                        final rounded = _originalAmount!.roundToDouble();
+                        _amountController.text = rounded.toStringAsFixed(2);
+                      } else {
+                        // Restore original only if it matches the rounded value (user didn't manually edit)
+                        // Actually, simplified: just re-calculate bill or use stored original
+                        // Better: If user manually edits, we shouldn't overwrite unless they toggle.
+                        // Strategy: Always calculate from current text when rounding.
+                        // When un-rounding, we can't easily guess "original" if user edited.
+                        // So, let's just use the strict bill amount IF available, or just toggle rounding on current value.
+                        if (_originalAmount != null && _originalAmount! > 0) {
+                          _amountController.text =
+                              _originalAmount!.toStringAsFixed(2);
+                        }
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
                 accountsAsync.when(
                   data: (accounts) {
                     final sourceAccounts = accounts
@@ -103,6 +136,35 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                   );
 
                   await storage.saveTransaction(txn);
+
+                  // Auto-create Rounding Adjustment if enabled
+                  if (_isRounded &&
+                      _originalAmount != null &&
+                      (_originalAmount! - amount).abs() > 0.001) {
+                    final diff = _originalAmount! - amount;
+                    // If diff > 0 (e.g. 100.4 - 100.0 = 0.4): We underpaid 0.4 -> Need Income to reduce debt.
+                    // If diff < 0 (e.g. 100.6 - 101.0 = -0.4): We overpaid 0.4 -> Need Expense to increase debt back (technically "Bank Fee" logic, but effectively balances it).
+                    // Actually:
+                    // Bill: 100.4. Paid: 100. Rem: 0.4.
+                    // To make Rem 0, we need to "pay" 0.4 more.
+                    // An "Income" on CC acts as a credit/payment.
+                    // So Income of 0.4 works.
+
+                    final adjustmentType = diff > 0
+                        ? TransactionType.income
+                        : TransactionType.expense;
+
+                    final adjustmentTxn = Transaction.create(
+                      title: 'Rounding Adjustment',
+                      amount: diff.abs(),
+                      date: _date,
+                      type: adjustmentType,
+                      category: 'Adjustment',
+                      accountId: widget.creditCardAccount.id,
+                      toAccountId: null,
+                    );
+                    await storage.saveTransaction(adjustmentTxn);
+                  }
 
                   ref.invalidate(accountsProvider);
                   ref.invalidate(transactionsProvider);

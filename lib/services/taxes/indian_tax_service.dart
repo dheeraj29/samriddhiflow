@@ -104,10 +104,26 @@ class IndianTaxService implements TaxStrategy {
 
     // Rebate u/s 87A
     double totalTaxableIncome = netTaxableNormalIncome + specialRateIncome;
-    if (rules.isRebateEnabled && totalTaxableIncome <= rules.rebateLimit) {
-      slabTax = 0;
-      specialTax = 0;
-      taxBeforeCess = 0;
+    if (rules.isRebateEnabled) {
+      if (totalTaxableIncome <= rules.rebateLimit) {
+        slabTax = 0;
+        specialTax = 0;
+        taxBeforeCess = 0;
+      } else {
+        // Marginal Relief (New Regime Budget 2023 onwards)
+        // If taxBeforeCess > (totalTaxableIncome - rebateLimit), cap at the excess income.
+        // This usually only applies for New Regime (where rebateLimit is 7L)
+        // For Old Regime (rebateLimit 5L), usually no marginal relief.
+        // But let's check rebateLimit >= 700000 to assume New Regime style logic
+        if (rules.rebateLimit >= 700000) {
+          double excessIncome = totalTaxableIncome - rules.rebateLimit;
+          if (taxBeforeCess > excessIncome) {
+            taxBeforeCess = excessIncome;
+            // Adjust individual components for breakdown accuracy if needed
+            // For now, capping the total before cess is the standard approach
+          }
+        }
+      }
     }
 
     double cess =
@@ -134,8 +150,23 @@ class IndianTaxService implements TaxStrategy {
   }
 
   double calculateSalaryIncome(TaxYearData data, TaxRules rules) {
-    double gross = data.salary.grossSalary;
-    if (gross == 0) return 0;
+    double salary = data.salary.grossSalary;
+
+    // Gifts from Employer
+    double taxableGifts = 0;
+    if (rules.isGiftFromEmployerEnabled) {
+      double gifts = data.salary.giftsFromEmployer;
+      if (gifts > 0) {
+        // Usually, if gifts > 5000, the WHOLE amount is taxable, or just the excess?
+        // Rule 3(7)(iv): "value of any gift ... below Rs. 5,000 ... shall be exempt".
+        // Interpretation 1: Flat exemption of 5000.
+        taxableGifts = max(0, gifts - rules.giftFromEmployerExemptionLimit);
+      }
+    }
+
+    double totalGross = salary + taxableGifts;
+
+    if (totalGross <= 0) return 0;
 
     double exemptLeave = rules.isRetirementExemptionEnabled
         ? min(data.salary.leaveEncashment, rules.limitLeaveEncashment)
@@ -144,7 +175,27 @@ class IndianTaxService implements TaxStrategy {
         ? min(data.salary.gratuity, rules.limitGratuity)
         : 0;
 
-    double netSalary = gross - exemptLeave - exemptGratuity;
+    double netSalary = totalGross - exemptLeave - exemptGratuity;
+
+    // Custom Salary Exemptions
+    if (rules.customExemptions.isNotEmpty) {
+      for (final rule in rules.customExemptions) {
+        if (rule.isEnabled && rule.incomeHead == 'Salary') {
+          double claimed = data.salary.customExemptions[rule.id] ?? 0;
+          if (claimed > 0) {
+            double maxAllowed = 0;
+            if (rule.isPercentage) {
+              maxAllowed = totalGross * (rule.limit / 100);
+            } else {
+              maxAllowed = rule.limit;
+            }
+            double actualExemption = min(claimed, maxAllowed);
+            netSalary -= actualExemption;
+          }
+        }
+      }
+    }
+
     double stdDed =
         rules.isStdDeductionSalaryEnabled ? rules.stdDeductionSalary : 0;
     return (netSalary - stdDed).clamp(0, double.infinity);
@@ -182,12 +233,19 @@ class IndianTaxService implements TaxStrategy {
   double calculateBusinessIncome(TaxYearData data, TaxRules rules) {
     double total = 0;
     for (var b in data.businessIncomes) {
-      if (b.type == BusinessType.regular) {
+      if (b.type == BusinessType.section44AD &&
+          rules.is44ADEnabled &&
+          b.grossTurnover <= rules.limit44AD) {
+        // Presumptive rate from settings (e.g. 6% or 8%)
+        total += max(b.netIncome, b.grossTurnover * (rules.rate44AD / 100));
+      } else if (b.type == BusinessType.section44ADA &&
+          rules.is44ADAEnabled &&
+          b.grossTurnover <= rules.limit44ADA) {
+        // Presumptive rate from settings (usually 50%)
+        total += max(b.netIncome, b.grossTurnover * (rules.rate44ADA / 100));
+      } else {
+        // Regular (Actual Profit) or fallback if limit exceeded
         total += b.netIncome;
-      } else if (b.type == BusinessType.section44AD) {
-        total += max(b.netIncome, b.grossTurnover * 0.06);
-      } else if (b.type == BusinessType.section44ADA) {
-        total += max(b.netIncome, b.grossTurnover * 0.50);
       }
     }
     return total;

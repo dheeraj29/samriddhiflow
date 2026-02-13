@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 // Keep for Service ref
 import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/screens/dashboard_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +13,67 @@ import '../test_mocks.dart';
 
 // Mock overrides if needed or use container.
 // For smoke test, we can use empty providers or initial state.
+
+import 'package:samriddhi_flow/models/dashboard_config.dart';
+
+// Mocks
+class MockCurrencyNotifier extends CurrencyNotifier {
+  @override
+  String build() => 'en_US';
+}
+
+class MockCategoriesNotifier extends CategoriesNotifier {
+  @override
+  List<Category> build() => [];
+}
+
+class MockBackupThresholdNotifier extends BackupThresholdNotifier {
+  @override
+  int build() => 10;
+}
+
+class MockTxnsSinceBackupNotifier extends TxnsSinceBackupNotifier {
+  @override
+  int build() => 0;
+}
+
+class MockSmartCalculatorEnabledNotifier
+    extends SmartCalculatorEnabledNotifier {
+  @override
+  bool build() => false;
+}
+
+class MockCalculatorVisibleNotifier extends CalculatorVisibleNotifier {
+  @override
+  bool build() => false;
+}
+
+class MockHolidaysNotifier extends HolidaysNotifier {
+  @override
+  List<DateTime> build() => [];
+}
+
+class MockDashboardConfigNotifier extends DashboardConfigNotifier {
+  @override
+  DashboardVisibilityConfig build() => const DashboardVisibilityConfig();
+}
+
+class MockAppLockIntentNotifier extends AppLockIntentNotifier {
+  @override
+  bool build() => false;
+}
+
+class MockActiveProfileIdNotifier extends ProfileNotifier {
+  @override
+  String build() => 'default';
+}
+
+class MockNotificationService extends Mock implements NotificationService {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<List<String>> checkNudges() async => [];
+}
 
 void main() {
   testWidgets('Dashboard Renders with Empty State',
@@ -46,6 +110,19 @@ void main() {
           activeProfileProvider.overrideWith((ref) => null),
           profilesProvider.overrideWith((ref) => Future.value([])),
           activeProfileIdProvider.overrideWith(MockActiveProfileIdNotifier.new),
+          currencyProvider.overrideWith(MockCurrencyNotifier.new),
+          categoriesProvider.overrideWith(MockCategoriesNotifier.new),
+          recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+          backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
+          txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
+          smartCalculatorEnabledProvider
+              .overrideWith(MockSmartCalculatorEnabledNotifier.new),
+          calculatorVisibleProvider
+              .overrideWith(MockCalculatorVisibleNotifier.new),
+          holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+          dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+          appLockStatusProvider.overrideWith((ref) => false),
+          appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
         ],
         child: const MaterialApp(
           home: DashboardScreen(),

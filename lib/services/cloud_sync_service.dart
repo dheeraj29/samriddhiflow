@@ -10,6 +10,7 @@ import '../models/category.dart';
 import '../models/profile.dart';
 import '../models/taxes/insurance_policy.dart';
 import '../models/taxes/tax_rules.dart';
+import '../models/taxes/tax_data.dart';
 import 'taxes/tax_config_service.dart';
 
 class CloudSyncService {
@@ -65,6 +66,8 @@ class CloudSyncService {
       'tax_rules': _taxConfigService
           .getAllRules()
           .map((year, rules) => MapEntry(year.toString(), rules.toMap())),
+      'tax_data':
+          _storageService.getAllTaxYearData().map((e) => e.toMap()).toList(),
     };
 
     await _cloudStorage.syncData(user.uid, data);
@@ -98,7 +101,7 @@ class CloudSyncService {
               .addCategory(_mapToCategory(Map<String, dynamic>.from(c)));
         }
       } catch (e) {
-        print("Restore Error (Categories): $e");
+        // print("Restore Error (Categories): $e");
         rethrow;
       }
     }
@@ -145,7 +148,7 @@ class CloudSyncService {
         }
         await _storageService.saveInsurancePolicies(policies);
       } catch (e) {
-        print("Restore Error (Insurance): $e");
+        // print("Restore Error (Insurance): $e");
         rethrow;
       }
     }
@@ -159,7 +162,19 @@ class CloudSyncService {
         });
         await _taxConfigService.restoreAllRules(taxRules);
       } catch (e) {
-        print("Restore Error (TaxRules): $e");
+        // print("Restore Error (TaxRules): $e");
+        rethrow;
+      }
+    }
+
+    if (data['tax_data'] != null) {
+      try {
+        for (var td in (data['tax_data'] as List)) {
+          final taxData = TaxYearData.fromMap(Map<String, dynamic>.from(td));
+          await _storageService.saveTaxYearData(taxData);
+        }
+      } catch (e) {
+        // print("Restore Error (TaxData): $e");
         rethrow;
       }
     }

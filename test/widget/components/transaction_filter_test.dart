@@ -45,28 +45,38 @@ void main() {
     // 1. Change Time Range
     await tester.tap(find.text('All Time'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Last 30 Days').last);
+    // Use find.byWidgetPredicate to find the item in the dropdown menu specifically
+    await tester.tap(find
+        .descendant(
+            of: find.byType(Scrollable), matching: find.text('Last 30 Days'))
+        .last);
     await tester.pumpAndSettle();
     expect(changedRange, TimeRange.last30Days);
 
     // 2. Change Category
     await tester.tap(find.text('All Categories'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Food').last);
+    await tester.tap(find
+        .descendant(of: find.byType(Scrollable), matching: find.text('Food'))
+        .last);
     await tester.pumpAndSettle();
     expect(changedCategory, 'Food');
 
     // 3. Change Type
     await tester.tap(find.text('All Types'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Income').last);
+    await tester.tap(find
+        .descendant(of: find.byType(Scrollable), matching: find.text('Income'))
+        .last);
     await tester.pumpAndSettle();
     expect(changedType, TransactionType.income);
 
     // 4. Change Account
     await tester.tap(find.text('All Accounts'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cash').last);
+    await tester.tap(find
+        .descendant(of: find.byType(Scrollable), matching: find.text('Cash'))
+        .last);
     await tester.pumpAndSettle();
     expect(changedAccount, 'acc1');
   });

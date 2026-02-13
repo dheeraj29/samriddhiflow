@@ -16,7 +16,11 @@ class TaxExemptionRule {
   @HiveField(4)
   final bool isEnabled;
 
+  @HiveField(5)
+  final String id; // Unique ID for mapping
+
   const TaxExemptionRule({
+    required this.id,
     required this.name,
     required this.incomeHead,
     required this.limit,
@@ -24,6 +28,7 @@ class TaxExemptionRule {
     this.isEnabled = true,
   });
   TaxExemptionRule copyWith({
+    String? id,
     String? name,
     String? incomeHead,
     double? limit,
@@ -31,6 +36,7 @@ class TaxExemptionRule {
     bool? isEnabled,
   }) {
     return TaxExemptionRule(
+      id: id ?? this.id,
       name: name ?? this.name,
       incomeHead: incomeHead ?? this.incomeHead,
       limit: limit ?? this.limit,
@@ -40,6 +46,7 @@ class TaxExemptionRule {
   }
 
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'incomeHead': incomeHead,
         'limit': limit,
@@ -48,6 +55,8 @@ class TaxExemptionRule {
       };
 
   factory TaxExemptionRule.fromMap(Map<String, dynamic> m) => TaxExemptionRule(
+        id: m['id']?.toString() ??
+            'rule_${DateTime.now().millisecondsSinceEpoch}', // Fallback for old data
         name: m['name'] ?? '',
         incomeHead: m['incomeHead'] ?? '',
         limit: (m['limit'] as num?)?.toDouble() ?? 0.0,
@@ -156,7 +165,7 @@ class TaxMappingRule {
       );
 }
 
-@HiveType(typeId: 200)
+@HiveType(typeId: 224)
 class TaxRules {
   @HiveField(0)
   final double currencyLimit10_10D;
@@ -167,8 +176,7 @@ class TaxRules {
   @HiveField(2)
   final double stdExemption112A;
 
-  @HiveField(3)
-  final double legacyReserved; // Reserved
+  // @HiveField(3) - Removed legacyReserved
 
   @HiveField(4)
   final double ltcgRateEquity;
@@ -177,10 +185,9 @@ class TaxRules {
   final double stcgRate;
 
   @HiveField(6)
-  final int windowGainReinvest;
+  final double windowGainReinvest;
 
-  @HiveField(7)
-  final int legacyReservedInt; // Reserved
+  // @HiveField(7) - Removed legacyReservedInt
 
   @HiveField(8)
   final Map<String, String> tagMappings;
@@ -236,8 +243,7 @@ class TaxRules {
   final List<InsurancePremiumRule> insurancePremiumRules;
 
   // --- EXEMPTION TOGGLES ---
-  @HiveField(25)
-  final bool legacyToggle1; // Reserved
+  // @HiveField(25) - Removed legacyToggle1
   @HiveField(26)
   final bool isCashGiftExemptionEnabled;
 
@@ -260,7 +266,6 @@ class TaxRules {
   final bool isLTCGExemption112AEnabled;
   @HiveField(35)
   final bool isInsuranceExemptionEnabled;
-
   @HiveField(36)
   final bool isInsuranceAggregateLimitEnabled;
   @HiveField(37)
@@ -279,15 +284,36 @@ class TaxRules {
   @HiveField(43)
   final List<TaxMappingRule> advancedTagMappings;
 
+  @HiveField(44)
+  final int financialYearStartMonth; // Default 4 (April)
+
+  @HiveField(45)
+  final double giftFromEmployerExemptionLimit; // Default 5000
+
+  @HiveField(46)
+  final bool isGiftFromEmployerEnabled;
+
+  @HiveField(47)
+  final bool is44ADEnabled;
+  @HiveField(48)
+  final double limit44AD;
+  @HiveField(49)
+  final double rate44AD;
+
+  @HiveField(50)
+  final bool is44ADAEnabled;
+  @HiveField(51)
+  final double limit44ADA;
+  @HiveField(52)
+  final double rate44ADA;
+
   TaxRules({
     this.currencyLimit10_10D = 500000,
     this.stdDeductionSalary = 75000,
     this.stdExemption112A = 125000,
-    this.legacyReserved = 5000,
     this.ltcgRateEquity = 12.5,
     this.stcgRate = 20.0,
-    this.windowGainReinvest = 2,
-    this.legacyReservedInt = 8,
+    this.windowGainReinvest = 2.0,
     this.tagMappings = const {},
     this.limitGratuity = 2000000,
     this.limitLeaveEncashment = 2500000,
@@ -313,7 +339,6 @@ class TaxRules {
     this.jurisdiction = 'India',
     this.cashGiftExemptionLimit = 50000,
     List<InsurancePremiumRule>? insurancePremiumRules,
-    this.legacyToggle1 = true,
     this.isCashGiftExemptionEnabled = true,
     this.agricultureIncomeThreshold = 5000,
     this.agricultureBasicExemptionLimit = 400000,
@@ -332,12 +357,21 @@ class TaxRules {
     this.isCGRatesEnabled = true,
     this.isAgriIncomeEnabled = true,
     this.advancedTagMappings = const [],
+    this.financialYearStartMonth = 4,
+    this.giftFromEmployerExemptionLimit = 5000,
+    this.isGiftFromEmployerEnabled = true,
+    this.is44ADEnabled = true,
+    this.limit44AD = 20000000,
+    this.rate44AD = 6.0,
+    this.is44ADAEnabled = true,
+    this.limit44ADA = 5000000,
+    this.rate44ADA = 50.0,
   })  : dateEffectiveULIP = dateEffectiveULIP ?? DateTime(2021, 2, 1),
         dateEffectiveNonULIP = dateEffectiveNonULIP ?? DateTime(2023, 4, 1),
         insurancePremiumRules = insurancePremiumRules ??
             [
               InsurancePremiumRule(
-                  DateTime(1900, 1, 1), 100.0), // Using 1900 as far past
+                  DateTime(2000, 1, 1), 100.0), // Using 2000 as far past
               InsurancePremiumRule(DateTime(2003, 4, 1), 20.0),
               InsurancePremiumRule(DateTime(2012, 4, 1), 10.0),
             ];
@@ -348,7 +382,7 @@ class TaxRules {
     double? stdExemption112A,
     double? ltcgRateEquity,
     double? stcgRate,
-    int? windowGainReinvest,
+    double? windowGainReinvest,
     Map<String, String>? tagMappings,
     List<TaxSlab>? slabs,
     double? limitGratuity,
@@ -384,6 +418,15 @@ class TaxRules {
     bool? isCGRatesEnabled,
     bool? isAgriIncomeEnabled,
     List<TaxMappingRule>? advancedTagMappings,
+    int? financialYearStartMonth,
+    double? giftFromEmployerExemptionLimit,
+    bool? isGiftFromEmployerEnabled,
+    bool? is44ADEnabled,
+    double? limit44AD,
+    double? rate44AD,
+    bool? is44ADAEnabled,
+    double? limit44ADA,
+    double? rate44ADA,
   }) {
     return TaxRules(
       currencyLimit10_10D: currencyLimit10_10D ?? this.currencyLimit10_10D,
@@ -444,6 +487,18 @@ class TaxRules {
       isCGRatesEnabled: isCGRatesEnabled ?? this.isCGRatesEnabled,
       isAgriIncomeEnabled: isAgriIncomeEnabled ?? this.isAgriIncomeEnabled,
       advancedTagMappings: advancedTagMappings ?? this.advancedTagMappings,
+      financialYearStartMonth:
+          financialYearStartMonth ?? this.financialYearStartMonth,
+      giftFromEmployerExemptionLimit:
+          giftFromEmployerExemptionLimit ?? this.giftFromEmployerExemptionLimit,
+      isGiftFromEmployerEnabled:
+          isGiftFromEmployerEnabled ?? this.isGiftFromEmployerEnabled,
+      is44ADEnabled: is44ADEnabled ?? this.is44ADEnabled,
+      limit44AD: limit44AD ?? this.limit44AD,
+      rate44AD: rate44AD ?? this.rate44AD,
+      is44ADAEnabled: is44ADAEnabled ?? this.is44ADAEnabled,
+      limit44ADA: limit44ADA ?? this.limit44ADA,
+      rate44ADA: rate44ADA ?? this.rate44ADA,
     );
   }
 
@@ -455,6 +510,7 @@ class TaxRules {
         'stcgRate': stcgRate,
         'windowGainReinvest': windowGainReinvest,
         'tagMappings': tagMappings,
+        // ... (rest is same, no changes needed for toMap as dynamic handles double)
         'limitGratuity': limitGratuity,
         'limitLeaveEncashment': limitLeaveEncashment,
         'slabs': slabs.map((e) => e.toMap()).toList(),
@@ -491,6 +547,15 @@ class TaxRules {
         'isAgriIncomeEnabled': isAgriIncomeEnabled,
         'advancedTagMappings':
             advancedTagMappings.map((e) => e.toMap()).toList(),
+        'financialYearStartMonth': financialYearStartMonth,
+        'giftFromEmployerExemptionLimit': giftFromEmployerExemptionLimit,
+        'isGiftFromEmployerEnabled': isGiftFromEmployerEnabled,
+        'is44ADEnabled': is44ADEnabled,
+        'limit44AD': limit44AD,
+        'rate44AD': rate44AD,
+        'is44ADAEnabled': is44ADAEnabled,
+        'limit44ADA': limit44ADA,
+        'rate44ADA': rate44ADA,
       };
 
   factory TaxRules.fromMap(Map<String, dynamic> m) {
@@ -502,7 +567,7 @@ class TaxRules {
       stdExemption112A: (m['stdExemption112A'] as num?)?.toDouble() ?? 125000,
       ltcgRateEquity: (m['ltcgRateEquity'] as num?)?.toDouble() ?? 12.5,
       stcgRate: (m['stcgRate'] as num?)?.toDouble() ?? 20.0,
-      windowGainReinvest: m['windowGainReinvest'] ?? 2,
+      windowGainReinvest: (m['windowGainReinvest'] as num?)?.toDouble() ?? 2.0,
       tagMappings: Map<String, String>.from(m['tagMappings'] ?? {}),
       limitGratuity: (m['limitGratuity'] as num?)?.toDouble() ?? 2000000,
       limitLeaveEncashment:
@@ -567,6 +632,12 @@ class TaxRules {
               ?.map((e) => TaxMappingRule.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
           [],
+      is44ADEnabled: m['is44ADEnabled'] ?? true,
+      limit44AD: (m['limit44AD'] as num?)?.toDouble() ?? 20000000,
+      rate44AD: (m['rate44AD'] as num?)?.toDouble() ?? 6.0,
+      is44ADAEnabled: m['is44ADAEnabled'] ?? true,
+      limit44ADA: (m['limit44ADA'] as num?)?.toDouble() ?? 5000000,
+      rate44ADA: (m['rate44ADA'] as num?)?.toDouble() ?? 50.0,
     );
   }
 }

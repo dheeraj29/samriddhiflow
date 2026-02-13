@@ -95,7 +95,7 @@ class Account extends HiveObject {
 
     // In this application's architecture, for Credit Cards:
     // 1. Account.balance stores the "Billed Balance" (last statement minus payments).
-    // 2. StorageService skips updating balance for new expenses until the cycle rolls over.
+    // 2. StorageService skips updating balance for new expenses AND payments until the cycle rolls over.
     // Therefore, the Outstanding Bill is simply the current balance.
     return CurrencyUtils.roundTo2Decimals(balance.clamp(0.0, double.infinity));
   }

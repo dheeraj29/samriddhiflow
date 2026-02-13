@@ -14,8 +14,10 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:samriddhi_flow/models/dashboard_config.dart';
 
 import 'services/auth_service.dart';
 import 'services/file_service.dart';
@@ -81,6 +83,24 @@ class LocalModeNotifier extends Notifier<bool> {
 final localModeProvider =
     NotifierProvider<LocalModeNotifier, bool>(LocalModeNotifier.new);
 
+class DashboardConfigNotifier extends Notifier<DashboardVisibilityConfig> {
+  @override
+  DashboardVisibilityConfig build() {
+    final storage = ref.read(storageServiceProvider);
+    return storage.getDashboardConfig();
+  }
+
+  Future<void> updateConfig({bool? showIncomeExpense, bool? showBudget}) async {
+    state = state.copyWith(
+        showIncomeExpense: showIncomeExpense, showBudget: showBudget);
+    await ref.read(storageServiceProvider).saveDashboardConfig(state);
+  }
+}
+
+final dashboardConfigProvider =
+    NotifierProvider<DashboardConfigNotifier, DashboardVisibilityConfig>(
+        DashboardConfigNotifier.new);
+
 // --- Service Providers ---
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -144,6 +164,13 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     Hive.registerAdapter<Transaction>(TransactionAdapter(), override: true);
     Hive.registerAdapter<TransactionType>(TransactionTypeAdapter(),
         override: true);
+    Hive.registerAdapter<PayoutFrequency>(PayoutFrequencyAdapter(),
+        override: true);
+    Hive.registerAdapter<SalaryStructure>(SalaryStructureAdapter(),
+        override: true);
+    Hive.registerAdapter<CustomAllowance>(CustomAllowanceAdapter(),
+        override: true);
+    Hive.registerAdapter<TaxYearData>(TaxYearDataAdapter(), override: true);
 
     // Open specialized boxes
     await Hive.openBox('sum_tracker');
@@ -151,9 +178,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     final storage = ref.watch(storageServiceProvider);
     await storage.init();
 
-    // Initialize TaxConfigService (Fix for LateInitializationError during Sync/Backup)
     final taxConfig = ref.read(taxConfigServiceProvider);
     await taxConfig.init();
+
+    // Recalculate CC Balances to handle Cycle Rollovers on restart
+    await storage.recalculateCCBalances();
 
     DebugLogger()
         .log("StorageInit: Hive Initialized & Boxes Opened Successfully.");

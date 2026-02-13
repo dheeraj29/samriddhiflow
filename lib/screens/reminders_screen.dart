@@ -292,9 +292,10 @@ class RemindersScreen extends ConsumerWidget {
     return Column(
       children: ccAccounts.map((acc) {
         if (acc.billingCycleDay == null) return const SizedBox();
-
         final today = DateTime.now();
-        final lastBillDate = today.day >= acc.billingCycleDay!
+
+        // Reminder Logic: Bill generated AFTER the cycle day is over (e.g. Day 15 if Cycle Day 14)
+        final lastBillDate = today.day > acc.billingCycleDay!
             ? DateTime(today.year, today.month, acc.billingCycleDay!)
             : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 

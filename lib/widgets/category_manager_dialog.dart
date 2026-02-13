@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category.dart';
+import '../models/taxes/tax_data_models.dart';
 import '../providers.dart';
 import 'pure_icons.dart';
 
@@ -100,7 +101,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                         items: CategoryUsage.values
                             .map((u) => DropdownMenuItem(
                                 value: u,
-                                child: Text(u.name.toUpperCase(),
+                                child: Text(u.name.toHumanReadable(),
                                     style: const TextStyle(fontSize: 13))))
                             .toList(),
                         onChanged: (v) => setState(() => _usage = v!),
@@ -120,7 +121,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                         items: CategoryTag.values
                             .map((t) => DropdownMenuItem(
                                 value: t,
-                                child: Text(t.name.toUpperCase(),
+                                child: Text(t.name.toHumanReadable(),
                                     style: const TextStyle(fontSize: 13))))
                             .toList(),
                         onChanged: (v) => setState(() => _tag = v!),
@@ -219,7 +220,8 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                             size: 20),
                         title: Text(cat.name,
                             style: const TextStyle(fontSize: 14)),
-                        subtitle: Text("${cat.usage.name} | ${cat.tag.name}",
+                        subtitle: Text(
+                            "${cat.usage.name.toHumanReadable()} | ${cat.tag.name.toHumanReadable()}",
                             style: const TextStyle(fontSize: 12)),
                         dense: true,
                         trailing: Row(

@@ -10,25 +10,25 @@ void main() {
       test('Date after cycle day (28)', () {
         final date = DateTime(2024, 5, 29);
         final start = BillingHelper.getCycleStart(date, cycleDay28);
-        expect(start, DateTime(2024, 5, 28));
+        expect(start, DateTime(2024, 5, 29));
       });
 
       test('Date before cycle day (28)', () {
         final date = DateTime(2024, 5, 27);
         final start = BillingHelper.getCycleStart(date, cycleDay28);
-        expect(start, DateTime(2024, 4, 28));
+        expect(start, DateTime(2024, 4, 29));
       });
 
       test('Date after cycle day (5)', () {
         final date = DateTime(2024, 5, 6);
         final start = BillingHelper.getCycleStart(date, cycleDay5);
-        expect(start, DateTime(2024, 5, 5));
+        expect(start, DateTime(2024, 5, 6));
       });
 
       test('Date before cycle day (5)', () {
         final date = DateTime(2024, 5, 4);
         final start = BillingHelper.getCycleStart(date, cycleDay5);
-        expect(start, DateTime(2024, 4, 5));
+        expect(start, DateTime(2024, 4, 6));
       });
     });
 

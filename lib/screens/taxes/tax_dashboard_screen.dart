@@ -32,20 +32,35 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Future<void> _initServices() async {
-    await ref.read(taxConfigServiceProvider).init();
-    if (mounted) {
-      setState(() {
-        _isServiceInitialized = true;
-        _loadData();
-      });
+    try {
+      final config = ref.read(taxConfigServiceProvider);
+      await config.init();
+      if (mounted) {
+        setState(() {
+          _isServiceInitialized = true;
+          // Fix: Use correct financial year logic (Feb 2026 -> FY 2025 if Apr cycle)
+          _selectedYear = config.getCurrentFinancialYear();
+          _loadData();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fallback or show error
+        setState(() {
+          _isServiceInitialized = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error initializing tax data: $e')));
+      }
     }
   }
 
-  // Placeholder load - in real persistence we'd save TaxYearData to Hive too
-  // For now, we start fresh or empty.
+  // Load TaxYearData from Hive
   void _loadData() {
+    final storage = ref.read(storageServiceProvider);
+    final savedData = storage.getTaxYearData(_selectedYear);
     setState(() {
-      _taxData = TaxYearData(year: _selectedYear);
+      _taxData = savedData ?? TaxYearData(year: _selectedYear);
     });
   }
 
@@ -61,6 +76,24 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       appBar: AppBar(
         title: const Text('Tax Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_document),
+            tooltip: 'Edit Details',
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => TaxDetailsScreen(
+                            data: _taxData ?? TaxYearData(year: _selectedYear),
+                            onSave: (newData) async {
+                              await ref
+                                  .read(storageServiceProvider)
+                                  .saveTaxYearData(newData);
+                              setState(() => _taxData = newData);
+                            },
+                          )));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.sync),
             tooltip: 'Sync from Transactions',
@@ -80,21 +113,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 MaterialPageRoute(builder: (_) => const TaxRulesScreen())),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => TaxDetailsScreen(
-                        data: _taxData ?? TaxYearData(year: _selectedYear),
-                        onSave: (newData) {
-                          setState(() => _taxData = newData);
-                        },
-                      )));
-        },
-        label: const Text('Edit Details'),
-        icon: const Icon(Icons.edit),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -119,9 +137,33 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Future<void> _showSyncDialog(TaxDataFetcher fetcher) async {
-    DateTime start = DateTime(_selectedYear, 4, 1);
-    DateTime end = DateTime(_selectedYear + 1, 3, 31);
-    bool overwriteAll = true;
+    // Get FY Start Month
+    final config = ref.read(taxConfigServiceProvider);
+    final rules = config.getRulesForYear(_selectedYear);
+    final startMonth = rules.financialYearStartMonth;
+
+    // Fixed Start Date (FY Start)
+    final start = DateTime(_selectedYear, startMonth, 1);
+
+    // Default End Date (Today or FY End)
+    DateTime defaultEnd = DateTime.now();
+    DateTime fyEnd;
+    if (startMonth == 1) {
+      fyEnd = DateTime(_selectedYear, 12, 31);
+    } else {
+      fyEnd = DateTime(_selectedYear + 1, startMonth, 1)
+          .subtract(const Duration(days: 1));
+    }
+
+    if (defaultEnd.isAfter(fyEnd)) {
+      defaultEnd = fyEnd;
+    }
+    if (defaultEnd.isBefore(start)) {
+      defaultEnd = start;
+    }
+
+    DateTime end = defaultEnd;
+    bool smartSync = true; // Default to Smart Sync
 
     await showDialog(
       context: context,
@@ -132,69 +174,70 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Select Date Range for Transactions:'),
-              const SizedBox(height: 8),
+              const Text('Sync Period (YTD)',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              // Start Date (Fixed)
               Row(
                 children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.calendar_today, size: 16),
-                      label: Text('${start.day}/${start.month}/${start.year}'),
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2030),
-                            initialDate: start);
-                        if (d != null) setStateBuilder(() => start = d);
-                      },
-                    ),
+                  const Icon(Icons.event_available,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  const Text('From: ', style: TextStyle(color: Colors.grey)),
+                  Text(
+                    '${start.day}/${start.month}/${start.year}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.grey),
                   ),
-                  const Text(' - '),
-                  Expanded(
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.calendar_today, size: 16),
-                      label: Text('${end.day}/${end.month}/${end.year}'),
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2030),
-                            initialDate: end);
-                        if (d != null) setStateBuilder(() => end = d);
-                      },
-                    ),
+                  const SizedBox(width: 4),
+                  const Text('(FY Start)',
+                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // End Date (Editable)
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today,
+                      size: 16, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  const Text('To: '),
+                  TextButton(
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                          context: context,
+                          firstDate: start,
+                          lastDate: DateTime(2030),
+                          initialDate: end);
+                      if (d != null) setStateBuilder(() => end = d);
+                    },
+                    child: Text('${end.day}/${end.month}/${end.year}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ],
               ),
-              const Divider(),
-              const Divider(),
-              RadioListTile<bool>(
-                title: const Text('Overwrite All Headers'),
-                subtitle: const Text('Replaces Salary, Business, CG, Other'),
-                value: true,
-                // ignore: deprecated_member_use
-                groupValue: overwriteAll,
-                // ignore: deprecated_member_use
-                onChanged: (v) => setStateBuilder(() => overwriteAll = v!),
-              ),
-              RadioListTile<bool>(
-                title: const Text('Smart Merge (Interest Only)'),
-                subtitle: const Text(
-                    'Updates Interest for tagged loans only. Keeps other entries.'),
-                value: false,
-                // ignore: deprecated_member_use
-                groupValue: overwriteAll,
-                // ignore: deprecated_member_use
-                onChanged: (v) => setStateBuilder(() => overwriteAll = v!),
-              ),
-              if (overwriteAll)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
-                  child: Text(
-                      'Note: Manual entries in Rent/Tax will be preserved if "Loan Tag" is used.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Divider(height: 24),
+              RadioGroup<bool>(
+                groupValue: smartSync,
+                onChanged: (v) => setStateBuilder(() => smartSync = v!),
+                child: const Column(
+                  children: [
+                    RadioListTile<bool>(
+                      title: Text('Smart Sync (Recommended)'),
+                      subtitle: Text(
+                          'Updates totals from transactions but PROTECTS your manual edits.'),
+                      value: true,
+                    ),
+                    RadioListTile<bool>(
+                      title: Text('Force Reset'),
+                      subtitle: Text(
+                          'Overwrites EVERYTHING. Manual edits will be lost.'),
+                      value: false,
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
           actions: [
@@ -204,7 +247,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             FilledButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await _performSync(fetcher, start, end, overwriteAll);
+                await _performSync(fetcher, start, end, true,
+                    forceReset: !smartSync);
               },
               child: const Text('Sync Now'),
             ),
@@ -214,8 +258,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     );
   }
 
-  Future<void> _performSync(TaxDataFetcher fetcher, DateTime start,
-      DateTime end, bool overwriteAll) async {
+  Future<void> _performSync(
+      TaxDataFetcher fetcher, DateTime start, DateTime end, bool smartSync,
+      {bool forceReset = false}) async {
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Syncing...')));
 
@@ -231,17 +276,13 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       }
 
       // Update Interest for each HP
-      // Update Interest for each HP
-      final loans = await ref.read(
-          loansProvider.future); // Assume loansProvider returns List<Loan>
+      final loans = await ref.read(loansProvider.future);
 
       for (int i = 0; i < mergedHP.length; i++) {
         final hp = mergedHP[i];
         if (hp.loanId != null) {
           try {
             final loan = loans.firstWhere((l) => l.id == hp.loanId);
-
-            // Calculate Interest from Loan Transactions directly
             double interest = 0;
             for (var txn in loan.transactions) {
               if (txn.date.isAfter(start.subtract(const Duration(days: 1))) &&
@@ -249,41 +290,106 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 interest += txn.interestComponent;
               }
             }
-
             if (interest > 0) {
               mergedHP[i] = HouseProperty(
                 name: hp.name,
                 isSelfOccupied: hp.isSelfOccupied,
-                rentReceived: hp.rentReceived, // Keep manual
-                municipalTaxes: hp.municipalTaxes, // Keep manual
-                interestOnLoan: interest, // UPDATE
+                rentReceived: hp.rentReceived,
+                municipalTaxes: hp.municipalTaxes,
+                interestOnLoan: interest,
                 loanId: hp.loanId,
               );
             }
           } catch (e) {
-            // Loan not found or other error, skip update
+            // Loan not found
           }
         }
       }
 
       TaxYearData finalData;
 
-      if (overwriteAll) {
-        // Overwrite everything EXCEPT House Property Structure (we use mergedHP)
+      if (forceReset) {
+        // Force Reset: Overwrite everything, clear locks
+        // Force Reset: Overwrite everything, but PROTECT manual salary history
         finalData = newData.copyWith(
+          salary: newData.salary.copyWith(
+            grossSalary: _taxData?.salary.grossSalary ?? 0,
+            history: _taxData?.salary.history ?? [],
+          ),
           houseProperties:
               mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
+          lockedFields: [], // Clear locks
+          lastSyncDate: DateTime.now(),
         );
       } else {
-        // Only update HP Interest, keep everything else from _taxData
-        finalData = (_taxData ?? newData).copyWith(
-          houseProperties: mergedHP,
-        );
+        // Smart Sync: Respect Locks
+        // logic similar to previous overwriteAll=true
+        final old = _taxData;
+        if (old != null && old.lockedFields.isNotEmpty) {
+          final locked = old.lockedFields;
+          bool isLocked(String id) => locked.contains(id);
+
+          final mergedSalary = newData.salary.copyWith(
+            grossSalary: isLocked('salary.gross')
+                ? old.salary.grossSalary
+                : newData.salary.grossSalary,
+            npsEmployer: isLocked('salary.nps')
+                ? old.salary.npsEmployer
+                : newData.salary.npsEmployer,
+            leaveEncashment: isLocked('salary.leave')
+                ? old.salary.leaveEncashment
+                : newData.salary.leaveEncashment,
+            gratuity: isLocked('salary.gratuity')
+                ? old.salary.gratuity
+                : newData.salary.gratuity,
+            giftsFromEmployer: isLocked('salary.gifts')
+                ? old.salary.giftsFromEmployer
+                : newData.salary.giftsFromEmployer,
+            monthlyGross: isLocked('salary.monthly')
+                ? old.salary.monthlyGross
+                : newData.salary.monthlyGross,
+          );
+
+          // Granular monthly
+          final combinedMonthly =
+              Map<int, double>.from(newData.salary.monthlyGross);
+          for (int i = 1; i <= 12; i++) {
+            if (isLocked('salary.monthly.$i')) {
+              combinedMonthly[i] = old.salary.monthlyGross[i] ?? 0;
+            }
+          }
+
+          finalData = newData.copyWith(
+            salary: mergedSalary.copyWith(monthlyGross: combinedMonthly),
+            houseProperties:
+                mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
+            agricultureIncome: isLocked('agri.income')
+                ? old.agricultureIncome
+                : newData.agricultureIncome,
+            advanceTax:
+                isLocked('tax.advance') ? old.advanceTax : newData.advanceTax,
+            lockedFields: old.lockedFields,
+            lastSyncDate: DateTime.now(),
+          );
+        } else {
+          // No locks, just overwrite (same as force but keeps locks empty)
+          // No locks, just overwrite but PROTECT manual salary
+          finalData = newData.copyWith(
+            salary: newData.salary.copyWith(
+              grossSalary: _taxData?.salary.grossSalary ?? 0,
+              history: _taxData?.salary.history ?? [],
+            ),
+            houseProperties:
+                mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
+            lastSyncDate: DateTime.now(),
+          );
+        }
       }
 
       setState(() {
         _taxData = finalData;
       });
+      await ref.read(storageServiceProvider).saveTaxYearData(finalData);
 
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -329,10 +435,10 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             const Divider(),
             ...trackingGains.map((gain) {
-              final deadline = DateTime(
-                  gain.gainDate.year + rules.windowGainReinvest,
-                  gain.gainDate.month,
-                  gain.gainDate.day);
+              // days = years * 365.25 approx, or just 365.
+              // Standard tax law usually counts years, but for fractional, we can approx days.
+              final days = (rules.windowGainReinvest * 365.25).round();
+              final deadline = gain.gainDate.add(Duration(days: days));
               final remainingDays = deadline.difference(DateTime.now()).inDays;
 
               // Warning color if deadline is close (< 180 days)
@@ -472,12 +578,19 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Widget _buildYearSelector() {
+    final theme = Theme.of(context);
+    final config = ref.read(taxConfigServiceProvider);
+
+    // Fix: Use Financial Year anchor
+    final currentYear = config.getCurrentFinancialYear();
+    final years = List.generate(8, (i) => currentYear - i);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -487,13 +600,14 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             children: [
               const Text('FY: ', style: TextStyle(fontWeight: FontWeight.bold)),
               DropdownButton<int>(
-                value: _selectedYear,
+                value:
+                    years.contains(_selectedYear) ? _selectedYear : years.first,
                 underline: Container(),
                 isDense: true,
-                items: [2023, 2024, 2025, 2026]
+                items: years
                     .map((y) => DropdownMenuItem(
                           value: y,
-                          child: Text('$y-${y + 1}'),
+                          child: Text('FY $y-${y + 1}'),
                         ))
                     .toList(),
                 onChanged: (val) {

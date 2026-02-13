@@ -8,7 +8,7 @@ part of 'insurance_policy.dart';
 
 class InsurancePolicyAdapter extends TypeAdapter<InsurancePolicy> {
   @override
-  final typeId = 201;
+  final typeId = 225;
 
   @override
   InsurancePolicy read(BinaryReader reader) {

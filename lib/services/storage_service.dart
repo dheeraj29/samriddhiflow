@@ -8,9 +8,11 @@ import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/utils/billing_helper.dart';
 import 'package:samriddhi_flow/utils/recurrence_utils.dart';
 import 'package:samriddhi_flow/utils/debug_logger.dart';
+import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
 
 class StorageService {
@@ -28,6 +30,7 @@ class StorageService {
   static const String boxProfiles = 'profiles';
   static const String boxCategories = 'categories_v3';
   static const String boxInsurancePolicies = 'insurance_policies';
+  static const String boxTaxData = 'tax_data';
 
   Future<void> init() async {
     // Load default categories JSON into memory
@@ -41,6 +44,7 @@ class StorageService {
     await _safeOpenBox<Profile>(boxProfiles);
     await _safeOpenBox<Category>(boxCategories);
     await _safeOpenBox<InsurancePolicy>(boxInsurancePolicies);
+    await _safeOpenBox<TaxYearData>(boxTaxData);
 
     // Initial profile
     final pBox = _hive.box<Profile>(boxProfiles);
@@ -165,6 +169,23 @@ class StorageService {
         await setActiveProfileId('default');
       }
     }
+  }
+
+  // --- Dashboard Config ---
+  DashboardVisibilityConfig getDashboardConfig() {
+    final box = _hive.box(boxSettings);
+    final map = box.get('dashboardConfig');
+    if (map != null) {
+      // Cast the map to Map<String, dynamic> safely
+      final castMap = Map<String, dynamic>.from(map as Map);
+      return DashboardVisibilityConfig.fromMap(castMap);
+    }
+    return const DashboardVisibilityConfig();
+  }
+
+  Future<void> saveDashboardConfig(DashboardVisibilityConfig config) async {
+    final box = _hive.box(boxSettings);
+    await box.put('dashboardConfig', config.toMap());
   }
 
   Future<void> _deleteItemsByProfile<T>(String boxName, String profileId,
@@ -379,6 +400,73 @@ class StorageService {
     await _incrementBackupCounter();
   }
 
+  /// Recalculates Credit Card balances based on the current billing cycle.
+  /// Corrects standard 'Storage' skipping logic which doesn't auto-rollover.
+  /// Returns the number of accounts updated.
+  Future<int> recalculateCCBalances() async {
+    final accountBox = _hive.box<Account>(boxAccounts);
+    final txnBox = _hive.box<Transaction>(boxTransactions);
+    final allTxns = txnBox.values.toList();
+    final now = DateTime.now();
+
+    int updatedCount = 0;
+    for (var acc in accountBox.values) {
+      if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
+        continue;
+      }
+
+      double calculatedBalance = 0;
+      for (var txn in allTxns) {
+        if (txn.isDeleted) continue;
+
+        // Check if transaction is relevant to this account
+        bool isSource = txn.accountId == acc.id;
+        bool isTarget = txn.toAccountId == acc.id;
+
+        if (!isSource && !isTarget) continue;
+
+        // Skip if Unbilled Expense/Transfer-Out/Transfer-In(Payment)
+        if (BillingHelper.isUnbilled(txn.date, now, acc.billingCycleDay!)) {
+          if (txn.type == TransactionType.expense ||
+              (txn.type == TransactionType.transfer && isSource) ||
+              txn.type == TransactionType.income ||
+              (txn.type == TransactionType.transfer && !isSource)) {
+            continue; // Skip Unbilled
+          }
+        }
+
+        // Apply Impact
+        double impact = 0;
+        if (txn.type == TransactionType.expense && isSource) {
+          impact = -txn.amount;
+        } else if (txn.type == TransactionType.income && isSource) {
+          // rare: Income on CC
+          impact = txn.amount;
+        } else if (txn.type == TransactionType.transfer) {
+          // Transfer Logic
+          if (isSource) impact = -txn.amount;
+          if (isTarget) impact = txn.amount;
+        }
+
+        // CC Balance Logic: Positive = Debt
+        // Impact (Net Worth) -> -100 implies Spent 100.
+        // Balance -> Balance - Impact = Balance - (-100) = Balance + 100.
+        calculatedBalance -= impact;
+      }
+
+      // Round and Update if different
+      calculatedBalance = CurrencyUtils.roundTo2Decimals(calculatedBalance);
+      if ((acc.balance - calculatedBalance).abs() > 0.01) {
+        DebugLogger()
+            .log('Recalc CC ${acc.name}: ${acc.balance} -> $calculatedBalance');
+        acc.balance = calculatedBalance;
+        await accountBox.put(acc.id, acc);
+        updatedCount++;
+      }
+    }
+    return updatedCount;
+  }
+
   Future<void> saveTransactions(List<Transaction> transactions,
       {bool applyImpact = true, DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions);
@@ -447,25 +535,18 @@ class StorageService {
       final effectiveNow = now ?? DateTime.now();
       if (BillingHelper.isUnbilled(
           txn.date, effectiveNow, acc.billingCycleDay!)) {
-        // Skip updates for unbilled expenses/transfers-out on CC
-        // Because CC balance only tracks "Billed" debt + "Unbilled" is virtual until rollover
-        // Wait, current logic:
-        // Expense: Skip if unbilled.
-        // Transfer (Source): Skip if unbilled.
-        // Income: Skip if unbilled.
-        // Transfer (Target - Payment): NEVER Skip.
-
         if (txn.type == TransactionType.expense ||
             (txn.type == TransactionType.transfer && isSource) ||
-            txn.type == TransactionType.income) {
+            txn.type == TransactionType.income ||
+            (txn.type == TransactionType.transfer && !isSource)) {
+          // Skip updates for unbilled expenses AND payments (symmetry)
           skipBalanceUpdate = true;
         }
       }
+    }
 
-      if (!isSource && txn.type == TransactionType.transfer) {
-        // Payment to CC -> Always apply
-        skipBalanceUpdate = false;
-      }
+    if (skipBalanceUpdate) {
+      return;
     }
 
     if (skipBalanceUpdate) return;
@@ -1122,5 +1203,21 @@ class StorageService {
       }
       rethrow;
     }
+  }
+
+  // --- Tax Data Operations ---
+  TaxYearData? getTaxYearData(int year) {
+    // Key by year (int)
+    final box = _hive.box<TaxYearData>(boxTaxData);
+    return box.get(year);
+  }
+
+  Future<void> saveTaxYearData(TaxYearData data) async {
+    final box = _hive.box<TaxYearData>(boxTaxData);
+    await box.put(data.year, data);
+  }
+
+  List<TaxYearData> getAllTaxYearData() {
+    return _hive.box<TaxYearData>(boxTaxData).values.toList();
   }
 }

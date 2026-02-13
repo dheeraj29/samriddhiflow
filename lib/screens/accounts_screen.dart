@@ -9,6 +9,7 @@ import '../widgets/account_card.dart';
 import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
+import 'cc_payment_dialog.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
   @override
@@ -344,6 +345,20 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (acc.type == AccountType.creditCard)
+              ListTile(
+                leading: const Icon(Icons.payment, color: Colors.green),
+                title: const Text('Pay Bill',
+                    style: TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                      context: context,
+                      builder: (_) =>
+                          RecordCCPaymentDialog(creditCardAccount: acc));
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.list_alt),
               title: const Text('View Transactions'),

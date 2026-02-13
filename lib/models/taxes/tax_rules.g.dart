@@ -17,6 +17,7 @@ class TaxExemptionRuleAdapter extends TypeAdapter<TaxExemptionRule> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return TaxExemptionRule(
+      id: fields[5] as String,
       name: fields[0] as String,
       incomeHead: fields[1] as String,
       limit: (fields[2] as num).toDouble(),
@@ -28,7 +29,7 @@ class TaxExemptionRuleAdapter extends TypeAdapter<TaxExemptionRule> {
   @override
   void write(BinaryWriter writer, TaxExemptionRule obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class TaxExemptionRuleAdapter extends TypeAdapter<TaxExemptionRule> {
       ..writeByte(3)
       ..write(obj.isPercentage)
       ..writeByte(4)
-      ..write(obj.isEnabled);
+      ..write(obj.isEnabled)
+      ..writeByte(5)
+      ..write(obj.id);
   }
 
   @override
@@ -176,7 +179,7 @@ class TaxMappingRuleAdapter extends TypeAdapter<TaxMappingRule> {
 
 class TaxRulesAdapter extends TypeAdapter<TaxRules> {
   @override
-  final typeId = 200;
+  final typeId = 224;
 
   @override
   TaxRules read(BinaryReader reader) {
@@ -191,11 +194,10 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
           fields[1] == null ? 75000 : (fields[1] as num).toDouble(),
       stdExemption112A:
           fields[2] == null ? 125000 : (fields[2] as num).toDouble(),
-      legacyReserved: fields[3] == null ? 5000 : (fields[3] as num).toDouble(),
       ltcgRateEquity: fields[4] == null ? 12.5 : (fields[4] as num).toDouble(),
       stcgRate: fields[5] == null ? 20.0 : (fields[5] as num).toDouble(),
-      windowGainReinvest: fields[6] == null ? 2 : (fields[6] as num).toInt(),
-      legacyReservedInt: fields[7] == null ? 8 : (fields[7] as num).toInt(),
+      windowGainReinvest:
+          fields[6] == null ? 2.0 : (fields[6] as num).toDouble(),
       tagMappings: fields[8] == null
           ? const {}
           : (fields[8] as Map).cast<String, String>(),
@@ -237,7 +239,6 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
           fields[23] == null ? 50000 : (fields[23] as num).toDouble(),
       insurancePremiumRules:
           (fields[24] as List?)?.cast<InsurancePremiumRule>(),
-      legacyToggle1: fields[25] == null ? true : fields[25] as bool,
       isCashGiftExemptionEnabled:
           fields[26] == null ? true : fields[26] as bool,
       agricultureIncomeThreshold:
@@ -267,29 +268,36 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
       advancedTagMappings: fields[43] == null
           ? const []
           : (fields[43] as List).cast<TaxMappingRule>(),
+      financialYearStartMonth:
+          fields[44] == null ? 4 : (fields[44] as num).toInt(),
+      giftFromEmployerExemptionLimit:
+          fields[45] == null ? 5000 : (fields[45] as num).toDouble(),
+      isGiftFromEmployerEnabled: fields[46] == null ? true : fields[46] as bool,
+      is44ADEnabled: fields[47] == null ? true : fields[47] as bool,
+      limit44AD: fields[48] == null ? 20000000 : (fields[48] as num).toDouble(),
+      rate44AD: fields[49] == null ? 6.0 : (fields[49] as num).toDouble(),
+      is44ADAEnabled: fields[50] == null ? true : fields[50] as bool,
+      limit44ADA: fields[51] == null ? 5000000 : (fields[51] as num).toDouble(),
+      rate44ADA: fields[52] == null ? 50.0 : (fields[52] as num).toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, TaxRules obj) {
     writer
-      ..writeByte(44)
+      ..writeByte(53)
       ..writeByte(0)
       ..write(obj.currencyLimit10_10D)
       ..writeByte(1)
       ..write(obj.stdDeductionSalary)
       ..writeByte(2)
       ..write(obj.stdExemption112A)
-      ..writeByte(3)
-      ..write(obj.legacyReserved)
       ..writeByte(4)
       ..write(obj.ltcgRateEquity)
       ..writeByte(5)
       ..write(obj.stcgRate)
       ..writeByte(6)
       ..write(obj.windowGainReinvest)
-      ..writeByte(7)
-      ..write(obj.legacyReservedInt)
       ..writeByte(8)
       ..write(obj.tagMappings)
       ..writeByte(9)
@@ -324,8 +332,6 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
       ..write(obj.cashGiftExemptionLimit)
       ..writeByte(24)
       ..write(obj.insurancePremiumRules)
-      ..writeByte(25)
-      ..write(obj.legacyToggle1)
       ..writeByte(26)
       ..write(obj.isCashGiftExemptionEnabled)
       ..writeByte(27)
@@ -361,7 +367,25 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
       ..writeByte(42)
       ..write(obj.isAgriIncomeEnabled)
       ..writeByte(43)
-      ..write(obj.advancedTagMappings);
+      ..write(obj.advancedTagMappings)
+      ..writeByte(44)
+      ..write(obj.financialYearStartMonth)
+      ..writeByte(45)
+      ..write(obj.giftFromEmployerExemptionLimit)
+      ..writeByte(46)
+      ..write(obj.isGiftFromEmployerEnabled)
+      ..writeByte(47)
+      ..write(obj.is44ADEnabled)
+      ..writeByte(48)
+      ..write(obj.limit44AD)
+      ..writeByte(49)
+      ..write(obj.rate44AD)
+      ..writeByte(50)
+      ..write(obj.is44ADAEnabled)
+      ..writeByte(51)
+      ..write(obj.limit44ADA)
+      ..writeByte(52)
+      ..write(obj.rate44ADA);
   }
 
   @override

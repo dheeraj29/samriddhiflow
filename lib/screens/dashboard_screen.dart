@@ -18,6 +18,7 @@ import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
 import '../utils/ui_utils.dart';
+import '../models/dashboard_config.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -79,6 +80,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final activeProfile = ref.watch(activeProfileProvider);
     final categories = ref.watch(categoriesProvider);
     final currencyLocale = ref.watch(currencyProvider);
+    final dashboardConfig = ref.watch(dashboardConfigProvider);
 
     // 3. Calculator Reactivity: Ensure overlay reappears if toggled ON
     ref.listen(smartCalculatorEnabledProvider, (previous, enabled) {
@@ -146,7 +148,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _buildNetWorthCard(context, accountsAsync, currencyLocale, ref),
                 const SizedBox(height: 16),
                 _buildMonthlySummary(context, transactionsAsync, categories,
-                    currencyLocale, ref),
+                    currencyLocale, ref, _isPrivacyMode, dashboardConfig),
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -497,7 +499,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       AsyncValue<List<Transaction>> transactionsAsync,
       List<Category> categories,
       String currencyLocale,
-      WidgetRef ref) {
+      WidgetRef ref,
+      bool isPrivate,
+      DashboardVisibilityConfig config) {
+    if (!config.showIncomeExpense && !config.showBudget) {
+      return const SizedBox.shrink();
+    }
     return transactionsAsync.when(
       data: (transactions) {
         double income = 0;
@@ -542,51 +549,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           child: Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Income (This Month)',
-                            style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        const SizedBox(height: 4),
-                        SmartCurrencyText(
-                          value: income,
-                          locale: currencyLocale,
-                          style: const TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ],
+              if (config.showIncomeExpense) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Income (This Month)',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          isPrivate
+                              ? const Text('••••••',
+                                  style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18))
+                              : SmartCurrencyText(
+                                  value: income,
+                                  locale: currencyLocale,
+                                  style: const TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18),
+                                ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(
-                      width: 1,
-                      height: 40,
-                      color: Colors.grey.withValues(alpha: 0.2)),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('Expense (Budgeted)',
-                            style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        const SizedBox(height: 4),
-                        SmartCurrencyText(
-                          value: expense,
-                          locale: currencyLocale,
-                          style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ],
+                    Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.withValues(alpha: 0.2)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Expense (Budgeted)',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          isPrivate
+                              ? const Text('••••••',
+                                  style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18))
+                              : SmartCurrencyText(
+                                  value: expense,
+                                  locale: currencyLocale,
+                                  style: const TextStyle(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18),
+                                ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              if (ref.watch(monthlyBudgetProvider) > 0) ...[
+                  ],
+                ),
+              ],
+              if (config.showBudget &&
+                  ref.watch(monthlyBudgetProvider) > 0) ...[
                 const SizedBox(height: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,15 +620,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       children: [
                         const Text('Monthly Budget Progress',
                             style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(
-                            (ref.watch(monthlyBudgetProvider) == 0)
-                                ? '0%'
-                                : '${((expense / ref.watch(monthlyBudgetProvider)) * 100).toStringAsFixed(0)}%',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    expense > ref.watch(monthlyBudgetProvider)
+                        isPrivate
+                            ? const Text('••%',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueGrey))
+                            : Text(
+                                (ref.watch(monthlyBudgetProvider) == 0)
+                                    ? '0%'
+                                    : '${((expense / ref.watch(monthlyBudgetProvider)) * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: expense >
+                                            ref.watch(monthlyBudgetProvider)
                                         ? Colors.redAccent
                                         : Colors.blueGrey)),
                       ],
@@ -631,12 +661,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const Text('Spent: ',
                                 style: TextStyle(
                                     fontSize: 11, color: Colors.grey)),
-                            SmartCurrencyText(
-                              value: expense,
-                              locale: currencyLocale,
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
+                            isPrivate
+                                ? const Text('••••',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold))
+                                : SmartCurrencyText(
+                                    value: expense,
+                                    locale: currencyLocale,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                           ],
                         ),
                         Row(
@@ -644,12 +680,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const Text('Remaining: ',
                                 style: TextStyle(
                                     fontSize: 11, color: Colors.grey)),
-                            SmartCurrencyText(
-                              value: ref.watch(monthlyBudgetProvider) - expense,
-                              locale: currencyLocale,
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
+                            isPrivate
+                                ? const Text('••••',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold))
+                                : SmartCurrencyText(
+                                    value: ref.watch(monthlyBudgetProvider) -
+                                        expense,
+                                    locale: currencyLocale,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                           ],
                         ),
                       ],
