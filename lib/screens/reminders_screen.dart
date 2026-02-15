@@ -12,6 +12,7 @@ import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
+import '../utils/billing_helper.dart';
 
 class RemindersScreen extends ConsumerWidget {
   const RemindersScreen({super.key});
@@ -43,8 +44,8 @@ class RemindersScreen extends ConsumerWidget {
             _buildSectionTitle(context, 'Credit Card Bills', Icons.credit_card),
             accountsAsync.when(
               data: (accounts) => ref.watch(transactionsProvider).when(
-                    data: (txns) =>
-                        _buildCCReminders(context, accounts, currency, txns),
+                    data: (txns) => _buildCCReminders(
+                        context, ref, accounts, currency, txns),
                     loading: () => const CircularProgressIndicator(),
                     error: (e, s) => Text('Error: $e'),
                   ),
@@ -283,8 +284,13 @@ class RemindersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCCReminders(BuildContext context, List<Account> accounts,
-      NumberFormat currency, List<Transaction> allTransactions) {
+  Widget _buildCCReminders(
+      BuildContext context,
+      WidgetRef ref,
+      List<Account> accounts,
+      NumberFormat currency,
+      List<Transaction> allTransactions) {
+    final storage = ref.watch(storageServiceProvider);
     final ccAccounts =
         accounts.where((a) => a.type == AccountType.creditCard).toList();
     if (ccAccounts.isEmpty) return const Text('No credit cards.');
@@ -311,10 +317,14 @@ class RemindersScreen extends ConsumerWidget {
             .toList();
 
         final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
-        final billedAmount = acc.calculateBilledAmount(allTransactions);
+        final billedAmount = BillingHelper.calculateBilledAmount(
+            acc, allTransactions, today, storage.getLastRollover(acc.id));
+
+        // According to user: "billed + balance ideally there" (not unbilled)
+        final totalDue = acc.balance + billedAmount;
 
         final isFullyPaid =
-            acc.balance <= 0 || (billedAmount > 0 && totalPaid >= billedAmount);
+            totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue);
         final isPartiallyPaid = !isFullyPaid && totalPaid > 0;
 
         Color statusColor = Colors.grey;
@@ -389,7 +399,7 @@ class RemindersScreen extends ConsumerWidget {
                                 fontSize: 12)),
                         if (!isFullyPaid) ...[
                           const SizedBox(height: 2),
-                          Text(currency.format(acc.balance),
+                          Text(currency.format(totalDue),
                               style: AppTheme.offlineSafeTextStyle
                                   .copyWith(fontWeight: FontWeight.bold)),
                         ]
@@ -404,7 +414,7 @@ class RemindersScreen extends ConsumerWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
-                        'Paid: ${currency.format(totalPaid)} / ${currency.format(billedAmount > 0 ? billedAmount : acc.balance)}',
+                        'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue)}',
                         style: AppTheme.offlineSafeTextStyle
                             .copyWith(fontSize: 12, color: Colors.orange),
                       ),

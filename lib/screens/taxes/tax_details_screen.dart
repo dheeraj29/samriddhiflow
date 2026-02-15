@@ -14,8 +14,14 @@ import 'package:intl/intl.dart';
 class TaxDetailsScreen extends ConsumerStatefulWidget {
   final TaxYearData data;
   final Function(TaxYearData) onSave;
+  final int? initialTabIndex;
 
-  const TaxDetailsScreen({super.key, required this.data, required this.onSave});
+  const TaxDetailsScreen({
+    super.key,
+    required this.data,
+    required this.onSave,
+    this.initialTabIndex,
+  });
 
   @override
   ConsumerState<TaxDetailsScreen> createState() => _TaxDetailsScreenState();
@@ -38,6 +44,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   List<CapitalGainEntry> _capitalGains = [];
   List<OtherIncome> _otherIncomes = [];
   List<OtherIncome> _cashGifts = [];
+  List<CustomAllowance> _independentAllowances = [];
+  List<CustomDeduction> _independentDeductions = [];
+  List<CustomExemption> _independentExemptions = [];
 
   // Controllers for Other Income / Agri / Tax
   late TextEditingController _otherIncomeNameCtrl;
@@ -64,6 +73,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   void initState() {
     super.initState();
     _currentData = widget.data;
+    if (widget.initialTabIndex != null) {
+      _selectedIndex = widget.initialTabIndex!;
+    }
 
     _initSalaryControllers();
     _initTaxPaymentControllers();
@@ -98,6 +110,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     _capitalGains = List.from(_currentData.capitalGains);
     _otherIncomes = List.from(_currentData.otherIncomes);
     _cashGifts = List.from(_currentData.cashGifts);
+    _independentAllowances =
+        List.from(_currentData.salary.independentAllowances);
+    _independentDeductions =
+        List.from(_currentData.salary.independentDeductions);
+    _independentExemptions =
+        List.from(_currentData.salary.independentExemptions);
   }
 
   void _updateSummary() {
@@ -115,6 +133,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         leaveEncashment: double.tryParse(_salaryLeaveEncashCtrl.text) ?? 0,
         gratuity: double.tryParse(_salaryGratuityCtrl.text) ?? 0,
         giftsFromEmployer: double.tryParse(_salaryEmployerGiftsCtrl.text) ?? 0,
+        independentAllowances: _independentAllowances,
+        independentDeductions: _independentDeductions,
+        independentExemptions: _independentExemptions,
       );
 
       _currentData = _currentData.copyWith(
@@ -185,6 +206,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       customExemptions: const {},
       history: _currentData.salary.history,
       netSalaryReceived: _currentData.salary.netSalaryReceived,
+      independentAllowances: _independentAllowances,
+      independentDeductions: _independentDeductions,
+      independentExemptions: _independentExemptions,
     );
 
     final updatedData = _currentData.copyWith(
@@ -531,6 +555,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             );
           }),
         const SizedBox(height: 16),
+        _buildSalarySummaryCard(),
+        const SizedBox(height: 16),
         _buildConsolidatedAdjustments(),
         const Divider(height: 32),
         _buildSectionTitle('Exemptions & Deductions'),
@@ -543,6 +569,291 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         _buildNumberField('Gifts from Employer', _salaryEmployerGiftsCtrl,
             subtitle: 'Any vouchers/tokens > exemption limit'),
         const SizedBox(height: 16),
+        _buildSectionTitle('Independent Allowances'),
+        _buildIndependentAllowances(),
+        const SizedBox(height: 16),
+        _buildSectionTitle('Independent Deductions'),
+        _buildIndependentDeductions(),
+        const SizedBox(height: 16),
+        _buildSectionTitle('Custom Ad-hoc Exemptions'),
+        _buildIndependentExemptions(),
+        const SizedBox(height: 16),
+        _buildSectionTitle('TDS / Taxes Already Paid'),
+        _buildTdsSummarySection(),
+        const SizedBox(height: 16),
+        _buildTakeHomeBreakdown(),
+      ],
+    );
+  }
+
+  Widget _buildIndependentAllowances() {
+    return Column(
+      children: [
+        if (_independentAllowances.isEmpty)
+          const Text('No independent allowances',
+              style: TextStyle(color: Colors.grey, fontSize: 12))
+        else
+          ..._independentAllowances.map((a) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(a.name),
+                subtitle: Text(
+                    '₹${a.payoutAmount.toStringAsFixed(0)} (${a.frequency.name})'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 20),
+                  onPressed: () {
+                    setState(() => _independentAllowances.remove(a));
+                    _updateSummary();
+                  },
+                ),
+              )),
+        TextButton.icon(
+          onPressed: () => _addCustomAllowanceDialog(context, (a) {
+            setState(() => _independentAllowances.add(a));
+            _updateSummary();
+          }),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Independent Allowance'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIndependentDeductions() {
+    return Column(
+      children: [
+        if (_independentDeductions.isEmpty)
+          const Text('No independent deductions',
+              style: TextStyle(color: Colors.grey, fontSize: 12))
+        else
+          ..._independentDeductions.map((d) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(d.name),
+                subtitle: Text(
+                    '₹${d.amount.toStringAsFixed(0)} (${d.frequency.name})'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 20),
+                  onPressed: () {
+                    setState(() => _independentDeductions.remove(d));
+                    _updateSummary();
+                  },
+                ),
+              )),
+        TextButton.icon(
+          onPressed: () => _addCustomDeductionDialog(onAdd: (d) {
+            setState(() => _independentDeductions.add(d));
+            _updateSummary();
+          }),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Independent Deduction'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIndependentExemptions() {
+    return Column(
+      children: [
+        if (_independentExemptions.isEmpty)
+          const Text('No ad-hoc exemptions',
+              style: TextStyle(color: Colors.grey, fontSize: 12))
+        else
+          ..._independentExemptions.map((e) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(e.name),
+                subtitle: Text('₹${e.amount.toStringAsFixed(0)}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 20),
+                  onPressed: () {
+                    setState(() => _independentExemptions.remove(e));
+                    _updateSummary();
+                  },
+                ),
+                onTap: () => _addCustomExemptionDialog(
+                    existing: e,
+                    onAdd: (updated) {
+                      setState(() {
+                        int idx = _independentExemptions.indexOf(e);
+                        _independentExemptions[idx] = updated;
+                      });
+                      _updateSummary();
+                    }),
+              )),
+        TextButton.icon(
+          onPressed: () => _addCustomExemptionDialog(onAdd: (e) {
+            setState(() => _independentExemptions.add(e));
+            _updateSummary();
+          }),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Ad-hoc Exemption'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTdsSummarySection() {
+    final totalTds = _tdsEntries.fold(0.0, (sum, e) => sum + e.amount);
+    return Column(
+      children: [
+        ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Total TDS tracked'),
+          trailing: Text('₹${totalTds.toStringAsFixed(0)}',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  setState(
+                      () => _selectedIndex = 5); // Navigate to Tax Paid tab
+                },
+                icon: const Icon(Icons.edit),
+                label: const Text('View/Edit All TDS'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _copyLiabilityToTds,
+                icon: const Icon(Icons.sync),
+                label: const Text('Copy Calc. Tax to TDS'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _copyLiabilityToTds() {
+    final taxService = ref.read(indianTaxServiceProvider);
+    double estimatedTax = taxService.calculateLiability(_currentData);
+
+    final now = DateTime.now();
+    final newEntry = TaxPaymentEntry(
+      amount: estimatedTax,
+      date: now,
+      source: 'Calculated Liability',
+      description: 'Auto-sync from tax estimation',
+    );
+
+    setState(() {
+      _tdsEntries.removeWhere((e) => e.source == 'Calculated Liability');
+      _tdsEntries.add(newEntry);
+    });
+    _updateSummary();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Estimated tax liability copied to TDS!')),
+    );
+  }
+
+  void _addCustomExemptionDialog(
+      {CustomExemption? existing, required Function(CustomExemption) onAdd}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final amtCtrl =
+        TextEditingController(text: existing?.amount.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(existing == null
+            ? 'Add Custom Exemption'
+            : 'Edit Custom Exemption'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Exemption Name')),
+            TextField(
+              controller: amtCtrl,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (nameCtrl.text.isEmpty) return;
+              onAdd(CustomExemption(
+                  name: nameCtrl.text,
+                  amount: double.tryParse(amtCtrl.text) ?? 0));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTakeHomeBreakdown() {
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final strategy = ref.read(indianTaxServiceProvider);
+    final breakdown =
+        strategy.calculateMonthlySalaryBreakdown(_currentData, rules);
+
+    if (breakdown.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        _buildSectionTitle('Monthly Take-Home Breakdown'),
+        const Text(
+          'Tax for bonuses/extras is applied in the month received.',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 20,
+            horizontalMargin: 0,
+            columns: const [
+              DataColumn(label: Text('Month')),
+              DataColumn(label: Text('Gross')),
+              DataColumn(label: Text('Tax')),
+              DataColumn(label: Text('Deductions')),
+              DataColumn(label: Text('Net In-Hand')),
+            ],
+            rows: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((m) {
+              final data = breakdown[m] ?? {};
+              final gross = data['gross'] ?? 0.0;
+              final tax = data['tax'] ?? 0.0;
+              final ded = data['deductions'] ?? 0.0;
+              final net = data['takeHome'] ?? 0.0;
+              final isStopped =
+                  _getStructureForMonth(m)?.stoppedMonths.contains(m) ?? false;
+
+              return DataRow(cells: [
+                DataCell(Text(DateFormat('MMM').format(DateTime(2023, m, 1)))),
+                DataCell(
+                    Text(isStopped ? '-' : '₹${gross.toStringAsFixed(0)}')),
+                DataCell(Text(isStopped ? '-' : '₹${tax.toStringAsFixed(0)}',
+                    style: const TextStyle(color: Colors.red))),
+                DataCell(Text(isStopped ? '-' : '₹${ded.toStringAsFixed(0)}',
+                    style: const TextStyle(color: Colors.orange))),
+                DataCell(Text(isStopped ? '-' : '₹${net.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green))),
+              ]);
+            }).toList(),
+          ),
+        ),
       ],
     );
   }
@@ -680,7 +991,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   final allowance = s?.customAllowances
                       .where((c) => c.name == name && c.isPartial)
                       .firstOrNull;
-                  return allowance?.monthlyAmount;
+                  return allowance?.payoutAmount;
                 })),
       ],
     );
@@ -815,6 +1126,62 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSalarySummaryCard() {
+    double historyGross = _calculateAnnualGross(_currentData.salary.history);
+    double independentAllowances =
+        _independentAllowances.fold(0.0, (sum, a) => sum + a.payoutAmount);
+    double totalAnnualGross = historyGross + independentAllowances;
+
+    return Card(
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Projected Annual Income',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('From History / Structures:'),
+                Text('₹${historyGross.toStringAsFixed(0)}',
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Independent Allowances:'),
+                Text('₹${independentAllowances.toStringAsFixed(0)}',
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Total Annual Gross:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('₹${totalAnnualGross.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.blue)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1116,7 +1483,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       padding: EdgeInsets.all(12),
                       margin: EdgeInsets.symmetric(horizontal: 20),
                       message:
-                          'Section 44AD: For Business (6% of Turnover).\nSection 44ADA: For Professionals (50% of Receipts).\nRegular: Actual Profit (Audit required if < limit).',
+                          '• Section 44AD: For Business (6% of Turnover).\n• Section 44ADA: For Professionals (50% of Receipts).\n• Regular: Actual Profit (Audit required if < limit).',
                       child: Icon(Icons.info_outline, color: Colors.blue),
                     ),
                   ),
@@ -1262,17 +1629,34 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             Text(
                                 'Gross: ₹${entry.saleAmount.toStringAsFixed(0)}'),
                             if (entry.intendToReinvest)
-                              Text(
-                                entry.matchReinvestType == ReinvestmentType.none
-                                    ? '⚠ Reinvestment Pending'
-                                    : 'Reinvested: ₹${entry.reinvestedAmount.toStringAsFixed(0)} to ${entry.matchReinvestType.toHumanReadable()}',
-                                style: TextStyle(
-                                  color: entry.matchReinvestType ==
-                                          ReinvestmentType.none
-                                      ? Colors.orange
-                                      : Colors.green,
-                                  fontSize: 12,
-                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    entry.matchReinvestType ==
+                                            ReinvestmentType.none
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.check_circle_outline,
+                                    size: 14,
+                                    color: entry.matchReinvestType ==
+                                            ReinvestmentType.none
+                                        ? Colors.orange
+                                        : Colors.green,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    entry.matchReinvestType ==
+                                            ReinvestmentType.none
+                                        ? 'Reinvestment Pending'
+                                        : 'Reinvested: ₹${entry.reinvestedAmount.toStringAsFixed(0)} to ${entry.matchReinvestType.toHumanReadable()}',
+                                    style: TextStyle(
+                                      color: entry.matchReinvestType ==
+                                              ReinvestmentType.none
+                                          ? Colors.orange
+                                          : Colors.green,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                           ],
                         ),
@@ -2086,6 +2470,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final stoppedMonthsNotifier =
         ValueNotifier<List<int>>(existing?.stoppedMonths ?? []);
 
+    // Deduction fields
+    final pfCtrl = TextEditingController(
+        text: existing != null
+            ? (existing.monthlyEmployeePF * 12).toStringAsFixed(0)
+            : '');
+    final gratuityCtrl = TextEditingController(
+        text: existing != null
+            ? (existing.monthlyGratuity * 12).toStringAsFixed(0)
+            : '');
+    final customDeductionsNotifier = ValueNotifier<List<CustomDeduction>>(
+        List.from(existing?.customDeductions ?? []));
+
     // Helper to build Frequency Row
     Widget buildFrequencyRow(
         String label,
@@ -2226,6 +2622,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(
@@ -2238,6 +2637,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                ],
               ),
               const SizedBox(height: 16),
               // Performance Pay
@@ -2346,12 +2748,67 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         contentPadding: EdgeInsets.zero,
                         title: Text(a.name),
                         subtitle: Text(
-                            '₹${(a.monthlyAmount * 12).toStringAsFixed(0)}/yr ${a.isPartial ? "(Partial)" : ""}'),
+                            '₹${(a.payoutAmount * (a.frequency == PayoutFrequency.monthly ? 12 : (a.frequency == PayoutFrequency.quarterly ? 4 : (a.frequency == PayoutFrequency.halfYearly ? 2 : 1)))).toStringAsFixed(0)}/yr ${a.isPartial ? "(Partial)" : ""}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, size: 20),
                           onPressed: () {
                             customAllowancesNotifier.value =
                                 list.where((x) => x != a).toList();
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const Text('Retirement Contributions (Annual)',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              _buildNumberField('Employee PF', pfCtrl),
+              const SizedBox(height: 12),
+              _buildNumberField('Gratuity Accrual', gratuityCtrl),
+              const SizedBox(height: 24),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Custom Deductions',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () {
+                      _addCustomDeductionDialog(onAdd: (newDeduction) {
+                        customDeductionsNotifier.value = [
+                          ...customDeductionsNotifier.value,
+                          newDeduction
+                        ];
+                      });
+                    },
+                  ),
+                ],
+              ),
+              ValueListenableBuilder<List<CustomDeduction>>(
+                valueListenable: customDeductionsNotifier,
+                builder: (context, list, _) {
+                  if (list.isEmpty) {
+                    return const Text('No custom deductions',
+                        style: TextStyle(color: Colors.grey, fontSize: 12));
+                  }
+                  return Column(
+                    children: list.map((d) {
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(d.name),
+                        subtitle: Text(
+                            '₹${(d.amount * (d.frequency == PayoutFrequency.monthly ? 12 : 1)).toStringAsFixed(0)}/yr ${d.isTaxable ? "(Taxable)" : "(Post-Tax)"}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          onPressed: () {
+                            customDeductionsNotifier.value =
+                                list.where((x) => x != d).toList();
                           },
                         ),
                       );
@@ -2465,6 +2922,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 isVariablePayPartial: varPartialNotifier.value,
                 variablePayAmounts: varAmounts,
                 stoppedMonths: stoppedMonthsNotifier.value,
+                monthlyEmployeePF: (double.tryParse(pfCtrl.text) ?? 0) / 12,
+                monthlyGratuity: (double.tryParse(gratuityCtrl.text) ?? 0) / 12,
+                customDeductions: customDeductionsNotifier.value,
               );
 
               setState(() {
@@ -2629,9 +3089,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               TextField(
                 controller: amtCtrl,
                 decoration:
-                    const InputDecoration(labelText: 'Monthly/Payout Amount'),
+                    const InputDecoration(labelText: 'Annual Payout Amount'),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                ],
               ),
               const SizedBox(height: 12),
               // Frequency UI
@@ -2735,24 +3198,187 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             FilledButton(
                 onPressed: () {
                   if (nameCtrl.text.isEmpty) return;
-                  final annualAmount = double.tryParse(amtCtrl.text) ?? 0;
-                  final monthlyAmount = annualAmount / 12;
+                  final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
+
+                  // Calculate payout amount based on frequency
+                  double payoutAmount = inputAmount;
+                  if (freqNotifier.value == PayoutFrequency.monthly) {
+                    payoutAmount = inputAmount / 12;
+                  }
+                  // For other frequencies, the "Annual Amount" entered might be the payout amount?
+                  // User said "accept annual payouts". Usually means "I will get X per year".
+                  // If it's a bonus, Annual Amount = Payout Amount.
+                  // If it's a monthly allowance, Annual Amount / 12 = Payout Amount.
 
                   // Auto-fill partial amounts if partial is selected
                   Map<int, double> partialAmounts = {};
                   if (isPartialNotifier.value) {
                     for (int m = 1; m <= 12; m++) {
-                      partialAmounts[m] = monthlyAmount;
+                      partialAmounts[m] = payoutAmount;
                     }
                   }
 
                   onAdd(CustomAllowance(
                     name: nameCtrl.text,
-                    monthlyAmount: monthlyAmount,
+                    payoutAmount: payoutAmount,
                     isPartial: isPartialNotifier.value,
                     frequency: freqNotifier.value,
                     startMonth: startMonthNotifier.value,
                     customMonths: customMonthsNotifier.value,
+                    partialAmounts: partialAmounts,
+                  ));
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Add')),
+          ],
+        );
+      }),
+    );
+  }
+
+  void _addCustomDeductionDialog(
+      {CustomDeduction? existing, required Function(CustomDeduction) onAdd}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final amtCtrl = TextEditingController(
+        text: existing != null ? existing.amount.toString() : '');
+    final isTaxableNotifier = ValueNotifier<bool>(existing?.isTaxable ?? false);
+    final freqNotifier = ValueNotifier<PayoutFrequency>(
+        existing?.frequency ?? PayoutFrequency.monthly);
+    final startMonthNotifier = ValueNotifier<int?>(existing?.startMonth ?? 4);
+    final customMonthsNotifier =
+        ValueNotifier<List<int>>(existing?.customMonths ?? []);
+    final isPartialNotifier = ValueNotifier<bool>(existing?.isPartial ?? false);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
+        return AlertDialog(
+          title: Text(existing == null ? 'Add Deduction' : 'Edit Deduction'),
+          content: SingleChildScrollView(
+              child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                  controller: nameCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Deduction Name')),
+              TextField(
+                controller: amtCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Annual Amount',
+                    helperText:
+                        'For monthly, total yearly. For others, payout amt.'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<bool>(
+                valueListenable: isTaxableNotifier,
+                builder: (context, val, _) => SwitchListTile(
+                  title: const Text('Taxable?'),
+                  subtitle: const Text(
+                      'Reduces taxable gross before tax calculation'),
+                  value: val,
+                  onChanged: (v) => isTaxableNotifier.value = v,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<PayoutFrequency>(
+                valueListenable: freqNotifier,
+                builder: (context, val, _) => Column(
+                  children: [
+                    DropdownButtonFormField<PayoutFrequency>(
+                      decoration: const InputDecoration(labelText: 'Frequency'),
+                      initialValue: val,
+                      items: PayoutFrequency.values
+                          .map((f) => DropdownMenuItem(
+                              value: f, child: Text(f.name.toUpperCase())))
+                          .toList(),
+                      onChanged: (v) => freqNotifier.value = v!,
+                    ),
+                    if (val == PayoutFrequency.custom) ...[
+                      const SizedBox(height: 8),
+                      ValueListenableBuilder<List<int>>(
+                        valueListenable: customMonthsNotifier,
+                        builder: (context, list, _) => InkWell(
+                          onTap: () async {
+                            final selected =
+                                await _showMonthMultiSelect(context, list);
+                            if (selected != null) {
+                              customMonthsNotifier.value = selected;
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                                labelText: 'Select Months'),
+                            child: Text(list.isEmpty
+                                ? 'None'
+                                : '${list.length} months'),
+                          ),
+                        ),
+                      ),
+                    ] else if (val != PayoutFrequency.monthly) ...[
+                      const SizedBox(height: 8),
+                      ValueListenableBuilder<int?>(
+                        valueListenable: startMonthNotifier,
+                        builder: (context, smth, _) =>
+                            DropdownButtonFormField<int>(
+                          decoration:
+                              const InputDecoration(labelText: 'Start Month'),
+                          initialValue: smth,
+                          items: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
+                              .map((m) => DropdownMenuItem(
+                                    value: m,
+                                    child: Text(DateFormat('MMM')
+                                        .format(DateTime(2023, m, 1))),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => startMonthNotifier.value = v,
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<bool>(
+                valueListenable: isPartialNotifier,
+                builder: (context, val, _) => CheckboxListTile(
+                  title: const Text('Is Partial / Irregular?'),
+                  value: val,
+                  onChanged: (v) => isPartialNotifier.value = v ?? false,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ),
+            ],
+          )),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () {
+                  if (nameCtrl.text.isEmpty) return;
+                  final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
+                  double payoutAmount = inputAmount;
+                  if (freqNotifier.value == PayoutFrequency.monthly) {
+                    payoutAmount = inputAmount / 12;
+                  }
+
+                  Map<int, double> partialAmounts = {};
+                  if (isPartialNotifier.value) {
+                    for (int m = 1; m <= 12; m++) {
+                      partialAmounts[m] = payoutAmount;
+                    }
+                  }
+
+                  onAdd(CustomDeduction(
+                    name: nameCtrl.text,
+                    amount: payoutAmount,
+                    isTaxable: isTaxableNotifier.value,
+                    frequency: freqNotifier.value,
+                    startMonth: startMonthNotifier.value,
+                    customMonths: customMonthsNotifier.value,
+                    isPartial: isPartialNotifier.value,
                     partialAmounts: partialAmounts,
                   ));
                   Navigator.pop(ctx);

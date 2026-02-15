@@ -74,6 +74,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   Map<String, String> _tagMappings = {};
   List<TaxMappingRule> _advancedMappings = [];
   List<TaxExemptionRule> _customExemptions = [];
+  List<String> _transactionDescriptions = [];
 
   @override
   void initState() {
@@ -83,6 +84,18 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     _selectedYear =
         ref.read(taxConfigServiceProvider).getCurrentFinancialYear();
     _loadRulesForYear(_selectedYear);
+    _loadTransactionDescriptions();
+  }
+
+  void _loadTransactionDescriptions() {
+    final storage = ref.read(storageServiceProvider);
+    final txs = storage.getAllTransactions();
+    _transactionDescriptions = txs
+        .map((t) => t.title)
+        .where((d) => d.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
   }
 
   void _loadRulesForYear(int year) {
@@ -579,7 +592,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         label: const Text('Add Mapping'),
         icon: const Icon(Icons.add_link),
       ),
-      body: _tagMappings.isEmpty
+      body: (_tagMappings.isEmpty && _advancedMappings.isEmpty)
           ? const Center(child: Text('No mappings defined.'))
           : ListView(
               padding: const EdgeInsets.all(16),
@@ -780,12 +793,60 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: matchDescCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Must Match Description',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., Sold'),
+                          child: RawAutocomplete<String>(
+                            textEditingController: matchDescCtrl,
+                            focusNode: FocusNode(),
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                              if (textEditingValue.text.isEmpty) {
+                                return const Iterable<String>.empty();
+                              }
+                              return _transactionDescriptions
+                                  .where((String option) {
+                                return option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase());
+                              });
+                            },
+                            fieldViewBuilder: (context, controller, focusNode,
+                                onFieldSubmitted) {
+                              return TextField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                    labelText: 'Must Match Description',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'e.g., Sold'),
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  child: SizedBox(
+                                    height: 200,
+                                    width: 300,
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.all(8.0),
+                                      itemCount: options.length,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                        final String option =
+                                            options.elementAt(index);
+                                        return GestureDetector(
+                                          onTap: () {
+                                            onSelected(option);
+                                          },
+                                          child: ListTile(
+                                            title: Text(option),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         IconButton(
@@ -817,12 +878,60 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: excludeDescCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Exclude Description',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., Transfer'),
+                          child: RawAutocomplete<String>(
+                            textEditingController: excludeDescCtrl,
+                            focusNode: FocusNode(),
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                              if (textEditingValue.text.isEmpty) {
+                                return const Iterable<String>.empty();
+                              }
+                              return _transactionDescriptions
+                                  .where((String option) {
+                                return option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase());
+                              });
+                            },
+                            fieldViewBuilder: (context, controller, focusNode,
+                                onFieldSubmitted) {
+                              return TextField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                    labelText: 'Exclude Description',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'e.g., Transfer'),
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  child: SizedBox(
+                                    height: 200,
+                                    width: 300,
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.all(8.0),
+                                      itemCount: options.length,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                        final String option =
+                                            options.elementAt(index);
+                                        return GestureDetector(
+                                          onTap: () {
+                                            onSelected(option);
+                                          },
+                                          child: ListTile(
+                                            title: Text(option),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         IconButton(
@@ -861,6 +970,14 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                   child: const Text('Cancel')),
               FilledButton(
                 onPressed: () {
+                  // Add any pending text from controllers
+                  if (matchDescCtrl.text.isNotEmpty) {
+                    matchDescriptions.add(matchDescCtrl.text);
+                  }
+                  if (excludeDescCtrl.text.isNotEmpty) {
+                    excludeDescriptions.add(excludeDescCtrl.text);
+                  }
+
                   setState(() {
                     if (selectedHead == 'ltcg' || selectedHead == 'stcg') {
                       final newRule = TaxMappingRule(
@@ -885,7 +1002,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                   });
                   Navigator.pop(ctx);
                 },
-                child: const Text('Add'),
+                child: Text(index != null ? 'Update' : 'Add'),
               ),
             ],
           );

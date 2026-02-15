@@ -3,7 +3,7 @@ import 'tax_data_models.dart';
 
 part 'tax_data.g.dart';
 
-@HiveType(typeId: 222)
+@HiveType(typeId: 226)
 class TaxYearData {
   @HiveField(0)
   final int year; // Assessment Year (e.g., 2025-2026) -> Acts as Key
@@ -57,7 +57,9 @@ class TaxYearData {
   });
 
   // Getters for Summaries (Used by Dashboard)
-  double get totalSalary => salary.grossSalary;
+  double get totalSalary =>
+      salary.grossSalary +
+      salary.independentAllowances.fold(0.0, (sum, a) => sum + a.payoutAmount);
 
   double get totalHP =>
       houseProperties.fold(0, (sum, hp) => sum + hp.rentReceived);

@@ -110,25 +110,41 @@ void main() {
       expect(fromMap.grossDividend, 1500);
     });
     test('CustomAllowance', () {
-      const ca = CustomAllowance(
+      const allowance = CustomAllowance(
         name: 'Bonus',
-        monthlyAmount: 1000,
-        isPartial: true,
-        partialAmounts: {1: 500.0},
+        payoutAmount: 50000,
+        frequency: PayoutFrequency.annually,
+        startMonth: 3,
       );
-      final map = ca.toMap();
+
+      final map = allowance.toMap();
+      expect(map['name'], 'Bonus');
+      expect(map['payoutAmount'], 50000.0);
+      expect(map['frequency'], PayoutFrequency.annually.index);
+
       final fromMap = CustomAllowance.fromMap(map);
       expect(fromMap.name, 'Bonus');
-      expect(fromMap.partialAmounts[1], 500.0);
+      expect(fromMap.payoutAmount, 50000.0);
+      expect(fromMap.frequency, PayoutFrequency.annually);
     });
 
+    test('CustomAllowance monthlyAmount backward compatibility (fromMap)', () {
+      final map = {
+        'name': 'Bonus',
+        'monthlyAmount': 50000.0,
+        'frequency': PayoutFrequency.annually.index,
+      };
+
+      final fromMap = CustomAllowance.fromMap(map);
+      expect(fromMap.payoutAmount, 50000.0);
+    });
     test('SalaryStructure', () {
       final ss = SalaryStructure(
           id: 's1',
           effectiveDate: DateTime(2024, 4, 1),
           monthlyBasic: 50000,
           customAllowances: const [
-            CustomAllowance(name: 'A1', monthlyAmount: 100)
+            CustomAllowance(name: 'A1', payoutAmount: 100)
           ]);
       final map = ss.toMap();
       final fromMap = SalaryStructure.fromMap(map);

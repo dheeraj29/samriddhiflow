@@ -179,7 +179,7 @@ class TaxMappingRuleAdapter extends TypeAdapter<TaxMappingRule> {
 
 class TaxRulesAdapter extends TypeAdapter<TaxRules> {
   @override
-  final typeId = 224;
+  final typeId = 227;
 
   @override
   TaxRules read(BinaryReader reader) {
@@ -285,7 +285,7 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
   @override
   void write(BinaryWriter writer, TaxRules obj) {
     writer
-      ..writeByte(53)
+      ..writeByte(50)
       ..writeByte(0)
       ..write(obj.currencyLimit10_10D)
       ..writeByte(1)

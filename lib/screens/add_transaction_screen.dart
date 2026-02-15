@@ -812,8 +812,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   String _formatAccountBalance(Account a, List<Transaction> allTxns) {
     if (a.type == AccountType.creditCard) {
       final now = DateTime.now();
+      final storage = ref.read(storageServiceProvider);
       final unbilled = BillingHelper.calculateUnbilledAmount(a, allTxns, now);
-      final currentDebt = a.balance + unbilled; // Total amount used
+      final billed = BillingHelper.calculateBilledAmount(
+          a, allTxns, now, storage.getLastRollover(a.id));
+      final currentDebt = a.balance + billed + unbilled; // Total amount used
 
       if (a.creditLimit != null && a.creditLimit! > 0) {
         final available = a.creditLimit! - currentDebt;

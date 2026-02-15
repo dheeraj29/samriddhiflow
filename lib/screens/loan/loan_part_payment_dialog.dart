@@ -116,7 +116,7 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
         title: 'Loan Part Pay: ${loan.name}',
         amount: amount,
         type: TransactionType.expense,
-        category: 'Loan Principal',
+        category: 'Bank loan',
         accountId: _selectedAccountId!,
         date: _selectedDate,
         loanId: loan.id,

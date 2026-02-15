@@ -407,6 +407,12 @@ class ExcelService {
               : activeProfileId,
         );
         await _storage.saveAccount(acc);
+
+        // FIX: Initialize rollover timestamp for Credit Cards to prevent double-counting
+        if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+          await _storage.initRolloverForImport(acc.id, acc.billingCycleDay!);
+        }
+
         existingAccountsMutex.add(acc); // Keep generic list updated
         resultCounts['accounts'] = resultCounts['accounts']! + 1;
       } catch (_) {}
@@ -598,14 +604,17 @@ class ExcelService {
             ? ExcelUtils.getCellValue(row[accNameIdx])
             : 'Default Account';
 
-        String finalAccountId = accIdIdx != -1 && accIdIdx < row.length
+        String? finalAccountId = accIdIdx != -1 && accIdIdx < row.length
             ? ExcelUtils.getCellValue(row[accIdIdx])
-            : '';
+            : null;
 
         // Account Resolution Logic
-        if (finalAccountId.isEmpty ||
+        if (finalAccountId == null ||
+            finalAccountId.isEmpty ||
             finalAccountId.toLowerCase() == 'manual' ||
-            !accounts.any((a) => a.id == finalAccountId)) {
+            (accounts.isNotEmpty &&
+                !accounts.any((a) => a.id == finalAccountId))) {
+          // Try to match by name if ID failed or was manual
           final matchedAcc = accounts.firstWhere(
               (a) => a.name.toLowerCase() == accountName.toLowerCase(),
               orElse: () => Account.empty());
@@ -613,7 +622,10 @@ class ExcelService {
           if (matchedAcc.id.isNotEmpty) {
             finalAccountId = matchedAcc.id;
           } else if (accountName.isNotEmpty &&
-              accountName.toLowerCase() != 'unknown') {
+              accountName.toLowerCase() != 'unknown' &&
+              accountName.toLowerCase() != 'default account' &&
+              accountName.toLowerCase() != 'manual') {
+            // Create new account ONLY if a specific name was provided
             final newAcc = Account.create(
                 name: accountName,
                 type: AccountType.savings,
@@ -622,8 +634,9 @@ class ExcelService {
             await _storage.saveAccount(newAcc);
             accounts.add(newAcc);
             finalAccountId = newAcc.id;
-          } else if (accounts.isNotEmpty) {
-            finalAccountId = accounts.first.id;
+          } else {
+            // Explicitly set to null for "No Account" / "Manual"
+            finalAccountId = null;
           }
         }
 

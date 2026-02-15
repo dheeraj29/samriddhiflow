@@ -5,6 +5,7 @@ import '../models/account.dart';
 import '../models/transaction.dart';
 import '../utils/currency_utils.dart';
 import '../widgets/form_utils.dart';
+import '../utils/billing_helper.dart';
 
 class RecordCCPaymentDialog extends ConsumerStatefulWidget {
   final Account creditCardAccount;
@@ -35,10 +36,15 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
     return txnsAsync.when(
       data: (txns) {
-        // Set initial amount strictly on first load
         if (_amountController.text.isEmpty) {
-          final billed = widget.creditCardAccount.calculateBilledAmount(txns);
-          _amountController.text = billed.toStringAsFixed(2);
+          final storage = ref.read(storageServiceProvider);
+          final billed = BillingHelper.calculateBilledAmount(
+              widget.creditCardAccount,
+              txns,
+              DateTime.now(),
+              storage.getLastRollover(widget.creditCardAccount.id));
+          final totalDue = widget.creditCardAccount.balance + billed;
+          _amountController.text = totalDue.toStringAsFixed(2);
         }
 
         return AlertDialog(

@@ -12,6 +12,7 @@ import '../models/taxes/insurance_policy.dart';
 import '../models/taxes/tax_rules.dart';
 import '../models/taxes/tax_data.dart';
 import 'taxes/tax_config_service.dart';
+import '../models/lending_record.dart';
 
 class CloudSyncService {
   final CloudStorageInterface _cloudStorage;
@@ -68,6 +69,10 @@ class CloudSyncService {
           .map((year, rules) => MapEntry(year.toString(), rules.toMap())),
       'tax_data':
           _storageService.getAllTaxYearData().map((e) => e.toMap()).toList(),
+      'lending_records': _storageService
+          .getLendingRecords()
+          .map((e) => _lendingRecordToMap(e))
+          .toList(),
     };
 
     await _cloudStorage.syncData(user.uid, data);
@@ -108,8 +113,14 @@ class CloudSyncService {
 
     if (data['accounts'] != null) {
       for (var a in (data['accounts'] as List)) {
-        await _storageService
-            .saveAccount(_mapToAccount(Map<String, dynamic>.from(a)));
+        final acc = _mapToAccount(Map<String, dynamic>.from(a));
+        await _storageService.saveAccount(acc);
+
+        // FIX: Initialize rollover timestamp for Credit Cards to prevent double-counting
+        if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+          await _storageService.initRolloverForImport(
+              acc.id, acc.billingCycleDay!);
+        }
       }
     }
 
@@ -175,6 +186,18 @@ class CloudSyncService {
         }
       } catch (e) {
         // print("Restore Error (TaxData): $e");
+        rethrow;
+      }
+    }
+
+    if (data['lending_records'] != null) {
+      try {
+        for (var l in (data['lending_records'] as List)) {
+          await _storageService.saveLendingRecord(
+              _mapToLendingRecord(Map<String, dynamic>.from(l)));
+        }
+      } catch (e) {
+        // print("Restore Error (Lending): $e");
         rethrow;
       }
     }
@@ -379,5 +402,30 @@ class CloudSyncService {
         name: m['name'],
         currencyLocale: m['currencyLocale'] ?? 'en_IN',
         monthlyBudget: (m['monthlyBudget'] as num?)?.toDouble() ?? 0.0,
+      );
+
+  Map<String, dynamic> _lendingRecordToMap(LendingRecord l) => {
+        'id': l.id,
+        'personName': l.personName,
+        'amount': l.amount,
+        'reason': l.reason,
+        'date': l.date.toIso8601String(),
+        'type': l.type.index,
+        'isClosed': l.isClosed,
+        'closedDate': l.closedDate?.toIso8601String(),
+        'profileId': l.profileId,
+      };
+
+  LendingRecord _mapToLendingRecord(Map<String, dynamic> m) => LendingRecord(
+        id: m['id'],
+        personName: m['personName'],
+        amount: (m['amount'] as num).toDouble(),
+        reason: m['reason'],
+        date: DateTime.parse(m['date']),
+        type: LendingType.values[m['type']],
+        isClosed: m['isClosed'] ?? false,
+        closedDate:
+            m['closedDate'] != null ? DateTime.parse(m['closedDate']) : null,
+        profileId: m['profileId'],
       );
 }

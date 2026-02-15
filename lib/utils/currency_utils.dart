@@ -70,7 +70,7 @@ class CurrencyUtils {
     return (value * 100).roundToDouble() / 100;
   }
 
-  static String formatCurrency(double value) {
-    return getFormatter('en_IN').format(value);
+  static String formatCurrency(double value, String locale) {
+    return getFormatter(locale).format(value);
   }
 }

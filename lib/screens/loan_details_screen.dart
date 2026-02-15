@@ -656,7 +656,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
             title: 'Loan EMI: ${loan.name}',
             amount: loan.emiAmount,
             type: TransactionType.expense,
-            category: 'Loan Repayment',
+            category: 'Bank loan',
             accountId: loan.accountId!,
             date: emiDate,
             loanId: loan.id,

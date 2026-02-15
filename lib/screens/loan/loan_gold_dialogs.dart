@@ -49,7 +49,7 @@ class GoldLoanInterestPaymentDialog extends ConsumerWidget {
           accountId: accountId,
           loanTxn: loanTxn,
           transactionTitle: 'Loan Interest: ${loan.name}',
-          transactionCategory: 'Loan Interest',
+          transactionCategory: 'Bank loan',
         );
       },
     );
@@ -105,7 +105,7 @@ class GoldLoanCloseDialog extends ConsumerWidget {
           accountId: accountId,
           loanTxn: loanTxn,
           transactionTitle: 'Loan Closure: ${loan.name}',
-          transactionCategory: 'Loan Repayment',
+          transactionCategory: 'Bank loan',
         );
       },
     );

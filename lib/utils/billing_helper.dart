@@ -15,11 +15,8 @@ class BillingHelper {
   /// Returns true if the [txnDate] is in the "Unbilled" (current) cycle for the given [now].
   /// The current cycle starts AFTER the billing day.
   static bool isUnbilled(DateTime txnDate, DateTime now, int cycleDay) {
-    // If today is the cycle day, the CURRENT cycle is closing/billed today.
-    // The next (unbilled) cycle starts tomorrow.
-    final currentCycleStart = (now.day == cycleDay)
-        ? DateTime(now.year, now.month, now.day + 1)
-        : getCycleStart(now, cycleDay);
+    // The current cycle starts AFTER the billing day of the previous month.
+    final currentCycleStart = getCycleStart(now, cycleDay);
 
     final txnDateOnly = DateTime(txnDate.year, txnDate.month, txnDate.day);
     return !txnDateOnly.isBefore(currentCycleStart);
@@ -31,34 +28,66 @@ class BillingHelper {
         currentCycleStart.day);
   }
 
-  /// Calculates the unbilled amount for a Credit Card account.
+  /// Calculates the "Unbilled" amount (Spent in current cycle).
+  /// Range: (Current Cycle Start, Now].
   static double calculateUnbilledAmount(
       Account acc, List<Transaction> allTxns, DateTime now) {
     if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
       return 0;
     }
+    final currentCycleStart = getCycleStart(now, acc.billingCycleDay!);
+    return _calculatePeriodSpend(acc, allTxns, currentCycleStart, now);
+  }
 
-    double unbilled = 0;
-    // Filter relevant transactions first
-    final relevantTxnsQuery = allTxns.where((t) =>
+  /// Calculates the "Billed" amount (Generated Statement) that hasn't been added to Balance yet.
+  /// Range: (Last Rollover Date, Current Cycle Start].
+  static double calculateBilledAmount(Account acc, List<Transaction> allTxns,
+      DateTime now, int? lastRolloverMillis) {
+    if (acc.type != AccountType.creditCard ||
+        acc.billingCycleDay == null ||
+        lastRolloverMillis == null) {
+      return 0;
+    }
+
+    final lastRollover =
+        DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+    final currentCycleStart = getCycleStart(now, acc.billingCycleDay!);
+
+    // If fully caught up, return 0
+    if (!lastRollover.isBefore(currentCycleStart)) {
+      return 0;
+    }
+
+    return _calculatePeriodSpend(acc, allTxns, lastRollover, currentCycleStart);
+  }
+
+  /// Shared logic to calculate Net Spend (Expenses + Outgoing Transfers) in a date range.
+  /// Range: (Start, End] (Start exclusive, End inclusive/inclusive-ish depending on logic)
+  static double _calculatePeriodSpend(
+      Account acc, List<Transaction> allTxns, DateTime start, DateTime end) {
+    // Range: (start, end]
+    final relevantTxns = allTxns.where((t) =>
         !t.isDeleted &&
         (t.accountId == acc.id || t.toAccountId == acc.id) &&
-        BillingHelper.isUnbilled(t.date, now, acc.billingCycleDay!));
+        t.date.isAfter(start) &&
+        (t.date.isBefore(end) || t.date.isAtSameMomentAs(end)));
 
-    for (var t in relevantTxnsQuery) {
-      // Expense or Transfer Out -> Adds to Unbilled
+    double spend = 0;
+    for (var t in relevantTxns) {
       if (t.type == TransactionType.expense && t.accountId == acc.id) {
-        unbilled += t.amount;
+        spend += t.amount;
       }
       if (t.type == TransactionType.income && t.accountId == acc.id) {
-        unbilled -= t.amount;
+        spend -= t.amount;
       }
-      if (t.type == TransactionType.transfer && t.accountId == acc.id) {
-        unbilled += t.amount;
+      if (t.type == TransactionType.transfer) {
+        if (t.accountId == acc.id) spend += t.amount; // Outgoing = Spend
+        // Payment (Incoming Transfer) is IGNORED here because:
+        // 1. StorageService applies payments immediately to Account.balance.
+        // 2. We are calculating "Pending Bill", which is the sum of Spends.
+        // 3. Net Debt = Balance (lowered by payment) + Pending Bill (Spends).
       }
-      // Payments (Transfer In) are EXCLUDED from unbilled, as they pay off the Billed Balance.
-      // (Or strictly speaking, the user wants them skipped entirely until rollover).
     }
-    return unbilled;
+    return spend;
   }
 }

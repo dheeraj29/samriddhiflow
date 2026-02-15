@@ -111,16 +111,15 @@ class _RecordLoanPaymentDialogState
                 children: [
                   Expanded(
                     child: RadioListTile<bool>.adaptive(
-                      title: Text('Reduce Tenure',
-                          style: TextStyle(fontSize: 12)),
+                      title:
+                          Text('Reduce Tenure', style: TextStyle(fontSize: 12)),
                       value: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                   Expanded(
                     child: RadioListTile<bool>.adaptive(
-                      title: Text('Reduce EMI',
-                          style: TextStyle(fontSize: 12)),
+                      title: Text('Reduce EMI', style: TextStyle(fontSize: 12)),
                       value: false,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -158,7 +157,7 @@ class _RecordLoanPaymentDialogState
                 type: _selectedAccountId != 'manual'
                     ? TransactionType.transfer
                     : TransactionType.expense,
-                category: 'Loan',
+                category: 'Bank loan',
                 accountId:
                     _selectedAccountId == 'manual' ? null : _selectedAccountId,
                 loanId: widget.loan.id,

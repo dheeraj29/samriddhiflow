@@ -33,10 +33,11 @@ void main() {
     });
 
     group('isUnbilled (Dynamic)', () {
-      test('Cycle Day 28: Date ON bill day is NOT unbilled', () {
+      test('Cycle Day 28: Date ON bill day IS unbilled (wait for rollover)',
+          () {
         final now = DateTime(2024, 5, 28);
         final date = DateTime(2024, 5, 28);
-        expect(BillingHelper.isUnbilled(date, now, 28), false);
+        expect(BillingHelper.isUnbilled(date, now, 28), true);
       });
 
       test('Cycle Day 28: Date after bill day IS unbilled', () {
@@ -45,10 +46,10 @@ void main() {
         expect(BillingHelper.isUnbilled(date, now, 28), true);
       });
 
-      test('Cycle Day 5: Date ON bill day is NOT unbilled', () {
+      test('Cycle Day 5: Date ON bill day IS unbilled (wait for rollover)', () {
         final now = DateTime(2024, 5, 5);
         final date = DateTime(2024, 5, 5);
-        expect(BillingHelper.isUnbilled(date, now, 5), false);
+        expect(BillingHelper.isUnbilled(date, now, 5), true);
       });
 
       test('Cycle Day 5: Date after bill day IS unbilled', () {

@@ -32,13 +32,22 @@ class SalaryDetailsAdapter extends TypeAdapter<SalaryDetails> {
           : (fields[7] as List).cast<SalaryStructure>(),
       netSalaryReceived:
           fields[8] == null ? const {} : (fields[8] as Map).cast<int, double>(),
+      independentDeductions: fields[9] == null
+          ? const []
+          : (fields[9] as List).cast<CustomDeduction>(),
+      independentAllowances: fields[10] == null
+          ? const []
+          : (fields[10] as List).cast<CustomAllowance>(),
+      independentExemptions: fields[11] == null
+          ? const []
+          : (fields[11] as List).cast<CustomExemption>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SalaryDetails obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.grossSalary)
       ..writeByte(1)
@@ -56,7 +65,13 @@ class SalaryDetailsAdapter extends TypeAdapter<SalaryDetails> {
       ..writeByte(7)
       ..write(obj.history)
       ..writeByte(8)
-      ..write(obj.netSalaryReceived);
+      ..write(obj.netSalaryReceived)
+      ..writeByte(9)
+      ..write(obj.independentDeductions)
+      ..writeByte(10)
+      ..write(obj.independentAllowances)
+      ..writeByte(11)
+      ..write(obj.independentExemptions);
   }
 
   @override
@@ -298,34 +313,39 @@ class SalaryStructureAdapter extends TypeAdapter<SalaryStructure> {
       customAllowances: fields[6] == null
           ? const []
           : (fields[6] as List).cast<CustomAllowance>(),
-      performancePayFrequency: fields[7] == null
+      performancePayFrequency: fields[11] == null
           ? PayoutFrequency.monthly
-          : fields[7] as PayoutFrequency,
-      performancePayStartMonth: (fields[8] as num?)?.toInt(),
-      performancePayCustomMonths: (fields[9] as List?)?.cast<int>(),
-      variablePayFrequency: fields[10] == null
+          : fields[11] as PayoutFrequency,
+      performancePayStartMonth: (fields[12] as num?)?.toInt(),
+      performancePayCustomMonths: (fields[13] as List?)?.cast<int>(),
+      variablePayFrequency: fields[14] == null
           ? PayoutFrequency.annually
-          : fields[10] as PayoutFrequency,
+          : fields[14] as PayoutFrequency,
       variablePayStartMonth:
-          fields[11] == null ? 3 : (fields[11] as num?)?.toInt(),
-      variablePayCustomMonths: (fields[12] as List?)?.cast<int>(),
-      isPerformancePayPartial: fields[13] == null ? false : fields[13] as bool,
-      performancePayAmounts: fields[14] == null
+          fields[15] == null ? 3 : (fields[15] as num?)?.toInt(),
+      variablePayCustomMonths: (fields[16] as List?)?.cast<int>(),
+      isPerformancePayPartial: fields[17] == null ? false : fields[17] as bool,
+      performancePayAmounts: fields[18] == null
           ? const {}
-          : (fields[14] as Map).cast<int, double>(),
-      isVariablePayPartial: fields[15] == null ? false : fields[15] as bool,
-      variablePayAmounts: fields[16] == null
+          : (fields[18] as Map).cast<int, double>(),
+      isVariablePayPartial: fields[19] == null ? false : fields[19] as bool,
+      variablePayAmounts: fields[20] == null
           ? const {}
-          : (fields[16] as Map).cast<int, double>(),
+          : (fields[20] as Map).cast<int, double>(),
       stoppedMonths:
-          fields[17] == null ? const [] : (fields[17] as List).cast<int>(),
+          fields[21] == null ? const [] : (fields[21] as List).cast<int>(),
+      monthlyEmployeePF: fields[7] == null ? 0 : (fields[7] as num).toDouble(),
+      monthlyGratuity: fields[9] == null ? 0 : (fields[9] as num).toDouble(),
+      customDeductions: fields[10] == null
+          ? const []
+          : (fields[10] as List).cast<CustomDeduction>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SalaryStructure obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -341,26 +361,32 @@ class SalaryStructureAdapter extends TypeAdapter<SalaryStructure> {
       ..writeByte(6)
       ..write(obj.customAllowances)
       ..writeByte(7)
-      ..write(obj.performancePayFrequency)
-      ..writeByte(8)
-      ..write(obj.performancePayStartMonth)
+      ..write(obj.monthlyEmployeePF)
       ..writeByte(9)
-      ..write(obj.performancePayCustomMonths)
+      ..write(obj.monthlyGratuity)
       ..writeByte(10)
-      ..write(obj.variablePayFrequency)
+      ..write(obj.customDeductions)
       ..writeByte(11)
-      ..write(obj.variablePayStartMonth)
+      ..write(obj.performancePayFrequency)
       ..writeByte(12)
-      ..write(obj.variablePayCustomMonths)
+      ..write(obj.performancePayStartMonth)
       ..writeByte(13)
-      ..write(obj.isPerformancePayPartial)
+      ..write(obj.performancePayCustomMonths)
       ..writeByte(14)
-      ..write(obj.performancePayAmounts)
+      ..write(obj.variablePayFrequency)
       ..writeByte(15)
-      ..write(obj.isVariablePayPartial)
+      ..write(obj.variablePayStartMonth)
       ..writeByte(16)
-      ..write(obj.variablePayAmounts)
+      ..write(obj.variablePayCustomMonths)
       ..writeByte(17)
+      ..write(obj.isPerformancePayPartial)
+      ..writeByte(18)
+      ..write(obj.performancePayAmounts)
+      ..writeByte(19)
+      ..write(obj.isVariablePayPartial)
+      ..writeByte(20)
+      ..write(obj.variablePayAmounts)
+      ..writeByte(21)
       ..write(obj.stoppedMonths);
   }
 
@@ -371,6 +397,64 @@ class SalaryStructureAdapter extends TypeAdapter<SalaryStructure> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SalaryStructureAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class CustomDeductionAdapter extends TypeAdapter<CustomDeduction> {
+  @override
+  final typeId = 222;
+
+  @override
+  CustomDeduction read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return CustomDeduction(
+      name: fields[0] as String,
+      amount: (fields[1] as num).toDouble(),
+      isTaxable: fields[2] == null ? false : fields[2] as bool,
+      frequency: fields[3] == null
+          ? PayoutFrequency.monthly
+          : fields[3] as PayoutFrequency,
+      startMonth: (fields[4] as num?)?.toInt(),
+      customMonths: (fields[5] as List?)?.cast<int>(),
+      isPartial: fields[6] == null ? false : fields[6] as bool,
+      partialAmounts:
+          fields[7] == null ? const {} : (fields[7] as Map).cast<int, double>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, CustomDeduction obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.name)
+      ..writeByte(1)
+      ..write(obj.amount)
+      ..writeByte(2)
+      ..write(obj.isTaxable)
+      ..writeByte(3)
+      ..write(obj.frequency)
+      ..writeByte(4)
+      ..write(obj.startMonth)
+      ..writeByte(5)
+      ..write(obj.customMonths)
+      ..writeByte(6)
+      ..write(obj.isPartial)
+      ..writeByte(7)
+      ..write(obj.partialAmounts);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CustomDeductionAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
@@ -387,7 +471,7 @@ class CustomAllowanceAdapter extends TypeAdapter<CustomAllowance> {
     };
     return CustomAllowance(
       name: fields[0] as String,
-      monthlyAmount: (fields[1] as num).toDouble(),
+      payoutAmount: (fields[1] as num).toDouble(),
       isPartial: fields[2] == null ? false : fields[2] as bool,
       frequency: fields[3] == null
           ? PayoutFrequency.monthly
@@ -406,7 +490,7 @@ class CustomAllowanceAdapter extends TypeAdapter<CustomAllowance> {
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.monthlyAmount)
+      ..write(obj.payoutAmount)
       ..writeByte(2)
       ..write(obj.isPartial)
       ..writeByte(3)
@@ -490,19 +574,22 @@ class TaxPaymentEntryAdapter extends TypeAdapter<TaxPaymentEntry> {
       amount: (fields[0] as num).toDouble(),
       date: fields[1] as DateTime,
       source: fields[2] == null ? '' : fields[2] as String,
+      description: fields[3] == null ? '' : fields[3] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaxPaymentEntry obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.amount)
       ..writeByte(1)
       ..write(obj.date)
       ..writeByte(2)
-      ..write(obj.source);
+      ..write(obj.source)
+      ..writeByte(3)
+      ..write(obj.description);
   }
 
   @override
@@ -512,6 +599,43 @@ class TaxPaymentEntryAdapter extends TypeAdapter<TaxPaymentEntry> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TaxPaymentEntryAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class CustomExemptionAdapter extends TypeAdapter<CustomExemption> {
+  @override
+  final typeId = 224;
+
+  @override
+  CustomExemption read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return CustomExemption(
+      name: fields[0] as String,
+      amount: (fields[1] as num).toDouble(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, CustomExemption obj) {
+    writer
+      ..writeByte(2)
+      ..writeByte(0)
+      ..write(obj.name)
+      ..writeByte(1)
+      ..write(obj.amount);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CustomExemptionAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

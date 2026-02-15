@@ -11,6 +11,7 @@ import '../providers.dart';
 import '../feature_providers.dart';
 import '../theme/app_theme.dart';
 import '../models/profile.dart';
+import '../models/account.dart';
 import 'package:uuid/uuid.dart';
 
 import '../services/auth_service.dart';
@@ -72,25 +73,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           _buildAppearanceSection(),
-          const Divider(),
           _buildDashboardSection(),
-          const Divider(),
           _buildCloudSectionHeader(context, user),
-          const Divider(),
           _buildDataManagementSection(context),
-          const Divider(),
           _buildFeatureManagementSection(context),
-          const Divider(),
           _buildProfileManagementSection(context),
-          const Divider(),
           _buildPreferencesSection(context),
           if (user != null && !ref.watch(isOfflineProvider)) ...[
-            const Divider(),
             _buildAuthSection(context),
           ],
-          const Divider(),
           _buildSecuritySection(context),
-          const Divider(),
           _buildAppInfoSection(context),
         ],
       ),
@@ -365,7 +357,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showRepairDialog(BuildContext parentContext) {
-    final jobs = ref.read(repairServiceProvider).jobs;
+    final allJobs = ref.read(repairServiceProvider).jobs;
+    final jobs = allJobs.where((j) => j.showInSettings).toList();
     showDialog(
       context: parentContext,
       builder: (dialogContext) => AlertDialog(
@@ -383,12 +376,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: const Icon(Icons.play_arrow, color: Colors.blue),
                 onTap: () async {
                   Navigator.pop(dialogContext);
+
+                  Map<String, dynamic>? args;
+                  if (job.id == 'repair_cc_balances') {
+                    final accounts =
+                        (ref.read(accountsProvider).asData?.value ?? [])
+                            .where((a) => a.type == AccountType.creditCard)
+                            .toList();
+
+                    if (accounts.isNotEmpty && context.mounted) {
+                      final result = await showDialog<String>(
+                        context: parentContext,
+                        builder: (ctx) => SimpleDialog(
+                          title: const Text('Select Credit Card'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () => Navigator.pop(ctx, 'all'),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text('All Credit Cards',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            const Divider(),
+                            ...accounts.map((a) => SimpleDialogOption(
+                                  onPressed: () => Navigator.pop(ctx, a.id),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0),
+                                    child: Text(a.name),
+                                  ),
+                                )),
+                          ],
+                        ),
+                      );
+
+                      if (result == null) return; // Cancelled
+                      if (result != 'all') {
+                        args = {'accountId': result};
+                      }
+                    }
+                  }
+
+                  if (!context.mounted) return;
+
                   // Show loading or progress?
                   ScaffoldMessenger.of(parentContext).showSnackBar(
                       const SnackBar(content: Text('Running repair...')));
 
                   try {
-                    final int count = await job.run(ref.reader);
+                    final int count = await job.run(ref.reader, args: args);
                     if (context.mounted) {
                       ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
                           content: Text(
@@ -768,20 +806,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
 
         try {
-          updateFound =
-              await ConnectivityPlatform.checkForServiceWorkerUpdate();
+          updateFound = await ConnectivityPlatform.checkForServiceWorkerUpdate()
+              .timeout(const Duration(seconds: 5));
         } catch (e) {
-          debugPrint("Update check failed: $e");
-          // Explicitly warn user if the check threw an exception
-          if (mounted) {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Unable to check for updates: $e"),
-                backgroundColor: Colors.redAccent,
-              ),
-            );
-          }
+          debugPrint("Update check failed/timed out: $e");
+          // If check fails or times out, we assume no update found (or can't detect)
+          // and proceed to show the "Up to Date" dialog which allows Force Reload.
           updateFound = false;
         }
       }

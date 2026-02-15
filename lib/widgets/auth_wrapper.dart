@@ -411,6 +411,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
         final firebaseInit = ref.watch(firebaseInitializerProvider);
 
+        // --- OPTIMIZATION: Background Revalidation ---
+        // If we have a persistent local session, don't block the UI with a full-screen loading spinner
+        // while Firebase is initializing or re-validating. Show the Dashboard optimistically.
+        if (isPersistentLogin &&
+            (firebaseInit.isLoading || !_bootGracePeriodFinished) &&
+            !_isRedirectingLocal) {
+          return _buildAuthStream(context, isPersistentLogin);
+        }
+
         return firebaseInit.when(
           loading: () => _buildLoadingScreen(
             _isRedirectingLocal
@@ -514,12 +523,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         // --- PERSISTENT SESSION GUARD ---
         if (isPersistentLogin) {
           if (!_hasVerificationTimedOut) {
-            return _buildLoadingScreen(
-              _isSlowConnection
-                  ? "Slow link. Verifying Session..."
-                  : "Verifying Session...",
-              showOfflineBypass: true, // Allow bypass for logged-in users
-            );
+            // OPTIMIZATION: If we are already in a persistent session, just show the Dashboard.
+            // Verification will happen in the background or via the Firebase init check above.
+            return const DashboardScreen();
           } else {
             // Safety/Manual Timeout: Grant entry to local data
             DebugLogger()
@@ -533,8 +539,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         // so we can assume we are online here.
         return const LoginScreen();
       },
-      loading: () => _buildLoadingScreen("Verifying Session...",
-          showOfflineBypass: isPersistentLogin),
+      loading: () {
+        if (isPersistentLogin) return const DashboardScreen();
+        return _buildLoadingScreen("Verifying Session...",
+            showOfflineBypass: isPersistentLogin);
+      },
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Auth Stream Error: $e");
         return const LoginScreen();

@@ -10,6 +10,7 @@ class AccountCard extends ConsumerWidget {
   final Account account;
   final VoidCallback? onTap;
   final double unbilledAmount;
+  final double billedAmount;
   final bool compactView;
 
   const AccountCard({
@@ -17,6 +18,7 @@ class AccountCard extends ConsumerWidget {
     required this.account,
     this.onTap,
     this.unbilledAmount = 0,
+    this.billedAmount = 0,
     this.compactView = true,
   });
 
@@ -45,6 +47,25 @@ class AccountCard extends ConsumerWidget {
         cardColor = Colors.orangeAccent;
         iconWidget = PureIcons.wallet(color: Colors.white, size: 28);
         break;
+    }
+
+    // CC Display Logic:
+    // If we have negative balance (credit/payment), apply it to Billed Amount first for display.
+    double displayBalance = account.balance;
+    double displayBilled = billedAmount;
+
+    if (account.type == AccountType.creditCard && displayBalance < 0) {
+      double credit = -displayBalance;
+      displayBalance = 0;
+
+      if (credit <= displayBilled) {
+        displayBilled -= credit;
+        credit = 0;
+      } else {
+        credit -= displayBilled;
+        displayBilled = 0;
+        displayBalance = -credit;
+      }
     }
 
     return Card(
@@ -82,7 +103,7 @@ class AccountCard extends ConsumerWidget {
                 // Balance Display
                 if (account.type == AccountType.creditCard) ...[
                   Text(
-                    _format(account.balance + unbilledAmount),
+                    _format(displayBalance + displayBilled + unbilledAmount),
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -93,10 +114,14 @@ class AccountCard extends ConsumerWidget {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _buildMiniInfo(
-                          'Billed', account.balance, account.currency),
+                      if (displayBilled > 0)
+                        _buildMiniInfo(
+                            'Billed', displayBilled, account.currency),
                       _buildMiniInfo(
                           'Unbilled', unbilledAmount, account.currency),
+                      if (displayBalance != 0)
+                        _buildMiniInfo(
+                            'Balance', displayBalance, account.currency),
                     ],
                   ),
                 ] else

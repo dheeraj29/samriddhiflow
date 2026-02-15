@@ -165,7 +165,7 @@ class TaxMappingRule {
       );
 }
 
-@HiveType(typeId: 224)
+@HiveType(typeId: 227)
 class TaxRules {
   @HiveField(0)
   final double currencyLimit10_10D;

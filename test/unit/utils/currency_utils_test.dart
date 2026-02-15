@@ -55,8 +55,8 @@ void main() {
     });
 
     test('formatCurrency uses default Indian locale', () {
-      expect(CurrencyUtils.formatCurrency(1000), contains('1,000'));
-      expect(CurrencyUtils.formatCurrency(1000), contains('₹'));
+      expect(CurrencyUtils.formatCurrency(1000, 'en_IN'), contains('1,000'));
+      expect(CurrencyUtils.formatCurrency(1000, 'en_IN'), contains('₹'));
     });
   });
 }

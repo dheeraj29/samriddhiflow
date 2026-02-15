@@ -23,6 +23,7 @@ class TaxDashboardScreen extends ConsumerStatefulWidget {
 class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   int _selectedYear = DateTime.now().year; // FY Start Year
   TaxYearData? _taxData;
+  List<TaxYearData> _allTaxData = [];
   bool _isServiceInitialized = false;
 
   @override
@@ -59,8 +60,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   void _loadData() {
     final storage = ref.read(storageServiceProvider);
     final savedData = storage.getTaxYearData(_selectedYear);
+    final allData = storage.getAllTaxYearData();
+
     setState(() {
       _taxData = savedData ?? TaxYearData(year: _selectedYear);
+      _allTaxData = allData..sort((a, b) => b.year.compareTo(a.year));
     });
   }
 
@@ -89,7 +93,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                               await ref
                                   .read(storageServiceProvider)
                                   .saveTaxYearData(newData);
-                              setState(() => _taxData = newData);
+                              _loadData();
                             },
                           )));
             },
@@ -404,18 +408,27 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Widget _buildExemptionsCard(TaxYearData data) {
+    if (_allTaxData.isEmpty) return const SizedBox.shrink();
+
     final rules =
         ref.watch(taxConfigServiceProvider).getRulesForYear(data.year);
-    if (data.capitalGains.isEmpty) return const SizedBox.shrink();
 
-    // Filter relevant gains for tracking (Active Window)
-    final trackingGains = data.capitalGains.where((gain) {
-      // Calculate years passed
-      int gainFyStart = gain.gainDate.year;
-      if (gain.gainDate.month < 4) gainFyStart -= 1;
-      int currentFYStart = data.year;
-      return (currentFYStart - gainFyStart) <= rules.windowGainReinvest;
-    }).toList();
+    // Filter relevant gains for tracking (Active Window across ALL years)
+    final trackingGains = <MapEntry<TaxYearData, CapitalGainEntry>>[];
+    for (var yearData in _allTaxData) {
+      for (var gain in yearData.capitalGains) {
+        // Calculate years passed
+        int gainFyStart = gain.gainDate.year;
+        if (gain.gainDate.month < 4) gainFyStart -= 1;
+        int currentFYStart = data.year;
+
+        // Display if within reinvestment window and not fully reinvested (or just show all active)
+        if ((currentFYStart - gainFyStart) >= 0 &&
+            (currentFYStart - gainFyStart) <= rules.windowGainReinvest) {
+          trackingGains.add(MapEntry(yearData, gain));
+        }
+      }
+    }
 
     if (trackingGains.isEmpty) return const SizedBox.shrink();
 
@@ -434,9 +447,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 'Reinvest within ${rules.windowGainReinvest} years to claim exemption under 54/54F',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             const Divider(),
-            ...trackingGains.map((gain) {
+            ...trackingGains.map((entry) {
+              final gainYearData = entry.key;
+              final gain = entry.value;
+
               // days = years * 365.25 approx, or just 365.
-              // Standard tax law usually counts years, but for fractional, we can approx days.
               final days = (rules.windowGainReinvest * 365.25).round();
               final deadline = gain.gainDate.add(Duration(days: days));
               final remainingDays = deadline.difference(DateTime.now()).inDays;
@@ -448,14 +463,14 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                    '${gain.description.isNotEmpty ? gain.description : 'Capital Gain'} (${gain.matchAssetType.name})'),
+                    '${gain.description.isNotEmpty ? gain.description : 'Capital Gain'} (${gain.matchAssetType.toHumanReadable()})'),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        'Gain: ₹${gain.capitalGainAmount.toStringAsFixed(0)} | Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)}'),
+                        'FY ${gainYearData.year}-${gainYearData.year + 1} | Gain: ₹${gain.capitalGainAmount.toStringAsFixed(0)}'),
                     Text(
-                        'Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
+                        'Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
                         style: TextStyle(
                             color: isExpired
                                 ? Colors.red
@@ -463,14 +478,44 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                             fontWeight: FontWeight.bold)),
                   ],
                 ),
-                trailing: isExpired
-                    ? const Chip(
-                        label: Text('Expired'),
-                        backgroundColor: Colors.redAccent,
-                        labelStyle: TextStyle(color: Colors.white))
-                    : gain.reinvestedAmount >= gain.capitalGainAmount
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.timelapse, color: Colors.orange),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isExpired &&
+                        gain.reinvestedAmount < gain.capitalGainAmount)
+                      IconButton(
+                        icon: const Icon(Icons.add_task, color: Colors.blue),
+                        tooltip: 'Add Reinvestment',
+                        onPressed: () async {
+                          // Navigate to Details -> Cap Gains Tab (Index 3) for the SPECIFIC year the gain occurred
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TaxDetailsScreen(
+                                data: gainYearData,
+                                initialTabIndex: 3,
+                                onSave: (updated) {
+                                  ref
+                                      .read(storageServiceProvider)
+                                      .saveTaxYearData(updated);
+                                },
+                              ),
+                            ),
+                          );
+                          _loadData();
+                        },
+                      ),
+                    isExpired
+                        ? const Chip(
+                            label: Text('Expired'),
+                            backgroundColor: Colors.redAccent,
+                            labelStyle: TextStyle(color: Colors.white))
+                        : gain.reinvestedAmount >= gain.capitalGainAmount
+                            ? const Icon(Icons.check_circle,
+                                color: Colors.green)
+                            : const Icon(Icons.timelapse, color: Colors.orange),
+                  ],
+                ),
               );
             }),
           ],

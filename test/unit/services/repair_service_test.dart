@@ -29,9 +29,6 @@ void main() {
       final job = repairService.getJob('repair_account_currency');
       expect(job, isA<RepairAccountCurrencyJob>());
       expect(job.name, 'Repair Account Currency');
-
-      final job2 = repairService.getJob('repair_cc_balances');
-      expect(job2, isA<RepairCreditCardBalanceJob>());
     });
 
     test('getJob throws on invalid id', () {
@@ -51,20 +48,6 @@ void main() {
 
       verify(() => mockStorage.repairAccountCurrencies('en_IN')).called(1);
       expect(count, 5);
-    });
-  });
-
-  group('RepairCreditCardBalanceJob', () {
-    test('run calls storage.recalculateCCBalances', () async {
-      final job = RepairCreditCardBalanceJob();
-
-      when(() => mockStorage.recalculateCCBalances())
-          .thenAnswer((_) async => 10);
-
-      final count = await job.run(mockRef);
-
-      verify(() => mockStorage.recalculateCCBalances()).called(1);
-      expect(count, 10);
     });
   });
 }

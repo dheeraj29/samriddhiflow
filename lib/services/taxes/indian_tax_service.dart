@@ -164,7 +164,19 @@ class IndianTaxService implements TaxStrategy {
       }
     }
 
-    double totalGross = salary + taxableGifts;
+    // Add Independent Allowances
+    double indAllowances = 0;
+    for (final a in data.salary.independentAllowances) {
+      for (int m = 1; m <= 12; m++) {
+        if (SalaryStructure.isPayoutMonth(
+            m, a.frequency, a.startMonth, a.customMonths)) {
+          indAllowances +=
+              a.isPartial ? (a.partialAmounts[m] ?? 0) : a.payoutAmount;
+        }
+      }
+    }
+
+    double totalGross = salary + taxableGifts + indAllowances;
 
     if (totalGross <= 0) return 0;
 
@@ -177,7 +189,7 @@ class IndianTaxService implements TaxStrategy {
 
     double netSalary = totalGross - exemptLeave - exemptGratuity;
 
-    // Custom Salary Exemptions
+    // Custom Salary Exemptions (Config Rules)
     if (rules.customExemptions.isNotEmpty) {
       for (final rule in rules.customExemptions) {
         if (rule.isEnabled && rule.incomeHead == 'Salary') {
@@ -191,6 +203,24 @@ class IndianTaxService implements TaxStrategy {
             }
             double actualExemption = min(claimed, maxAllowed);
             netSalary -= actualExemption;
+          }
+        }
+      }
+    }
+
+    // Independent Ad-hoc Exemptions
+    for (final ex in data.salary.independentExemptions) {
+      netSalary -= ex.amount;
+    }
+
+    // Pre-Tax Independent Deductions
+    for (final d in data.salary.independentDeductions) {
+      if (d.isTaxable) {
+        // Taxable = Pre-Tax deduction (reduces gross)
+        for (int m = 1; m <= 12; m++) {
+          if (SalaryStructure.isPayoutMonth(
+              m, d.frequency, d.startMonth, d.customMonths)) {
+            netSalary -= d.isPartial ? (d.partialAmounts[m] ?? 0) : d.amount;
           }
         }
       }
@@ -455,6 +485,218 @@ class IndianTaxService implements TaxStrategy {
       percentRule = annualPremium <= (0.10 * sumAssured);
     }
     return !percentRule;
+  }
+
+  /// Calculates a monthly breakdown of salary, taxes, and take-home pay.
+  /// Logic:
+  /// 1. Calculate "Base" Annual Income (Regular monthly components).
+  /// 2. For each month:
+  ///    a. Calculate "Actual" Monthly Gross (Base + this month's Extras/Bonuses).
+  ///    b. Project Annual Gross using actuals so far and base for remaining.
+  ///    c. Tax for month = (Annual Tax on Updated Projection - Tax already allocated to previous months).
+  ///    d. But wait, if we want bonus tax *in that month*, we calculate:
+  ///       Marginal Tax = (Tax on Base + Bonus) - (Tax on Base).
+  ///       Monthly Tax = (Annual Tax on Base / 12) + Marginal Tax.
+  Map<int, Map<String, double>> calculateMonthlySalaryBreakdown(
+      TaxYearData data, TaxRules rules) {
+    final Map<int, Map<String, double>> breakdown = {};
+
+    // 1. Determine "Base" Annual Income (Regular monthly components only)
+    // We'll calculate this by assuming only monthly components are present.
+    double baseAnnualGross = 0;
+    for (int m = 1; m <= 12; m++) {
+      final s = _getStructureForMonth(data, m);
+
+      // Regular monthly from structure
+      if (s != null) {
+        double monthlyBase = s.monthlyBasic + s.monthlyFixedAllowances;
+        if (s.performancePayFrequency == PayoutFrequency.monthly) {
+          monthlyBase += (s.isPerformancePayPartial
+              ? (s.performancePayAmounts[m] ?? 0)
+              : s.monthlyPerformancePay);
+        }
+        for (final a in s.customAllowances) {
+          if (a.frequency == PayoutFrequency.monthly) {
+            monthlyBase +=
+                (a.isPartial ? (a.partialAmounts[m] ?? 0) : a.payoutAmount);
+          }
+        }
+        baseAnnualGross += monthlyBase;
+      }
+
+      // Add independent monthly allowances
+      for (final a in data.salary.independentAllowances) {
+        if (a.frequency == PayoutFrequency.monthly) {
+          baseAnnualGross += a.payoutAmount;
+        }
+      }
+    }
+
+    // 2. Calculate Base Annual Tax
+    // Create a dummy TaxYearData with only base income
+    final baseData = data.copyWith(
+      salary: data.salary.copyWith(grossSalary: baseAnnualGross),
+    );
+    final baseDetailed = calculateDetailedLiability(baseData, rules);
+    double totalBaseTax = baseDetailed['totalTax'] ?? 0;
+    double monthlyBaseTax = totalBaseTax / 12;
+
+    // 3. Process each month
+    for (int m = 1; m <= 12; m++) {
+      final s = _getStructureForMonth(data, m);
+      double monthlyGross = 0;
+      double regularMonthly = 0;
+
+      if (s != null) {
+        monthlyGross =
+            s.calculateContribution(m, rules.financialYearStartMonth);
+
+        // Extras for this month = monthlyGross - regularMonthly
+        regularMonthly = s.monthlyBasic + s.monthlyFixedAllowances;
+        if (s.performancePayFrequency == PayoutFrequency.monthly) {
+          regularMonthly += (s.isPerformancePayPartial
+              ? (s.performancePayAmounts[m] ?? 0)
+              : s.monthlyPerformancePay);
+        }
+        for (final a in s.customAllowances) {
+          if (a.frequency == PayoutFrequency.monthly) {
+            regularMonthly +=
+                (a.isPartial ? (a.partialAmounts[m] ?? 0) : a.payoutAmount);
+          }
+        }
+      }
+
+      // Independent Allowances
+      for (final a in data.salary.independentAllowances) {
+        if (SalaryStructure.isPayoutMonth(
+            m, a.frequency, a.startMonth, a.customMonths)) {
+          double amt =
+              a.isPartial ? (a.partialAmounts[m] ?? 0) : a.payoutAmount;
+          monthlyGross += amt;
+          if (a.frequency == PayoutFrequency.monthly) {
+            regularMonthly += amt;
+          }
+        }
+      }
+
+      double extras = max(0, monthlyGross - regularMonthly);
+
+      // Marginal Tax calculation for extras
+      double marginalTax = 0;
+      if (extras > 0) {
+        final extraData = data.copyWith(
+          salary: data.salary.copyWith(grossSalary: baseAnnualGross + extras),
+        );
+        final extraDetailed = calculateDetailedLiability(extraData, rules);
+        marginalTax = (extraDetailed['totalTax'] ?? 0) - totalBaseTax;
+      }
+
+      double monthlyTax = monthlyBaseTax + marginalTax;
+
+      // Deductions (Post-Tax and Pre-Tax)
+      double preTaxDeductions = 0;
+      if (s != null) {
+        preTaxDeductions = s.monthlyEmployeePF; // PF is usually pre-tax (80C)
+      }
+
+      // Independent Deductions
+      double postTaxDeductions = 0;
+      final allDeductions = [
+        if (s != null) ...s.customDeductions,
+        ...data.salary.independentDeductions,
+      ];
+
+      for (final d in allDeductions) {
+        // Check if d applies to this month
+        if (SalaryStructure.isPayoutMonth(
+            m, d.frequency, d.startMonth, d.customMonths)) {
+          double amt = d.isPartial ? (d.partialAmounts[m] ?? 0) : d.amount;
+          if (d.isTaxable) {
+            preTaxDeductions += amt;
+          } else {
+            postTaxDeductions += amt;
+          }
+        }
+      }
+
+      // Ad-hoc Exemptions (apply evenly or in specific month?
+      // Usually ad-hoc exemptions are annual. Let's apply 1/12th to each month for take-home projection.)
+      double monthlyExemption = 0;
+      for (final ex in data.salary.independentExemptions) {
+        monthlyExemption += ex.amount / 12;
+      }
+
+      double takeHome = monthlyGross -
+          monthlyTax -
+          preTaxDeductions -
+          postTaxDeductions -
+          monthlyExemption;
+
+      breakdown[m] = {
+        'gross': monthlyGross,
+        'tax': monthlyTax,
+        'deductions': preTaxDeductions + postTaxDeductions,
+        'takeHome': takeHome,
+        'extras': extras,
+      };
+    }
+
+    return breakdown;
+  }
+
+  SalaryStructure? _getStructureForMonth(TaxYearData data, int month) {
+    if (data.salary.history.isEmpty) return null;
+
+    // Sort history by effective date desc
+    final sorted = List<SalaryStructure>.from(data.salary.history)
+      ..sort((a, b) => b.effectiveDate.compareTo(a.effectiveDate));
+
+    // Indian FY: Apr (4) to Mar (3).
+    // If AY is 2025, FY is 2024-25.
+    // Months 4-12 are in 2024 (AY-1).
+    // Months 1-3 are in 2025 (AY-1? No, 2025-26 AY -> 2024-25 FY. So 1-3 of 2025).
+    // Wait: AY 2025-26 -> FY 2024-25.
+    // Apr 2024 to Dec 2024. Jan 2025 to Mar 2025.
+    // So if month >= 4, year = data.year - 1. If month <= 3, year = data.year.
+    int yr = (month >= 4) ? (data.year - 1) : data.year;
+    final targetDate = DateTime(yr, month, 28);
+
+    for (final s in sorted) {
+      if (s.effectiveDate.isBefore(targetDate) ||
+          s.effectiveDate.isAtSameMomentAs(targetDate)) {
+        return s;
+      }
+    }
+    return sorted.last;
+  }
+}
+
+extension SalaryStructureHelpers on SalaryStructure {
+  bool isPayoutMonth(int currentMonth, PayoutFrequency freq, int? startMonth,
+      List<int>? customMonths) {
+    if (freq == PayoutFrequency.monthly) return true;
+    if (freq == PayoutFrequency.annually) {
+      return currentMonth == (startMonth ?? 3);
+    }
+    if (freq == PayoutFrequency.halfYearly) {
+      int s = startMonth ?? 3;
+      int second = (s + 6) > 12 ? (s + 6 - 12) : (s + 6);
+      return currentMonth == s || currentMonth == second;
+    }
+    if (freq == PayoutFrequency.quarterly) {
+      int s = startMonth ?? 3;
+      List<int> months = [
+        s,
+        (s + 3) > 12 ? (s + 3 - 12) : (s + 3),
+        (s + 6) > 12 ? (s + 6 - 12) : (s + 6),
+        (s + 9) > 12 ? (s + 9 - 12) : (s + 9),
+      ];
+      return months.contains(currentMonth);
+    }
+    if (freq == PayoutFrequency.custom) {
+      return customMonths?.contains(currentMonth) ?? false;
+    }
+    return false;
   }
 }
 

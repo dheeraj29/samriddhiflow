@@ -2,9 +2,10 @@
 // Do not modify
 // Check in to version control
 
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
@@ -26,11 +27,15 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(CategoryTagAdapter());
     registerAdapter(CategoryUsageAdapter());
     registerAdapter(CustomAllowanceAdapter());
+    registerAdapter(CustomDeductionAdapter());
+    registerAdapter(CustomExemptionAdapter());
     registerAdapter(DividendIncomeAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(LendingRecordAdapter());
+    registerAdapter(LendingTypeAdapter());
     registerAdapter(LoanAdapter());
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());
@@ -66,11 +71,15 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(CategoryTagAdapter());
     registerAdapter(CategoryUsageAdapter());
     registerAdapter(CustomAllowanceAdapter());
+    registerAdapter(CustomDeductionAdapter());
+    registerAdapter(CustomExemptionAdapter());
     registerAdapter(DividendIncomeAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(LendingRecordAdapter());
+    registerAdapter(LendingTypeAdapter());
     registerAdapter(LoanAdapter());
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());

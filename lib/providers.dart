@@ -9,6 +9,7 @@ import 'services/loan_service.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
+import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
@@ -140,6 +141,8 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     Hive.registerAdapter<InsurancePremiumRule>(InsurancePremiumRuleAdapter(),
         override: true);
     Hive.registerAdapter<Loan>(LoanAdapter(), override: true);
+    Hive.registerAdapter<LendingRecord>(LendingRecordAdapter(), override: true);
+    Hive.registerAdapter<LendingType>(LendingTypeAdapter(), override: true);
     Hive.registerAdapter<LoanTransaction>(LoanTransactionAdapter(),
         override: true);
     Hive.registerAdapter<LoanTransactionType>(LoanTransactionTypeAdapter(),
@@ -169,6 +172,10 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     Hive.registerAdapter<SalaryStructure>(SalaryStructureAdapter(),
         override: true);
     Hive.registerAdapter<CustomAllowance>(CustomAllowanceAdapter(),
+        override: true);
+    Hive.registerAdapter<CustomDeduction>(CustomDeductionAdapter(),
+        override: true);
+    Hive.registerAdapter<CustomExemption>(CustomExemptionAdapter(),
         override: true);
     Hive.registerAdapter<TaxYearData>(TaxYearDataAdapter(), override: true);
 

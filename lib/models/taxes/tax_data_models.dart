@@ -29,6 +29,15 @@ class SalaryDetails {
   @HiveField(8)
   final Map<int, double> netSalaryReceived;
 
+  @HiveField(9)
+  final List<CustomDeduction> independentDeductions;
+
+  @HiveField(10)
+  final List<CustomAllowance> independentAllowances;
+
+  @HiveField(11)
+  final List<CustomExemption> independentExemptions;
+
   const SalaryDetails({
     this.grossSalary = 0,
     this.npsEmployer = 0,
@@ -39,6 +48,9 @@ class SalaryDetails {
     this.customExemptions = const {},
     this.history = const [],
     this.netSalaryReceived = const {},
+    this.independentDeductions = const [],
+    this.independentAllowances = const [],
+    this.independentExemptions = const [],
   });
 
   SalaryDetails copyWith({
@@ -51,6 +63,9 @@ class SalaryDetails {
     Map<String, double>? customExemptions,
     List<SalaryStructure>? history,
     Map<int, double>? netSalaryReceived,
+    List<CustomDeduction>? independentDeductions,
+    List<CustomAllowance>? independentAllowances,
+    List<CustomExemption>? independentExemptions,
   }) {
     return SalaryDetails(
       grossSalary: grossSalary ?? this.grossSalary,
@@ -62,6 +77,12 @@ class SalaryDetails {
       customExemptions: customExemptions ?? this.customExemptions,
       history: history ?? this.history,
       netSalaryReceived: netSalaryReceived ?? this.netSalaryReceived,
+      independentDeductions:
+          independentDeductions ?? this.independentDeductions,
+      independentAllowances:
+          independentAllowances ?? this.independentAllowances,
+      independentExemptions:
+          independentExemptions ?? this.independentExemptions,
     );
   }
 
@@ -76,6 +97,12 @@ class SalaryDetails {
         'history': history.map((e) => e.toMap()).toList(),
         'netSalaryReceived':
             netSalaryReceived.map((k, v) => MapEntry(k.toString(), v)),
+        'independentDeductions':
+            independentDeductions.map((e) => e.toMap()).toList(),
+        'independentAllowances':
+            independentAllowances.map((e) => e.toMap()).toList(),
+        'independentExemptions':
+            independentExemptions.map((e) => e.toMap()).toList(),
       };
 
   factory SalaryDetails.fromMap(Map<String, dynamic> m) => SalaryDetails(
@@ -96,6 +123,21 @@ class SalaryDetails {
         netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
                 MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
+        independentDeductions: (m['independentDeductions'] as List?)
+                ?.map((e) =>
+                    CustomDeduction.fromMap(Map<String, dynamic>.from(e)))
+                .toList() ??
+            [],
+        independentAllowances: (m['independentAllowances'] as List?)
+                ?.map((e) =>
+                    CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
+                .toList() ??
+            [],
+        independentExemptions: (m['independentExemptions'] as List?)
+                ?.map((e) =>
+                    CustomExemption.fromMap(Map<String, dynamic>.from(e)))
+                .toList() ??
+            [],
       );
 }
 
@@ -399,31 +441,38 @@ class SalaryStructure {
   @HiveField(6)
   final List<CustomAllowance> customAllowances;
 
-  // New Fields
   @HiveField(7)
-  final PayoutFrequency performancePayFrequency;
-  @HiveField(8)
-  final int? performancePayStartMonth; // 1-12
+  final double monthlyEmployeePF;
   @HiveField(9)
+  final double monthlyGratuity;
+  @HiveField(10)
+  final List<CustomDeduction> customDeductions;
+
+  // Performance/Variable Pay Config
+  @HiveField(11)
+  final PayoutFrequency performancePayFrequency;
+  @HiveField(12)
+  final int? performancePayStartMonth; // 1-12
+  @HiveField(13)
   final List<int>? performancePayCustomMonths;
 
-  @HiveField(10)
+  @HiveField(14)
   final PayoutFrequency variablePayFrequency;
-  @HiveField(11)
+  @HiveField(15)
   final int? variablePayStartMonth;
-  @HiveField(12)
+  @HiveField(16)
   final List<int>? variablePayCustomMonths;
 
-  @HiveField(13)
+  @HiveField(17)
   final bool isPerformancePayPartial;
-  @HiveField(14)
+  @HiveField(18)
   final Map<int, double> performancePayAmounts; // 1-12 calendar month
 
-  @HiveField(15)
+  @HiveField(19)
   final bool isVariablePayPartial;
-  @HiveField(16)
+  @HiveField(20)
   final Map<int, double> variablePayAmounts; // 1-12 calendar month
-  @HiveField(17)
+  @HiveField(21)
   final List<int> stoppedMonths;
 
   const SalaryStructure({
@@ -445,6 +494,9 @@ class SalaryStructure {
     this.isVariablePayPartial = false,
     this.variablePayAmounts = const {},
     this.stoppedMonths = const [],
+    this.monthlyEmployeePF = 0,
+    this.monthlyGratuity = 0,
+    this.customDeductions = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -455,6 +507,9 @@ class SalaryStructure {
         'monthlyPerformancePay': monthlyPerformancePay,
         'annualVariablePay': annualVariablePay,
         'customAllowances': customAllowances.map((e) => e.toMap()).toList(),
+        'monthlyEmployeePF': monthlyEmployeePF,
+        'monthlyGratuity': monthlyGratuity,
+        'customDeductions': customDeductions.map((e) => e.toMap()).toList(),
         'performancePayFrequency': performancePayFrequency.index,
         'performancePayStartMonth': performancePayStartMonth,
         'performancePayCustomMonths': performancePayCustomMonths,
@@ -484,8 +539,15 @@ class SalaryStructure {
                     CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
-        performancePayFrequency:
-            PayoutFrequency.values[m['performancePayFrequency'] ?? 0],
+        monthlyEmployeePF: (m['monthlyEmployeePF'] as num?)?.toDouble() ?? 0,
+        monthlyGratuity: (m['monthlyGratuity'] as num?)?.toDouble() ?? 0,
+        customDeductions: (m['customDeductions'] as List?)
+                ?.map((e) =>
+                    CustomDeduction.fromMap(Map<String, dynamic>.from(e)))
+                .toList() ??
+            [],
+        performancePayFrequency: PayoutFrequency
+            .values[m['performancePayFrequency'] ?? m['payoutFrequency'] ?? 0],
         performancePayStartMonth: m['performancePayStartMonth'],
         performancePayCustomMonths:
             (m['performancePayCustomMonths'] as List?)?.cast<int>(),
@@ -526,8 +588,7 @@ class SalaryStructure {
       total += (annualVariablePay / 12);
     }
 
-    total +=
-        customAllowances.fold(0.0, (sum, item) => sum + item.monthlyAmount);
+    total += customAllowances.fold(0.0, (sum, item) => sum + item.payoutAmount);
 
     return total;
   }
@@ -536,8 +597,8 @@ class SalaryStructure {
     if (stoppedMonths.contains(month)) return 0;
     double monthlyGross = monthlyBasic + monthlyFixedAllowances;
 
-    if (_isPayoutMonth(month, performancePayFrequency, performancePayStartMonth,
-        performancePayCustomMonths)) {
+    if (SalaryStructure.isPayoutMonth(month, performancePayFrequency,
+        performancePayStartMonth, performancePayCustomMonths)) {
       if (isPerformancePayPartial) {
         monthlyGross += (performancePayAmounts[month] ?? 0.0);
       } else {
@@ -545,8 +606,8 @@ class SalaryStructure {
       }
     }
 
-    if (_isPayoutMonth(month, variablePayFrequency, variablePayStartMonth,
-        variablePayCustomMonths)) {
+    if (SalaryStructure.isPayoutMonth(month, variablePayFrequency,
+        variablePayStartMonth, variablePayCustomMonths)) {
       if (isVariablePayPartial) {
         monthlyGross += (variablePayAmounts[month] ?? 0.0);
       } else {
@@ -571,9 +632,9 @@ class SalaryStructure {
 
     // Custom Allowances
     for (final allowance in customAllowances) {
-      if (_isPayoutMonth(month, allowance.frequency, allowance.startMonth,
-          allowance.customMonths)) {
-        double amount = allowance.monthlyAmount;
+      if (SalaryStructure.isPayoutMonth(month, allowance.frequency,
+          allowance.startMonth, allowance.customMonths)) {
+        double amount = allowance.payoutAmount;
         if (allowance.isPartial) {
           amount = allowance.partialAmounts[month] ?? 0.0;
         }
@@ -584,33 +645,33 @@ class SalaryStructure {
     return monthlyGross;
   }
 
-  bool _isPayoutMonth(int currentMonth, PayoutFrequency freq, int? startMonth,
-      List<int>? customMonths) {
+  static bool isPayoutMonth(int currentMonth, PayoutFrequency freq,
+      int? startMonth, List<int>? customMonths) {
     if (freq == PayoutFrequency.monthly) return true;
     if (freq == PayoutFrequency.annually) {
       return currentMonth == (startMonth ?? 3);
     }
     if (freq == PayoutFrequency.halfYearly) {
-      int s = startMonth ?? 3;
-      int second = (s + 6) > 12 ? (s + 6 - 12) : (s + 6);
-      return currentMonth == s || currentMonth == second;
+      int sVal = startMonth ?? 3;
+      int second = (sVal + 6) > 12 ? (sVal + 6 - 12) : (sVal + 6);
+      return currentMonth == sVal || currentMonth == second;
     }
     if (freq == PayoutFrequency.quarterly) {
-      int s = startMonth ?? 3;
+      int sVal = startMonth ?? 3;
       List<int> months = [
-        s,
-        (s + 3) > 12 ? (s + 3 - 12) : (s + 3),
-        (s + 6) > 12 ? (s + 6 - 12) : (s + 6),
-        (s + 9) > 12 ? (s + 9 - 12) : (s + 9),
+        sVal,
+        (sVal + 3) > 12 ? (sVal + 3 - 12) : (sVal + 3),
+        (sVal + 6) > 12 ? (sVal + 6 - 12) : (sVal + 6),
+        (sVal + 9) > 12 ? (sVal + 9 - 12) : (sVal + 9),
       ];
       return months.contains(currentMonth);
     }
     if (freq == PayoutFrequency.trimester) {
-      int s = startMonth ?? 3;
+      int sVal = startMonth ?? 3;
       List<int> months = [
-        s,
-        (s + 4) > 12 ? (s + 4 - 12) : (s + 4),
-        (s + 8) > 12 ? (s + 8 - 12) : (s + 8),
+        sVal,
+        (sVal + 4) > 12 ? (sVal + 4 - 12) : (sVal + 4),
+        (sVal + 8) > 12 ? (sVal + 8 - 12) : (sVal + 8),
       ];
       return months.contains(currentMonth);
     }
@@ -639,6 +700,9 @@ class SalaryStructure {
     bool? isVariablePayPartial,
     Map<int, double>? variablePayAmounts,
     List<int>? stoppedMonths,
+    double? monthlyEmployeePF,
+    double? monthlyGratuity,
+    List<CustomDeduction>? customDeductions,
   }) {
     return SalaryStructure(
       id: id ?? this.id,
@@ -668,8 +732,90 @@ class SalaryStructure {
       isVariablePayPartial: isVariablePayPartial ?? this.isVariablePayPartial,
       variablePayAmounts: variablePayAmounts ?? this.variablePayAmounts,
       stoppedMonths: stoppedMonths ?? this.stoppedMonths,
+      monthlyEmployeePF: monthlyEmployeePF ?? this.monthlyEmployeePF,
+      monthlyGratuity: monthlyGratuity ?? this.monthlyGratuity,
+      customDeductions: customDeductions ?? this.customDeductions,
     );
   }
+}
+
+@HiveType(typeId: 222)
+class CustomDeduction {
+  @HiveField(0)
+  final String name;
+  @HiveField(1)
+  final double amount;
+  @HiveField(2)
+  final bool isTaxable; // If true, reduces taxable gross income
+
+  @HiveField(3)
+  final PayoutFrequency frequency;
+  @HiveField(4)
+  final int? startMonth;
+  @HiveField(5)
+  final List<int>? customMonths;
+  @HiveField(6)
+  final bool isPartial;
+  @HiveField(7)
+  final Map<int, double> partialAmounts;
+
+  const CustomDeduction({
+    required this.name,
+    required this.amount,
+    this.isTaxable = false,
+    this.frequency = PayoutFrequency.monthly,
+    this.startMonth,
+    this.customMonths,
+    this.isPartial = false,
+    this.partialAmounts = const {},
+  });
+
+  CustomDeduction copyWith({
+    String? name,
+    double? amount,
+    bool? isTaxable,
+    PayoutFrequency? frequency,
+    int? startMonth,
+    List<int>? customMonths,
+    bool? isPartial,
+    Map<int, double>? partialAmounts,
+  }) {
+    return CustomDeduction(
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      isTaxable: isTaxable ?? this.isTaxable,
+      frequency: frequency ?? this.frequency,
+      startMonth: startMonth ?? this.startMonth,
+      customMonths: customMonths ?? this.customMonths,
+      isPartial: isPartial ?? this.isPartial,
+      partialAmounts: partialAmounts ?? this.partialAmounts,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'amount': amount,
+        'isTaxable': isTaxable,
+        'frequency': frequency.index,
+        'startMonth': startMonth,
+        'customMonths': customMonths,
+        'isPartial': isPartial,
+        'partialAmounts':
+            partialAmounts.map((k, v) => MapEntry(k.toString(), v)),
+      };
+
+  factory CustomDeduction.fromMap(Map<String, dynamic> m) => CustomDeduction(
+        name: m['name'] ?? '',
+        amount: (m['amount'] as num?)?.toDouble() ?? 0,
+        isTaxable: m['isTaxable'] ?? false,
+        frequency: PayoutFrequency.values[m['frequency'] ?? 0],
+        startMonth: m['startMonth'],
+        customMonths: (m['customMonths'] as List?)?.cast<int>(),
+        isPartial: m['isPartial'] ?? false,
+        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
+      );
 }
 
 @HiveType(typeId: 221)
@@ -677,7 +823,7 @@ class CustomAllowance {
   @HiveField(0)
   final String name;
   @HiveField(1)
-  final double monthlyAmount;
+  final double payoutAmount; // Amount paid in the payout month
   @HiveField(2)
   final bool isPartial;
 
@@ -692,7 +838,7 @@ class CustomAllowance {
 
   const CustomAllowance({
     required this.name,
-    required this.monthlyAmount,
+    required this.payoutAmount,
     this.isPartial = false,
     this.frequency = PayoutFrequency.monthly,
     this.startMonth,
@@ -702,7 +848,7 @@ class CustomAllowance {
 
   CustomAllowance copyWith({
     String? name,
-    double? monthlyAmount,
+    double? payoutAmount,
     bool? isPartial,
     PayoutFrequency? frequency,
     int? startMonth,
@@ -711,7 +857,7 @@ class CustomAllowance {
   }) {
     return CustomAllowance(
       name: name ?? this.name,
-      monthlyAmount: monthlyAmount ?? this.monthlyAmount,
+      payoutAmount: payoutAmount ?? this.payoutAmount,
       isPartial: isPartial ?? this.isPartial,
       frequency: frequency ?? this.frequency,
       startMonth: startMonth ?? this.startMonth,
@@ -722,7 +868,7 @@ class CustomAllowance {
 
   Map<String, dynamic> toMap() => {
         'name': name,
-        'monthlyAmount': monthlyAmount,
+        'payoutAmount': payoutAmount,
         'isPartial': isPartial,
         'frequency': frequency.index,
         'startMonth': startMonth,
@@ -733,7 +879,9 @@ class CustomAllowance {
 
   factory CustomAllowance.fromMap(Map<String, dynamic> m) => CustomAllowance(
         name: m['name'] ?? '',
-        monthlyAmount: (m['monthlyAmount'] as num?)?.toDouble() ?? 0,
+        payoutAmount: (m['payoutAmount'] as num?)?.toDouble() ??
+            (m['monthlyAmount'] as num?)?.toDouble() ??
+            0,
         isPartial: m['isPartial'] ?? false,
         frequency: PayoutFrequency.values[m['frequency'] ?? 0],
         startMonth: m['startMonth'],
@@ -855,4 +1003,31 @@ extension TaxStringHelpers on String {
     result = result[0].toUpperCase() + result.substring(1);
     return result;
   }
+}
+
+@HiveType(typeId: 224)
+class CustomExemption {
+  @HiveField(0)
+  final String name;
+  @HiveField(1)
+  final double amount;
+
+  const CustomExemption({required this.name, required this.amount});
+
+  CustomExemption copyWith({String? name, double? amount}) {
+    return CustomExemption(
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'amount': amount,
+      };
+
+  factory CustomExemption.fromMap(Map<String, dynamic> m) => CustomExemption(
+        name: m['name'] ?? '',
+        amount: (m['amount'] as num?)?.toDouble() ?? 0,
+      );
 }

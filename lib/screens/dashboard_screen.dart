@@ -19,6 +19,7 @@ import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
 import '../utils/ui_utils.dart';
 import '../models/dashboard_config.dart';
+import 'lending/lending_dashboard_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -235,20 +236,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             final allTxns = ref.watch(transactionsProvider).value ?? [];
             final now = DateTime.now();
 
+            final storage = ref.watch(storageServiceProvider);
+
             for (var acc in accounts) {
               double unbilled = 0;
+              double billed = 0;
               if (acc.type == AccountType.creditCard) {
                 unbilled =
                     BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
+                billed = BillingHelper.calculateBilledAmount(
+                    acc, allTxns, now, storage.getLastRollover(acc.id));
               }
 
               if (acc.type == AccountType.creditCard) {
-                // For Credit Cards, positive balance + unbilled is Debt
-                final totalOwed = acc.balance + unbilled;
+                // For Credit Cards, the entire usage (Balance + Billed + Unbilled)
+                // reduces Net Worth as it's a liability.
+                final totalOwed = acc.balance + billed + unbilled;
                 if (totalOwed > 0) {
                   debt += totalOwed;
                 }
-                // CC Balance + Unbilled reduces Net Worth (assuming positive balance = owed)
                 netWorth -= totalOwed;
               } else {
                 // For other accounts (Savings, Cash), balance is Asset
@@ -756,6 +762,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             onTap: () => Navigator.pushNamed(context, '/taxes'),
             child: _buildActionItem(
                 context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LendingDashboardScreen()),
+            ),
+            child: _buildActionItem(
+                context, Icons.handshake, 'Lending', Colors.teal),
           ),
         ],
       ),

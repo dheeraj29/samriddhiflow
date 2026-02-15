@@ -10,6 +10,7 @@ import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
 import 'cc_payment_dialog.dart';
+import '../services/repair_service.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
   @override
@@ -298,15 +299,22 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
   Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
     double unbilled = 0;
+    double billed = 0;
     if (acc.type == AccountType.creditCard) {
       final now = DateTime.now();
       final allTxns = ref.watch(transactionsProvider).value ?? [];
       unbilled = BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
+
+      final storage = ref.watch(storageServiceProvider);
+      final lastRollover = storage.getLastRollover(acc.id);
+      billed =
+          BillingHelper.calculateBilledAmount(acc, allTxns, now, lastRollover);
     }
 
     return AccountCard(
       account: acc,
       unbilledAmount: unbilled,
+      billedAmount: billed,
       compactView: _compactView,
       onTap: () => _showAccountOptions(context, ref, acc),
     );
@@ -357,6 +365,38 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                       context: context,
                       builder: (_) =>
                           RecordCCPaymentDialog(creditCardAccount: acc));
+                },
+              ),
+            if (acc.type == AccountType.creditCard)
+              ListTile(
+                leading: const Icon(Icons.build_circle_outlined,
+                    color: Colors.orange),
+                title: const Text('Recalculate Bill',
+                    style: TextStyle(
+                        color: Colors.orange, fontWeight: FontWeight.bold)),
+                subtitle: const Text('Refreshes billing cycle display'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final repairService = ref.read(repairServiceProvider);
+                  final job = repairService.getJob('recalculate_billed_amount');
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Recalculating bill...')),
+                  );
+
+                  await job.run(ref.reader, args: {
+                    'accountId': acc.id,
+                  });
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Bill recalculated for ${acc.name}.')),
+                    );
+                  }
+                  // Refresh
+                  ref.invalidate(accountsProvider);
+                  ref.invalidate(transactionsProvider);
                 },
               ),
             ListTile(

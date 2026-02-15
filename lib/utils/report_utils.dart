@@ -38,9 +38,13 @@ class ReportUtils {
     Map<String, double> data = {};
     for (var t in transactions) {
       if (t.loanId != null &&
-          (t.category == 'EMI' ||
+          (t.category == 'Bank loan' ||
+              t.category == 'EMI' ||
               t.category == 'Prepayment' ||
-              t.category == 'Loan Payment')) {
+              t.category == 'Loan Payment' ||
+              t.category == 'Loan Repayment' ||
+              t.category == 'Loan Principal' ||
+              t.category == 'Loan Interest')) {
         data[t.title] = (data[t.title] ?? 0) + t.amount;
       }
     }
