@@ -13,14 +13,14 @@ class MockUserCredential extends Mock implements UserCredential {}
 
 class MockStorageService extends Mock implements StorageService {}
 
-class MockLogoutRequestedNotifier extends Mock
-    implements LogoutRequestedNotifier {}
-
 abstract class RefInterface {
   T read<T>(dynamic provider);
 }
 
 class MockRef extends Mock implements RefInterface {}
+
+class MockLogoutRequestedNotifier extends Mock
+    implements LogoutRequestedNotifier {}
 
 void main() {
   late AuthService authService;
@@ -35,9 +35,10 @@ void main() {
     mockUser = MockUser();
     mockRef = MockRef();
 
-    authService = AuthService(mockAuth, mockStorage);
+    authService = AuthService(mockAuth, mockStorage, true);
 
     registerFallbackValue(false);
+    when(() => mockRef.read(logoutRequestedProvider)).thenReturn(false);
   });
 
   test('currentUser returns mocked user', () {
@@ -69,8 +70,10 @@ void main() {
           .thenThrow(FirebaseAuthException(code: 'user-disabled'));
       when(() => mockAuth.signOut()).thenAnswer((_) async {});
       when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
+
+      final mockNotifier = MockLogoutRequestedNotifier();
       when(() => mockRef.read(logoutRequestedProvider.notifier))
-          .thenReturn(MockLogoutRequestedNotifier());
+          .thenReturn(mockNotifier);
 
       final response = await authService.signInWithGoogle(mockRef);
 
@@ -106,5 +109,105 @@ void main() {
     verify(() => mockAuth.signOut()).called(1);
     verify(() => mockStorage.setAuthFlag(false)).called(1);
     verify(() => mockRef.read(logoutRequestedProvider.notifier)).called(1);
+  });
+
+  test('reloadUser calls firebase reload', () async {
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockUser.reload()).thenAnswer((_) async {});
+
+    await authService.reloadUser(mockRef);
+
+    verify(() => mockUser.reload()).called(1);
+  });
+
+  test('reloadUser skips if signOutInProgress', () async {
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    authService.isSignOutInProgress = true;
+    await authService.reloadUser(mockRef);
+    verifyNever(() => mockUser.reload());
+  });
+
+  testWidgets('signInWithGoogle returns error if firebase auth is null',
+      (WidgetTester tester) async {
+    final authServiceNull = AuthService(null, mockStorage);
+    // This will hit the Lazy Initializing branch since _auth is null
+    final response = await authServiceNull.signInWithGoogle(null);
+    expect(response.status, AuthStatus.error);
+    // The exact message depend on whether Lazy Init fails (it will in tests)
+    expect(response.message, contains('Connection failed'));
+  });
+
+  group('handleRedirectResult', () {
+    test('returns early if signOutInProgress', () async {
+      authService.isSignOutInProgress = true;
+      await authService.handleRedirectResult(mockRef);
+      verifyNever(() => mockAuth.getRedirectResult());
+    });
+
+    test('recovers session if redirect user is found', () async {
+      final mockCredential = MockUserCredential();
+      when(() => mockAuth.getRedirectResult())
+          .thenAnswer((_) async => mockCredential);
+      when(() => mockCredential.user).thenReturn(mockUser);
+      when(() => mockStorage.setAuthFlag(true)).thenAnswer((_) async {});
+
+      final mockNotifier = MockLogoutRequestedNotifier();
+      when(() => mockRef.read(logoutRequestedProvider.notifier))
+          .thenReturn(mockNotifier);
+
+      await authService.handleRedirectResult(mockRef);
+
+      verify(() => mockStorage.setAuthFlag(true)).called(1);
+      verify(() => mockNotifier.value = false).called(1);
+    });
+
+    test('recovers session if currentUser is already restored (fallback)',
+        () async {
+      final mockCredential = MockUserCredential();
+      when(() => mockAuth.getRedirectResult())
+          .thenAnswer((_) async => mockCredential);
+      when(() => mockCredential.user).thenReturn(null);
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockStorage.setAuthFlag(true)).thenAnswer((_) async {});
+
+      final mockNotifier = MockLogoutRequestedNotifier();
+      when(() => mockRef.read(logoutRequestedProvider.notifier))
+          .thenReturn(mockNotifier);
+
+      await authService.handleRedirectResult(mockRef);
+
+      verify(() => mockStorage.setAuthFlag(true)).called(1);
+    });
+
+    test('handles redirect errors gracefully', () async {
+      when(() => mockAuth.getRedirectResult()).thenThrow(Exception('Fail'));
+      await authService.handleRedirectResult(mockRef);
+      // Completes without throwing
+    });
+  });
+
+  test('signOut handles exceptions during firebase signOut', () async {
+    final mockNotifier = MockLogoutRequestedNotifier();
+    when(() => mockRef.read(logoutRequestedProvider.notifier))
+        .thenReturn(mockNotifier);
+    when(() => mockAuth.signOut()).thenThrow(Exception('Signout failed'));
+    when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
+
+    await authService.signOut(mockRef);
+    verify(() => mockStorage.setAuthFlag(false)).called(1);
+  });
+
+  test('deleteAccount calls user delete', () async {
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockUser.delete()).thenAnswer((_) async {});
+
+    await authService.deleteAccount();
+
+    verify(() => mockUser.delete()).called(1);
+  });
+
+  test('authStateChanges returns null stream if _auth is null', () {
+    final authServiceNull = AuthService(null, mockStorage);
+    expect(authServiceNull.authStateChanges, emits(null));
   });
 }

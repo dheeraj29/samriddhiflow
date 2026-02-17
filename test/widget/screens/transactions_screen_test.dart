@@ -189,4 +189,72 @@ void main() {
 
     expect(find.byType(DropdownButton<String?>), findsWidgets);
   });
+
+  testWidgets('TransactionsScreen filters by type', (tester) async {
+    final t1 = Transaction.create(
+      title: 'Income1',
+      amount: 100,
+      type: TransactionType.income,
+      category: 'S',
+      accountId: 'a1',
+      date: DateTime.now(),
+    );
+    final t2 = Transaction.create(
+      title: 'Expense1',
+      amount: 50,
+      type: TransactionType.expense,
+      category: 'F',
+      accountId: 'a1',
+      date: DateTime.now(),
+    );
+
+    await tester.pumpWidget(createWidgetUnderTest(transactions: [t1, t2]));
+    await tester.pumpAndSettle();
+
+    final typeDropdown =
+        find.widgetWithText(DropdownButtonFormField<TransactionType?>, 'Type');
+    await tester.tap(typeDropdown);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Income').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Income1'), findsOneWidget);
+    expect(find.text('Expense1'), findsNothing);
+  });
+
+  testWidgets('TransactionsScreen Select All (Filtered) logic', (tester) async {
+    final t1 = Transaction.create(
+      title: 'T1',
+      amount: 10,
+      type: TransactionType.expense,
+      category: 'A',
+      accountId: 'a1',
+      date: DateTime.now(),
+    );
+    final t2 = Transaction.create(
+      title: 'T2',
+      amount: 20,
+      type: TransactionType.income,
+      category: 'B',
+      accountId: 'a1',
+      date: DateTime.now(),
+    );
+
+    await tester.pumpWidget(createWidgetUnderTest(transactions: [t1, t2]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Select Transactions'));
+    await tester.pumpAndSettle();
+
+    final selectAllButton = find.byTooltip('Select All (Filtered)');
+    await tester.tap(selectAllButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 Selected'), findsOneWidget);
+
+    await tester.tap(selectAllButton);
+    await tester.pumpAndSettle();
+    expect(find.text('All Transactions'), findsOneWidget);
+  });
 }

@@ -42,7 +42,7 @@ void main() {
 
       // Feature Services
       container.read(cloudSyncServiceProvider);
-      container.read(excelServiceProvider);
+
       container.read(calendarServiceProvider);
       container.read(notificationServiceProvider);
 
@@ -54,7 +54,7 @@ void main() {
 
       // Feature Services
       container.read(cloudSyncServiceProvider);
-      container.read(excelServiceProvider);
+
       container.read(calendarServiceProvider);
       container.read(notificationServiceProvider);
     });

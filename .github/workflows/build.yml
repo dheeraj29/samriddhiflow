@@ -20,8 +20,11 @@ jobs:
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
 
 
+      - name: Install Dependencies
+        run: flutter pub get
+
       - name: Run Tests
-        run: flutter test --coverage
+        run: flutter test --coverage --no-pub
 
       - name: Build Web
         env:

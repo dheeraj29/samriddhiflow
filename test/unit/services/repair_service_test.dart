@@ -1,53 +1,89 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/services/repair_service.dart';
-import '../../widget/test_mocks.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/providers.dart';
 
 class MockRefReader extends Mock implements RefReader {}
 
+class MockStorageService extends Mock implements StorageService {}
+
 void main() {
-  late MockStorageService mockStorage;
   late RepairService repairService;
   late MockRefReader mockRef;
+  late MockStorageService mockStorage;
 
   setUp(() {
-    mockStorage = MockStorageService();
     repairService = RepairService();
     mockRef = MockRefReader();
+    mockStorage = MockStorageService();
 
     when(() => mockRef.read(storageServiceProvider)).thenReturn(mockStorage);
+    when(() => mockRef.read(currencyProvider)).thenReturn('INR');
   });
 
-  group('RepairService', () {
-    test('jobs list is not empty', () {
-      expect(repairService.jobs, isNotEmpty);
-      expect(repairService.jobs.length, 2);
+  test('RepairService contains all jobs', () {
+    expect(repairService.jobs.any((j) => j is RepairAccountCurrencyJob), true);
+    expect(
+        repairService.jobs.any((j) => j is RecalculateBilledAmountJob), true);
+  });
+
+  test('getJob returns job by id or throws', () {
+    final job = repairService.getJob('repair_account_currency');
+    expect(job, isA<RepairAccountCurrencyJob>());
+    expect(() => repairService.getJob('non_existent'), throwsException);
+  });
+
+  group('RecalculateBilledAmountJob', () {
+    final job = RecalculateBilledAmountJob();
+
+    test('runs for specific accountId', () async {
+      when(() => mockStorage.recalculateBilledAmount(any()))
+          .thenAnswer((_) async {});
+
+      final count = await job.run(mockRef, args: {'accountId': 'acc1'});
+
+      expect(count, 1);
+      verify(() => mockStorage.recalculateBilledAmount('acc1')).called(1);
     });
 
-    test('getJob returns correct job', () {
-      final job = repairService.getJob('repair_account_currency');
-      expect(job, isA<RepairAccountCurrencyJob>());
-      expect(job.name, 'Repair Account Currency');
-    });
+    test('runs for all credit cards if no accountId provided', () async {
+      final acc1 = Account(
+          id: 'c1', name: 'C1', type: AccountType.creditCard, balance: 0);
+      final acc2 =
+          Account(id: 's1', name: 'S1', type: AccountType.savings, balance: 0);
 
-    test('getJob throws on invalid id', () {
-      expect(() => repairService.getJob('invalid_id'), throwsException);
+      when(() => mockStorage.getAccounts()).thenReturn([acc1, acc2]);
+      when(() => mockStorage.recalculateBilledAmount(any()))
+          .thenAnswer((_) async {});
+
+      final count = await job.run(mockRef);
+
+      expect(count, 1); // Only c1
+      verify(() => mockStorage.recalculateBilledAmount('c1')).called(1);
+      verifyNever(() => mockStorage.recalculateBilledAmount('s1'));
     });
   });
 
   group('RepairAccountCurrencyJob', () {
-    test('run calls storage.repairAccountCurrencies', () async {
-      final job = RepairAccountCurrencyJob();
+    final job = RepairAccountCurrencyJob();
 
+    test('calls repairAccountCurrencies with default currency', () async {
       when(() => mockStorage.repairAccountCurrencies(any()))
           .thenAnswer((_) async => 5);
-      when(() => mockRef.read(currencyProvider)).thenReturn('en_IN');
 
       final count = await job.run(mockRef);
 
-      verify(() => mockStorage.repairAccountCurrencies('en_IN')).called(1);
       expect(count, 5);
+      verify(() => mockStorage.repairAccountCurrencies('INR')).called(1);
     });
+  });
+
+  test('RepairJob properties check', () {
+    final job = RecalculateBilledAmountJob();
+    expect(job.name, isNotEmpty);
+    expect(job.description, isNotEmpty);
+    expect(job.showInSettings, false);
   });
 }

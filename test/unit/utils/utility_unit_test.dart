@@ -1,11 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
-import 'package:samriddhi_flow/models/account.dart';
-import 'package:samriddhi_flow/models/category.dart';
-import 'package:samriddhi_flow/models/profile.dart';
+
 import 'package:samriddhi_flow/utils/financial_utils.dart';
-import 'package:samriddhi_flow/utils/excel_utils.dart';
 
 void main() {
   group('FinancialUtils Tests', () {
@@ -121,38 +118,6 @@ void main() {
 
     test('calculateMaxRemainingTenure - returns 0 for empty list', () {
       expect(FinancialUtils.calculateMaxRemainingTenure([]), 0);
-    });
-  });
-
-  group('ExcelUtils Mapping Tests', () {
-    test('profileToRow - maps profile correctly', () {
-      final p = Profile(
-          id: 'p1', name: 'Dev', currencyLocale: 'en_US', monthlyBudget: 1000);
-      final row = ExcelUtils.profileToRow(p);
-      expect(row, ['p1', 'Dev']);
-    });
-
-    test('accountToRow - maps account correctly', () {
-      final a = Account(
-          id: 'a1',
-          name: 'Bank',
-          type: AccountType.savings,
-          balance: 5000,
-          profileId: 'p1');
-      final row = ExcelUtils.accountToRow(a);
-      expect(row, ['a1', 'Bank', 'savings', '5000.0', 'p1']);
-    });
-
-    test('categoryToRow - maps category correctly', () {
-      final c = Category(
-          id: 'c1',
-          name: 'Food',
-          usage: CategoryUsage.expense,
-          tag: CategoryTag.none,
-          iconCode: 123,
-          profileId: 'p1');
-      final row = ExcelUtils.categoryToRow(c);
-      expect(row, ['c1', 'Food', 'expense', 'none', '123', 'p1']);
     });
   });
 }

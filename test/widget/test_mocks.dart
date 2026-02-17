@@ -6,7 +6,7 @@ import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/auth_service.dart';
-import 'package:samriddhi_flow/services/excel_service.dart';
+
 import 'package:samriddhi_flow/services/file_service.dart';
 import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
@@ -27,11 +27,6 @@ class MockCalendarService extends Mock implements CalendarService {}
 class MockCloudSyncService extends Mock implements CloudSyncService {}
 
 class MockRepairService extends Mock implements RepairService {}
-
-class MockExcelService extends Mock implements ExcelService {
-  @override
-  Future<List<int>> exportData({bool allProfiles = false}) async => [];
-}
 
 class MockAuthService extends Mock implements AuthService {}
 

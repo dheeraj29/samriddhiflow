@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../models/loan.dart';
@@ -224,6 +225,9 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
                   labelText: 'Payment Amount', prefixText: '₹ '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+              ],
             ),
             const SizedBox(height: 16),
             InkWell(

@@ -47,7 +47,7 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
                 labelText: 'New EMI Amount', border: OutlineInputBorder()),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
             ],
           ),
           const SizedBox(height: 16),

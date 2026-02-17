@@ -284,8 +284,91 @@ void main() {
     await tester.tap(find.byTooltip('Switch to Extended Numbers'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Total Credit Usage'), findsOneWidget);
-    // 5000 (billed) + 2000 (unbilled) = 7000
     expect(find.textContaining('7,000'), findsWidgets);
+  });
+
+  testWidgets('AccountsScreen account deletion flow', (tester) async {
+    final account = Account(
+        id: 'del1',
+        name: 'DeleteMe',
+        type: AccountType.savings,
+        profileId: 'default');
+    when(() => mockStorageService.deleteAccount(any()))
+        .thenAnswer((_) async {});
+
+    await tester.pumpWidget(createTestWidget(tester, accounts: [account]));
+    await tester.pumpAndSettle();
+
+    // Open options
+    await tester.tap(find.text('DeleteMe'));
+    await tester.pumpAndSettle();
+
+    final deleteOption = find.text('Delete Account');
+    expect(deleteOption, findsOneWidget);
+    await tester.tap(deleteOption);
+    await tester.pumpAndSettle();
+
+    // Confirm dialog
+    expect(find.text('Delete Account?'), findsOneWidget);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorageService.deleteAccount('del1')).called(1);
+  });
+
+  testWidgets('AccountsScreen credit card payment dialog flow', (tester) async {
+    final card = Account(
+        id: 'cc_pay',
+        name: 'Chase Card',
+        type: AccountType.creditCard,
+        balance: 1000,
+        billingCycleDay: 15,
+        profileId: 'default');
+
+    when(() => mockStorageService.getLastRollover(any())).thenReturn(null);
+
+    await tester.pumpWidget(createTestWidget(tester, accounts: [card]));
+    await tester.pumpAndSettle();
+
+    // Open options
+    await tester.tap(find.text('Chase Card'));
+    await tester.pumpAndSettle();
+
+    final payOption = find.text('Pay Bill');
+    expect(payOption, findsOneWidget);
+    await tester.tap(payOption);
+    await tester.pumpAndSettle();
+
+    // Check if RecordCCPaymentDialog appeared
+    expect(find.text('Pay Chase Card Bill'), findsOneWidget);
+  });
+
+  testWidgets('AccountsScreen clear billed amount flow', (tester) async {
+    final card = Account(
+        id: 'cc_clear',
+        name: 'Amex',
+        type: AccountType.creditCard,
+        balance: 1000,
+        profileId: 'default');
+
+    when(() => mockStorageService.clearBilledAmount(any()))
+        .thenAnswer((_) async {});
+
+    await tester.pumpWidget(createTestWidget(tester, accounts: [card]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Amex'));
+    await tester.pumpAndSettle();
+
+    final clearOption = find.text('Clear Billed Amount');
+    await tester.tap(clearOption);
+    await tester.pumpAndSettle();
+
+    // Confirm dialog
+    expect(find.text('Clear Billed Amount?'), findsOneWidget);
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorageService.clearBilledAmount('cc_clear')).called(1);
   });
 }

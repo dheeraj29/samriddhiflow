@@ -776,7 +776,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
               ],
             ),
           ],
@@ -1311,7 +1311,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}')),
+                            RegExp(r'^\d*\.?\d{0,2}$')),
                       ]),
                   TextField(
                       controller: taxCtrl,
@@ -1321,7 +1321,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}')),
+                            RegExp(r'^\d*\.?\d{0,2}$')),
                       ]),
                 ],
                 const Divider(),
@@ -1366,7 +1366,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}')),
+                            RegExp(r'^\d*\.?\d{0,2}$')),
                       ]),
                 if (selectedLoanId != null)
                   Padding(
@@ -1542,7 +1542,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
                 TextField(
                     controller: netCtrl,
@@ -1555,7 +1555,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
               ],
             ),
@@ -1789,7 +1789,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
                 TextField(
                     controller: costCtrl,
@@ -1799,7 +1799,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
                 ListTile(
                   title: const Text('Gain Date'),
@@ -1864,7 +1864,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}')),
+                              RegExp(r'^\d*\.?\d{0,2}$')),
                         ]),
                     ListTile(
                       title: const Text('Reinvest Date'),
@@ -2005,7 +2005,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}')),
+                              RegExp(r'^\d*\.?\d{0,2}$')),
                         ],
                       ),
                       if (validExemptions.isNotEmpty) ...[
@@ -2090,7 +2090,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       decoration: InputDecoration(labelText: label, helperText: subtitle),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
       ],
     );
   }
@@ -2199,7 +2199,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
                 ],
               ),
               const SizedBox(height: 8),
@@ -2322,7 +2322,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
+                        RegExp(r'^\d*\.?\d{0,2}$')),
                   ]),
             ],
           ),
@@ -2394,7 +2394,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
+                        RegExp(r'^\d*\.?\d{0,2}$')),
                   ],
                   decoration: const InputDecoration(
                     prefixText: '₹ ',
@@ -2623,7 +2623,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
                 ],
               ),
               const SizedBox(height: 16),
@@ -2638,7 +2638,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
                 ],
               ),
               const SizedBox(height: 16),
@@ -2656,7 +2656,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
+                        RegExp(r'^\d*\.?\d{0,2}$')),
                   ],
                   decoration: const InputDecoration(
                     isDense: true,
@@ -3093,7 +3093,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
                 ],
               ),
               const SizedBox(height: 12),
@@ -3268,7 +3268,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     labelText: 'Annual Amount',
                     helperText:
                         'For monthly, total yearly. For others, payout amt.'),
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                ],
               ),
               const SizedBox(height: 16),
               ValueListenableBuilder<bool>(
@@ -3405,7 +3409,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             const SizedBox(height: 16),
             TextField(
               controller: targetCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+              ],
               decoration: const InputDecoration(
                   labelText: 'Annual CTC', border: OutlineInputBorder()),
             ),

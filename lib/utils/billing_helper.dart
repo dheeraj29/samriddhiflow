@@ -69,7 +69,7 @@ class BillingHelper {
     final relevantTxns = allTxns.where((t) =>
         !t.isDeleted &&
         (t.accountId == acc.id || t.toAccountId == acc.id) &&
-        t.date.isAfter(start) &&
+        !t.date.isBefore(start) &&
         (t.date.isBefore(end) || t.date.isAtSameMomentAs(end)));
 
     double spend = 0;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/loan.dart';
@@ -43,6 +44,9 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
             decoration: const InputDecoration(
                 labelText: 'New Annual Rate (%)', suffixText: '%'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+            ],
           ),
           const SizedBox(height: 16),
           FormUtils.buildDatePickerField(
@@ -69,8 +73,8 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
                 ),
                 RadioListTile<bool>.adaptive(
                   title: Text('Adjust Tenure'),
-                  subtitle: Text(
-                      'Keep EMI constant.\nLoan duration will change.'),
+                  subtitle:
+                      Text('Keep EMI constant.\nLoan duration will change.'),
                   value: true,
                 ),
               ],

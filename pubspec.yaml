@@ -1,7 +1,7 @@
 name: samriddhi_flow
 description: Samriddhi Flow - Premium personal finance and smart budgeting PWA.
 publish_to: 'none'
-version: 2.3.0
+version: 2.4.0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -25,9 +25,10 @@ dependencies:
   # path_provider: ^2.1.2 # Often included in flutter sdk or via hive_flutter implicitly, but good to have explicit if needed for non-web logic
   
   # Data Handling
-  excel: ^4.0.0
+
   file_picker: ^10.3.10
   web: ^1.1.1
+  archive: ^4.0.7
   
   # Firebase
   firebase_core: ^4.3.0
@@ -72,3 +73,4 @@ flutter:
     - family: AppFont
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf
+

@@ -140,7 +140,8 @@ class _InsurancePortfolioScreenState
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
                 TextField(
                     controller: sumAssuredCtrl,
@@ -148,7 +149,8 @@ class _InsurancePortfolioScreenState
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ]),
                 const SizedBox(height: 16),
                 Row(
@@ -434,7 +436,8 @@ class _InsurancePortfolioScreenState
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
                     ],
                   )
                 ]),
@@ -502,7 +505,7 @@ class _InsurancePortfolioScreenState
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
         ],
       ),
     );

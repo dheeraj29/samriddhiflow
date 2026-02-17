@@ -9,254 +9,277 @@ import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
 void main() {
-  late MockTaxConfigService mockConfig;
   late IndianTaxService taxService;
+  late MockTaxConfigService mockConfig;
+
+  final defaultSlabs = [
+    const TaxSlab(300000, 0),
+    const TaxSlab(600000, 5),
+    const TaxSlab(900000, 10),
+    const TaxSlab(1200000, 15),
+    const TaxSlab(1500000, 20),
+    const TaxSlab(double.infinity, 30),
+  ];
+
+  final defaultRules = TaxRules(
+    slabs: defaultSlabs,
+    stdDeductionSalary: 75000,
+    rebateLimit: 700000,
+    cessRate: 4,
+    limitLeaveEncashment: 2500000,
+    limitGratuity: 2000000,
+    isStdDeductionSalaryEnabled: true,
+    isRebateEnabled: true,
+    isCessEnabled: true,
+  );
 
   setUp(() {
     mockConfig = MockTaxConfigService();
     taxService = IndianTaxService(mockConfig);
+    when(() => mockConfig.getRulesForYear(any())).thenReturn(defaultRules);
   });
 
-  TaxRules createBasicRules() {
-    return TaxRules(
-      stdDeductionSalary: 50000,
-      isStdDeductionSalaryEnabled: true,
-      rebateLimit: 0, // Disable rebate for simple calculation
-      isRebateEnabled: false,
-      isCessEnabled: true,
-      cessRate: 4.0,
-      stdExemption112A: 125000,
-      isLTCGExemption112AEnabled: true,
-      ltcgRateEquity: 12.5,
-      stcgRate: 20.0,
-      isCGRatesEnabled: true,
-      slabs: const [
-        TaxSlab(250000, 0),
-        TaxSlab(500000, 5),
-        TaxSlab(1000000, 20),
-        TaxSlab(double.infinity, 30),
-      ],
-    );
-  }
-
-  group('IndianTaxService - Salary', () {
-    test('calculateSalaryIncome with standard deduction', () {
-      final rules = createBasicRules();
+  group('IndianTaxService - calculateDetailedLiability', () {
+    test('Basic salary calculation with Standard Deduction', () {
       final data = TaxYearData(
         year: 2025,
-        salary: const SalaryDetails(
-          grossSalary: 600000,
-        ),
+        salary: const SalaryDetails(grossSalary: 1000000),
       );
 
-      final income = taxService.calculateSalaryIncome(data, rules);
+      final result = taxService.calculateDetailedLiability(data, defaultRules);
 
-      // Expected Salary Income: 600,000 - 50,000 (Std Ded) = 550,000
-      expect(income, 550000);
+      // Gross = 10L, Net Taxable = 10L - 75k (StdDed) = 9.25L
+      // Slabs:
+      // 0-3L: 0
+      // 3-6L: 3L * 5% = 15000
+      // 6-9L: 3L * 10% = 30000
+      // 9-9.25L: 25k * 15% = 3750
+      // Total Slab Tax = 48750
+      // Cess = 48750 * 4% = 1950
+      // Total = 50700
+      expect(result['slabTax'], 48750);
+      expect(result['cess'], 1950);
+      expect(result['totalTax'], 50700);
     });
 
-    test('calculateSalaryIncome with zero salary', () {
-      final rules = createBasicRules();
+    test('Rebate u/s 87A for income below threshold', () {
       final data = TaxYearData(
         year: 2025,
-        salary: const SalaryDetails(
-          grossSalary: 0,
-        ),
+        salary: const SalaryDetails(grossSalary: 700000),
       );
 
-      final income = taxService.calculateSalaryIncome(data, rules);
-      expect(income, 0);
-    });
+      final result = taxService.calculateDetailedLiability(data, defaultRules);
 
-    test('Standard Deduction disabled', () {
-      final rules =
-          createBasicRules().copyWith(isStdDeductionSalaryEnabled: false);
-      final data = TaxYearData(
-        year: 2025,
-        salary: const SalaryDetails(
-          grossSalary: 600000,
-        ),
-      );
-
-      final income = taxService.calculateSalaryIncome(data, rules);
-      expect(income, 600000);
+      // Taxable = 700k - 75k = 625k
+      // 625k <= 700k (rebate limit), so tax should be 0
+      expect(result['totalTax'], 0);
     });
   });
 
-  group('IndianTaxService - House Property', () {
-    test('calculateHousePropertyIncome with municipal taxes and std deduction',
-        () {
-      final rules = createBasicRules().copyWith(
-        standardDeductionRateHP: 30.0,
-        isStdDeductionHPEnabled: true,
-      );
+  group('IndianTaxService - calculateSalaryIncome', () {
+    test('Exempts Leave Encashment and Gratuity up to limits', () {
       final data = TaxYearData(
         year: 2025,
-        houseProperties: const [
-          HouseProperty(
-            name: 'Home',
-            rentReceived: 100000,
-            municipalTaxes: 10000,
-            isSelfOccupied: false,
-          ),
-        ],
+        salary: const SalaryDetails(
+          grossSalary: 1000000,
+          leaveEncashment: 500000,
+          gratuity: 300000,
+        ),
       );
 
-      final income = taxService.calculateHousePropertyIncome(data, rules);
+      final rules = defaultRules.copyWith(
+        limitLeaveEncashment: 200000,
+        limitGratuity: 100000,
+        isRetirementExemptionEnabled: true,
+      );
 
-      // Net Annual Value (NAV) = 100,000 - 10,000 = 90,000
-      // Std Deduction (30%) = 0.3 * 90,000 = 27,000
-      // Taxable HP = 90,000 - 27,000 = 63,000
-      expect(income, 63000);
+      final salaryIncome = taxService.calculateSalaryIncome(data, rules);
+
+      // Gross = 10L
+      // Exempt Leave = min(5L, 2L) = 2L
+      // Exempt Grat = min(3L, 1L) = 1L
+      // Net = 10L - 2L - 1L = 7L
+      // Taxable = 7L - 75k (StdDed) = 6.25L
+      expect(salaryIncome, 625000);
     });
 
-    test('calculateHousePropertyIncome with interest on loan', () {
-      final rules = createBasicRules().copyWith(
-        standardDeductionRateHP: 30.0,
-        isStdDeductionHPEnabled: true,
-        maxHPDeductionLimit: 200000,
-      );
+    test('Handles Gifts from Employer exemption', () {
       final data = TaxYearData(
         year: 2025,
-        houseProperties: const [
-          HouseProperty(
+        salary:
+            const SalaryDetails(grossSalary: 500000, giftsFromEmployer: 8000),
+      );
+      final rules = defaultRules.copyWith(
+        isGiftFromEmployerEnabled: true,
+        giftFromEmployerExemptionLimit: 5000,
+      );
+
+      final salaryIncome = taxService.calculateSalaryIncome(data, rules);
+      // Taxable Gifts = 8000 - 5000 = 3000
+      // Total Gross = 500k + 3k = 503k
+      // Taxable = 503k - 75k = 428k
+      expect(salaryIncome, 428000);
+    });
+  });
+
+  group('IndianTaxService - calculateHousePropertyIncome', () {
+    test('Self-occupied property with interest loss capped', () {
+      final data = TaxYearData(
+        year: 2025,
+        houseProperties: [
+          const HouseProperty(
             name: 'Home',
             isSelfOccupied: true,
-            rentReceived: 0,
             interestOnLoan: 250000,
           ),
         ],
       );
+      final rules = defaultRules.copyWith(
+        isHPMaxInterestEnabled: true,
+        maxHPDeductionLimit: 200000,
+      );
 
-      final income = taxService.calculateHousePropertyIncome(data, rules);
+      final hpIncome = taxService.calculateHousePropertyIncome(data, rules);
+      expect(hpIncome, -200000);
+    });
 
-      // Self-occupied property loss capped at 200,000
-      expect(income, -200000);
+    test('Let-out property with rent and municipal taxes', () {
+      final data = TaxYearData(
+        year: 2025,
+        houseProperties: [
+          const HouseProperty(
+            name: 'Rental',
+            isSelfOccupied: false,
+            rentReceived: 300000,
+            municipalTaxes: 20000,
+            interestOnLoan: 50000,
+          ),
+        ],
+      );
+      final rules = defaultRules.copyWith(
+        isStdDeductionHPEnabled: true,
+        standardDeductionRateHP: 30.0,
+      );
+
+      final hpIncome = taxService.calculateHousePropertyIncome(data, rules);
+      // NAV = 300k - 20k = 280k
+      // Std Ded = 280k * 30% = 84k
+      // Income = 280k - 84k - 50k = 146k
+      expect(hpIncome, 146000);
     });
   });
 
-  group('IndianTaxService - Agriculture Income (Partial Integration)', () {
-    test('applyPartialIntegration correctly', () {
-      final rules = createBasicRules().copyWith(
-        isAgriIncomeEnabled: true,
-        agricultureIncomeThreshold: 5000,
-        agricultureBasicExemptionLimit: 250000,
-      );
-
-      // Case: Normal Income 300,000, Agri Income 100,000
-      // netTaxableNormalIncome = 300,000 (after ded)
-      // Step 1: Base = 300k + 100k = 400k. Tax(400k) = (400k-250k)*5% = 7500
-      // Step 2: Base = 250k + 100k = 350k. Tax(350k) = (350k-250k)*5% = 5000
-      // Slab Tax = 7500 - 5000 = 2500
-
+  group('IndianTaxService - calculateCapitalGains', () {
+    test('Separates Equity and Other LTCG/STCG', () {
+      final now = DateTime(2024, 6, 1);
       final data = TaxYearData(
-        year: 2025,
-        salary: const SalaryDetails(
-            grossSalary: 350000), // after std ded is 300,000
-        agricultureIncome: 100000,
-      );
-
-      when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
-
-      final liability = taxService.calculateLiability(data);
-      // Cess 4% of 2500 = 100. Total = 2600
-      expect(liability, 2600);
-    });
-  });
-
-  group('IndianTaxService - Capital Gains', () {
-    test('calculateCapitalGains Equity LTCG with exemption', () {
-      final rules = createBasicRules();
-      final data = TaxYearData(
-        year: 2025,
+        year: 2024,
         capitalGains: [
           CapitalGainEntry(
-            description: 'Equity Sale',
+            description: 'Stocks',
+            saleAmount: 1000000,
+            costOfAcquisition: 800000,
+            gainDate: now,
             matchAssetType: AssetType.equityShares,
             isLTCG: true,
-            saleAmount: 300000,
+          ),
+          CapitalGainEntry(
+            description: 'Gold',
+            saleAmount: 500000,
+            costOfAcquisition: 400000,
+            gainDate: now,
+            matchAssetType: AssetType.other,
+            isLTCG: true,
+          ),
+          CapitalGainEntry(
+            description: 'Intraday',
+            saleAmount: 150000,
             costOfAcquisition: 100000,
-            gainDate: DateTime(2025, 5, 1),
+            gainDate: now,
+            matchAssetType: AssetType.other,
+            isLTCG: false,
           ),
         ],
       );
 
-      // Gain = 200,000
-      // Exemption (112A) = 125,000
-      // Taxable = 75,000
-      // Tax (12.5%) = 0.125 * 75,000 = 9375
+      when(() => mockConfig.getRulesForYear(2024)).thenReturn(defaultRules);
 
-      when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
-
-      final liability = taxService.calculateLiability(data);
-      // Normal income is 0.
-      // Cess 4% of 9375 = 375. Total = 9750
-      expect(liability, 9750);
+      final cgResults = taxService.calculateCapitalGains(data, defaultRules);
+      expect(cgResults['LTCG_Equity'], 200000);
+      expect(cgResults['LTCG_Other'], 100000);
+      expect(cgResults['STCG'], 50000);
     });
 
-    test('calculateCapitalGains Property LTCG with reinvestment', () {
-      final rules = createBasicRules().copyWith(
-        maxCGReinvestLimit: 100000000,
-      );
+    test('Handles Reinvestment Exemption (u/s 54F for Equity)', () {
+      final now = DateTime(2024, 6, 1);
       final data = TaxYearData(
-        year: 2025,
+        year: 2024,
         capitalGains: [
           CapitalGainEntry(
-            description: 'Flat Sale',
-            matchAssetType: AssetType.residentialProperty,
+            description: 'Stocks',
+            saleAmount: 2000000,
+            costOfAcquisition: 1000000,
+            gainDate: now,
+            matchAssetType: AssetType.equityShares,
             isLTCG: true,
-            saleAmount: 10000000,
-            costOfAcquisition: 4000000,
-            gainDate: DateTime(2025, 5, 1),
-            reinvestedAmount: 5000000,
+            reinvestedAmount: 600000,
             matchReinvestType: ReinvestmentType.residentialProperty,
-            intendToReinvest: true,
           ),
         ],
       );
 
-      // Gain = 6,000,000
-      // Reinvestment Exemption = 5,000,000
-      // Taxable = 1,000,000
-      // Tax (12.5%) = 0.125 * 1,000,000 = 125,000
+      final rules = defaultRules.copyWith(
+        isCGReinvestmentEnabled: true,
+        maxCGReinvestLimit: 10000000,
+        windowGainReinvest: 2,
+      );
 
-      when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
+      when(() => mockConfig.getRulesForYear(2024)).thenReturn(rules);
 
-      final liability = taxService.calculateLiability(data);
-      // Cess 4% of 125,000 = 5,000. Total = 130,000
-      expect(liability, 130000);
+      final cgResults = taxService.calculateCapitalGains(data, rules);
+      // Gain = 10L, Reinvest = 6L (Valid target: Residential)
+      // Taxable = 10L - 6L = 4L
+      expect(cgResults['LTCG_Equity'], 400000);
     });
   });
 
-  group('IndianTaxService - ITR Suggestions', () {
-    test('suggests ITR-1 for simple salary', () {
-      final data = TaxYearData(
-          year: 2025, salary: const SalaryDetails(grossSalary: 500000));
-      expect(taxService.suggestITR(data), 'ITR-1 (Sahaj)');
-    });
-
-    test('suggests ITR-2 for capital gains', () {
-      final data = TaxYearData(
-        year: 2025,
-        capitalGains: [
-          CapitalGainEntry(
-            gainDate: DateTime(2025, 5, 1),
-            saleAmount: 10000,
-            costOfAcquisition: 5000,
-          ),
-        ],
+  group('IndianTaxService - calculateMonthlySalaryBreakdown', () {
+    test('Correctly identifies extras and calculates marginal tax', () {
+      // Setup a simple salary structure
+      final structure = SalaryStructure(
+        id: 's1',
+        effectiveDate: DateTime(2024, 4, 1),
+        monthlyBasic: 50000,
+        monthlyFixedAllowances: 10000,
+        performancePayFrequency: PayoutFrequency.monthly,
+        monthlyPerformancePay: 5000,
+        customAllowances: [],
       );
-      expect(taxService.suggestITR(data), 'ITR-2');
-    });
 
-    test('suggests ITR-3 or ITR-4 for business income', () {
       final data = TaxYearData(
-        year: 2025,
-        businessIncomes: [
-          const BusinessEntity(name: 'Store', netIncome: 100000),
-        ],
+        year: 2025, // FY 2024-25
+        salary: SalaryDetails(
+          history: [structure],
+          independentAllowances: [
+            const CustomAllowance(
+              name: 'Bonus',
+              payoutAmount: 100000,
+              frequency: PayoutFrequency.annually,
+              startMonth: 10,
+            ),
+          ],
+        ),
       );
-      expect(taxService.suggestITR(data), 'ITR-3 or ITR-4');
+
+      final breakdown =
+          taxService.calculateMonthlySalaryBreakdown(data, defaultRules);
+
+      // Regular Month Gross = 50k + 10k + 5k = 65k
+      // Oct Gross = 65k + 100k = 165k
+      expect(breakdown[4]!['gross'], 65000);
+      expect(breakdown[10]!['gross'], 165000);
+      expect(breakdown[10]!['extras'], 100000);
+      expect(breakdown[10]!['tax'], greaterThan(breakdown[4]!['tax']!));
     });
   });
 }

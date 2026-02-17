@@ -114,7 +114,9 @@ class SalaryDetails {
                 MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
         giftsFromEmployer: (m['giftsFromEmployer'] as num?)?.toDouble() ?? 0,
-        customExemptions: Map<String, double>.from(m['customExemptions'] ?? {}),
+        customExemptions: (m['customExemptions'] as Map?)?.map(
+                (k, v) => MapEntry(k.toString(), (v as num).toDouble())) ??
+            {},
         history: (m['history'] as List?)
                 ?.map((e) =>
                     SalaryStructure.fromMap(Map<String, dynamic>.from(e)))

@@ -431,8 +431,9 @@ class RemindersScreen extends ConsumerWidget {
                       ),
                       onPressed: () => showDialog(
                           context: context,
-                          builder: (_) =>
-                              RecordCCPaymentDialog(creditCardAccount: acc)),
+                          builder: (_) => RecordCCPaymentDialog(
+                              creditCardAccount: acc,
+                              isFullyPaid: isFullyPaid)),
                     ),
                   )
                 ]

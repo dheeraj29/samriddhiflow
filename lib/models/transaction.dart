@@ -139,4 +139,42 @@ class Transaction extends HiveObject {
       profileId: profileId ?? this.profileId,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'type': type.index,
+      'category': category,
+      'accountId': accountId,
+      'toAccountId': toAccountId,
+      'loanId': loanId,
+      'isRecurringInstance': isRecurringInstance,
+      'isDeleted': isDeleted,
+      'holdingTenureMonths': holdingTenureMonths,
+      'gainAmount': gainAmount,
+      'profileId': profileId,
+    };
+  }
+
+  factory Transaction.fromMap(Map<String, dynamic> map) {
+    return Transaction(
+      id: map['id'],
+      title: map['title'],
+      amount: (map['amount'] as num).toDouble(),
+      date: DateTime.parse(map['date']),
+      type: TransactionType.values[map['type']],
+      category: map['category'],
+      accountId: map['accountId'],
+      toAccountId: map['toAccountId'],
+      loanId: map['loanId'],
+      isRecurringInstance: map['isRecurringInstance'] ?? false,
+      isDeleted: map['isDeleted'] ?? false,
+      holdingTenureMonths: map['holdingTenureMonths'],
+      gainAmount: (map['gainAmount'] as num?)?.toDouble(),
+      profileId: map['profileId'],
+    );
+  }
 }

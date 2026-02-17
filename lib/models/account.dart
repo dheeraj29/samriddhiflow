@@ -99,4 +99,32 @@ class Account extends HiveObject {
     // Therefore, the Outstanding Bill is simply the current balance.
     return CurrencyUtils.roundTo2Decimals(balance.clamp(0.0, double.infinity));
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'balance': balance,
+      'type': type.index,
+      'profileId': profileId,
+      'billingCycleDay': billingCycleDay,
+      'paymentDueDateDay': paymentDueDateDay,
+      'creditLimit': creditLimit,
+      'currency': currency,
+    };
+  }
+
+  factory Account.fromMap(Map<String, dynamic> map) {
+    return Account(
+      id: map['id'],
+      name: map['name'],
+      balance: (map['balance'] as num).toDouble(),
+      type: AccountType.values[map['type']],
+      profileId: map['profileId'],
+      billingCycleDay: map['billingCycleDay'],
+      paymentDueDateDay: map['paymentDueDateDay'],
+      creditLimit: (map['creditLimit'] as num?)?.toDouble(),
+      currency: map['currency'] ?? '',
+    );
+  }
 }

@@ -47,6 +47,30 @@ class LoanTransaction extends HiveObject {
     required this.interestComponent,
     required this.resultantPrincipal,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'amount': amount,
+      'type': type.index,
+      'principalComponent': principalComponent,
+      'interestComponent': interestComponent,
+      'resultantPrincipal': resultantPrincipal,
+    };
+  }
+
+  factory LoanTransaction.fromMap(Map<String, dynamic> map) {
+    return LoanTransaction(
+      id: map['id'],
+      date: DateTime.parse(map['date']),
+      amount: (map['amount'] as num).toDouble(),
+      type: LoanTransactionType.values[map['type']],
+      principalComponent: (map['principalComponent'] as num).toDouble(),
+      interestComponent: (map['interestComponent'] as num).toDouble(),
+      resultantPrincipal: (map['resultantPrincipal'] as num).toDouble(),
+    );
+  }
 }
 
 @HiveType(typeId: 9)
@@ -156,6 +180,48 @@ class Loan extends HiveObject {
       emiDay: emiDay,
       firstEmiDate: firstEmiDate,
       profileId: profileId,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'totalPrincipal': totalPrincipal,
+      'remainingPrincipal': remainingPrincipal,
+      'interestRate': interestRate,
+      'tenureMonths': tenureMonths,
+      'startDate': startDate.toIso8601String(),
+      'emiAmount': emiAmount,
+      'accountId': accountId,
+      'transactions': transactions.map((t) => t.toMap()).toList(),
+      'type': type.index,
+      'emiDay': emiDay,
+      'firstEmiDate': firstEmiDate.toIso8601String(),
+      'profileId': profileId,
+    };
+  }
+
+  factory Loan.fromMap(Map<String, dynamic> map) {
+    return Loan(
+      id: map['id'],
+      name: map['name'],
+      totalPrincipal: (map['totalPrincipal'] as num).toDouble(),
+      remainingPrincipal: (map['remainingPrincipal'] as num).toDouble(),
+      interestRate: (map['interestRate'] as num).toDouble(),
+      tenureMonths: map['tenureMonths'],
+      startDate: DateTime.parse(map['startDate']),
+      emiAmount: (map['emiAmount'] as num).toDouble(),
+      accountId: map['accountId'],
+      transactions: (map['transactions'] as List?)
+              ?.map(
+                  (t) => LoanTransaction.fromMap(Map<String, dynamic>.from(t)))
+              .toList() ??
+          [],
+      type: LoanType.values[map['type'] ?? 0],
+      emiDay: map['emiDay'] ?? 1,
+      firstEmiDate: DateTime.parse(map['firstEmiDate']),
+      profileId: map['profileId'],
     );
   }
 }

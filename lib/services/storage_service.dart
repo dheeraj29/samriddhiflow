@@ -248,13 +248,50 @@ class StorageService {
         .toList();
   }
 
-  Future<void> saveAccount(Account account) async {
+  Future<void> saveAccount(Account account,
+      {bool keepBilledStatus = false}) async {
     final box = _hive.box<Account>(boxAccounts);
+    final existingAccount = box.get(account.id);
 
-    // Always check for Cycle correctness matching the (new) billing cycle day
+    // Smart Update Logic:
+    // Only reset rollover if:
+    // 1. Billing Cycle Day Changed.
+    // 2. OR Rollover is missing/stale.
     if (account.type == AccountType.creditCard &&
         account.billingCycleDay != null) {
-      await resetCreditCardRollover(account);
+      bool shouldReset = false;
+      if (existingAccount == null) {
+        // New Account -> Reset
+        shouldReset = true;
+      } else if (existingAccount.billingCycleDay != account.billingCycleDay) {
+        // Cycle Changed -> Reset
+        shouldReset = true;
+      } else {
+        // Cycle Same. Check for stale rollover.
+        final lastRolloverMillis = getLastRollover(account.id);
+        if (lastRolloverMillis == null) {
+          shouldReset = true;
+        } else {
+          // Rollover exists.
+          // If we are preserving status, we doing nothing.
+          // If the Last Rollover is WAY off (e.g. more than 2 cycles ago), maybe repair?
+          // For now, trusting "keepBilledStatus" or default behavior.
+          // Actually, if we just edit name, we DON'T want to call resetCreditCardRollover
+          // because that method calculates a "Fresh" rollover based on TODAY.
+          // If the user properly had a bill generated 10 days ago, and we run reset now,
+          // it might move the rollover to TODAY-ish, potentially messing up the "Billed" bucket
+          // if transactions happened in between.
+
+          // SO: If cycle day hasn't changed, we STILL call reset to ensure the date isn't wrong.
+          // resetCreditCardRollover is idempotent (returns early if dates match).
+          shouldReset = true;
+        }
+      }
+
+      if (shouldReset) {
+        await resetCreditCardRollover(account,
+            keepBilledStatus: keepBilledStatus);
+      }
     }
 
     await box.put(account.id, account);
@@ -262,21 +299,34 @@ class StorageService {
 
   /// Resets the billing cycle tracking to the current month's previous cycle end.
   /// Effectively "repairs" the cycle calculation schedule.
-  Future<void> resetCreditCardRollover(Account acc) async {
+  /// [keepBilledStatus]: If true, sets rollover to force "Billed Amount" to 0 (Current Cycle Start).
+  Future<void> resetCreditCardRollover(Account acc,
+      {bool keepBilledStatus = false}) async {
     if (acc.billingCycleDay == null) return;
 
     try {
       final now = DateTime.now();
       final currentCycleStart =
           BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-      // Target: The start of the cycle that JUST finished (The "Billed" cycle start).
-      final targetRolloverDateStart = BillingHelper.getCycleStart(
-          currentCycleStart.subtract(const Duration(days: 1)),
-          acc.billingCycleDay!);
 
-      // Store as End of Previous Day (inclusive boundary for Balance)
-      final newRolloverDate =
-          targetRolloverDateStart.subtract(const Duration(seconds: 1));
+      DateTime newRolloverDate;
+
+      if (keepBilledStatus) {
+        // Force "Billed" to be 0 by setting rollover to Current Cycle Start (minus 1 sec)
+        // This means everything before is "History/Paid", everything after is "Unbilled".
+        newRolloverDate =
+            currentCycleStart.subtract(const Duration(seconds: 1));
+      } else {
+        // Default: Create "Billed" bucket for the previous cycle.
+        // Target: The start of the cycle that JUST finished (The "Billed" cycle start).
+        final targetRolloverDateStart = BillingHelper.getCycleStart(
+            currentCycleStart.subtract(const Duration(days: 1)),
+            acc.billingCycleDay!);
+
+        // Store as End of Previous Day (inclusive boundary for Balance)
+        newRolloverDate =
+            targetRolloverDateStart.subtract(const Duration(seconds: 1));
+      }
 
       final oldRolloverMillis = getLastRollover(acc.id);
 
@@ -294,18 +344,28 @@ class StorageService {
 
       await setLastRollover(acc.id, newRolloverDate.millisecondsSinceEpoch);
       DebugLogger().log(
-          'Repair: Auto-reset cycle for ${acc.name} to $newRolloverDate. (Date-Only fix)');
+          'Repair: Auto-reset cycle for ${acc.name} to $newRolloverDate. (Date-Only fix, keepBilled=$keepBilledStatus)');
     } catch (e) {
       DebugLogger().log('Error resetting cycle for ${acc.name}: $e');
     }
   }
 
-  /// Explicitly refreshes the billing cycle dates for an account.
-  /// This ensures "Billed Amount" displays are accurate without touching Balance/Arrears.
+  /// Explicitly refreshes the billing cycle dates to SHOW the bill (Billed Amount > 0).
+  /// Reverts any "Paid" status for the current cycle.
   Future<void> recalculateBilledAmount(String accountId) async {
     final acc = _hive.box<Account>(boxAccounts).get(accountId);
     if (acc == null) return;
-    await resetCreditCardRollover(acc);
+    // Force keepBilledStatus = false to ensure the previous cycle is treated as "Billed"
+    await resetCreditCardRollover(acc, keepBilledStatus: false);
+  }
+
+  /// Manually clears the billed amount (Mark as Paid/Advance Cycle).
+  /// Doesn't record a transaction, just updates the pointer.
+  Future<void> clearBilledAmount(String accountId) async {
+    final acc = _hive.box<Account>(boxAccounts).get(accountId);
+    if (acc == null) return;
+    // Force keepBilledStatus = true to advance pointer to current cycle start
+    await resetCreditCardRollover(acc, keepBilledStatus: true);
   }
 
   Future<void> deleteAccount(String id) async {

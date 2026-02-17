@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
@@ -179,6 +180,9 @@ class RecurringManagerScreen extends ConsumerWidget {
             labelText: 'New Amount',
             border: OutlineInputBorder(),
           ),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+          ],
           autofocus: true,
         ),
         actions: [

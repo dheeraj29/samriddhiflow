@@ -36,4 +36,22 @@ class Profile extends HiveObject {
       monthlyBudget: monthlyBudget,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'currencyLocale': currencyLocale,
+      'monthlyBudget': monthlyBudget,
+    };
+  }
+
+  factory Profile.fromMap(Map<String, dynamic> map) {
+    return Profile(
+      id: map['id'],
+      name: map['name'],
+      currencyLocale: map['currencyLocale'] ?? 'en_IN',
+      monthlyBudget: (map['monthlyBudget'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
 }

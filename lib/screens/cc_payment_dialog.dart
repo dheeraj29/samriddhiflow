@@ -9,7 +9,9 @@ import '../utils/billing_helper.dart';
 
 class RecordCCPaymentDialog extends ConsumerStatefulWidget {
   final Account creditCardAccount;
-  const RecordCCPaymentDialog({super.key, required this.creditCardAccount});
+  final bool isFullyPaid;
+  const RecordCCPaymentDialog(
+      {super.key, required this.creditCardAccount, required this.isFullyPaid});
 
   @override
   ConsumerState<RecordCCPaymentDialog> createState() =>
@@ -22,6 +24,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   String _sourceAccountId = 'manual';
   bool _isRounded = false;
   double? _originalAmount;
+  double _calculatedTotalDue = 0;
 
   @override
   void initState() {
@@ -36,15 +39,24 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
     return txnsAsync.when(
       data: (txns) {
-        if (_amountController.text.isEmpty) {
+        // Only calculate and autofill if NOT fully paid and text is empty
+        if (_amountController.text.isEmpty && !widget.isFullyPaid) {
           final storage = ref.read(storageServiceProvider);
           final billed = BillingHelper.calculateBilledAmount(
               widget.creditCardAccount,
               txns,
               DateTime.now(),
               storage.getLastRollover(widget.creditCardAccount.id));
+
           final totalDue = widget.creditCardAccount.balance + billed;
-          _amountController.text = totalDue.toStringAsFixed(2);
+
+          // Store for later comparison
+          _calculatedTotalDue = totalDue;
+
+          // Only autofill if due amount is positive (debt)
+          if (totalDue > 0) {
+            _amountController.text = totalDue.toStringAsFixed(2);
+          }
         }
 
         return AlertDialog(
@@ -53,6 +65,26 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (widget.isFullyPaid)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        SizedBox(width: 8),
+                        Text('Bill is already marked as paid.',
+                            style:
+                                TextStyle(color: Colors.green, fontSize: 13)),
+                      ],
+                    ),
+                  ),
                 FormUtils.buildAmountField(
                   controller: _amountController,
                   currency: ref.watch(currencyProvider),
@@ -75,12 +107,6 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                         final rounded = _originalAmount!.roundToDouble();
                         _amountController.text = rounded.toStringAsFixed(2);
                       } else {
-                        // Restore original only if it matches the rounded value (user didn't manually edit)
-                        // Actually, simplified: just re-calculate bill or use stored original
-                        // Better: If user manually edits, we shouldn't overwrite unless they toggle.
-                        // Strategy: Always calculate from current text when rounding.
-                        // When un-rounding, we can't easily guess "original" if user edited.
-                        // So, let's just use the strict bill amount IF available, or just toggle rounding on current value.
                         if (_originalAmount != null && _originalAmount! > 0) {
                           _amountController.text =
                               _originalAmount!.toStringAsFixed(2);
@@ -143,19 +169,26 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
                   await storage.saveTransaction(txn);
 
+                  // Auto-advance Cycle Logic
+                  // If payment covers the calculated due amount (within small tolerance)
+                  // Or if the user is paying significantly to clear debt.
+                  // We use _calculatedTotalDue calculated at opening.
+                  // Only auto-advance if we weren't already paid.
+                  if (!widget.isFullyPaid && _calculatedTotalDue > 0) {
+                    // Check if payment covers the due amount (tolerance 1.0)
+                    if (amount >= (_calculatedTotalDue - 1.0)) {
+                      // Full Payment! Advance the cycle.
+                      await storage.resetCreditCardRollover(
+                          widget.creditCardAccount,
+                          keepBilledStatus: true);
+                    }
+                  }
+
                   // Auto-create Rounding Adjustment if enabled
                   if (_isRounded &&
                       _originalAmount != null &&
                       (_originalAmount! - amount).abs() > 0.001) {
                     final diff = _originalAmount! - amount;
-                    // If diff > 0 (e.g. 100.4 - 100.0 = 0.4): We underpaid 0.4 -> Need Income to reduce debt.
-                    // If diff < 0 (e.g. 100.6 - 101.0 = -0.4): We overpaid 0.4 -> Need Expense to increase debt back (technically "Bank Fee" logic, but effectively balances it).
-                    // Actually:
-                    // Bill: 100.4. Paid: 100. Rem: 0.4.
-                    // To make Rem 0, we need to "pay" 0.4 more.
-                    // An "Income" on CC acts as a credit/payment.
-                    // So Income of 0.4 works.
-
                     final adjustmentType = diff > 0
                         ? TransactionType.income
                         : TransactionType.expense;

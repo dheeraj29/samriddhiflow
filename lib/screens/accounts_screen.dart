@@ -5,12 +5,13 @@ import 'package:intl/intl.dart';
 import '../utils/currency_utils.dart';
 import '../providers.dart';
 import '../models/account.dart';
+import '../models/transaction.dart';
 import '../widgets/account_card.dart';
 import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
 import 'cc_payment_dialog.dart';
-import '../services/repair_service.dart';
+import '../utils/debug_logger.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
   @override
@@ -101,12 +102,18 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             double totalUsage = 0;
             final allTxns = transactionsAsync.value ?? [];
             final now = DateTime.now();
+            final storage = ref.watch(storageServiceProvider);
 
             for (var card in creditCards) {
               totalLimit += card.creditLimit ?? 0;
               final unbilled =
                   BillingHelper.calculateUnbilledAmount(card, allTxns, now);
-              totalUsage += (card.balance + unbilled);
+
+              final lastRollover = storage.getLastRollover(card.id);
+              final billed = BillingHelper.calculateBilledAmount(
+                  card, allTxns, now, lastRollover);
+
+              totalUsage += (card.balance + unbilled + billed);
             }
 
             final utilization =
@@ -361,10 +368,82 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                         color: Colors.green, fontWeight: FontWeight.bold)),
                 onTap: () {
                   Navigator.pop(context);
+
+                  // Calculate isFullyPaid status
+                  bool isFullyPaid = false;
+                  if (acc.billingCycleDay != null) {
+                    final today = DateTime.now();
+                    final lastBillDate = today.day > acc.billingCycleDay!
+                        ? DateTime(
+                            today.year, today.month, acc.billingCycleDay!)
+                        : DateTime(
+                            today.year, today.month - 1, acc.billingCycleDay!);
+
+                    final allTxns = ref.read(transactionsProvider).value ?? [];
+                    final payments = allTxns
+                        .where((t) =>
+                            !t.isDeleted &&
+                            t.toAccountId == acc.id &&
+                            t.type == TransactionType.transfer &&
+                            t.date.isAfter(
+                                lastBillDate.subtract(const Duration(days: 1))))
+                        .toList();
+
+                    final totalPaid =
+                        payments.fold(0.0, (sum, t) => sum + t.amount);
+                    final storage = ref.read(storageServiceProvider);
+                    final billedAmount = BillingHelper.calculateBilledAmount(
+                        acc, allTxns, today, storage.getLastRollover(acc.id));
+                    final totalDue = acc.balance + billedAmount;
+
+                    isFullyPaid = totalDue <= 0.01 ||
+                        (totalDue > 0 && totalPaid >= totalDue);
+                  }
+
                   showDialog(
                       context: context,
-                      builder: (_) =>
-                          RecordCCPaymentDialog(creditCardAccount: acc));
+                      builder: (_) => RecordCCPaymentDialog(
+                          creditCardAccount: acc, isFullyPaid: isFullyPaid));
+                },
+              ),
+            if (acc.type == AccountType.creditCard)
+              ListTile(
+                leading:
+                    const Icon(Icons.cleaning_services, color: Colors.blueGrey),
+                title: const Text('Clear Billed Amount',
+                    style: TextStyle(
+                        color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                subtitle: const Text('Mark current bill as paid/cleared'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Clear Billed Amount?'),
+                      content: const Text(
+                          'This will set the current "Billed Amount" to 0 without recording a payment transaction.\n\nUse this if the bill was calculated incorrectly or paid outside the app.'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Clear')),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    await ref
+                        .read(storageServiceProvider)
+                        .clearBilledAmount(acc.id);
+                    ref.invalidate(accountsProvider);
+                    ref.invalidate(transactionsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Billed amount cleared.')));
+                    }
+                  }
                 },
               ),
             if (acc.type == AccountType.creditCard)
@@ -377,16 +456,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 subtitle: const Text('Refreshes billing cycle display'),
                 onTap: () async {
                   Navigator.pop(context);
-                  final repairService = ref.read(repairServiceProvider);
-                  final job = repairService.getJob('recalculate_billed_amount');
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Recalculating bill...')),
                   );
 
-                  await job.run(ref.reader, args: {
-                    'accountId': acc.id,
-                  });
+                  await ref
+                      .read(storageServiceProvider)
+                      .recalculateBilledAmount(acc.id);
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -614,7 +691,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
                 ],
                 validator: (v) => v!.isEmpty ? 'Required' : null,
                 onSaved: (v) => _limit = double.tryParse(v ?? '') ?? 0,
@@ -697,6 +774,26 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       final storage = ref.read(storageServiceProvider);
+
+      // Smart Update Logic: Check if we need to preserve "Billed = 0" status
+      bool keepBilledStatus = false;
+      if (widget.account != null &&
+          widget.account!.type == AccountType.creditCard &&
+          _billingDay != null) {
+        final lastRollover = storage.getLastRollover(widget.account!.id);
+        final allTxns = ref.read(transactionsProvider).value ?? [];
+        final now = DateTime.now();
+        final currentBilled = BillingHelper.calculateBilledAmount(
+            widget.account!, allTxns, now, lastRollover);
+
+        if (currentBilled == 0 &&
+            widget.account!.billingCycleDay != _billingDay) {
+          keepBilledStatus = true;
+          DebugLogger().log(
+              'Smart Update: Preserving Billed=0 status for ${widget.account!.name}');
+        }
+      }
+
       if (widget.account != null) {
         final acc = widget.account!;
         acc.name = _name;
@@ -705,7 +802,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         acc.billingCycleDay = _billingDay;
         acc.paymentDueDateDay = _dueDay;
         acc.currency = _currency;
-        await storage.saveAccount(acc);
+        await storage.saveAccount(acc, keepBilledStatus: keepBilledStatus);
       } else {
         final profileId = ref.read(activeProfileIdProvider);
         final newAccount = Account.create(

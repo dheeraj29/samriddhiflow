@@ -159,7 +159,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           e.code == 'user-disabled' ||
           e.code == 'min-app-version-error') {
         DebugLogger().log("Critical Session Error (${e.code}): Force Logout.");
+        // OPTIONAL: We could show a dialog here if we had context, but for now we trust the error.
         await authService.signOut(ref);
+      } else if (e.code == 'network-request-failed' ||
+          e.code == 'unavailable') {
+        DebugLogger()
+            .log("Revalidation: Network Issue (${e.code}). Keeping Session.");
       } else {
         DebugLogger().log("Revalidation warning (${e.code}) - Keeping Session");
       }

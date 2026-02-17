@@ -94,4 +94,33 @@ class LendingRecord extends HiveObject {
       profileId: profileId ?? this.profileId,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'personName': personName,
+      'amount': amount,
+      'reason': reason,
+      'date': date.toIso8601String(),
+      'type': type.index,
+      'isClosed': isClosed,
+      'closedDate': closedDate?.toIso8601String(),
+      'profileId': profileId,
+    };
+  }
+
+  factory LendingRecord.fromMap(Map<String, dynamic> map) {
+    return LendingRecord(
+      id: map['id'],
+      personName: map['personName'],
+      amount: (map['amount'] as num).toDouble(),
+      reason: map['reason'],
+      date: DateTime.parse(map['date']),
+      type: LendingType.values[map['type']],
+      isClosed: map['isClosed'] ?? false,
+      closedDate:
+          map['closedDate'] != null ? DateTime.parse(map['closedDate']) : null,
+      profileId: map['profileId'],
+    );
+  }
 }

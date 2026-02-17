@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart'; // Added for Uuid
 
 import '../providers.dart';
@@ -465,7 +466,10 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 '${NumberFormat.simpleCurrency(locale: currencyLocale).currencySymbol} ',
             border: const OutlineInputBorder(),
           ),
-          keyboardType: TextInputType.number,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*(\.\d{0,2})?$')),
+          ],
           onChanged: (v) {
             setState(() {
               _prepaymentAmount = double.tryParse(v) ?? 0;

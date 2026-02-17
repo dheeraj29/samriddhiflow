@@ -1052,7 +1052,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d*')),
+                            RegExp(r'^\d*\.?\d{0,2}$')),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -1074,7 +1074,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d*')),
+                            RegExp(r'^\d*\.?\d{0,2}$')),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -1135,7 +1135,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           if (isInt)
             FilteringTextInputFormatter.digitsOnly
           else
-            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
         ],
         validator: (val) {
           if (val == null || val.isEmpty) return 'Required';
@@ -1424,7 +1424,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d*')),
+                              RegExp(r'^\d*\.?\d{0,2}$')),
                         ]),
                   ]),
                   actions: [

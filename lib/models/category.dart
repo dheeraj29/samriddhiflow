@@ -72,4 +72,26 @@ class Category extends HiveObject {
       profileId: profileId,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'usage': usage.index,
+      'tag': tag.index,
+      'iconCode': iconCode,
+      'profileId': profileId,
+    };
+  }
+
+  factory Category.fromMap(Map<String, dynamic> map) {
+    return Category(
+      id: map['id'],
+      name: map['name'],
+      usage: CategoryUsage.values[map['usage']],
+      tag: CategoryTag.values[map['tag']],
+      iconCode: map['iconCode'],
+      profileId: map['profileId'],
+    );
+  }
 }

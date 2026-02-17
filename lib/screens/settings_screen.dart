@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
+
 import '../theme/app_theme.dart';
 import '../models/profile.dart';
 import '../models/account.dart';
@@ -328,23 +329,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         UIUtils.buildSectionHeader('Data Management'),
         ListTile(
-          title: const Text('Export Data to Excel'),
-          subtitle: const Text('Backup all transactions (.xlsx)'),
-          leading: PureIcons.download(color: AppTheme.primary),
-          onTap: _exportLocalFile,
-        ),
-        ListTile(
-          title: const Text('Restore Data from Excel (Local)'),
-          subtitle: const Text('Restore from local backup file'),
-          leading: PureIcons.upload(color: Colors.green),
-          onTap: _importLocalFile,
-        ),
-        ListTile(
           title: const Text('Recycle Bin'),
           subtitle: const Text('Restore deleted transactions'),
           leading: PureIcons.recycleBin(color: Colors.red),
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const RecycleBinScreen())),
+        ),
+        ListTile(
+          title: const Text('Backup Data (ZIP)'),
+          subtitle: const Text('Export all data to a ZIP file'),
+          leading: const Icon(Icons.archive, color: Colors.purple),
+          onTap: _isUploading ? null : _backupToZip,
+          trailing: _isUploading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : null,
+        ),
+        ListTile(
+          title: const Text('Restore Data (ZIP)'),
+          subtitle: const Text('Import data from a ZIP file'),
+          leading: const Icon(Icons.unarchive, color: Colors.teal),
+          onTap: _isDownloading ? null : _restoreFromZip,
+          trailing: _isDownloading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : null,
         ),
         ListTile(
           title: const Text('Repair Data'),
@@ -599,7 +612,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             initialValue: ref.read(monthlyBudgetProvider).toString(),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
             ],
             onSave: (val) {
               final amount = double.tryParse(val) ?? 0;
@@ -898,160 +911,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 // coverage:ignore-end
 
-  Future<void> _exportLocalFile() async {
-    // 1. Check Connectivity
-    if (ref.read(isOfflineProvider)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Internet connection required for Excel operations (Premium Feature Validation).',
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-      return;
-    }
-
-    final excelService = ref.read(excelServiceProvider);
-    final List<int> excelData = await excelService.exportData();
-
-    final profile = ref.read(activeProfileProvider);
-    final profileName =
-        profile?.name.replaceAll(RegExp(r'[^\w\s-]'), '_') ?? 'budget';
-    final timestamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
-    final fileName = '${profileName}_backup_$timestamp.xlsx';
-
-    final accounts = ref.read(accountsProvider).value?.length ?? 0;
-    final loans = ref.read(loansProvider).value?.length ?? 0;
-    final txns = ref.read(transactionsProvider).value?.length ?? 0;
-
-    final loansData = ref.read(loansProvider).value ?? [];
-    int loanTxns = 0;
-    for (var l in loansData) {
-      loanTxns += l.transactions.length;
-    }
-
-    try {
-      final fileService = ref.read(fileServiceProvider);
-      await fileService.saveFile(fileName, excelData);
-
-      ref.read(txnsSinceBackupProvider.notifier).reset();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Exported: $accounts accounts, $loans loans, $txns txns, $loanTxns loan txns')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export Failed: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _importLocalFile() async {
-    // 1. Check Connectivity
-    if (ref.read(isOfflineProvider)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Internet connection required for Excel operations (Premium Feature Validation).',
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-      return;
-    }
-
-    final excelService = ref.read(excelServiceProvider);
-    try {
-      final results = await excelService.importData();
-      final status = results['status']!;
-
-      if (!mounted) return;
-
-      if (status == 1) {
-        // Success
-        // Success
-        ref.invalidate(accountsProvider);
-        ref.invalidate(transactionsProvider);
-        ref.invalidate(loansProvider);
-        ref.invalidate(recurringTransactionsProvider);
-
-        String msg = 'Imported: ';
-        List<String> parts = [];
-        if ((results['profiles'] ?? 0) > 0) {
-          parts.add('${results['profiles']} profiles');
-        }
-        if ((results['accounts'] ?? 0) > 0) {
-          parts.add('${results['accounts']} accounts');
-        }
-        if ((results['loans'] ?? 0) > 0) parts.add('${results['loans']} loans');
-        if ((results['categories'] ?? 0) > 0) {
-          parts.add('${results['categories']} categories');
-        }
-        if ((results['transactions'] ?? 0) > 0) {
-          String txnDetails = '${results['transactions']} transactions';
-
-          List<String> types = [];
-          if ((results['type_income'] ?? 0) > 0) {
-            types.add('In: ${results['type_income']}');
-          }
-          if ((results['type_expense'] ?? 0) > 0) {
-            types.add('Ex: ${results['type_expense']}');
-          }
-          if ((results['type_transfer'] ?? 0) > 0) {
-            types.add('Tr: ${results['type_transfer']}');
-          }
-
-          if (types.isNotEmpty) {
-            txnDetails += ' (${types.join(', ')})';
-          }
-          if ((results['skipped_error'] ?? 0) > 0) {
-            txnDetails += ' [Skipped Errors: ${results['skipped_error']}]';
-          }
-          if ((results['skipped_selftransfer'] ?? 0) > 0) {
-            txnDetails +=
-                ' [Skipped Self-Transfers: ${results['skipped_selftransfer']}]';
-          }
-
-          parts.add(txnDetails);
-        }
-        if ((results['loanTransactions'] ?? 0) > 0) {
-          parts.add('${results['loanTransactions']} loan transactions');
-        }
-
-        if (parts.isEmpty) {
-          msg += "Data processed successfully.";
-        } else {
-          msg += parts.join(', ');
-        }
-
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(msg)));
-      } else if (status == 0) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('No new data found.')));
-      } else if (status == -2) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Error reading file.')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Import Error: $e")));
-      }
-    }
-  }
-
   Future<void> _backupToCloud() async {
     // Check PIN if enabled
     if (_isAppLockEnabled) {
@@ -1082,6 +941,118 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _backupToZip() async {
+    setState(() => _isUploading = true);
+    try {
+      // 1. Generate ZIP bytes
+      final bytes =
+          await ref.read(jsonDataServiceProvider).createBackupPackage();
+
+      // 2. Save File
+      final fileName =
+          'samriddhi_backup_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.zip';
+      final resultMessage =
+          await ref.read(fileServiceProvider).saveFile(fileName, bytes);
+
+      if (resultMessage != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(resultMessage)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Backup Failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _restoreFromZip() async {
+    // 1. Pick File Bytes
+    final bytes = await ref
+        .read(fileServiceProvider)
+        .pickFile(allowedExtensions: ['zip']);
+
+    if (bytes == null) return;
+
+    // 2. Safety Dialog
+    if (!mounted) return;
+    final decision = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("⚠️ Restoring from ZIP"),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Are you sure?"),
+            SizedBox(height: 8),
+            Text(
+                "This will PERMANENTLY WIPE all local data and replace it with the backup content."),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'CANCEL'),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'RESTORE'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Yes, Restore"),
+          ),
+        ],
+      ),
+    );
+
+    if (decision != 'RESTORE') return;
+
+    setState(() => _isDownloading = true);
+    try {
+      final stats =
+          await ref.read(jsonDataServiceProvider).restoreFromPackage(bytes);
+
+      if (mounted) {
+        // Force refresh providers
+        ref.invalidate(accountsProvider);
+        ref.invalidate(transactionsProvider);
+        ref.invalidate(loansProvider);
+        ref.invalidate(recurringTransactionsProvider);
+        ref.invalidate(profilesProvider);
+
+        final summary =
+            stats.entries.map((e) => "${e.key}: ${e.value}").join("\n");
+        await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+                  title: const Text("Restore Complete"),
+                  content: Text("Restored items:\n$summary"),
+                  actions: [
+                    TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          // Reload App
+                          Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const DashboardScreen()),
+                              (route) => false);
+                        },
+                        child: const Text("OK, Reload"))
+                  ],
+                ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Restore Failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
   Future<void> _smartRestoreFlow() async {
     // Check PIN if enabled
     if (_isAppLockEnabled) {
@@ -1104,9 +1075,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             SizedBox(height: 16),
             Text(
                 "This will PERMANENTLY WIPE all local data and replace it with your cloud data."),
-            SizedBox(height: 16),
-            Text(
-                "Do you want to download a safety backup (Excel) of your CURRENT data first?"),
           ],
         ),
         actions: [
@@ -1115,29 +1083,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, 'NO_BACKUP_RESTORE'),
+            onPressed: () => Navigator.pop(ctx, 'RESTORE'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("No, Just Restore"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, 'BACKUP_THEN_RESTORE'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text("Yes, Backup First"),
+            child: const Text("Yes, Restore"),
           ),
         ],
       ),
     );
 
-    if (decision == 'CANCEL' || decision == null) return;
-
-    if (decision == 'BACKUP_THEN_RESTORE') {
-      final excelService = ref.read(excelServiceProvider);
-      final currentBytes = await excelService.exportData(allProfiles: true);
-      final fileService = ref.read(fileServiceProvider);
-      await fileService.saveFile(
-          'safety_backup_before_restore.xlsx', currentBytes);
-      await Future.delayed(const Duration(seconds: 2));
-    }
+    if (decision != 'RESTORE') return;
 
     // 2. Perform Restore
     setState(() => _isDownloading = true);

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_core/firebase_core.dart';
 import 'cloud_storage_interface.dart';
 import 'storage_service.dart';
@@ -42,25 +43,16 @@ class CloudSyncService {
 
     // Serialize all app data
     final data = {
-      'accounts': _storageService
-          .getAllAccounts()
-          .map((e) => _accountToMap(e))
-          .toList(),
-      'transactions': _storageService
-          .getAllTransactions()
-          .map((e) => _transactionToMap(e))
-          .toList(),
-      'loans': _storageService.getAllLoans().map((e) => _loanToMap(e)).toList(),
-      'recurring': _storageService
-          .getAllRecurring()
-          .map((e) => _recurringToMap(e))
-          .toList(),
-      'categories': _storageService
-          .getAllCategories()
-          .map((e) => _categoryToMap(e))
-          .toList(),
-      'profiles':
-          _storageService.getProfiles().map((e) => _profileToMap(e)).toList(),
+      'accounts':
+          _storageService.getAllAccounts().map((e) => e.toMap()).toList(),
+      'transactions':
+          _storageService.getAllTransactions().map((e) => e.toMap()).toList(),
+      'loans': _storageService.getAllLoans().map((e) => e.toMap()).toList(),
+      'recurring':
+          _storageService.getAllRecurring().map((e) => e.toMap()).toList(),
+      'categories':
+          _storageService.getAllCategories().map((e) => e.toMap()).toList(),
+      'profiles': _storageService.getProfiles().map((e) => e.toMap()).toList(),
       'settings': _storageService.getAllSettings(),
       'insurance_policies':
           _storageService.getInsurancePolicies().map((e) => e.toMap()).toList(),
@@ -69,10 +61,8 @@ class CloudSyncService {
           .map((year, rules) => MapEntry(year.toString(), rules.toMap())),
       'tax_data':
           _storageService.getAllTaxYearData().map((e) => e.toMap()).toList(),
-      'lending_records': _storageService
-          .getLendingRecords()
-          .map((e) => _lendingRecordToMap(e))
-          .toList(),
+      'lending_records':
+          _storageService.getLendingRecords().map((e) => e.toMap()).toList(),
     };
 
     await _cloudStorage.syncData(user.uid, data);
@@ -85,8 +75,12 @@ class CloudSyncService {
     final user = auth.currentUser;
     if (user == null) throw Exception("User not logged in");
 
-    final data = await _cloudStorage.fetchData(user.uid);
-    if (data == null) throw Exception("No cloud data found");
+    final rawData = await _cloudStorage.fetchData(user.uid);
+    if (rawData == null) throw Exception("No cloud data found");
+
+    // SANITIZATION: Convert Firestore Timestamps to DateTime
+    // Hive doesn't know how to serialize Timestamp (minified:tH), causing restore crash.
+    final data = _sanitizeFirestoreData(rawData) as Map<String, dynamic>;
 
     // Clear local data before restore
     await _storageService.clearAllData();
@@ -95,7 +89,7 @@ class CloudSyncService {
     if (data['profiles'] != null) {
       for (var p in (data['profiles'] as List)) {
         await _storageService
-            .saveProfile(_mapToProfile(Map<String, dynamic>.from(p)));
+            .saveProfile(Profile.fromMap(Map<String, dynamic>.from(p)));
       }
     }
 
@@ -103,7 +97,7 @@ class CloudSyncService {
       try {
         for (var c in (data['categories'] as List)) {
           await _storageService
-              .addCategory(_mapToCategory(Map<String, dynamic>.from(c)));
+              .addCategory(Category.fromMap(Map<String, dynamic>.from(c)));
         }
       } catch (e) {
         // print("Restore Error (Categories): $e");
@@ -113,7 +107,7 @@ class CloudSyncService {
 
     if (data['accounts'] != null) {
       for (var a in (data['accounts'] as List)) {
-        final acc = _mapToAccount(Map<String, dynamic>.from(a));
+        final acc = Account.fromMap(Map<String, dynamic>.from(a));
         await _storageService.saveAccount(acc);
 
         // FIX: Initialize rollover timestamp for Credit Cards to prevent double-counting
@@ -127,7 +121,7 @@ class CloudSyncService {
     if (data['transactions'] != null) {
       for (var t in (data['transactions'] as List)) {
         await _storageService.saveTransaction(
-            _mapToTransaction(Map<String, dynamic>.from(t)),
+            Transaction.fromMap(Map<String, dynamic>.from(t)),
             applyImpact: false);
       }
     }
@@ -135,14 +129,14 @@ class CloudSyncService {
     if (data['loans'] != null) {
       for (var l in (data['loans'] as List)) {
         await _storageService
-            .saveLoan(_mapToLoan(Map<String, dynamic>.from(l)));
+            .saveLoan(Loan.fromMap(Map<String, dynamic>.from(l)));
       }
     }
 
     if (data['recurring'] != null) {
       for (var rt in (data['recurring'] as List)) {
         await _storageService.saveRecurringTransaction(
-            _mapToRecurring(Map<String, dynamic>.from(rt)));
+            RecurringTransaction.fromMap(Map<String, dynamic>.from(rt)));
       }
     }
 
@@ -194,7 +188,7 @@ class CloudSyncService {
       try {
         for (var l in (data['lending_records'] as List)) {
           await _storageService.saveLendingRecord(
-              _mapToLendingRecord(Map<String, dynamic>.from(l)));
+              LendingRecord.fromMap(Map<String, dynamic>.from(l)));
         }
       } catch (e) {
         // print("Restore Error (Lending): $e");
@@ -212,220 +206,22 @@ class CloudSyncService {
     await _cloudStorage.deleteData(user.uid);
   }
 
-  // --- Mappers ---
-
-  Map<String, dynamic> _accountToMap(Account a) => {
-        'id': a.id,
-        'name': a.name,
-        'balance': a.balance,
-        'type': a.type.index,
-        'profileId': a.profileId,
-        'billingCycleDay': a.billingCycleDay,
-        'paymentDueDateDay': a.paymentDueDateDay,
-        'creditLimit': a.creditLimit,
-        'currency': a.currency,
-      };
-
-  Account _mapToAccount(Map<String, dynamic> m) => Account(
-        id: m['id'],
-        name: m['name'],
-        balance: (m['balance'] as num).toDouble(),
-        type: AccountType.values[m['type']],
-        profileId: m['profileId'],
-        billingCycleDay: m['billingCycleDay'],
-        paymentDueDateDay: m['paymentDueDateDay'],
-        creditLimit: (m['creditLimit'] as num?)?.toDouble(),
-        currency: m['currency'] ?? '',
-      );
-
-  Map<String, dynamic> _transactionToMap(Transaction t) => {
-        'id': t.id,
-        'title': t.title,
-        'amount': t.amount,
-        'date': t.date.toIso8601String(),
-        'type': t.type.index,
-        'category': t.category,
-        'accountId': t.accountId,
-        'toAccountId': t.toAccountId,
-        'loanId': t.loanId,
-        'isRecurringInstance': t.isRecurringInstance,
-        'isDeleted': t.isDeleted,
-        'holdingTenureMonths': t.holdingTenureMonths,
-        'gainAmount': t.gainAmount,
-        'profileId': t.profileId,
-      };
-
-  Transaction _mapToTransaction(Map<String, dynamic> m) => Transaction(
-        id: m['id'],
-        title: m['title'],
-        amount: (m['amount'] as num).toDouble(),
-        date: DateTime.parse(m['date']),
-        type: TransactionType.values[m['type']],
-        category: m['category'],
-        accountId: m['accountId'],
-        toAccountId: m['toAccountId'],
-        loanId: m['loanId'],
-        isRecurringInstance: m['isRecurringInstance'] ?? false,
-        isDeleted: m['isDeleted'] ?? false,
-        holdingTenureMonths: m['holdingTenureMonths'],
-        gainAmount: (m['gainAmount'] as num?)?.toDouble(),
-        profileId: m['profileId'],
-      );
-
-  Map<String, dynamic> _loanToMap(Loan l) => {
-        'id': l.id,
-        'name': l.name,
-        'totalPrincipal': l.totalPrincipal,
-        'remainingPrincipal': l.remainingPrincipal,
-        'interestRate': l.interestRate,
-        'tenureMonths': l.tenureMonths,
-        'startDate': l.startDate.toIso8601String(),
-        'emiAmount': l.emiAmount,
-        'accountId': l.accountId,
-        'type': l.type.index,
-        'emiDay': l.emiDay,
-        'firstEmiDate': l.firstEmiDate.toIso8601String(),
-        'profileId': l.profileId,
-        'transactions':
-            l.transactions.map((t) => _loanTransactionToMap(t)).toList(),
-      };
-
-  Loan _mapToLoan(Map<String, dynamic> m) => Loan(
-        id: m['id'],
-        name: m['name'],
-        totalPrincipal: (m['totalPrincipal'] as num).toDouble(),
-        remainingPrincipal: (m['remainingPrincipal'] as num).toDouble(),
-        interestRate: (m['interestRate'] as num).toDouble(),
-        tenureMonths: m['tenureMonths'],
-        startDate: DateTime.parse(m['startDate']),
-        emiAmount: (m['emiAmount'] as num).toDouble(),
-        accountId: m['accountId'],
-        type: LoanType.values[m['type'] ?? 0],
-        emiDay: m['emiDay'] ?? 1,
-        firstEmiDate: DateTime.parse(m['firstEmiDate']),
-        profileId: m['profileId'],
-        transactions: (m['transactions'] as List?)
-                ?.map(
-                    (t) => _mapToLoanTransaction(Map<String, dynamic>.from(t)))
-                .toList() ??
-            [],
-      );
-
-  Map<String, dynamic> _loanTransactionToMap(LoanTransaction lt) => {
-        'id': lt.id,
-        'date': lt.date.toIso8601String(),
-        'amount': lt.amount,
-        'type': lt.type.index,
-        'principalComponent': lt.principalComponent,
-        'interestComponent': lt.interestComponent,
-        'resultantPrincipal': lt.resultantPrincipal,
-      };
-
-  LoanTransaction _mapToLoanTransaction(Map<String, dynamic> m) =>
-      LoanTransaction(
-        id: m['id'],
-        date: DateTime.parse(m['date']),
-        amount: (m['amount'] as num).toDouble(),
-        type: LoanTransactionType.values[m['type']],
-        principalComponent: (m['principalComponent'] as num).toDouble(),
-        interestComponent: (m['interestComponent'] as num).toDouble(),
-        resultantPrincipal: (m['resultantPrincipal'] as num).toDouble(),
-      );
-
-  Map<String, dynamic> _recurringToMap(RecurringTransaction rt) => {
-        'id': rt.id,
-        'title': rt.title,
-        'amount': rt.amount,
-        'category': rt.category,
-        'accountId': rt.accountId,
-        'frequency': rt.frequency.index,
-        'interval': rt.interval,
-        'byMonthDay': rt.byMonthDay,
-        'byWeekDay': rt.byWeekDay,
-        'nextExecutionDate': rt.nextExecutionDate.toIso8601String(),
-        'isActive': rt.isActive,
-        'scheduleType': rt.scheduleType.index,
-        'selectedWeekday': rt.selectedWeekday,
-        'adjustForHolidays': rt.adjustForHolidays,
-        'profileId': rt.profileId,
-        'type': rt.type.index,
-      };
-
-  RecurringTransaction _mapToRecurring(Map<String, dynamic> m) =>
-      RecurringTransaction(
-        id: m['id'],
-        title: m['title'],
-        amount: (m['amount'] as num).toDouble(),
-        category: m['category'],
-        accountId: m['accountId'],
-        frequency: Frequency.values[m['frequency']],
-        interval: m['interval'] ?? 1,
-        byMonthDay: m['byMonthDay'],
-        byWeekDay: m['byWeekDay'],
-        nextExecutionDate: DateTime.parse(m['nextExecutionDate']),
-        isActive: m['isActive'] ?? true,
-        scheduleType: ScheduleType.values[m['scheduleType'] ?? 0],
-        selectedWeekday: m['selectedWeekday'],
-        adjustForHolidays: m['adjustForHolidays'] ?? false,
-        profileId: m['profileId'] ?? 'default',
-        type:
-            TransactionType.values[m['type'] ?? TransactionType.expense.index],
-      );
-
-  Map<String, dynamic> _categoryToMap(Category c) => {
-        'id': c.id,
-        'name': c.name,
-        'usage': c.usage.index,
-        'tag': c.tag.index,
-        'iconCode': c.iconCode,
-        'profileId': c.profileId,
-      };
-
-  Category _mapToCategory(Map<String, dynamic> m) => Category(
-        id: m['id'],
-        name: m['name'],
-        usage: CategoryUsage.values[m['usage']],
-        tag: CategoryTag.values[m['tag']],
-        iconCode: m['iconCode'],
-        profileId: m['profileId'],
-      );
-
-  Map<String, dynamic> _profileToMap(Profile p) => {
-        'id': p.id,
-        'name': p.name,
-        'currencyLocale': p.currencyLocale,
-        'monthlyBudget': p.monthlyBudget,
-      };
-
-  Profile _mapToProfile(Map<String, dynamic> m) => Profile(
-        id: m['id'],
-        name: m['name'],
-        currencyLocale: m['currencyLocale'] ?? 'en_IN',
-        monthlyBudget: (m['monthlyBudget'] as num?)?.toDouble() ?? 0.0,
-      );
-
-  Map<String, dynamic> _lendingRecordToMap(LendingRecord l) => {
-        'id': l.id,
-        'personName': l.personName,
-        'amount': l.amount,
-        'reason': l.reason,
-        'date': l.date.toIso8601String(),
-        'type': l.type.index,
-        'isClosed': l.isClosed,
-        'closedDate': l.closedDate?.toIso8601String(),
-        'profileId': l.profileId,
-      };
-
-  LendingRecord _mapToLendingRecord(Map<String, dynamic> m) => LendingRecord(
-        id: m['id'],
-        personName: m['personName'],
-        amount: (m['amount'] as num).toDouble(),
-        reason: m['reason'],
-        date: DateTime.parse(m['date']),
-        type: LendingType.values[m['type']],
-        isClosed: m['isClosed'] ?? false,
-        closedDate:
-            m['closedDate'] != null ? DateTime.parse(m['closedDate']) : null,
-        profileId: m['profileId'],
-      );
+  /// Recursively converts [firestore.Timestamp] to [DateTime] and ensures Maps have String keys.
+  dynamic _sanitizeFirestoreData(dynamic data) {
+    if (data is firestore.Timestamp) {
+      return data.toDate().toIso8601String();
+    }
+    if (data is Map) {
+      // Create a new Map to avoid mutation issues and ensure String keys
+      final newMap = <String, dynamic>{};
+      data.forEach((key, value) {
+        newMap[key.toString()] = _sanitizeFirestoreData(value);
+      });
+      return newMap;
+    }
+    if (data is List) {
+      return data.map((item) => _sanitizeFirestoreData(item)).toList();
+    }
+    return data;
+  }
 }

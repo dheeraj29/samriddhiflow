@@ -127,7 +127,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}'))
+                          RegExp(r'^\d*\.?\d{0,2}$'))
                     ],
                     validator: (v) =>
                         (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid' : null,
@@ -168,7 +168,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                               decimal: true),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d{0,2}'))
+                                RegExp(r'^\d*\.?\d{0,2}$'))
                           ],
                           validator: (v) => (double.tryParse(v ?? '') ?? -1) < 0
                               ? 'Invalid'
@@ -227,7 +227,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}'))
+                            RegExp(r'^\d*\.?\d{0,2}$'))
                       ],
                       onChanged: (v) {
                         setState(() {

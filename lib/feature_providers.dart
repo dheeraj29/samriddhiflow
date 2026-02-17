@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'providers.dart';
 import 'services/firestore_storage_service.dart';
 import 'services/cloud_sync_service.dart';
-import 'services/excel_service.dart';
+import 'services/json_data_service.dart';
+
 import 'services/calendar_service.dart';
 import 'services/notification_service.dart';
 import 'services/taxes/tax_config_service.dart';
@@ -19,10 +20,10 @@ final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
       firebaseAuth: FirebaseAuth.instance);
 });
 
-final excelServiceProvider = Provider<ExcelService>((ref) {
+final jsonDataServiceProvider = Provider<JsonDataService>((ref) {
   final storage = ref.watch(storageServiceProvider);
-  final fileService = ref.watch(fileServiceProvider);
-  return ExcelService(storage, fileService);
+  final taxConfig = ref.watch(taxConfigServiceProvider);
+  return JsonDataService(storage, taxConfig);
 });
 
 final calendarServiceProvider = Provider<CalendarService>((ref) {

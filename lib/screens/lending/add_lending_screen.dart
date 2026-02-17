@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/lending_record.dart';
 import '../../services/lending/lending_provider.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class AddLendingScreen extends ConsumerStatefulWidget {
@@ -151,7 +152,11 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
               // Amount
               TextFormField(
                 controller: _amountController,
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Amount',
                   border: OutlineInputBorder(),

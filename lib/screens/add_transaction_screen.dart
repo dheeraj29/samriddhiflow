@@ -256,7 +256,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^-?\d*\.?\d{0,2}')),
+                            RegExp(r'^-?\d*\.?\d{0,2}$')),
                       ],
                       onChanged: (v) =>
                           setState(() => _gainAmount = double.tryParse(v)),
@@ -404,7 +404,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}$'))
                   ],
                   style: const TextStyle(
                       fontSize: 24, fontWeight: FontWeight.bold),

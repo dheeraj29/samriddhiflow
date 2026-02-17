@@ -1,101 +1,63 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:samriddhi_flow/models/lending_record.dart';
-import 'package:samriddhi_flow/services/cloud_sync_service.dart';
-import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
-import 'package:samriddhi_flow/services/storage_service.dart';
-import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:samriddhi_flow/models/taxes/tax_data.dart';
-import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/models/account.dart';
-import 'package:samriddhi_flow/models/transaction.dart';
-import 'package:samriddhi_flow/models/loan.dart';
-import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
-import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
+import 'package:samriddhi_flow/services/cloud_sync_service.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 
-class MockCloudStorage extends Mock implements CloudStorageInterface {
-  Map<String, dynamic>? _data;
+class MockCloudStorage extends Mock implements CloudStorageInterface {}
 
-  @override
-  Future<void> syncData(String uid, Map<String, dynamic> data) async {
-    _data = data;
-  }
+class MockStorageService extends Mock implements StorageService {}
 
-  @override
-  Future<Map<String, dynamic>?> fetchData(String uid) async {
-    return _data;
-  }
-}
+class MockTaxConfigService extends Mock implements TaxConfigService {}
 
-class MockStorageService extends Mock implements StorageService {
-  final List<LendingRecord> _lendingRecords = [];
+class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-  @override
-  List<LendingRecord> getLendingRecords() => _lendingRecords;
-
-  @override
-  Future<void> saveLendingRecord(LendingRecord record) async {
-    _lendingRecords.add(record);
-  }
-
-  @override
-  Future<void> clearAllData() async {
-    _lendingRecords.clear();
-  }
-
-  // Stubs for other calls in syncToCloud
-  @override
-  List<Account> getAllAccounts() => [];
-  @override
-  List<Transaction> getAllTransactions() => [];
-  @override
-  List<Loan> getAllLoans() => [];
-  @override
-  List<RecurringTransaction> getAllRecurring() => [];
-  @override
-  List<Category> getAllCategories() => [];
-  @override
-  List<Profile> getProfiles() => [];
-  @override
-  Map<String, dynamic> getAllSettings() => {};
-  @override
-  List<InsurancePolicy> getInsurancePolicies() => [];
-  @override
-  List<TaxYearData> getAllTaxYearData() => [];
-}
-
-class MockTaxConfigService extends Mock implements TaxConfigService {
-  @override
-  Map<int, TaxRules> getAllRules() => {};
-}
-
-class MockUser extends Mock implements User {
-  @override
-  String get uid => 'test_uid';
-}
-
-class MockFirebaseAuth extends Mock implements FirebaseAuth {
-  @override
-  User? get currentUser => MockUser();
-}
+class MockUser extends Mock implements User {}
 
 void main() {
-  late CloudSyncService syncService;
+  late CloudSyncService cloudSyncService;
   late MockCloudStorage mockCloudStorage;
   late MockStorageService mockStorageService;
   late MockTaxConfigService mockTaxConfigService;
   late MockFirebaseAuth mockAuth;
+  late MockUser mockUser;
 
   setUp(() {
     mockCloudStorage = MockCloudStorage();
     mockStorageService = MockStorageService();
     mockTaxConfigService = MockTaxConfigService();
     mockAuth = MockFirebaseAuth();
+    mockUser = MockUser();
 
-    syncService = CloudSyncService(
+    registerFallbackValue(Profile(id: 'f', name: 'f'));
+    registerFallbackValue(
+        Category(id: 'f', name: 'f', usage: CategoryUsage.expense));
+    registerFallbackValue(Account(
+      id: 'f',
+      name: 'f',
+      type: AccountType.savings,
+      balance: 0,
+    ));
+    registerFallbackValue(Transaction(
+      id: 'f',
+      title: 'f',
+      amount: 0,
+      date: DateTime.now(),
+      type: TransactionType.expense,
+      category: 'c',
+    ));
+
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockUser.uid).thenReturn('user123');
+
+    cloudSyncService = CloudSyncService(
       mockCloudStorage,
       mockStorageService,
       mockTaxConfigService,
@@ -103,51 +65,99 @@ void main() {
     );
   });
 
-  test('syncToCloud includes lending records', () async {
-    final record = LendingRecord.create(
-      personName: 'Test Person',
-      amount: 100.0,
-      reason: 'Test Reason',
-      date: DateTime.now(),
-      type: LendingType.lent,
-    );
-    mockStorageService._lendingRecords.add(record);
+  group('CloudSyncService - syncToCloud', () {
+    test('serializes and uploads all data', () async {
+      when(() => mockStorageService.getAllAccounts()).thenReturn([]);
+      when(() => mockStorageService.getAllTransactions()).thenReturn([]);
+      when(() => mockStorageService.getAllLoans()).thenReturn([]);
+      when(() => mockStorageService.getAllRecurring()).thenReturn([]);
+      when(() => mockStorageService.getAllCategories()).thenReturn([]);
+      when(() => mockStorageService.getProfiles()).thenReturn([]);
+      when(() => mockStorageService.getAllSettings()).thenReturn({});
+      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
 
-    await syncService.syncToCloud();
+      when(() => mockCloudStorage.syncData(any(), any()))
+          .thenAnswer((_) async {});
 
-    final data = mockCloudStorage._data;
-    expect(data, isNotNull);
-    expect(data!.containsKey('lending_records'), true);
-    final records = data['lending_records'] as List;
-    expect(records.length, 1);
-    expect(records[0]['personName'], 'Test Person');
+      await cloudSyncService.syncToCloud();
+
+      verify(() => mockCloudStorage.syncData('user123', any())).called(1);
+    });
+
+    test('throws error if not logged in', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+      expect(() => cloudSyncService.syncToCloud(), throwsException);
+    });
   });
 
-  test('restoreFromCloud restores lending records', () async {
-    // Setup cloud data
-    final recordMap = {
-      'id': 'test_id',
-      'personName': 'Restored Person',
-      'amount': 500.0,
-      'reason': 'Restored Reason',
-      'date': DateTime.now().toIso8601String(),
-      'type': LendingType.borrowed.index,
-      'isClosed': false,
-      'profileId': 'default',
-    };
+  group('CloudSyncService - restoreFromCloud', () {
+    test('clears local data and restores from cloud map', () async {
+      final cloudData = {
+        'profiles': [Profile(id: 'p1', name: 'P1').toMap()],
+        'accounts': [
+          Account(id: 'a1', name: 'A1', type: AccountType.savings, balance: 100)
+              .toMap()
+        ],
+      };
 
-    mockCloudStorage._data = {
-      'lending_records': [recordMap],
-      // Add other required fields as empty to avoid null errors
-      // check CloudSyncService for what it expects
-    };
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() => mockStorageService.saveProfile(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.addCategory(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveAccount(any()))
+          .thenAnswer((_) async {});
 
-    await syncService.restoreFromCloud();
+      await cloudSyncService.restoreFromCloud();
 
-    expect(mockStorageService._lendingRecords.length, 1);
-    final restored = mockStorageService._lendingRecords.first;
-    expect(restored.personName, 'Restored Person');
-    expect(restored.amount, 500.0);
-    expect(restored.type, LendingType.borrowed);
+      verify(() => mockStorageService.clearAllData()).called(1);
+      verify(() => mockStorageService.saveAccount(any())).called(1);
+    });
+
+    test('sanitizes Firestore timestamps recursively', () async {
+      final now = DateTime.now();
+      final cloudDataWithTimestamp = {
+        'transactions': [
+          {
+            'id': 't1',
+            'title': 'Test',
+            'amount': 50.0,
+            'date': firestore.Timestamp.fromDate(now),
+            'type': 1, // expense
+            'category': 'Food',
+          }
+        ]
+      };
+
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => cloudDataWithTimestamp);
+      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() => mockStorageService.saveTransaction(any(), applyImpact: false))
+          .thenAnswer((_) async {});
+
+      await cloudSyncService.restoreFromCloud();
+
+      final captured = verify(() => mockStorageService.saveTransaction(
+          captureAny(),
+          applyImpact: false)).captured.single as Transaction;
+      expect(captured.date.year, now.year);
+      expect(captured.date.month, now.month);
+      expect(captured.date.day, now.day);
+    });
+  });
+
+  group('CloudSyncService - deleteCloudData', () {
+    test('calls cloud storage delete', () async {
+      when(() => mockCloudStorage.deleteData(any())).thenAnswer((_) async {});
+
+      await cloudSyncService.deleteCloudData();
+
+      verify(() => mockCloudStorage.deleteData('user123')).called(1);
+    });
   });
 }

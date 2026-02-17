@@ -15,15 +15,16 @@ import '../firebase_options_debug.dart' as dev;
 class AuthService {
   final FirebaseAuth? _injectedAuth;
   final StorageService? _storageService;
+  final bool isWeb;
 
-  AuthService([this._injectedAuth, this._storageService]);
+  AuthService([this._injectedAuth, this._storageService, this.isWeb = kIsWeb]);
 
   FirebaseAuth? get _auth {
     if (_injectedAuth != null) return _injectedAuth;
 
     try {
       // CRITICAL: Check for JS object first to prevent ReferenceError crash on iOS
-      if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) return null;
+      if (isWeb && !FirebaseWebSafe.isFirebaseJsAvailable) return null;
 
       if (Firebase.apps.isNotEmpty) {
         return FirebaseAuth.instance;
@@ -95,7 +96,7 @@ class AuthService {
     }
 
     try {
-      if (kIsWeb) {
+      if (isWeb) {
         // Web: Use signInWithRedirect (More reliable for PWAs/COOP)
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider.setCustomParameters({'prompt': 'select_account'});
@@ -207,7 +208,7 @@ class AuthService {
     if (isSignOutInProgress) return;
     if (ref != null && ref.read(logoutRequestedProvider)) return;
     final auth = _auth;
-    if (auth != null && kIsWeb) {
+    if (auth != null && isWeb) {
       // Small delay to allow JS SDK to settle after reload
       await Future.delayed(const Duration(milliseconds: 500));
 
