@@ -303,7 +303,15 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
 
       // Handling Redirect Result
       DebugLogger().log("FirebaseInit: Handling Redirect Result...");
-      await ref.read(authServiceProvider).handleRedirectResult(ref);
+
+      // Check if logout was requested to avoid accidental re-login during redirect processing
+      if (!ref.read(logoutRequestedProvider)) {
+        final user = await ref.read(authServiceProvider).handleRedirectResult();
+        if (user != null) {
+          // If a user was successfully recovered from redirect, clear the logout flag
+          ref.read(logoutRequestedProvider.notifier).value = false;
+        }
+      }
 
       DebugLogger().log("FirebaseInit: Initialization Complete.");
       return;

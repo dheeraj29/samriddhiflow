@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-17T22:34:25.140377**
+> **Generated on: 2026-02-17T23:10:27.730377**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 77.3%**
@@ -13,11 +13,11 @@
 | widgets/auth_wrapper.dart | **63.5%** | 162/255 | WARN |
 | services/cloud_sync_service.dart | **63.9%** | 62/97 | WARN |
 | **providers.dart** | **64.3%** | 142/221 | WARN |
-| services/storage_service.dart | **64.4%** | 444/689 | WARN |
+| services/storage_service.dart | **64.3%** | 444/691 | WARN |
 | **screens/loan_details_screen.dart** | **66.2%** | 217/328 | WARN |
-| services/auth_service.dart | **68.0%** | 70/103 | WARN |
 | **screens/cc_payment_dialog.dart** | **68.3%** | 69/101 | WARN |
 | **screens/recurring_manager_screen.dart** | **69.0%** | 69/100 | WARN |
+| services/auth_service.dart | **69.3%** | 70/101 | WARN |
 | **screens/transactions_screen.dart** | **69.7%** | 136/195 | WARN |
 | models/taxes/tax_data.dart | **69.8%** | 67/96 | WARN |
 | services/taxes/indian_tax_service.dart | **70.0%** | 203/290 | WARN |

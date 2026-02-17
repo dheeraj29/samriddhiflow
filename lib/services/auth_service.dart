@@ -204,9 +204,9 @@ class AuthService {
 
   /// Finalizes the auth state after a web redirect.
   /// Should be called during app initialization.
-  Future<void> handleRedirectResult(dynamic ref) async {
-    if (isSignOutInProgress) return;
-    if (ref != null && ref.read(logoutRequestedProvider)) return;
+  Future<User?> handleRedirectResult() async {
+    if (isSignOutInProgress) return null;
+
     final auth = _auth;
     if (auth != null && isWeb) {
       // Small delay to allow JS SDK to settle after reload
@@ -220,25 +220,13 @@ class AuthService {
         final result = await auth.getRedirectResult();
         if (result.user != null) {
           DebugLogger().log("AuthService: Redirect Success");
-          if (_storageService != null) {
-            await _storageService.setAuthFlag(true);
-          } else if (Hive.isBoxOpen('settings')) {
-            await Hive.box('settings').put('isLoggedIn', true);
-          }
-          if (ref != null) {
-            ref.read(logoutRequestedProvider.notifier).value = false;
-          }
+          await _setLoggedInFlag(true);
+          return result.user;
         } else if (auth.currentUser != null) {
           DebugLogger().log(
               "AuthService: User already restored in currentUser fallback.");
-          if (_storageService != null) {
-            await _storageService.setAuthFlag(true);
-          } else if (Hive.isBoxOpen('settings')) {
-            await Hive.box('settings').put('isLoggedIn', true);
-          }
-          if (ref != null) {
-            ref.read(logoutRequestedProvider.notifier).value = false;
-          }
+          await _setLoggedInFlag(true);
+          return auth.currentUser;
         } else {
           DebugLogger()
               .log("AuthService: No Redirect Result User found (Both null).");
@@ -259,6 +247,15 @@ class AuthService {
     } else {
       DebugLogger()
           .log("AuthService: Skip Redirect check (Auth null or not Web).");
+    }
+    return null;
+  }
+
+  Future<void> _setLoggedInFlag(bool value) async {
+    if (_storageService != null) {
+      await _storageService.setAuthFlag(value);
+    } else if (Hive.isBoxOpen('settings')) {
+      await Hive.box('settings').put('isLoggedIn', value);
     }
   }
 

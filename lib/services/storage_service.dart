@@ -1141,7 +1141,11 @@ class StorageService {
 
   DateTime? getLastLogin() {
     final box = _hive.box(boxSettings);
-    return box.get('lastLogin') as DateTime?;
+    final value = box.get('lastLogin');
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return value as DateTime?;
   }
 
   Future<void> setLastLogin(DateTime date) async {

@@ -140,7 +140,7 @@ void main() {
   group('handleRedirectResult', () {
     test('returns early if signOutInProgress', () async {
       authService.isSignOutInProgress = true;
-      await authService.handleRedirectResult(mockRef);
+      await authService.handleRedirectResult();
       verifyNever(() => mockAuth.getRedirectResult());
     });
 
@@ -151,14 +151,10 @@ void main() {
       when(() => mockCredential.user).thenReturn(mockUser);
       when(() => mockStorage.setAuthFlag(true)).thenAnswer((_) async {});
 
-      final mockNotifier = MockLogoutRequestedNotifier();
-      when(() => mockRef.read(logoutRequestedProvider.notifier))
-          .thenReturn(mockNotifier);
-
-      await authService.handleRedirectResult(mockRef);
+      final result = await authService.handleRedirectResult();
 
       verify(() => mockStorage.setAuthFlag(true)).called(1);
-      verify(() => mockNotifier.value = false).called(1);
+      expect(result, mockUser);
     });
 
     test('recovers session if currentUser is already restored (fallback)',
@@ -170,18 +166,15 @@ void main() {
       when(() => mockAuth.currentUser).thenReturn(mockUser);
       when(() => mockStorage.setAuthFlag(true)).thenAnswer((_) async {});
 
-      final mockNotifier = MockLogoutRequestedNotifier();
-      when(() => mockRef.read(logoutRequestedProvider.notifier))
-          .thenReturn(mockNotifier);
-
-      await authService.handleRedirectResult(mockRef);
+      final result = await authService.handleRedirectResult();
 
       verify(() => mockStorage.setAuthFlag(true)).called(1);
+      expect(result, mockUser);
     });
 
     test('handles redirect errors gracefully', () async {
       when(() => mockAuth.getRedirectResult()).thenThrow(Exception('Fail'));
-      await authService.handleRedirectResult(mockRef);
+      await authService.handleRedirectResult();
       // Completes without throwing
     });
   });
