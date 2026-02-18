@@ -524,12 +524,10 @@ class IndianTaxService implements TaxStrategy {
         baseAnnualGross += monthlyBase;
       }
 
-      // Add independent monthly allowances
-      for (final a in data.salary.independentAllowances) {
-        if (a.frequency == PayoutFrequency.monthly) {
-          baseAnnualGross += a.payoutAmount;
-        }
-      }
+      // Note: We do NOT add independent monthly allowances here anymore.
+      // calculateSalaryIncome (called via calculateDetailedLiability) already adds them
+      // from the data.salary.independentAllowances list. Including them here
+      // would cause double-counting in the base tax calculation.
     }
 
     // 2. Calculate Base Annual Tax
@@ -652,13 +650,9 @@ class IndianTaxService implements TaxStrategy {
       ..sort((a, b) => b.effectiveDate.compareTo(a.effectiveDate));
 
     // Indian FY: Apr (4) to Mar (3).
-    // If AY is 2025, FY is 2024-25.
-    // Months 4-12 are in 2024 (AY-1).
-    // Months 1-3 are in 2025 (AY-1? No, 2025-26 AY -> 2024-25 FY. So 1-3 of 2025).
-    // Wait: AY 2025-26 -> FY 2024-25.
-    // Apr 2024 to Dec 2024. Jan 2025 to Mar 2025.
-    // So if month >= 4, year = data.year - 1. If month <= 3, year = data.year.
-    int yr = (month >= 4) ? (data.year - 1) : data.year;
+    // The data.year represents the START of the Financial Year (e.g., 2024 for FY 24-25).
+    // So Apr-Dec are in data.year, and Jan-Mar are in data.year + 1.
+    int yr = (month >= 4) ? data.year : data.year + 1;
     final targetDate = DateTime(yr, month, 28);
 
     for (final s in sorted) {

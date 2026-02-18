@@ -111,7 +111,6 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 // coverage:ignore-start
 final storageInitializerProvider = FutureProvider<void>((ref) async {
   // Initialize Hive & Register Adapters (Moved from main.dart to unblock UI)
-  DebugLogger().log("StorageInit: Starting Hive Initialization...");
   try {
     await Hive.initFlutter();
 
@@ -190,12 +189,8 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
 
     // Recalculate CC Balances to handle Cycle Rollovers on restart
     await storage.recalculateCCBalances();
-
-    DebugLogger()
-        .log("StorageInit: Hive Initialized & Boxes Opened Successfully.");
   } catch (e) {
     DebugLogger().log("StorageInit Error: $e");
-    debugPrint("Hive/Storage Init Failed: $e");
     rethrow; // Propagate to AuthWrapper UI
   }
 });
@@ -239,10 +234,7 @@ final authStreamProvider = StreamProvider<User?>((ref) {
     // If we are still initializing (loading), return an empty stream
     // to prevent the UI from prematurely deciding there is no user.
     loading: () => const Stream.empty(),
-    error: (e, __) {
-      DebugLogger().log("AuthStream: Firebase Init Error ($e). Staying idle.");
-      return const Stream.empty();
-    },
+    error: (e, __) => const Stream.empty(),
   );
 });
 // coverage:ignore-end
@@ -254,9 +246,7 @@ final fileServiceProvider = Provider<FileService>((ref) {
 // coverage:ignore-start
 final firebaseInitializerProvider = FutureProvider<void>((ref) async {
   // 1. Connectivity Check
-  DebugLogger().log("FirebaseInit: Checking Connectivity...");
   if (await NetworkUtils.isOffline()) {
-    DebugLogger().log("FirebaseInit: Offline Detected. Skipping Init.");
     return;
   }
 
@@ -268,19 +258,15 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
       reachable = true;
       break;
     }
-    DebugLogger().log(
-        "FirebaseInit: Reachability attempt ${i + 1} failed. DNS settling?");
     await Future.delayed(Duration(seconds: 1 + i));
   }
 
   if (!reachable) {
-    DebugLogger().log("FirebaseInit: Actual internet not reachable. Aborting.");
     throw Exception("Internet reached a timeout (DNS/Reachability issue).");
   }
 
   // 3. iOS PWA Offline Safety Check
   if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) {
-    DebugLogger().log("FirebaseInit: JS SDK Missing. Aborting Init.");
     throw Exception("Firebase JS SDK Missing (Offline Safe Mode)");
   }
 
@@ -291,8 +277,6 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
   while (attempts < maxAttempts) {
     try {
       attempts++;
-      DebugLogger().log(
-          "FirebaseInit: Starting Firebase.initializeApp (Attempt $attempts)...");
 
       // We use a progressive timeout: 20s, 40s, 60s
       await Firebase.initializeApp(
@@ -302,7 +286,6 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
       ).timeout(Duration(seconds: 20 * attempts));
 
       // Handling Redirect Result
-      DebugLogger().log("FirebaseInit: Handling Redirect Result...");
 
       // Check if logout was requested to avoid accidental re-login during redirect processing
       if (!ref.read(logoutRequestedProvider)) {
@@ -313,18 +296,17 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
         }
       }
 
-      DebugLogger().log("FirebaseInit: Initialization Complete.");
       return;
     } catch (e) {
       final isTimeout = e.toString().toLowerCase().contains("timeout");
-      DebugLogger().log("FirebaseInit: Attempt $attempts failed ($e).");
 
       if (attempts >= maxAttempts) {
         if (isTimeout) {
           throw Exception(
               "Firebase initialization timed out after $maxAttempts attempts.");
         }
-        rethrow;
+        // Fix for Web: Stringify exception to avoid interop subtype errors
+        throw e.toString();
       }
 
       // Wait before next attempt (Exponential-ish backoff)

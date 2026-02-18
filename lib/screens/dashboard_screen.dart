@@ -4,7 +4,6 @@ import 'add_transaction_screen.dart';
 import 'loans_screen.dart';
 import 'accounts_screen.dart';
 import 'settings_screen.dart';
-import '../utils/debug_logger.dart';
 import 'transactions_screen.dart';
 import 'reports_screen.dart';
 import 'reminders_screen.dart';
@@ -65,7 +64,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    DebugLogger().log("DashboardScreen: Disposing...");
     // Hide Calculator when leaving Dashboard via regular navigation
     // On logout, GlobalOverlay handles this reactively
     super.dispose();

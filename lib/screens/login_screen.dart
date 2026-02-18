@@ -156,7 +156,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _safetyTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
-        debugPrint("Login: Safety timeout triggered.");
       }
     });
   }
@@ -170,7 +169,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             storage.getAllTransactions().isNotEmpty;
 
         if (hasData) {
-          debugPrint("Auto-restore: Local data exists, skipping.");
           return;
         }
 
@@ -187,7 +185,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } catch (e) {
-      debugPrint("Auto-restore skipped or failed: $e");
+      // Auto-restore skipped or failed (offline or no cloud data)
     } finally {
       // Invalidate providers so Dashboard sees the new logged-in state and data
       // (This is safe to call even if unmounted as it updates the global Provider state)

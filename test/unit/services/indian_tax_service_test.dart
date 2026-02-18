@@ -281,5 +281,153 @@ void main() {
       expect(breakdown[10]!['extras'], 100000);
       expect(breakdown[10]!['tax'], greaterThan(breakdown[4]!['tax']!));
     });
+
+    test('Handles multiple salary structures in Financial Year', () {
+      final s1 = SalaryStructure(
+        id: 's1',
+        effectiveDate: DateTime(2024, 4, 1),
+        monthlyBasic: 50000,
+        monthlyFixedAllowances: 10000,
+      );
+      final s2 = SalaryStructure(
+        id: 's2',
+        effectiveDate: DateTime(2024, 10, 1), // Hike in October
+        monthlyBasic: 70000,
+        monthlyFixedAllowances: 15000,
+      );
+
+      final data = TaxYearData(
+        year: 2024, // FY 2024-25
+        salary: SalaryDetails(history: [s1, s2]),
+      );
+
+      final breakdown =
+          taxService.calculateMonthlySalaryBreakdown(data, defaultRules);
+
+      // Apr to Sep -> s1 (60k)
+      // Oct to Mar -> s2 (85k)
+      expect(breakdown[4]!['gross'], 60000);
+      expect(breakdown[9]!['gross'], 60000);
+      expect(breakdown[10]!['gross'], 85000);
+      expect(breakdown[3]!['gross'], 85000); // March of next calendar year
+    });
+
+    test('Includes independent monthly allowances and deductions', () {
+      final s1 = SalaryStructure(
+        id: 's1',
+        effectiveDate: DateTime(2024, 4, 1),
+        monthlyBasic: 100000,
+      );
+
+      final data = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(
+          history: [s1],
+          independentAllowances: [
+            const CustomAllowance(
+              name: 'Internet',
+              payoutAmount: 2000,
+              frequency: PayoutFrequency.monthly,
+            ),
+          ],
+          independentDeductions: [
+            const CustomDeduction(
+              name: 'Professional Tax',
+              amount: 200,
+              frequency: PayoutFrequency.monthly,
+              isTaxable: true, // Deduction from taxable income
+            ),
+            const CustomDeduction(
+              name: 'LWF',
+              amount: 10,
+              frequency: PayoutFrequency.monthly,
+              isTaxable: false, // Post-tax deduction
+            ),
+          ],
+        ),
+      );
+
+      final breakdown =
+          taxService.calculateMonthlySalaryBreakdown(data, defaultRules);
+
+      // Gross = 100k + 2k = 102k
+      expect(breakdown[4]!['gross'], 102000);
+      // Deductions = 200 + 10 = 210
+      expect(breakdown[4]!['deductions'], 210);
+      // Verify take-home calculation includes these
+      final tax = breakdown[4]!['tax']!;
+      final expectedTakeHome = 102000 - tax - 210;
+      expect(breakdown[4]!['takeHome'], closeTo(expectedTakeHome, 1));
+    });
+
+    test('Applies Marginal Relief for income slightly above rebate limit', () {
+      final data = TaxYearData(
+        year: 2025,
+        salary: const SalaryDetails(
+            grossSalary: 800000), // Net 7.25L after 75k StdDed
+      );
+
+      final result = taxService.calculateDetailedLiability(data, defaultRules);
+
+      // Tax on 7.25L (New Regime): 3-6 (15k), 6-7.25 (12.5k). Total = 27.5k.
+      // Excess Income = 7.25L - 7L = 25k.
+      // Marginal Relief caps taxBeforeCess at 25k.
+      // Cess 4% on 25k = 1000. Total = 26000.
+      expect(result['totalTax'], 26000);
+    });
+
+    test('LTCG Equity handles 1.25L exemption correctly', () {
+      final rules = defaultRules.copyWith(
+        stdExemption112A: 125000,
+        isCGRatesEnabled: true,
+        ltcgRateEquity: 12.5,
+      );
+
+      final data = TaxYearData(
+        year: 2025,
+        capitalGains: [
+          CapitalGainEntry(
+            description: 'Stocks',
+            saleAmount: 1000000,
+            costOfAcquisition: 0, // 10L gain
+            gainDate: DateTime(2025, 5, 1),
+            matchAssetType: AssetType.equityShares,
+            isLTCG: true,
+          ),
+        ],
+      );
+
+      final result = taxService.calculateDetailedLiability(data, rules);
+      // Gain = 10L. Exemption = 125k. Taxable = 8.75L.
+      // Tax @ 12.5% = 109375.
+      expect(result['specialTax'], 109375);
+    });
+
+    test('Handles Cash Gifts correctly (Exempt vs Taxable)', () {
+      final data = TaxYearData(
+        year: 2025,
+        cashGifts: [
+          const OtherIncome(
+              name: 'G1', amount: 40000, type: 'Gift', subtype: 'Other'),
+          const OtherIncome(
+              name: 'G2', amount: 100000, type: 'Gift', subtype: 'Marriage'),
+        ],
+      );
+
+      final rules = defaultRules.copyWith(cashGiftExemptionLimit: 50000);
+
+      var income = taxService.calculateOtherSources(data, rules);
+      expect(income, 0); // Aggregate 40k <= 50k
+
+      final data2 = data.copyWith(cashGifts: [
+        ...data.cashGifts,
+        const OtherIncome(
+            name: 'G3', amount: 20000, type: 'Gift', subtype: 'Other'),
+      ]);
+      // Total Other = 40k + 20k = 60k (> 50k)
+
+      income = taxService.calculateOtherSources(data2, rules);
+      expect(income, 60000); // Fully taxable
+    });
   });
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../feature_providers.dart';
 import '../providers.dart';
-import '../utils/debug_logger.dart';
 import 'quick_sum_tracker.dart';
 
 class GlobalOverlay extends ConsumerWidget {
@@ -15,10 +14,6 @@ class GlobalOverlay extends ConsumerWidget {
     final isCalculatorVisible = ref.watch(calculatorVisibleProvider);
     final isLoggedIn = ref.watch(isLoggedInProvider);
     final isLogoutRequested = ref.watch(logoutRequestedProvider);
-
-    if (isLogoutRequested) {
-      DebugLogger().log("GlobalOverlay: Logout Detected. Snapping Shut.");
-    }
 
     final showCalculator =
         isCalculatorVisible && isLoggedIn && !isLogoutRequested;

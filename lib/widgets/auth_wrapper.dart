@@ -44,13 +44,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           // Safety timeout: If Firebase fails to sign us in within 120s, release the screen
           Future.delayed(const Duration(seconds: 120), () {
             if (mounted && _isRedirectingLocal) {
-              DebugLogger().log("AuthWrapper: Redirect Timeout reached.");
               setState(() => _isRedirectingLocal = false);
             }
           });
         }
       } catch (e) {
-        debugPrint("Error reading session storage: $e");
+        // Error reading session storage
       }
     }
 
@@ -72,8 +71,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _verificationSafetyTimer = Timer(const Duration(seconds: 120), () {
       if (mounted && !_hasVerificationTimedOut) {
         setState(() => _hasVerificationTimedOut = true);
-        DebugLogger()
-            .log("AuthWrapper: Session Verification Timeout triggered.");
       }
     });
 
@@ -81,7 +78,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _slowConnectionTimer = Timer(const Duration(seconds: 25), () {
       if (mounted && !_isSlowConnection) {
         setState(() => _isSlowConnection = true);
-        DebugLogger().log("AuthWrapper: Slow Connection detected.");
       }
     });
   }
@@ -106,8 +102,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       if (mounted && _hasVerificationTimedOut && !ref.read(isOfflineProvider)) {
         final hasInternet = await NetworkUtils.hasActualInternet();
         if (hasInternet && mounted) {
-          DebugLogger().log(
-              "AuthWrapper: Background Reachability Detected. Auto-healing...");
           ref.invalidate(firebaseInitializerProvider);
         }
       }
@@ -123,7 +117,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       final checkFn = ref.read(connectivityCheckProvider);
       final isOffline = await checkFn();
       if (isOffline) {
-        DebugLogger().log("AuthWrapper: Offline. Skipping revalidation.");
         // If we are persistently logged in, mark as "Timed Out" immediately
         // so we enter Failover Mode (Dashboard) and stay there when network returns.
         if (ref.read(isLoggedInProvider) && mounted) {
@@ -138,10 +131,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             onTimeout: () => null,
           );
 
-      DebugLogger().log("AuthWrapper: Online. Revalidating Session...");
       await _revalidateSession();
     } catch (e) {
-      DebugLogger().log("AuthWrapper: Initial Check suppressed error: $e");
+      // Initial Check suppressed error
     }
   }
 
@@ -151,7 +143,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     try {
       final user = authService.currentUser;
       if (user != null && !authService.isSignOutInProgress) {
-        debugPrint("Connectivity restored: Revalidating session...");
         await authService.reloadUser(ref);
       }
     } on FirebaseAuthException catch (e) {
@@ -163,13 +154,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         await authService.signOut(ref);
       } else if (e.code == 'network-request-failed' ||
           e.code == 'unavailable') {
-        DebugLogger()
-            .log("Revalidation: Network Issue (${e.code}). Keeping Session.");
+        // Revalidation: Network Issue
       } else {
-        DebugLogger().log("Revalidation warning (${e.code}) - Keeping Session");
+        // Revalidation warning
       }
     } catch (e) {
-      debugPrint("Revalidation warning: $e");
+      // Revalidation warning suppressed
     }
   }
 
@@ -181,31 +171,37 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     ref.listen(isOfflineProvider, (previous, next) async {
       if (!_bootGracePeriodFinished) return; // Ignore startup noise
 
-      final wasOffline = previous ?? false;
-      final isOnline = !next;
-      if (wasOffline && isOnline) {
-        // Wait a small moment for DNS/Interface to settle
-        await Future.delayed(const Duration(seconds: 2));
-
-        // ACTUAL reachability check
-        final hasActualInternet = await NetworkUtils.hasActualInternet();
-        if (!hasActualInternet) {
-          DebugLogger().log(
-              "AuthWrapper: Network event Online but ACTUAL reachability failed. Staying in failover.");
-          return;
-        }
-
-        DebugLogger().log("AuthWrapper: Network Restored. Re-triggering Init.");
+      if (!(previous ?? false) && !next) {
         ref.invalidate(firebaseInitializerProvider);
 
         // Wait for Firebase to settle then revalidate
         try {
-          await ref
-              .read(firebaseInitializerProvider.future)
-              .timeout(const Duration(seconds: 10));
+          await ref.read(firebaseInitializerProvider.future).timeout(
+              const Duration(seconds: 15)); // Increased timeout for recovery
           await _revalidateSession();
+
+          // Clear timeout flag if recovery succeeded
+          if (mounted && _hasVerificationTimedOut) {
+            setState(() => _hasVerificationTimedOut = false);
+          }
         } catch (e) {
-          DebugLogger().log("AuthWrapper: Restoration revalidate failed: $e");
+          // Restoration revalidate failed
+        }
+      }
+    });
+
+    // 1.05 FIREBASE INIT ERROR LISTENER
+    ref.listen(firebaseInitializerProvider, (previous, next) {
+      if (next is AsyncError) {
+        final isPersistentLogin = ref.read(isLoggedInProvider);
+        if (isPersistentLogin && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Connection failed. Switching to Offline Mode."),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
       }
     });
@@ -213,8 +209,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // 1.0 GLOBAL LOGOUT NAVIGATION
     ref.listen(logoutRequestedProvider, (previous, next) {
       if (next == true) {
-        DebugLogger()
-            .log("AuthWrapper: Logout requested. Clearing navigator stack.");
         navigatorKey.currentState?.popUntil((route) => route.isFirst);
       }
     });
@@ -245,9 +239,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final isLoggedIn = ref.read(isLoggedInProvider);
         final user = next.value;
 
-        debugPrint(
-            "DEBUG: Listener fired. BootFinished: $_bootGracePeriodFinished, Redirecting: $_isRedirectingLocal, FirebaseInit: ${firebaseInit.isLoading}, SignOut: ${authService.isSignOutInProgress}");
-
         if (!_bootGracePeriodFinished ||
             // _isRedirectingLocal should not block logic, it's just a UI state
             firebaseInit
@@ -263,9 +254,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final checkFn = ref.read(connectivityCheckProvider);
         final isOffline = await checkFn();
 
-        debugPrint(
-            "Ghost Session Check Logic: next.hasValue=${next.hasValue} user=$user isOffline=$isOffline isLoggedIn=$isLoggedIn");
-
         // 3. GHOST SESSION DETECTION (Prompt User instead of Force Logout)
         if (next.hasValue && user == null && !isOffline && isLoggedIn) {
           // Extra Guard: Wait for 30s before flagging it
@@ -273,8 +261,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           final stillOffline = await checkFn();
 
           if (!stillOffline && context.mounted) {
-            DebugLogger()
-                .log("AuthWrapper: Ghost Session confirmed. Prompting user.");
             // Only show if not already showing a dialog or snackbar loop
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -297,9 +283,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           final storage = ref.read(storageServiceProvider);
           final accounts = storage.getAccounts();
           if (accounts.isEmpty) {
-            DebugLogger().log(
-                "AuthWrapper: Local data empty. Triggering Auto-Restore...");
-
             // Run in background, don't await blocking the UI
             ref.read(cloudSyncServiceProvider).restoreFromCloud().then((_) {
               if (context.mounted) {
@@ -317,7 +300,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 _ensureOptimisticFlag();
               }
             }).catchError((e) {
-              DebugLogger().log("AuthWrapper: Auto-Restore failed/skipped: $e");
+              // Auto-Restore failed/skipped
               // Optional: Show error only if it's not "No cloud data found"
               if (context.mounted && !e.toString().contains("No cloud data")) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -328,8 +311,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           }
         }
       } catch (e) {
-        DebugLogger()
-            .log("AuthWrapper: Background Listener suppressed error: $e");
+        // Background Listener suppressed error
       }
     });
 
@@ -441,20 +423,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             final isTimeout = e.toString().toLowerCase().contains("timeout");
 
             // SOFT FAILOVER: If we are already logged in locally, don't show the error screen.
-            // Just show a snackbar and let the user into the app (Offline Mode).
+            // Just show the Dashboard (Offline Mode). The SnackBar is now handled by the listener above.
             if (isPersistentLogin) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content:
-                          Text("Connection failed. Switching to Offline Mode."),
-                      backgroundColor: Colors.orange,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-              });
               return _buildAuthStream(context, isPersistentLogin);
             }
 
@@ -533,8 +503,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             return const DashboardScreen();
           } else {
             // Safety/Manual Timeout: Grant entry to local data
-            DebugLogger()
-                .log("AuthWrapper: Entering Dashboard via Offline Failover.");
             return const DashboardScreen();
           }
         }
@@ -654,11 +622,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       // We rely on StorageService to abstract the underlying box check if needed,
       // but getAuthFlag() usually returns default false if key missing.
       if (storage.getAuthFlag() == false) {
-        DebugLogger().log("AuthWrapper: Setting Optimistic Flag.");
         await storage.setAuthFlag(true);
       }
     } catch (e) {
-      DebugLogger().log("AuthWrapper: Failed to set Optimistic Flag: $e");
+      // Failed to set Optimistic Flag
     }
   }
 }

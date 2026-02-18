@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:samriddhi_flow/models/account.dart';
@@ -343,8 +344,6 @@ class StorageService {
       }
 
       await setLastRollover(acc.id, newRolloverDate.millisecondsSinceEpoch);
-      DebugLogger().log(
-          'Repair: Auto-reset cycle for ${acc.name} to $newRolloverDate. (Date-Only fix, keepBilled=$keepBilledStatus)');
     } catch (e) {
       DebugLogger().log('Error resetting cycle for ${acc.name}: $e');
     }
@@ -504,19 +503,14 @@ class StorageService {
               await accountsBox.put(acc.id, acc);
             }
 
-            // Mark as rolled over to the PREVIOUS cycle start (leaving one cycle as "Billed")
+            // Force update rollover date
             await settingsBox.put(
                 key, targetRolloverDate.millisecondsSinceEpoch);
 
             // Clear the auto-ignore flag if it existed
-            if (shouldIgnorePayments) {
+            if (effectiveIgnorePayments) {
               await settingsBox.delete(ignoreFlagKey);
-              DebugLogger().log(
-                  'CC Rollover: Cleared ignore_rollover_payments for ${acc.id}');
             }
-
-            DebugLogger().log(
-                'CC Rollover: ${acc.name} updated by $adhocAmount. New Balance: ${acc.balance} (Ignored Payments: $effectiveIgnorePayments)');
           }
         }
       }
@@ -593,17 +587,12 @@ class StorageService {
     final settingsBox = _hive.box(boxSettings);
     await settingsBox.put(
         'last_rollover_$accountId', importRolloverDate.millisecondsSinceEpoch);
-
-    DebugLogger().log(
-        'Import: Initialized rollover for $accountId to $importRolloverDate (Skip History)');
   }
 
   /// Explicitly sets the last rollover timestamp (Used by Repair Jobs).
   Future<void> setLastRollover(String accountId, int timestamp) async {
     final settingsBox = _hive.box(boxSettings);
     await settingsBox.put('last_rollover_$accountId', timestamp);
-    DebugLogger().log(
-        'Repair: Set last_rollover_$accountId to ${DateTime.fromMillisecondsSinceEpoch(timestamp)}');
   }
 
   /// Recalculates Credit Card balances based on the current billing cycle.
@@ -1218,7 +1207,33 @@ class StorageService {
   /// Exports all keys from the settings box.
   Map<String, dynamic> getAllSettings() {
     final box = _hive.box(boxSettings);
-    return Map<String, dynamic>.from(box.toMap());
+    final rawMap = Map<String, dynamic>.from(box.toMap());
+
+    // Sanitize for JSON (Remove complex objects that might have been saved by mistake)
+    final sanitized = <String, dynamic>{};
+    rawMap.forEach((key, value) {
+      if (value is DateTime) {
+        sanitized[key] = value.toIso8601String();
+      } else if (value is TimeOfDay) {
+        sanitized[key] = '${value.hour}:${value.minute}';
+      } else if (value is Color) {
+        sanitized[key] = value.toARGB32();
+      } else if (value is IconData) {
+        sanitized[key] = value.codePoint;
+      } else if (value is RecurringTransaction ||
+          value is Account ||
+          value is Transaction ||
+          value is Category ||
+          value is Loan ||
+          value is Profile) {
+        // Skip complex objects stored here by mistake (should be in own boxes)
+      } else {
+        // Primitives (int, double, bool, String, null)
+        sanitized[key] = value;
+      }
+    });
+
+    return sanitized;
   }
 
   /// Bulk-save settings from a map (used during restore).
@@ -1352,12 +1367,14 @@ class StorageService {
     if (_hive.isBoxOpen(boxName)) return _hive.box<T>(boxName);
 
     try {
-      DebugLogger().log("StorageService: Opening box '$boxName'...");
       return await _hive.openBox<T>(boxName);
     } catch (e) {
-      if (e is TypeError || e.toString().contains('subtype')) {
+      if (e is TypeError ||
+          e is UnsupportedError ||
+          e.toString().contains('subtype') ||
+          e.toString().contains('Infinity')) {
         DebugLogger().log(
-            "CRITICAL: TypeError detected opening '$boxName'. Attempting repair...");
+            "CRITICAL: Data Corruption detected opening '$boxName' ($e). Attempting repair...");
 
         // Open as dynamic to inspect contents
         final dynamicBox = await _hive.openBox(boxName);
@@ -1371,8 +1388,6 @@ class StorageService {
           final value = entry.value;
 
           if (value is! T && value != null) {
-            DebugLogger().log(
-                "Found mismatched type in '$boxName': ${value.runtimeType} at key '$key'");
             corruptedKeys.add(key);
 
             // Rescue specific types if we are in the wrong box
@@ -1383,8 +1398,6 @@ class StorageService {
         }
 
         if (corruptedKeys.isNotEmpty) {
-          DebugLogger().log(
-              "Removing ${corruptedKeys.length} corrupted/mismatched items from '$boxName'...");
           for (var key in corruptedKeys) {
             await dynamicBox.delete(key);
           }
@@ -1394,8 +1407,6 @@ class StorageService {
 
         // Handle rescued data
         if (rescuedProfiles.isNotEmpty) {
-          DebugLogger().log(
-              "Rescuing ${rescuedProfiles.length} profiles found in account box...");
           final pBox = await _safeOpenBox<Profile>(boxProfiles);
           for (var p in rescuedProfiles.values) {
             await pBox.put(p.id, p);

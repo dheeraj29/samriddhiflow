@@ -64,7 +64,7 @@ class TaxDataFetcher {
     // Pre-fetch categories for lookup
     final categories = _storage.getCategories();
     final Map<String, CategoryTag> categoryTagMap = {
-      for (var c in categories) c.name.toLowerCase(): c.tag
+      for (var c in categories) c.name: c.tag
     };
 
     // 2. Filter Strict: Income Only
@@ -94,20 +94,21 @@ class TaxDataFetcher {
       double amount = txn.amount;
       String head = 'other';
       bool matched = false;
-      final tagMap = _config.rules.tagMappings;
+      // Fix: Use rules for the SELECTED year, not current config
+      final tagMap = rules.tagMappings;
 
       // Determine Head
-      final catName = txn.category.toLowerCase();
+      // Fix: Exact Match (No Lowercase)
+      final catName = txn.category;
       final catTag = categoryTagMap[catName] ?? CategoryTag.none;
 
       // MAPPING LOGIC
       // 1. Advanced Mappings (Complex rules with months/descriptions)
-      final advancedRules = _config.rules.advancedTagMappings;
+      final advancedRules = rules.advancedTagMappings;
       TaxMappingRule? matchingAdvancedRule;
 
       for (final rule in advancedRules) {
-        if (rule.categoryName.toLowerCase() == catName ||
-            rule.categoryName.toLowerCase() == catTag.name.toLowerCase()) {
+        if (rule.categoryName == catName || rule.categoryName == catTag.name) {
           // Check months
           bool monthsMatch = true;
           if (rule.minHoldingMonths != null) {
@@ -127,9 +128,9 @@ class TaxDataFetcher {
           bool descMatch = true;
           if (rule.matchDescriptions.isNotEmpty) {
             descMatch = false;
-            final title = txn.title.toLowerCase();
+            final title = txn.title;
             for (final pattern in rule.matchDescriptions) {
-              if (title.contains(pattern.toLowerCase())) {
+              if (title.contains(pattern)) {
                 descMatch = true;
                 break;
               }
@@ -140,9 +141,9 @@ class TaxDataFetcher {
             // Check exclusions
             bool excluded = false;
             if (rule.excludeDescriptions.isNotEmpty) {
-              final title = txn.title.toLowerCase();
+              final title = txn.title;
               for (final pattern in rule.excludeDescriptions) {
-                if (title.contains(pattern.toLowerCase())) {
+                if (title.contains(pattern)) {
                   excluded = true;
                   break;
                 }

@@ -160,10 +160,18 @@ class Transaction extends HiveObject {
   }
 
   factory Transaction.fromMap(Map<String, dynamic> map) {
+    double amount = (map['amount'] as num).toDouble();
+    if (amount.isInfinite || amount.isNaN) amount = 0.0;
+
+    double? gainAmount = (map['gainAmount'] as num?)?.toDouble();
+    if (gainAmount != null && (gainAmount.isInfinite || gainAmount.isNaN)) {
+      gainAmount = 0.0;
+    }
+
     return Transaction(
       id: map['id'],
       title: map['title'],
-      amount: (map['amount'] as num).toDouble(),
+      amount: amount,
       date: DateTime.parse(map['date']),
       type: TransactionType.values[map['type']],
       category: map['category'],
@@ -173,7 +181,7 @@ class Transaction extends HiveObject {
       isRecurringInstance: map['isRecurringInstance'] ?? false,
       isDeleted: map['isDeleted'] ?? false,
       holdingTenureMonths: map['holdingTenureMonths'],
-      gainAmount: (map['gainAmount'] as num?)?.toDouble(),
+      gainAmount: gainAmount,
       profileId: map['profileId'],
     );
   }

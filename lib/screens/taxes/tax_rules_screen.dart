@@ -759,8 +759,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       'dividend',
                       'other',
                       'agriIncome',
+                      'gift',
                       if (selectedHead == 'salary') 'salary',
-                      if (selectedHead == 'gift') 'gift',
                     ]
                         .map((h) => DropdownMenuItem(
                             value: h, child: Text(h.toHumanReadable())))

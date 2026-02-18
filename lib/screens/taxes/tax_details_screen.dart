@@ -738,13 +738,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final newEntry = TaxPaymentEntry(
       amount: estimatedTax,
       date: now,
-      source: 'Calculated Liability',
-      description: 'Auto-sync from tax estimation',
+      source: 'Employer Paid',
+      description: 'Auto-sync from salary/tax estimation',
     );
 
     setState(() {
-      _tdsEntries.removeWhere((e) => e.source == 'Calculated Liability');
-      _tdsEntries.add(newEntry);
+      _tdsEntries.removeWhere((e) => e.source == 'Employer Paid');
+      _tdsEntries.add(newEntry.copyWith(source: 'Employer Paid'));
     });
     _updateSummary();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2817,13 +2817,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 },
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  _showCTCEstimator(basicCtrl, fixedCtrl);
-                },
-                icon: const Icon(Icons.calculate),
-                label: const Text('Estimate from Target In-Hand'),
-              ),
               const Divider(),
               const Text('Unemployment / No Salary',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -2878,6 +2871,44 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     const Text('Delete', style: TextStyle(color: Colors.red))),
           FilledButton(
             onPressed: () {
+              final effectiveDate = effectiveDateNotifier.value;
+
+              // Validate Date Range (Must be in current FY)
+              final rules = ref
+                  .read(taxConfigServiceProvider)
+                  .getRulesForYear(_currentData.year);
+              final fyStart =
+                  DateTime(_currentData.year, rules.financialYearStartMonth, 1);
+              final fyEnd = DateTime(
+                  _currentData.year + 1, rules.financialYearStartMonth, 0);
+
+              if (effectiveDate.isBefore(fyStart) ||
+                  effectiveDate.isAfter(fyEnd)) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Effective date must be within FY ${_currentData.year}-${(_currentData.year + 1).toString().substring(2)}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // Validate Duplicates
+              final isDuplicate = _currentData.salary.history.any((s) =>
+                  s.id != existing?.id &&
+                  DateUtils.isSameDay(s.effectiveDate, effectiveDate));
+              if (isDuplicate) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'A salary structure already exists for this effective date.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
               // Convert Annual Inputs to Monthly / Computed
               final annualBasic = double.tryParse(basicCtrl.text) ?? 0;
               final annualFixed = double.tryParse(fixedCtrl.text) ?? 0;
@@ -3391,50 +3422,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           ],
         );
       }),
-    );
-  }
-
-  void _showCTCEstimator(
-      TextEditingController basicCtrl, TextEditingController fixedCtrl) {
-    final targetCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Estimate Split (Annual)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-                'Enter expected Annual CTC / Gross. We will split it 50% Basic, 50% Fixed Allowances.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: targetCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              ],
-              decoration: const InputDecoration(
-                  labelText: 'Annual CTC', border: OutlineInputBorder()),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () {
-                final target = double.tryParse(targetCtrl.text) ?? 0;
-                if (target > 0) {
-                  // Split 50-50
-                  basicCtrl.text = (target * 0.5).toStringAsFixed(0);
-                  fixedCtrl.text = (target * 0.5).toStringAsFixed(0);
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Apply')),
-        ],
-      ),
     );
   }
 

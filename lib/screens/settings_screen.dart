@@ -822,9 +822,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           updateFound = await ConnectivityPlatform.checkForServiceWorkerUpdate()
               .timeout(const Duration(seconds: 5));
         } catch (e) {
-          debugPrint("Update check failed/timed out: $e");
-          // If check fails or times out, we assume no update found (or can't detect)
-          // and proceed to show the "Up to Date" dialog which allows Force Reload.
+          // Update check failed or timed out
           updateFound = false;
         }
       }
@@ -864,8 +862,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           try {
             await ConnectivityPlatform.reloadAndClearCache();
           } catch (e) {
-            debugPrint("Failed to clear cache: $e");
-            // Reload is handled in platform
+            // Reload failure
           }
         }
       }
@@ -897,8 +894,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         try {
           await ConnectivityPlatform.reloadAndClearCache();
         } catch (e) {
-          debugPrint("Failed to clear cache: $e");
-          // Reload is handled in platform
+          // Reload failure
         }
       } else {
         if (!mounted) return;

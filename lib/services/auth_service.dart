@@ -45,7 +45,6 @@ class AuthService {
     // Lazy Initialization: Try to init Firebase if it failed on startup (offline)
     if (_auth == null) {
       try {
-        DebugLogger().log("AuthService: Lazy Initializing Firebase...");
         await Firebase.initializeApp(
           options: kDebugMode
               ? dev.DefaultFirebaseOptions.currentPlatform
@@ -77,7 +76,6 @@ class AuthService {
       } on FirebaseAuthException catch (e) {
         // Smart Verification: Allow access if network is unavailable
         if (e.code == 'network-request-failed' || e.code == 'unavailable') {
-          debugPrint("Offline Session Validation: Allowed (${e.code})");
           return AuthResponse(status: AuthStatus.success);
         }
 
@@ -164,8 +162,6 @@ class AuthService {
     if (isSignOutInProgress) return;
 
     try {
-      DebugLogger().log("AuthService: Instant Logout initiated.");
-
       // 1. Snap UI shut immediately
       isSignOutInProgress = true;
       ref.read(logoutRequestedProvider.notifier).value = true;
@@ -180,9 +176,7 @@ class AuthService {
       // 3. Fully Decoupled Background Cleanup
       unawaited(Future(() async {
         try {
-          DebugLogger().log("AuthService: Destroying Firebase Session (BG)...");
           await _auth?.signOut();
-          DebugLogger().log("AuthService: Firebase SignOut Success.");
         } catch (e) {
           DebugLogger()
               .log("AuthService: Firebase SignOut suppressed error: $e");
@@ -212,41 +206,30 @@ class AuthService {
       // Small delay to allow JS SDK to settle after reload
       await Future.delayed(const Duration(milliseconds: 500));
 
-      final currentUri = Uri.parse(ConnectivityPlatform.getCurrentUrl());
-      DebugLogger().log(
-          "AuthService: Checking Redirect at ${currentUri.host}${currentUri.path}");
-
       try {
         final result = await auth.getRedirectResult();
         if (result.user != null) {
-          DebugLogger().log("AuthService: Redirect Success");
           await _setLoggedInFlag(true);
           return result.user;
         } else if (auth.currentUser != null) {
-          DebugLogger().log(
-              "AuthService: User already restored in currentUser fallback.");
           await _setLoggedInFlag(true);
           return auth.currentUser;
         } else {
-          DebugLogger()
-              .log("AuthService: No Redirect Result User found (Both null).");
+          // No Redirect Result User found
         }
       } catch (e) {
         DebugLogger().log("AuthService: REDIRECT ERROR: $e");
-        debugPrint("AuthService: Error handling redirect result: $e");
       } finally {
         // Always clear the pending flag after checking result
         try {
-          DebugLogger().log("AuthService: Clearing pending redirect flag.");
           ConnectivityPlatform.removeSessionStorageItem(
               'auth_redirect_pending');
         } catch (e) {
-          DebugLogger().log("AuthService: Failed to clear session flag: $e");
+          // Failed to clear session flag
         }
       }
     } else {
-      DebugLogger()
-          .log("AuthService: Skip Redirect check (Auth null or not Web).");
+      // Skip Redirect check
     }
     return null;
   }

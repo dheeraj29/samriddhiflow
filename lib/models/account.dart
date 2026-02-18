@@ -115,15 +115,23 @@ class Account extends HiveObject {
   }
 
   factory Account.fromMap(Map<String, dynamic> map) {
+    double balance = (map['balance'] as num).toDouble();
+    if (balance.isInfinite || balance.isNaN) balance = 0.0;
+
+    double? creditLimit = (map['creditLimit'] as num?)?.toDouble();
+    if (creditLimit != null && (creditLimit.isInfinite || creditLimit.isNaN)) {
+      creditLimit = 0.0;
+    }
+
     return Account(
       id: map['id'],
       name: map['name'],
-      balance: (map['balance'] as num).toDouble(),
+      balance: balance,
       type: AccountType.values[map['type']],
       profileId: map['profileId'],
       billingCycleDay: map['billingCycleDay'],
       paymentDueDateDay: map['paymentDueDateDay'],
-      creditLimit: (map['creditLimit'] as num?)?.toDouble(),
+      creditLimit: creditLimit,
       currency: map['currency'] ?? '',
     );
   }

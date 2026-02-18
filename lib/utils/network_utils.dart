@@ -15,8 +15,6 @@ class NetworkUtils {
       // coverage:ignore-start
       if (kIsWeb) {
         if (!ConnectivityPlatform.checkWebOnline()) {
-          DebugLogger()
-              .log("NetworkUtils: navigator.onLine is FALSE (Offline)");
           return true;
         }
       }
@@ -31,10 +29,8 @@ class NetworkUtils {
             !results.contains(ConnectivityResult.ethernet);
 
         if (isOffline) {
-          DebugLogger()
-              .log("NetworkUtils: Connectivity Plugin reported OFFLINE");
+          return isOffline;
         }
-        return isOffline;
       }
     } catch (e) {
       // 2. Fallback for Web/PWA
@@ -45,13 +41,9 @@ class NetworkUtils {
                 e.toString().contains("No implementation found");
 
         if (isMissingPlugin) {
-          DebugLogger().log(
-              "NetworkUtils: Connectivity plugin missing. Using Web Fallback.");
           try {
             // true if NOT onLine
             final webOffline = !ConnectivityPlatform.checkWebOnline();
-            DebugLogger().log(
-                "NetworkUtils: Web Navigator reports ${webOffline ? 'OFFLINE' : 'ONLINE'}");
             return webOffline;
           } catch (webE) {
             DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE");

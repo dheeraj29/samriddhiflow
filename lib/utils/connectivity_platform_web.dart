@@ -104,14 +104,24 @@ class ConnectivityPlatform {
 
   static Future<void> reloadAndClearCache() async {
     try {
+      // 1. Unregister Service Workers
+      final registrations =
+          await web.window.navigator.serviceWorker.getRegistrations().toDart;
+      final swList = registrations.toDart;
+      for (final registration in swList) {
+        await registration.unregister().toDart;
+      }
+
+      // 2. Clear Caches
       final caches = web.window.caches;
       final keysArray = await caches.keys().toDart;
       final keys = keysArray.toDart;
       for (final key in keys) {
         await caches.delete(key.toDart).toDart;
       }
-      web.window.location.reload();
     } catch (_) {
+      // Ignore errors, proceed to reload
+    } finally {
       web.window.location.reload();
     }
   }

@@ -953,6 +953,20 @@ class TaxPaymentEntry {
     this.description = '',
   });
 
+  TaxPaymentEntry copyWith({
+    double? amount,
+    DateTime? date,
+    String? source,
+    String? description,
+  }) {
+    return TaxPaymentEntry(
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      source: source ?? this.source,
+      description: description ?? this.description,
+    );
+  }
+
   Map<String, dynamic> toMap() => {
         'date': date.toIso8601String(),
         'amount': amount,

@@ -79,4 +79,20 @@ void main() {
     final fy = service.getCurrentFinancialYear();
     expect(fy, greaterThan(2020));
   });
+
+  test('Handles tag mappings correctly', () async {
+    final rules = TaxRules(tagMappings: {'Salary': 'salary'});
+    await service.saveRulesForYear(2025, rules);
+
+    final retrieved = service.getRulesForYear(2025);
+    expect(retrieved.tagMappings['Salary'], 'salary');
+  });
+
+  test('getRulesForYear falls back to Default if no past rules exist',
+      () async {
+    // Clear all
+    await Hive.box<TaxRules>('tax_rules_v2').clear();
+    final retrieved = service.getRulesForYear(2030);
+    expect(retrieved.stdDeductionSalary, 75000); // v2 default
+  });
 }

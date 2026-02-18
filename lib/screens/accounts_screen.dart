@@ -11,7 +11,6 @@ import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
 import 'cc_payment_dialog.dart';
-import '../utils/debug_logger.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
   @override
@@ -789,8 +788,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         if (currentBilled == 0 &&
             widget.account!.billingCycleDay != _billingDay) {
           keepBilledStatus = true;
-          DebugLogger().log(
-              'Smart Update: Preserving Billed=0 status for ${widget.account!.name}');
         }
       }
 
