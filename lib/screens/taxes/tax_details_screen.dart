@@ -663,7 +663,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(e.name),
-                subtitle: Text('₹${e.amount.toStringAsFixed(0)}'),
+                subtitle: Text(
+                    '₹${e.amount.toStringAsFixed(0)} (${e.frequency.name})'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -732,7 +733,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   void _copyLiabilityToTds() {
     final taxService = ref.read(indianTaxServiceProvider);
-    double estimatedTax = taxService.calculateLiability(_currentData);
+    double estimatedTax = taxService.calculateSalaryOnlyLiability(_currentData);
 
     final now = DateTime.now();
     final newEntry = TaxPaymentEntry(
@@ -755,47 +756,156 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   void _addCustomExemptionDialog(
       {CustomExemption? existing, required Function(CustomExemption) onAdd}) {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final amtCtrl =
-        TextEditingController(text: existing?.amount.toString() ?? '');
+    final amtCtrl = TextEditingController(
+        text: existing == null
+            ? ''
+            : (existing.frequency == PayoutFrequency.monthly
+                ? (existing.amount * 12).toStringAsFixed(0)
+                : existing.amount.toStringAsFixed(0)));
+
+    final freqNotifier = ValueNotifier<PayoutFrequency>(
+        existing?.frequency ?? PayoutFrequency.monthly);
+    final startMonthNotifier = ValueNotifier<int?>(existing?.startMonth);
+    final customMonthsNotifier =
+        ValueNotifier<List<int>>(existing?.customMonths ?? []);
+    final isPartialNotifier = ValueNotifier<bool>(existing?.isPartial ?? false);
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null
-            ? 'Add Custom Exemption'
-            : 'Edit Custom Exemption'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Exemption Name')),
-            TextField(
-              controller: amtCtrl,
-              decoration: const InputDecoration(labelText: 'Amount'),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+      builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
+        return AlertDialog(
+          title: Text(existing == null
+              ? 'Add Custom Exemption'
+              : 'Edit Custom Exemption'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                    controller: nameCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Exemption Name')),
+                TextField(
+                  controller: amtCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Annual Amount',
+                      helperText:
+                          'For monthly, total yearly. For others, payout amt.'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}$'))
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ValueListenableBuilder<PayoutFrequency>(
+                  valueListenable: freqNotifier,
+                  builder: (context, val, _) => Column(
+                    children: [
+                      DropdownButtonFormField<PayoutFrequency>(
+                        decoration:
+                            const InputDecoration(labelText: 'Frequency'),
+                        initialValue: val,
+                        items: PayoutFrequency.values
+                            .map((f) => DropdownMenuItem(
+                                value: f, child: Text(f.name.toUpperCase())))
+                            .toList(),
+                        onChanged: (v) => freqNotifier.value = v!,
+                      ),
+                      if (val == PayoutFrequency.custom) ...[
+                        const SizedBox(height: 8),
+                        ValueListenableBuilder<List<int>>(
+                          valueListenable: customMonthsNotifier,
+                          builder: (context, list, _) => InkWell(
+                            onTap: () async {
+                              final selected =
+                                  await _showMonthMultiSelect(context, list);
+                              if (selected != null) {
+                                customMonthsNotifier.value = selected;
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                  labelText: 'Select Months'),
+                              child: Text(list.isEmpty
+                                  ? 'None'
+                                  : '${list.length} months'),
+                            ),
+                          ),
+                        ),
+                      ] else if (val != PayoutFrequency.monthly) ...[
+                        const SizedBox(height: 8),
+                        ValueListenableBuilder<int?>(
+                          valueListenable: startMonthNotifier,
+                          builder: (context, smth, _) =>
+                              DropdownButtonFormField<int>(
+                            decoration:
+                                const InputDecoration(labelText: 'Start Month'),
+                            initialValue: smth,
+                            items: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
+                                .map((m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(DateFormat('MMM')
+                                          .format(DateTime(2023, m, 1))),
+                                    ))
+                                .toList(),
+                            onChanged: (v) => startMonthNotifier.value = v,
+                          ),
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ValueListenableBuilder<bool>(
+                  valueListenable: isPartialNotifier,
+                  builder: (context, val, _) => CheckboxListTile(
+                    title: const Text('Is Partial / Irregular?'),
+                    value: val,
+                    onChanged: (v) => isPartialNotifier.value = v ?? false,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.isEmpty) return;
-              onAdd(CustomExemption(
-                  name: nameCtrl.text,
-                  amount: double.tryParse(amtCtrl.text) ?? 0));
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.isEmpty) return;
+                final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
+                double payoutAmount = inputAmount;
+                if (freqNotifier.value == PayoutFrequency.monthly) {
+                  payoutAmount = inputAmount / 12;
+                }
+
+                Map<int, double> partialAmounts = {};
+                if (isPartialNotifier.value) {
+                  for (int m = 1; m <= 12; m++) {
+                    partialAmounts[m] = payoutAmount;
+                  }
+                }
+
+                onAdd(CustomExemption(
+                  name: nameCtrl.text,
+                  amount: payoutAmount,
+                  frequency: freqNotifier.value,
+                  startMonth: startMonthNotifier.value,
+                  customMonths: customMonthsNotifier.value,
+                  isPartial: isPartialNotifier.value,
+                  partialAmounts: partialAmounts,
+                ));
+                Navigator.pop(ctx);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      }),
     );
   }
 

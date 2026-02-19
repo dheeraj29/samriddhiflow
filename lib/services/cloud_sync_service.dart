@@ -65,7 +65,26 @@ class CloudSyncService {
           _storageService.getLendingRecords().map((e) => e.toMap()).toList(),
     };
 
-    await _cloudStorage.syncData(user.uid, data);
+    final sanitizedData = _sanitizeForSync(data);
+    await _cloudStorage.syncData(user.uid, sanitizedData);
+  }
+
+  /// Recursively replaces non-JSON-encodable doubles (Infinity, NaN) with 0.0.
+  dynamic _sanitizeForSync(dynamic data) {
+    if (data is double) {
+      if (data.isInfinite || data.isNaN) {
+        return 0.0;
+      }
+      return data;
+    } else if (data is Map) {
+      return data
+          .map(
+              (key, value) => MapEntry(key.toString(), _sanitizeForSync(value)))
+          .cast<String, dynamic>();
+    } else if (data is List) {
+      return data.map((e) => _sanitizeForSync(e)).toList().cast<dynamic>();
+    }
+    return data;
   }
 
   Future<void> restoreFromCloud() async {

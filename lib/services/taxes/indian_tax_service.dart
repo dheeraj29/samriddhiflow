@@ -21,6 +21,22 @@ class IndianTaxService implements TaxStrategy {
     return details['totalTax'] ?? 0;
   }
 
+  /// Calculates tax liability based ONLY on salary income (used for TDS estimation).
+  double calculateSalaryOnlyLiability(TaxYearData data) {
+    final rules = _configService.getRulesForYear(data.year);
+    final salaryOnlyData = data.copyWith(
+      houseProperties: [],
+      businessIncomes: [],
+      capitalGains: [],
+      otherIncomes: [],
+      cashGifts: [],
+      agricultureIncome: 0,
+      dividendIncome: const DividendIncome(),
+    );
+    final details = calculateDetailedLiability(salaryOnlyData, rules);
+    return details['totalTax'] ?? 0;
+  }
+
   Map<String, double> calculateDetailedLiability(
       TaxYearData data, TaxRules rules) {
     // Heads
@@ -411,9 +427,10 @@ class IndianTaxService implements TaxStrategy {
 
     for (final slab in rules.slabs) {
       if (income <= previousLimit) break;
-      double slabLimit = slab.upto;
-      double checkLimit =
-          slabLimit == double.infinity ? double.maxFinite : slabLimit;
+
+      final isUnlimited = slab.isUnlimited || slab.upto == double.infinity;
+      double checkLimit = isUnlimited ? double.maxFinite : slab.upto;
+
       double taxableInSlab = income > checkLimit
           ? checkLimit - previousLimit
           : income - previousLimit;
@@ -422,7 +439,7 @@ class IndianTaxService implements TaxStrategy {
         tax += taxableInSlab * (slab.rate / 100);
       }
       previousLimit = checkLimit;
-      if (slabLimit == double.infinity) break;
+      if (isUnlimited) break;
     }
     return tax;
   }
@@ -531,10 +548,31 @@ class IndianTaxService implements TaxStrategy {
     }
 
     // 2. Calculate Base Annual Tax
-    // Create a dummy TaxYearData with only base income
+    // Create a dummy TaxYearData with only base income, scoped to Salary Only.
+    // Also filter independent components to only include monthly ones to ensure
+    // baseline tax doesn't include tax from non-monthly bonuses/extras.
     final baseData = data.copyWith(
-      salary: data.salary.copyWith(grossSalary: baseAnnualGross),
+      salary: data.salary.copyWith(
+        grossSalary: baseAnnualGross,
+        independentAllowances: data.salary.independentAllowances
+            .where((a) => a.frequency == PayoutFrequency.monthly)
+            .toList(),
+        independentDeductions: data.salary.independentDeductions
+            .where((d) => d.frequency == PayoutFrequency.monthly)
+            .toList(),
+        independentExemptions: data.salary.independentExemptions
+            .where((ex) => ex.frequency == PayoutFrequency.monthly)
+            .toList(),
+      ),
+      houseProperties: [],
+      businessIncomes: [],
+      capitalGains: [],
+      otherIncomes: [],
+      cashGifts: [],
+      agricultureIncome: 0,
+      dividendIncome: const DividendIncome(),
     );
+
     final baseDetailed = calculateDetailedLiability(baseData, rules);
     double totalBaseTax = baseDetailed['totalTax'] ?? 0;
     double monthlyBaseTax = totalBaseTax / 12;
@@ -582,7 +620,7 @@ class IndianTaxService implements TaxStrategy {
       // Marginal Tax calculation for extras
       double marginalTax = 0;
       if (extras > 0) {
-        final extraData = data.copyWith(
+        final extraData = baseData.copyWith(
           salary: data.salary.copyWith(grossSalary: baseAnnualGross + extras),
         );
         final extraDetailed = calculateDetailedLiability(extraData, rules);
@@ -617,11 +655,14 @@ class IndianTaxService implements TaxStrategy {
         }
       }
 
-      // Ad-hoc Exemptions (apply evenly or in specific month?
-      // Usually ad-hoc exemptions are annual. Let's apply 1/12th to each month for take-home projection.)
+      // Ad-hoc Exemptions (Now frequency-aware)
       double monthlyExemption = 0;
       for (final ex in data.salary.independentExemptions) {
-        monthlyExemption += ex.amount / 12;
+        if (SalaryStructure.isPayoutMonth(
+            m, ex.frequency, ex.startMonth, ex.customMonths)) {
+          monthlyExemption +=
+              ex.isPartial ? (ex.partialAmounts[m] ?? 0) : ex.amount;
+        }
       }
 
       double takeHome = monthlyGross -
@@ -636,6 +677,7 @@ class IndianTaxService implements TaxStrategy {
         'deductions': preTaxDeductions + postTaxDeductions,
         'takeHome': takeHome,
         'extras': extras,
+        'exemption': monthlyExemption,
       };
     }
 

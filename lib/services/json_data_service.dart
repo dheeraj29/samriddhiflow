@@ -94,9 +94,28 @@ class JsonDataService {
   }
 
   void _addToArchive(Archive archive, String filename, dynamic content) {
-    final jsonStr = jsonEncode(content);
+    final sanitizedContent = _sanitizeForJson(content);
+    final jsonStr = jsonEncode(sanitizedContent);
     final bytes = utf8.encode(jsonStr);
     archive.addFile(ArchiveFile(filename, bytes.length, bytes));
+  }
+
+  /// Recursively replaces non-JSON-encodable doubles (Infinity, NaN) with 0.0.
+  dynamic _sanitizeForJson(dynamic data) {
+    if (data is double) {
+      if (data.isInfinite || data.isNaN) {
+        return 0.0;
+      }
+      return data;
+    } else if (data is Map) {
+      return data
+          .map(
+              (key, value) => MapEntry(key.toString(), _sanitizeForJson(value)))
+          .cast<String, dynamic>();
+    } else if (data is List) {
+      return data.map((e) => _sanitizeForJson(e)).toList().cast<dynamic>();
+    }
+    return data;
   }
 
   /// Restores data from a ZIP package.

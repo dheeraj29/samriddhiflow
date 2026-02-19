@@ -195,6 +195,63 @@ void main() {
     expect(stats['transactions'], 1);
   });
 
+  test('createBackupPackage sanitizes Infinity and NaN values', () async {
+    // Setup with Infinity in accounts and transactions
+    final accountMap = Account(
+            id: 'a1',
+            name: 'A1',
+            type: AccountType.savings,
+            balance: double.infinity)
+        .toMap();
+    final transactionMap = Transaction(
+            id: 't1',
+            title: 'T1',
+            amount: double.nan,
+            date: DateTime(2025),
+            type: TransactionType.expense,
+            category: 'C1')
+        .toMap();
+
+    when(() => mockStorageService.getAllAccounts())
+        .thenReturn([Account.fromMap(accountMap)]);
+    when(() => mockStorageService.getAllTransactions())
+        .thenReturn([Transaction.fromMap(transactionMap)]);
+    when(() => mockStorageService.getAllLoans()).thenReturn([]);
+    when(() => mockStorageService.getAllRecurring()).thenReturn([]);
+    when(() => mockStorageService.getAllCategories()).thenReturn([]);
+    when(() => mockStorageService.getProfiles()).thenReturn([]);
+    when(() => mockStorageService.getAllSettings())
+        .thenReturn({'inf': double.negativeInfinity});
+    when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+    when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+    when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+    when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+
+    // Run
+    final zipBytes = await jsonDataService.createBackupPackage();
+
+    // Verify
+    expect(zipBytes, isNotEmpty);
+    final archive = ZipDecoder().decodeBytes(zipBytes);
+
+    // Check accounts.json content
+    final accFile = archive.findFile('accounts.json')!;
+    final accData =
+        jsonDecode(utf8.decode(accFile.content as List<int>)) as List;
+    expect(accData[0]['balance'], 0.0); // Sanitized
+
+    // Check transactions.json content
+    final txFile = archive.findFile('transactions.json')!;
+    final txData = jsonDecode(utf8.decode(txFile.content as List<int>)) as List;
+    expect(txData[0]['amount'], 0.0); // Sanitized
+
+    // Check settings.json content
+    final settingsFile = archive.findFile('settings.json')!;
+    final settingsData =
+        jsonDecode(utf8.decode(settingsFile.content as List<int>)) as Map;
+    expect(settingsData['inf'], 0.0); // Sanitized
+  });
+
   test('restoreFromPackage throws on missing metadata', () async {
     final archive = Archive();
     final zipBytes = ZipEncoder().encode(archive);

@@ -68,12 +68,15 @@ class TaxExemptionRule {
 @HiveType(typeId: 202)
 class TaxSlab {
   @HiveField(0)
-  final double upto; // Upper limit of this slab (use double.infinity for last)
+  final double
+      upto; // Upper limit of this slab (use TaxRules.infinitySubstitute for last)
 
   @HiveField(1)
   final double rate; // Percentage (e.g. 5.0 for 5%)
 
   const TaxSlab(this.upto, this.rate);
+
+  bool get isUnlimited => upto >= TaxRules.infinitySubstitute;
 
   Map<String, dynamic> toMap() => {
         'upto': upto,
@@ -167,6 +170,8 @@ class TaxMappingRule {
 
 @HiveType(typeId: 227)
 class TaxRules {
+  static const double infinitySubstitute = 1e15;
+
   @HiveField(0)
   final double currencyLimit10_10D;
 
@@ -324,7 +329,7 @@ class TaxRules {
       TaxSlab(1600000, 15),
       TaxSlab(2000000, 20),
       TaxSlab(2400000, 25),
-      TaxSlab(double.infinity, 30),
+      TaxSlab(TaxRules.infinitySubstitute, 30),
     ],
     this.rebateLimit = 1200000,
     this.cessRate = 4.0,

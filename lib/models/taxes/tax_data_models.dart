@@ -1027,23 +1027,67 @@ class CustomExemption {
   final String name;
   @HiveField(1)
   final double amount;
+  @HiveField(2)
+  final PayoutFrequency frequency;
+  @HiveField(3)
+  final int? startMonth;
+  @HiveField(4)
+  final List<int>? customMonths;
+  @HiveField(5)
+  final bool isPartial;
+  @HiveField(6)
+  final Map<int, double> partialAmounts;
 
-  const CustomExemption({required this.name, required this.amount});
+  const CustomExemption({
+    required this.name,
+    required this.amount,
+    this.frequency = PayoutFrequency.monthly,
+    this.startMonth,
+    this.customMonths,
+    this.isPartial = false,
+    this.partialAmounts = const {},
+  });
 
-  CustomExemption copyWith({String? name, double? amount}) {
+  CustomExemption copyWith({
+    String? name,
+    double? amount,
+    PayoutFrequency? frequency,
+    int? startMonth,
+    List<int>? customMonths,
+    bool? isPartial,
+    Map<int, double>? partialAmounts,
+  }) {
     return CustomExemption(
       name: name ?? this.name,
       amount: amount ?? this.amount,
+      frequency: frequency ?? this.frequency,
+      startMonth: startMonth ?? this.startMonth,
+      customMonths: customMonths ?? this.customMonths,
+      isPartial: isPartial ?? this.isPartial,
+      partialAmounts: partialAmounts ?? this.partialAmounts,
     );
   }
 
   Map<String, dynamic> toMap() => {
         'name': name,
         'amount': amount,
+        'frequency': frequency.index,
+        'startMonth': startMonth,
+        'customMonths': customMonths,
+        'isPartial': isPartial,
+        'partialAmounts':
+            partialAmounts.map((k, v) => MapEntry(k.toString(), v)),
       };
 
   factory CustomExemption.fromMap(Map<String, dynamic> m) => CustomExemption(
         name: m['name'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
+        frequency: PayoutFrequency.values[m['frequency'] ?? 0],
+        startMonth: m['startMonth'],
+        customMonths: (m['customMonths'] as List?)?.cast<int>(),
+        isPartial: m['isPartial'] ?? false,
+        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
       );
 }

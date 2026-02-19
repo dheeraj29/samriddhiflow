@@ -213,7 +213,7 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
               TaxSlab(1600000, 15),
               TaxSlab(2000000, 20),
               TaxSlab(2400000, 25),
-              TaxSlab(double.infinity, 30)
+              TaxSlab(TaxRules.infinitySubstitute, 30)
             ]
           : (fields[9] as List).cast<TaxSlab>(),
       rebateLimit:

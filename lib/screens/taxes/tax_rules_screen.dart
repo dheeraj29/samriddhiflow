@@ -1026,7 +1026,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     icon: const Icon(Icons.add),
                     onPressed: () {
                       setState(() {
-                        _slabs.add(const TaxSlab(double.infinity, 30));
+                        _slabs.add(
+                            const TaxSlab(TaxRules.infinitySubstitute, 30));
                         _hasUnsavedChanges = true;
                       });
                     }),
@@ -1041,12 +1042,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                   SizedBox(
                     width: 100,
                     child: TextFormField(
-                      initialValue: slab.upto == double.infinity
-                          ? ''
-                          : slab.upto.toStringAsFixed(0),
+                      initialValue:
+                          slab.isUnlimited ? '' : slab.upto.toStringAsFixed(0),
                       decoration: InputDecoration(
-                        hintText:
-                            slab.upto == double.infinity ? 'Infinity' : '',
+                        hintText: slab.isUnlimited ? 'Unlimited' : '',
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
@@ -1057,8 +1056,9 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       onChanged: (val) {
                         setState(() {
                           double limit = val.isEmpty
-                              ? double.infinity
-                              : double.tryParse(val) ?? double.infinity;
+                              ? TaxRules.infinitySubstitute
+                              : double.tryParse(val) ??
+                                  TaxRules.infinitySubstitute;
                           _slabs[index] = TaxSlab(limit, slab.rate);
                           _hasUnsavedChanges = true;
                         });

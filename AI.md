@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v1.28.0
+**Current Version:** v2.6.0
 
 ## 2. Architecture
 
@@ -23,19 +23,27 @@ graph TD
         Transaction[Transaction / LoanTransaction]
         Loan
         Category
+        TaxRules
+        TaxYearData
+        InsurancePolicy
+        LendingRecord
     end
 
     subgraph "Services"
-        Excel[ExcelService (Import/Export)]
+        JSON[JsonDataService (Backup/Restore)]
         File[FileService (File Picker)]
         Theme[ThemeService]
         Storage
         CloudSync[CloudSyncService]
+        TaxConfig[TaxConfigService]
+        TaxEngine[TaxStrategy / IndianTaxService]
     end
 
-    Providers --> Excel
+    Providers --> JSON
     Providers --> File
     Providers --> CloudSync
+    Providers --> TaxConfig
+    Providers --> TaxEngine
 ```
 
 ### Key Components
@@ -43,6 +51,8 @@ graph TD
 *   **State Management:** `flutter_riverpod` used for reactive state, dependency injection, and business logic separation.
 *   **Storage:** `hive_ce` (Community Edition) for fast, key-value storage. Adapters generated via `build_runner`.
 *   **UI Framework:** Flutter Web (WASM-ready).
+*   **Tax Engine:** `IndianTaxService` (implementing `TaxStrategy`) provides salary breakdown, TDS estimation, and multi-year tax liability calculation. `TaxConfigService` manages slab rules and configuration persistence.
+*   **Lending Logic:** `LendingNotifier` manages the state of peer-to-peer debt, providing real-time aggregation of total lent and borrowed amounts.
 *   **Design System:** Custom "Premium" aesthetic using gradients, glassmorphism, and smooth animations.
 
 ## 3. Data Flow & Features
@@ -63,12 +73,12 @@ graph TD
     *   **Recurring:** Supports recurring patterns (Daily, Monthly, etc) with holiday-aware adjustments.
     *   **Loans:** EMI payments are transactions linked to Loan entities.
 
-### C. Import/Export (Excel)
-*   **Engine:** `excel` package.
+### C. Backup & Restore (JSON/ZIP)
+*   **Engine:** `archive` package & `json` encoding.
 *   **Logic:**
-    *   **Strict Column Matching:** Uses specific aliases (e.g., `Holding Tenure (Months)`) to map user headers to internal fields.
-    *   **Two-Pass Detection:** 1. Exact Match (Priority) -> 2. Substring Match (Fallback).
-    *   **Self-Correction:** Prevents mapping errors between "Account" and "To Account".
+    *   **Snapshots:** Generates a ZIP package containing separate JSON files for each data entity (Accounts, Transactions, Loans, etc.).
+    *   **Full Restore:** Restoration involves a full wipe and replace cycle to ensure consistent data state across platforms.
+    *   **Sanitization:** Automatically cleans non-finite numbers during the export process.
 
 ### D. Cloud Sync & Backup
 *   **Mechanism:** Snapshot Synchronization.
@@ -91,13 +101,27 @@ graph TD
     *   **Option 2: Reduce EMI:** Tenure remains the same; EMI is recalculated.
 *   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
-## 4. Current Status (v1.29.0)
-*   **Stable:** Core financial logic, cloud sync, and security features are fully operational.
-*   **Recent Updates (v1.29.0):**
-    *   **Test Suite Refinement**: Consolidated duplicate test files (Auth, Calendar, Reports) to improve maintenance.
-    *   **Mocking Infrastructure**: Centralized storage and service mocks in `test_mocks.dart` with standard defaults (`setupStorageDefaults`).
-    *   **Widget Stability**: Stabilized `ReportsScreen`, `SettingsScreen`, and dialog tests by addressing animation timeouts and element discovery issues (ActionChip).
-    *   **Coverage Baseline**: Established verified 100% coverage for core utility files and high coverage for critical UI components.
+### G. Tax Engine & Precision
+*   **Precision Guard:** Uses `1.0e15` as a finite substitute for `double.infinity` in Tax Slabs to prevent precision loss in Hive (JavaScript `Number.MAX_SAFE_INTEGER` limitation) and backup serialization failures.
+*   **Salary Breakdown Logic:**
+    *   **Scoped Taxing:** The monthly breakdown and TDS estimation use a **Salary-Only tax projection**, excluding non-salary losses/incomes for accurate payroll simulation.
+    *   **Frequency-Aware:** Independent components (Bonuses, LTA, Deductions) respect their defined payout frequencies (Monthly, Quarterly, Annual, Custom).
+    *   **Marginal Tax:** Non-monthly incomes are taxed using marginal tax calculation in the specific month received.
+*   **Sanitization:** `JsonDataService` and `CloudSyncService` sanitize non-finite numbers (`Infinity`, `NaN`) during export/sync to ensure data integrity.
+
+### H. Lending & Borrowing
+*   **Tracking:** Manages money lent to or borrowed from individuals.
+*   **Status:** Records can be marked as `Closed` with a specific date once settled.
+*   **Aggregated View:** Provided via `totalLentProvider` and `totalBorrowedProvider` for effective debt management.
+*   **Profile Scoping:** Automatically filtered by the active profile.
+
+## 4. Current Status (v2.6.0)
+*   **Stable:** Core financial logic, cloud sync, tax engine, and security features are fully operational.
+*   **Recent Updates (v2.6.0):**
+    *   **Tax Engine Refinement**: Implemented frequency-based payouts for independent components and salary-only tax scoping for breakdown/TDS estimation.
+    *   **Hive Precision Fix**: Resolved Hive "precision loss" warnings on Web by replacing `double.infinity` with finite constants.
+    *   **Data Sanitization**: Added automatic sanitization for non-finite numbers during JSON serialization and cloud sync.
+    *   **Enhanced Exemption UI**: Added full frequency and custom month controls to the Custom Exemption dialog.
 *   **Recent Updates (v1.22.0):**
     *   **Recurring Payment Skip**: Added a "Skip" option in the Reminders screen to advance cycles without recording transactions.
     *   **First Working Day Logic**: Implemented "First Working Day of Month" schedule type with full holiday/weekend awareness.
@@ -110,7 +134,7 @@ graph TD
         *   Moved Loan remaining tenure logic to `LoanService.calculateRemainingTenure`.
     *   **Credit Card Fix**: Standardized the **Billing Day** as a Billed day (inclusive); centralized rollover logic in `accountsProvider` to ensure zero-gap processing across all profiles.
     *   **Backup Persistence**: Updated Cloud Sync to preserve all app settings (rollover timestamps, budget, etc.).
-    *   **Refactoring Services**: Deduplicated logic in `StorageService` and `ExcelService` (Generic getters, Impact logic, Header parsing).
+    *   **Refactoring Services**: Deduplicated logic in `StorageService` and `JsonDataService` (Generic getters, Impact logic).
     *   **Test Coverage Push**: Achieved high coverage for critical screens:
         *   `RepairService` (Job Logic)
         *   `AddTransactionScreen` (Transfer/Recurring flows)
@@ -135,6 +159,3 @@ Target: **100% coverage** for core business logic and critical UI screens.
 3.  **Sanity**: Unit tests MUST be consolidated (avoid `_unit_test.dart` fragmentation). Merge redundant test files immediately.
 4.  **Mocks**: Use `test_mocks.dart` for shared service and provider mocks. Use `setupStorageDefaults(mockStorage)` to apply standard stubs and fallbacks.
 5.  **Aesthetics**: Tests involving charts (PieChart) should use explicit `tester.pump(Duration)` instead of `pumpAndSettle` to avoid animation timeouts.
-
-## 7. Future Roadmap
-*   **Tax Engine:** Tax calculation and assessment features (Indian Regime).

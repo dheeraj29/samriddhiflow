@@ -25,6 +25,8 @@ void main() {
       expect(CurrencyUtils.roundTo2Decimals(10.123), 10.12);
       expect(CurrencyUtils.roundTo2Decimals(10.126), 10.13);
       expect(CurrencyUtils.roundTo2Decimals(10.0), 10.0);
+      expect(CurrencyUtils.roundTo2Decimals(double.infinity), 0.0);
+      expect(CurrencyUtils.roundTo2Decimals(double.nan), 0.0);
     });
 
     test('getSmartFormat shortens large numbers', () {

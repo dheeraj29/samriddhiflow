@@ -616,17 +616,35 @@ class CustomExemptionAdapter extends TypeAdapter<CustomExemption> {
     return CustomExemption(
       name: fields[0] as String,
       amount: (fields[1] as num).toDouble(),
+      frequency: fields[2] == null
+          ? PayoutFrequency.monthly
+          : fields[2] as PayoutFrequency,
+      startMonth: (fields[3] as num?)?.toInt(),
+      customMonths: (fields[4] as List?)?.cast<int>(),
+      isPartial: fields[5] == null ? false : fields[5] as bool,
+      partialAmounts:
+          fields[6] == null ? const {} : (fields[6] as Map).cast<int, double>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomExemption obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.amount);
+      ..write(obj.amount)
+      ..writeByte(2)
+      ..write(obj.frequency)
+      ..writeByte(3)
+      ..write(obj.startMonth)
+      ..writeByte(4)
+      ..write(obj.customMonths)
+      ..writeByte(5)
+      ..write(obj.isPartial)
+      ..writeByte(6)
+      ..write(obj.partialAmounts);
   }
 
   @override

@@ -67,6 +67,7 @@ class CurrencyUtils {
   }
 
   static double roundTo2Decimals(double value) {
+    if (value.isInfinite || value.isNaN) return 0.0;
     return (value * 100).roundToDouble() / 100;
   }
 
