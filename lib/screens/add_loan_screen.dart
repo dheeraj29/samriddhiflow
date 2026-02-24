@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,8 @@ import '../models/account.dart';
 import '../utils/currency_utils.dart';
 import '../services/loan_service.dart';
 import '../theme/app_theme.dart';
+
+const dateFormatYyyyMmDd = 'yyyy-MM-dd';
 
 class AddLoanScreen extends ConsumerStatefulWidget {
   const AddLoanScreen({super.key});
@@ -80,11 +83,9 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                 setState(() {
                   _type = v!;
                   if (isGoldLoan) {
-                    // coverage:ignore-start
                     _calculateRateFromEMI = false;
                     _calculatedEMI = 0;
                     _emiController.clear();
-                    // coverage:ignore-end
                   }
                 });
               },
@@ -107,8 +108,8 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                       title: const Text('Calculate Rate from EMI?',
                           style: TextStyle(fontSize: 14)),
                       value: _calculateRateFromEMI,
-                      onChanged: (v) => // coverage:ignore-line
-                          setState(() => _calculateRateFromEMI = v!), // coverage:ignore-line
+                      onChanged: (v) =>
+                          setState(() => _calculateRateFromEMI = v!),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -129,7 +130,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$'))
+                          RegexUtils.amountExp)
                     ],
                     validator: (v) =>
                         (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid' : null,
@@ -139,7 +140,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                             double.tryParse(v) ?? 0);
                         if (!isGoldLoan) {
                           if (_calculateRateFromEMI) {
-                            _updateRate(loanService); // coverage:ignore-line
+                            _updateRate(loanService);
                           } else {
                             _updateEMI(loanService);
                           }
@@ -153,8 +154,8 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: _calculateRateFromEMI && !isGoldLoan
-                      ? TextFormField( // coverage:ignore-line
-                          controller: _rateController, // coverage:ignore-line
+                      ? TextFormField(
+                          controller: _rateController,
                           decoration: const InputDecoration(
                               labelText: 'Calculated Rate',
                               suffixText: '%',
@@ -170,7 +171,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                               decimal: true),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d{0,2}$'))
+                                RegexUtils.amountExp)
                           ],
                           validator: (v) => (double.tryParse(v ?? '') ?? -1) < 0
                               ? 'Invalid'
@@ -204,7 +205,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                         _tenure = int.tryParse(v) ?? 0;
                         if (!isGoldLoan) {
                           if (_calculateRateFromEMI) {
-                            _updateRate(loanService); // coverage:ignore-line
+                            _updateRate(loanService);
                           } else {
                             _updateEMI(loanService, excludeTenure: true);
                           }
@@ -229,18 +230,16 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$'))
+                            RegexUtils.amountExp)
                       ],
-                      // coverage:ignore-start
                       onChanged: (v) {
                         setState(() {
                           _calculatedEMI = CurrencyUtils.roundTo2Decimals(
                               double.tryParse(v) ?? 0);
                           if (_calculateRateFromEMI) {
                             _updateRate(loanService);
-                      // coverage:ignore-end
                           } else {
-                            _updateTenure(loanService, excludeEMI: true); // coverage:ignore-line
+                            _updateTenure(loanService, excludeEMI: true);
                           }
                         });
                       },
@@ -251,7 +250,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                   )
                 else
                   // Placeholder to keep layout balanced or just empty
-                  const Spacer(), // coverage:ignore-line
+                  const Spacer(),
               ],
             ),
             const SizedBox(height: 16),
@@ -259,21 +258,19 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () async { // coverage:ignore-line
-                      final d = await showDatePicker( // coverage:ignore-line
+                    onTap: () async {
+                      final d = await showDatePicker(
                           context: context,
-                          // coverage:ignore-start
                           initialDate: _startDate,
                           firstDate: DateTime(2000),
                           lastDate: DateTime(2030));
                       if (d != null) setState(() => _startDate = d);
-                          // coverage:ignore-end
                     },
                     child: InputDecorator(
                       decoration: const InputDecoration(
                           labelText: 'Start Date',
                           border: OutlineInputBorder()),
-                      child: Text(DateFormat('yyyy-MM-dd').format(_startDate)),
+                      child: Text(DateFormat(dateFormatYyyyMmDd).format(_startDate)),
                     ),
                   ),
                 ),
@@ -295,18 +292,18 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                             labelText: '1st EMI Date',
                             border: OutlineInputBorder()),
                         child: Text(
-                            DateFormat('yyyy-MM-dd').format(_firstEmiDate)),
+                            DateFormat(dateFormatYyyyMmDd).format(_firstEmiDate)),
                       ),
                     ),
                   )
                 else
-                  Expanded( // coverage:ignore-line
-                    child: InputDecorator( // coverage:ignore-line
+                  Expanded(
+                    child: InputDecorator(
                       decoration: const InputDecoration(
                           labelText: 'Maturity Date',
                           border: OutlineInputBorder()),
-                      child: Text(DateFormat('yyyy-MM-dd').format( // coverage:ignore-line
-                          _startDate.add(Duration(days: _tenure * 30)))), // coverage:ignore-line
+                      child: Text(DateFormat(dateFormatYyyyMmDd).format(
+                          _startDate.add(Duration(days: _tenure * 30)))),
                     ),
                   ),
               ],
@@ -326,7 +323,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                                 child: Text(d.toString()),
                               ))
                           .toList(),
-                      onChanged: (v) => setState(() => _emiDay = v!), // coverage:ignore-line
+                      onChanged: (v) => setState(() => _emiDay = v!),
                     ),
                   ),
                 ],
@@ -347,13 +344,11 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                       ...accounts
                           .where((a) => a.type == AccountType.savings)
                           .map((a) => DropdownMenuItem<String?>(
-                              // coverage:ignore-start
                               value: a.id,
                               child: Text(
                                   '${a.name} (${_formatAccountBalance(a)})'))),
-                              // coverage:ignore-end
                     ],
-                    onChanged: (v) => setState(() => _selectedAccountId = v), // coverage:ignore-line
+                    onChanged: (v) => setState(() => _selectedAccountId = v),
                   ),
                   loading: () => const LinearProgressIndicator(),
                   error: (e, s) => Text('Error: $e'),
@@ -382,15 +377,15 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                         'Total Interest: ${currency.format((_calculatedEMI * _tenure) - _principal)}',
                         style: const TextStyle(color: Colors.white54),
                       ),
-                    ] else ...[ // coverage:ignore-line
+                    ] else ...[
                       const Text('Projected Interest (Simple)',
                           style: TextStyle(color: Colors.white70)),
                       const SizedBox(height: 8),
-                      Text( // coverage:ignore-line
+                      Text(
                         // Simple Interest for Gold Loan: P * R * T / 100
                         // T is in months, so T/12 years
-                        currency.format( // coverage:ignore-line
-                            (_principal * _rate * (_tenure / 12)) / 100), // coverage:ignore-line
+                        currency.format(
+                            (_principal * _rate * (_tenure / 12)) / 100),
                         style: const TextStyle(
                             color: Colors.amberAccent,
                             fontSize: 32,
@@ -444,7 +439,6 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     }
   }
 
-  // coverage:ignore-start
   void _updateTenure(LoanService loanService, {bool excludeEMI = false}) {
     if (_type == LoanType.gold) return;
     if (_principal > 0 && _rate >= 0 && _calculatedEMI > 0) {
@@ -452,30 +446,24 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
         principal: _principal,
         annualRate: _rate,
         emi: _calculatedEMI,
-  // coverage:ignore-end
       );
-      // coverage:ignore-start
       if (tenure != _tenure) {
         setState(() {
           _tenure = tenure;
           _tenureController.text = _tenure > 0 ? _tenure.toString() : '';
           _tenureController.selection =
               TextSelection.collapsed(offset: _tenureController.text.length);
-      // coverage:ignore-end
         });
       }
     }
     if (!excludeEMI) {
-      // coverage:ignore-start
       _emiController.text =
           _calculatedEMI > 0 ? _calculatedEMI.toStringAsFixed(2) : '';
       _emiController.selection =
           TextSelection.collapsed(offset: _emiController.text.length);
-      // coverage:ignore-end
     }
   }
 
-  // coverage:ignore-start
   void _updateRate(LoanService loanService) {
     if (_type == LoanType.gold) return;
     if (_principal > 0 && _tenure > 0 && _calculatedEMI > 0) {
@@ -483,23 +471,18 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
         principal: _principal,
         tenureMonths: _tenure,
         emi: _calculatedEMI,
-  // coverage:ignore-end
       );
-      // coverage:ignore-start
       if ((rate - _rate).abs() > 0.001) {
         setState(() {
           _rate = rate;
           _rateController.text = _rate.toStringAsFixed(2);
-      // coverage:ignore-end
         });
       }
-    // coverage:ignore-start
     } else if (_principal > 0 && _tenure > 0 && _calculatedEMI == 0) {
       if (_rate != 0) {
         setState(() {
           _rate = 0;
           _rateController.text = '0.00';
-    // coverage:ignore-end
         });
       }
     }
@@ -522,7 +505,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
         type: _type,
         emiDay: _type == LoanType.gold ? 1 : _emiDay,
         firstEmiDate: _type == LoanType.gold
-            ? _startDate.add(Duration(days: _tenure * 30)) // coverage:ignore-line
+            ? _startDate.add(Duration(days: _tenure * 30))
             : _firstEmiDate,
         accountId: _selectedAccountId,
         profileId: activeProfileId,
@@ -535,13 +518,11 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     }
   }
 
-  // coverage:ignore-start
   String _formatAccountBalance(Account a) {
     if (a.type == AccountType.creditCard && a.creditLimit != null) {
       final avail = a.creditLimit! - a.balance;
       return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
-  // coverage:ignore-end
     }
-    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}'; // coverage:ignore-line
+    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
   }
 }

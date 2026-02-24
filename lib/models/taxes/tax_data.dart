@@ -57,7 +57,6 @@ class TaxYearData {
   });
 
   // Getters for Summaries (Used by Dashboard)
-  // coverage:ignore-start
   double get totalSalary {
     double total = salary.grossSalary;
     for (final a in salary.independentAllowances) {
@@ -67,42 +66,33 @@ class TaxYearData {
           total += a.isPartial
               ? (a.partialAmounts[m] ?? a.payoutAmount)
               : a.payoutAmount;
-  // coverage:ignore-end
         }
       }
     }
     return total;
   }
 
-  double get totalHP => // coverage:ignore-line
-      houseProperties.fold(0, (sum, hp) => sum + hp.rentReceived); // coverage:ignore-line
+  double get totalHP =>
+      houseProperties.fold(0, (sum, hp) => sum + hp.rentReceived);
 
-  double get totalBusiness => businessIncomes.fold( // coverage:ignore-line
+  double get totalBusiness => businessIncomes.fold(
       0,
-      // coverage:ignore-start
       (sum, b) =>
           sum +
           (b.type == BusinessType.regular ? b.netIncome : b.presumptiveIncome));
-      // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalLTCG => capitalGains
       .where((e) => e.isLTCG)
       .fold(0.0, (sum, e) => sum + e.capitalGainAmount);
-  // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalSTCG => capitalGains
       .where((e) => !e.isLTCG)
       .fold(0.0, (sum, e) => sum + e.capitalGainAmount);
-  // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalOther =>
       otherIncomes.fold(0.0, (sum, o) => sum + o.amount) +
       cashGifts.fold(0.0, (sum, c) => sum + c.amount) +
       agricultureIncome;
-  // coverage:ignore-end
 
   // Backwards compatibility for single double fields (summing up lists)
   double get tds => tdsEntries.fold(0.0, (sum, e) => sum + e.amount);
@@ -167,41 +157,41 @@ class TaxYearData {
                 ?.map(
                     (e) => HouseProperty.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         businessIncomes: (m['businessIncomes'] as List?)
                 ?.map(
                     (e) => BusinessEntity.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         capitalGains: (m['capitalGains'] as List?)
                 ?.map((e) =>
                     CapitalGainEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         otherIncomes: (m['otherIncomes'] as List?)
                 ?.map((e) => OtherIncome.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         dividendIncome: DividendIncome.fromMap(
             Map<String, dynamic>.from(m['dividendIncome'] ?? {})),
         cashGifts: (m['cashGifts'] as List?)
                 ?.map((e) => OtherIncome.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         agricultureIncome: (m['agricultureIncome'] as num?)?.toDouble() ?? 0,
         advanceTax: (m['advanceTax'] as num?)?.toDouble() ?? 0,
         tdsEntries: (m['tdsEntries'] as List?)
                 ?.map((e) =>
                     TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         tcsEntries: (m['tcsEntries'] as List?)
                 ?.map((e) =>
-                    TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         lastSyncDate: m['lastSyncDate'] != null
-            ? DateTime.parse(m['lastSyncDate']) // coverage:ignore-line
+            ? DateTime.parse(m['lastSyncDate'])
             : null,
         lockedFields: (m['lockedFields'] as List?)?.cast<String>() ?? [],
       );

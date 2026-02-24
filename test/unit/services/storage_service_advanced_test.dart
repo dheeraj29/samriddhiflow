@@ -197,7 +197,7 @@ void main() {
 
   group('StorageService Advanced - Cascasding Deletes', () {
     test('deleteProfile deletes everything related', () async {
-      final pid = 'p1';
+      const pid = 'p1';
 
       when(() => mockProfileBox.delete(pid)).thenAnswer((_) async {});
 

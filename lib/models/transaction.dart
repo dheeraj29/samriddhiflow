@@ -164,7 +164,7 @@ class Transaction extends HiveObject {
     if (amount.isInfinite || amount.isNaN) amount = 0.0;
 
     double? gainAmount = (map['gainAmount'] as num?)?.toDouble();
-    if (gainAmount != null && (gainAmount.isInfinite || gainAmount.isNaN)) { // coverage:ignore-line
+    if (gainAmount != null && (gainAmount.isInfinite || gainAmount.isNaN)) {
       gainAmount = 0.0;
     }
 

@@ -24,7 +24,7 @@ void main() {
 
   group('TaxDataFetcher - fetchAndAggregate', () {
     test('Correctly aggregates basic income heads in FY range', () async {
-      final year = 2024;
+      const year = 2024;
       final rules = TaxRules(financialYearStartMonth: 4, tagMappings: {
         'Rent': 'houseProp',
         'Profit': 'business',
@@ -77,7 +77,7 @@ void main() {
     });
 
     test('Handles advanced tag mappings and holding tenure', () async {
-      final year = 2024;
+      const year = 2024;
       final rules = TaxRules(advancedTagMappings: [
         const TaxMappingRule(
             categoryName: 'Stock Gain', taxHead: 'ltcg', minHoldingMonths: 12),
@@ -131,7 +131,7 @@ void main() {
 
     test('Integrates maturing insurance policies (ULIP and Non-ULIP)',
         () async {
-      final year = 2024;
+      const year = 2024;
       final rules = TaxRules(financialYearStartMonth: 4);
       when(() => mockConfig.getRulesForYear(year)).thenReturn(rules);
       when(() => mockStorage.getCategories()).thenReturn([]);
@@ -176,7 +176,7 @@ void main() {
     });
 
     test('Correctly splits dividends into Advance Tax Quarters', () async {
-      final year = 2024;
+      const year = 2024;
       final rules = TaxRules(
           financialYearStartMonth: 4, tagMappings: {'Div': 'dividend'});
       when(() => mockConfig.getRulesForYear(year)).thenReturn(rules);
@@ -231,7 +231,7 @@ void main() {
     });
 
     test('Returns warnings for unmapped income transactions', () async {
-      final year = 2024;
+      const year = 2024;
       final rules = TaxRules(tagMappings: {});
       when(() => mockConfig.getRulesForYear(year)).thenReturn(rules);
       when(() => mockStorage.getCategories()).thenReturn([]);

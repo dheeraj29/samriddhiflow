@@ -5,6 +5,7 @@ import '../models/account.dart';
 import '../utils/currency_utils.dart';
 import 'pure_icons.dart';
 import '../theme/app_theme.dart';
+import '../utils/regex_utils.dart';
 
 class FormUtils {
   /// A standardized amount input field with currency prefix.
@@ -24,7 +25,7 @@ class FormUtils {
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
       ],
     );
   }
@@ -39,9 +40,10 @@ class FormUtils {
     bool allowManual = true,
   }) {
     final allIds = [if (allowManual) 'manual', ...accounts.map((a) => a.id)];
-    final safeValue = allIds.contains(value)
-        ? value
-        : (allowManual ? 'manual' : accounts.first.id); // coverage:ignore-line
+    final safeValue = () {
+      if (allIds.contains(value)) return value;
+      return allowManual ? 'manual' : accounts.first.id;
+    }();
 
     return DropdownButtonFormField<String>(
       initialValue: safeValue,
@@ -74,14 +76,14 @@ class FormUtils {
     DateTime? lastDate,
   }) {
     return InkWell(
-      onTap: () async { // coverage:ignore-line
-        final picked = await showDatePicker( // coverage:ignore-line
+      onTap: () async {
+        final picked = await showDatePicker(
           context: context,
           initialDate: selectedDate,
-          firstDate: firstDate ?? DateTime(2020), // coverage:ignore-line
-          lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365)), // coverage:ignore-line
+          firstDate: firstDate ?? DateTime(2020),
+          lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365)),
         );
-        if (picked != null) onDateTarget(picked); // coverage:ignore-line
+        if (picked != null) onDateTarget(picked);
       },
       child: InputDecorator(
         decoration: InputDecoration(
@@ -99,8 +101,8 @@ class FormUtils {
 
   static String _formatAccountBalance(Account a) {
     if (a.type == AccountType.creditCard && a.creditLimit != null) {
-      final avail = a.creditLimit! - a.balance; // coverage:ignore-line
-      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}'; // coverage:ignore-line
+      final avail = a.creditLimit! - a.balance;
+      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
     }
     return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
   }

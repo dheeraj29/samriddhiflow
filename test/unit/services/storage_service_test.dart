@@ -110,7 +110,7 @@ void main() {
     });
 
     test('deleteProfile deletes profile and associated data', () async {
-      final profileId = 'p1';
+      const profileId = 'p1';
       when(() => mockProfileBox.delete(profileId)).thenAnswer((_) async {});
 
       when(() => mockAccountBox.toMap()).thenReturn({});

@@ -7,3 +7,15 @@ linter:
     prefer_final_fields: true
     use_key_in_widget_constructors: true
     prefer_function_declarations_over_variables: true
+    prefer_null_aware_operators: true
+    prefer_const_declarations: true
+    prefer_conditional_assignment: true
+    prefer_is_empty: true
+    prefer_is_not_empty: true
+    prefer_iterable_whereType: true
+    prefer_contains: true
+    prefer_is_not_operator: true
+    unnecessary_brace_in_string_interps: true
+    unnecessary_const: true
+    unnecessary_new: true
+    curly_braces_in_flow_control_structures: true

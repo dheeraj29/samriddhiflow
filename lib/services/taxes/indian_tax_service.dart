@@ -11,21 +11,18 @@ class IndianTaxService implements TaxStrategy {
 
   IndianTaxService(this._configService);
 
-  @override // coverage:ignore-line
+  @override
   String get countryCode => 'IN';
 
-  @override // coverage:ignore-line
+  @override
   double calculateLiability(TaxYearData data) {
-    // coverage:ignore-start
     if (!_configService.isReady) return 0;
     final rules = _configService.getRulesForYear(data.year);
     final details = calculateDetailedLiability(data, rules);
     return details['totalTax'] ?? 0;
-    // coverage:ignore-end
   }
 
   /// Calculates tax liability based ONLY on salary income (used for TDS estimation).
-  // coverage:ignore-start
   double calculateSalaryOnlyLiability(TaxYearData data) {
     final rules = _configService.getRulesForYear(data.year);
     final salaryOnlyData = data.copyWith(
@@ -34,12 +31,11 @@ class IndianTaxService implements TaxStrategy {
       capitalGains: [],
       otherIncomes: [],
       cashGifts: [],
-  // coverage:ignore-end
       agricultureIncome: 0,
       dividendIncome: const DividendIncome(),
     );
-    final details = calculateDetailedLiability(salaryOnlyData, rules); // coverage:ignore-line
-    return details['totalTax'] ?? 0; // coverage:ignore-line
+    final details = calculateDetailedLiability(salaryOnlyData, rules);
+    return details['totalTax'] ?? 0;
   }
 
   Map<String, double> calculateDetailedLiability(
@@ -263,15 +259,13 @@ class IndianTaxService implements TaxStrategy {
   double calculateBusinessIncome(TaxYearData data, TaxRules rules) {
     double total = 0;
     for (var biz in data.businessIncomes) {
-      // coverage:ignore-start
       if (biz.type == BusinessType.section44AD && rules.is44ADEnabled) {
         total += biz.presumptiveIncome;
       } else if (biz.type == BusinessType.section44ADA &&
           rules.is44ADAEnabled) {
         total += biz.presumptiveIncome;
-      // coverage:ignore-end
       } else {
-        total += biz.netIncome; // coverage:ignore-line
+        total += biz.netIncome;
       }
     }
     return total;
@@ -309,7 +303,7 @@ class IndianTaxService implements TaxStrategy {
   double calculateOtherSources(TaxYearData data, TaxRules rules) {
     double other = 0;
     for (var o in data.otherIncomes) {
-      other += o.amount; // coverage:ignore-line
+      other += o.amount;
     }
     other += data.dividendIncome.grossDividend;
 
@@ -369,26 +363,24 @@ class IndianTaxService implements TaxStrategy {
     return gain * (rules.stcgRate / 100);
   }
 
-  @override // coverage:ignore-line
-  Map<String, double> getDeductionSuggestions(TaxYearData data) => {}; // coverage:ignore-line
+  @override
+  Map<String, double> getDeductionSuggestions(TaxYearData data) => {};
 
-  @override // coverage:ignore-line
+  @override
   String suggestITR(TaxYearData data) {
-    // coverage:ignore-start
     if (data.businessIncomes.isNotEmpty) return 'ITR-3 or ITR-4';
     if (data.capitalGains.any((e) => e.capitalGainAmount > 0)) return 'ITR-2';
     if (data.houseProperties.length > 1) return 'ITR-2';
-    // coverage:ignore-end
     return 'ITR-1 (Sahaj)';
   }
 
-  @override // coverage:ignore-line
+  @override
   bool isInsuranceMaturityTaxable(
       double annualPremium, double sumAssured, DateTime issueDate) {
-    if (issueDate.isBefore(DateTime(2012, 4, 1))) { // coverage:ignore-line
-      return annualPremium > (0.20 * sumAssured); // coverage:ignore-line
+    if (issueDate.isBefore(DateTime(2012, 4, 1))) {
+      return annualPremium > (0.20 * sumAssured);
     } else {
-      return annualPremium > (0.10 * sumAssured); // coverage:ignore-line
+      return annualPremium > (0.10 * sumAssured);
     }
   }
 
@@ -459,7 +451,7 @@ class IndianTaxService implements TaxStrategy {
             SalaryStructure.isPayoutMonth(
                 m, a.frequency, a.startMonth, a.customMonths)) {
           currentIrregular += a.isPartial
-              ? (a.partialAmounts[m] ?? a.payoutAmount) // coverage:ignore-line
+              ? (a.partialAmounts[m] ?? a.payoutAmount)
               : a.payoutAmount;
         }
       }
@@ -621,13 +613,11 @@ class IndianTaxService implements TaxStrategy {
         return s;
       }
     }
-    return sorted.last; // coverage:ignore-line
+    return sorted.last;
   }
 }
 
-// coverage:ignore-start
 final indianTaxServiceProvider = Provider<IndianTaxService>((ref) {
   final config = ref.watch(taxConfigServiceProvider);
   return IndianTaxService(config);
-// coverage:ignore-end
 });

@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -68,11 +69,9 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
       left: _position.dx,
       top: _position.dy,
       child: GestureDetector(
-        // coverage:ignore-start
         onPanUpdate: (details) {
           setState(() {
             _position += details.delta;
-        // coverage:ignore-end
           });
         },
         child: Material(
@@ -173,7 +172,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: PureIcons.close(size: 18),
-                  onPressed: () => setState(() => _isExpanded = false), // coverage:ignore-line
+                  onPressed: () => setState(() => _isExpanded = false),
                 ),
               ],
             ],
@@ -198,31 +197,29 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
               ? const Center(
                   child: Text('Add values below',
                       style: TextStyle(color: Colors.grey, fontSize: 11)))
-              : ListView.builder( // coverage:ignore-line
+              : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: active.entries.length, // coverage:ignore-line
-                  itemBuilder: (context, index) { // coverage:ignore-line
+                  itemCount: active.entries.length,
+                  itemBuilder: (context, index) {
                     final entry =
-                        active.entries[active.entries.length - 1 - index]; // coverage:ignore-line
-                    return Padding( // coverage:ignore-line
+                        active.entries[active.entries.length - 1 - index];
+                    return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row( // coverage:ignore-line
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        // coverage:ignore-start
                         children: [
                           Expanded(
                             child: Text(
                                 entry.name ??
                                     (entry.operation == '+'
-                        // coverage:ignore-end
                                         ? 'Value'
-                                        : 'Op: ${entry.operation}'), // coverage:ignore-line
+                                        : 'Op: ${entry.operation}'),
                                 style: const TextStyle(
                                     fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis),
                           ),
-                          Text( // coverage:ignore-line
-                              '${entry.operation == '+' ? '' : ('${entry.operation} ')}${(entry.operation == '*' || entry.operation == '/') ? entry.value : formatter.format(entry.value)}', // coverage:ignore-line
+                          Text(
+                              '${entry.operation == '+' ? '' : ('${entry.operation} ')}${(entry.operation == '*' || entry.operation == '/') ? entry.value : formatter.format(entry.value)}',
                               style: const TextStyle(
                                   fontSize: 11, fontWeight: FontWeight.w500)),
                         ],
@@ -280,7 +277,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                         keyboardType: TextInputType.text,
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.\+\-\*\/]'))
+                              RegexUtils.mathExp)
                         ],
                         onSubmitted: (_) => _addValue(),
                       ),
@@ -331,7 +328,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
     if (text.isEmpty) return;
 
     String operation = '+';
-    if (text.startsWith(RegExp(r'[+\-*/]'))) {
+    if (text.startsWith(RegexUtils.mathOpExp)) {
       operation = text[0];
       text = text.substring(1).trim();
     }
@@ -342,7 +339,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
             val,
             name: _nameController.text.trim().isEmpty
                 ? null
-                : _nameController.text.trim(), // coverage:ignore-line
+                : _nameController.text.trim(),
             operation: operation,
           );
       _controller.clear();
@@ -374,24 +371,20 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                       trailing: p.id ==
                               ref.read(sumTrackerProvider).activeProfileId
                           ? PureIcons.checkCircle(color: Colors.green, size: 20)
-                          : IconButton( // coverage:ignore-line
-                              icon: PureIcons.deleteOutlined( // coverage:ignore-line
+                          : IconButton(
+                              icon: PureIcons.deleteOutlined(
                                   size: 18, color: Colors.redAccent),
-                              // coverage:ignore-start
                               onPressed: () {
                                 ref
                                     .read(sumTrackerProvider.notifier)
                                     .deleteProfile(p.id);
                                 Navigator.pop(context);
-                              // coverage:ignore-end
                               }),
-                      // coverage:ignore-start
                       onTap: () {
                         ref
                             .read(sumTrackerProvider.notifier)
                             .activateProfile(p.id);
                         Navigator.pop(context);
-                      // coverage:ignore-end
                       },
                     )),
                 const Divider(),
@@ -411,7 +404,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), // coverage:ignore-line
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
         ],
       ),
@@ -431,7 +424,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), // coverage:ignore-line
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

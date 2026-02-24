@@ -119,7 +119,7 @@ class Account extends HiveObject {
     if (balance.isInfinite || balance.isNaN) balance = 0.0;
 
     double? creditLimit = (map['creditLimit'] as num?)?.toDouble();
-    if (creditLimit != null && (creditLimit.isInfinite || creditLimit.isNaN)) { // coverage:ignore-line
+    if (creditLimit != null && (creditLimit.isInfinite || creditLimit.isNaN)) {
       creditLimit = 0.0;
     }
 

@@ -98,15 +98,13 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
-      // coverage:ignore-start
       error: (e, s) => Scaffold(
         body: Center(
           child: Padding(
-      // coverage:ignore-end
             padding: const EdgeInsets.all(24.0),
-            child: Column( // coverage:ignore-line
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [ // coverage:ignore-line
+              children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.amber),
                 const SizedBox(height: 16),
                 const Text(
@@ -115,11 +113,11 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text("Unable to initialize secure storage.\n$e", // coverage:ignore-line
+                Text("Unable to initialize secure storage.\n$e",
                     textAlign: TextAlign.center),
                 const SizedBox(height: 24),
-                ElevatedButton( // coverage:ignore-line
-                  onPressed: () => ref.refresh(storageInitializerProvider), // coverage:ignore-line
+                ElevatedButton(
+                  onPressed: () => ref.refresh(storageInitializerProvider),
                   child: const Text("Retry"),
                 ),
               ],
@@ -133,10 +131,10 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
 
         // 1. Watch for manual lock intent
         ref.listen(appLockIntentProvider, (previous, next) {
-          if (next == true) { // coverage:ignore-line
-            setState(() => _isLocked = true); // coverage:ignore-line
+          if (next == true) {
+            setState(() => _isLocked = true);
             // Reset intent
-            ref.read(appLockIntentProvider.notifier).reset(); // coverage:ignore-line
+            ref.read(appLockIntentProvider.notifier).reset();
           }
         });
 
@@ -148,17 +146,15 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
             // User just logged in via Forgot PIN fallback
             // Disable App Lock to prevent immediate re-lock.
             final wasLocked =
-                storage.isAppLockEnabled() && storage.getAppPin() != null; // coverage:ignore-line
+                storage.isAppLockEnabled() && storage.getAppPin() != null;
 
             if (wasLocked) {
-              _disableAppLock(); // coverage:ignore-line
+              _disableAppLock();
 
               // Use a post-frame callback to show snackbar since we are in build/listener
-              // coverage:ignore-start
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              // coverage:ignore-end
                     content: Text(
                         'App Unlocked. Please Reset your PIN in Settings.'),
                     backgroundColor: Colors.orange,
@@ -168,11 +164,9 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
               });
             }
 
-            // coverage:ignore-start
             setState(() {
               _isLocked = false;
               _isFallbackMode = false;
-            // coverage:ignore-end
             });
           }
         });
@@ -209,7 +203,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
             if (_isLocked && !_isFallbackMode)
               Positioned.fill(
                 child: AppLockScreen(
-                  onUnlocked: () => setState(() => _isLocked = false), // coverage:ignore-line
+                  onUnlocked: () => setState(() => _isLocked = false),
                   onFallback: () async {
                     // Sign out to force re-authentication (Forgot PIN flow)
                     // Set persistent flag so we know to reset PIN on next login

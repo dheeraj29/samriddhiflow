@@ -450,9 +450,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                     Text(
                         'Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
                         style: TextStyle(
-                            color: isExpired
-                                ? Colors.red
-                                : (isUrgent ? Colors.orange : Colors.grey),
+                            color: () {
+                              if (isExpired) return Colors.red;
+                              if (isUrgent) return Colors.orange;
+                              return Colors.grey;
+                            }(),
                             fontWeight: FontWeight.bold)),
                   ],
                 ),
@@ -489,15 +491,19 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                           _loadData();
                         },
                       ),
-                    isExpired
-                        ? const Chip(
+                    () {
+                      if (isExpired) {
+                        return const Chip(
                             label: Text('Expired'),
                             backgroundColor: Colors.redAccent,
-                            labelStyle: TextStyle(color: Colors.white))
-                        : gain.reinvestedAmount >= gain.capitalGainAmount
-                            ? const Icon(Icons.check_circle,
-                                color: Colors.green)
-                            : const Icon(Icons.timelapse, color: Colors.orange),
+                            labelStyle: TextStyle(color: Colors.white));
+                      }
+                      if (gain.reinvestedAmount >= gain.capitalGainAmount) {
+                        return const Icon(Icons.check_circle,
+                            color: Colors.green);
+                      }
+                      return const Icon(Icons.timelapse, color: Colors.orange);
+                    }(),
                   ],
                 ),
               );

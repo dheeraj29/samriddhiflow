@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -814,11 +815,15 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     TextField(
                       controller: minMonthsCtrl,
                       decoration: InputDecoration(
-                        labelText: selectedHead == 'stcg'
-                            ? 'STCG if holding period < (months)'
-                            : (selectedHead == 'ltcg'
-                                ? 'LTCG if holding period >= (months)'
-                                : 'Holding period threshold (months)'),
+                        labelText: () {
+                          if (selectedHead == 'stcg') {
+                            return 'STCG if holding period < (months)';
+                          }
+                          if (selectedHead == 'ltcg') {
+                            return 'LTCG if holding period >= (months)';
+                          }
+                          return 'Holding period threshold (months)';
+                        }(),
                         border: const OutlineInputBorder(),
                         helperText: 'Leave empty for any period',
                       ),
@@ -830,60 +835,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: RawAutocomplete<String>(
-                            textEditingController: matchDescCtrl,
-                            focusNode: FocusNode(),
-                            optionsBuilder:
-                                (TextEditingValue textEditingValue) {
-                              if (textEditingValue.text.isEmpty) {
-                                return const Iterable<String>.empty();
-                              }
-                              return _transactionDescriptions
-                                  .where((String option) {
-                                return option.toLowerCase().contains(
-                                    textEditingValue.text.toLowerCase());
-                              });
-                            },
-                            fieldViewBuilder: (context, controller, focusNode,
-                                onFieldSubmitted) {
-                              return TextField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                decoration: const InputDecoration(
-                                    labelText: 'Must Match Description',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'e.g., Sold'),
-                              );
-                            },
-                            optionsViewBuilder: (context, onSelected, options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4.0,
-                                  child: SizedBox(
-                                    height: 200,
-                                    width: 300,
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.all(8.0),
-                                      itemCount: options.length,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        final String option =
-                                            options.elementAt(index);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            onSelected(option);
-                                          },
-                                          child: ListTile(
-                                            title: Text(option),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                          child: _buildDescriptionAutocomplete(
+                            controller: matchDescCtrl,
+                            labelText: 'Must Match Description',
+                            hintText: 'e.g., Sold',
                           ),
                         ),
                         IconButton(
@@ -915,60 +870,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: RawAutocomplete<String>(
-                            textEditingController: excludeDescCtrl,
-                            focusNode: FocusNode(),
-                            optionsBuilder:
-                                (TextEditingValue textEditingValue) {
-                              if (textEditingValue.text.isEmpty) {
-                                return const Iterable<String>.empty();
-                              }
-                              return _transactionDescriptions
-                                  .where((String option) {
-                                return option.toLowerCase().contains(
-                                    textEditingValue.text.toLowerCase());
-                              });
-                            },
-                            fieldViewBuilder: (context, controller, focusNode,
-                                onFieldSubmitted) {
-                              return TextField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                decoration: const InputDecoration(
-                                    labelText: 'Exclude Description',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'e.g., Transfer'),
-                              );
-                            },
-                            optionsViewBuilder: (context, onSelected, options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4.0,
-                                  child: SizedBox(
-                                    height: 200,
-                                    width: 300,
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.all(8.0),
-                                      itemCount: options.length,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        final String option =
-                                            options.elementAt(index);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            onSelected(option);
-                                          },
-                                          child: ListTile(
-                                            title: Text(option),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                          child: _buildDescriptionAutocomplete(
+                            controller: excludeDescCtrl,
+                            labelText: 'Exclude Description',
+                            hintText: 'e.g., Transfer',
                           ),
                         ),
                         IconButton(
@@ -1088,7 +993,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegexUtils.amountExp),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -1111,7 +1016,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegexUtils.amountExp),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -1172,7 +1077,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           if (isInt)
             FilteringTextInputFormatter.digitsOnly
           else
-            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+            FilteringTextInputFormatter.allow(RegexUtils.amountExp),
         ],
         validator: (val) {
           if (val == null || val.isEmpty) return 'Required';
@@ -1382,6 +1287,65 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     );
   }
 
+  Widget _buildDescriptionAutocomplete({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+  }) {
+    return RawAutocomplete<String>(
+      textEditingController: controller,
+      focusNode: FocusNode(),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty) {
+          return const Iterable<String>.empty();
+        }
+        return _transactionDescriptions.where((String option) {
+          return option
+              .toLowerCase()
+              .contains(textEditingValue.text.toLowerCase());
+        });
+      },
+      fieldViewBuilder:
+          (context, fieldController, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: fieldController,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+              labelText: labelText,
+              border: const OutlineInputBorder(),
+              hintText: hintText),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4.0,
+            child: SizedBox(
+              height: 200,
+              width: 300,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8.0),
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return GestureDetector(
+                    onTap: () {
+                      onSelected(option);
+                    },
+                    child: ListTile(
+                      title: Text(option),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCustomExemptionsEditor() {
     // Defines custom exemptions displayed in General or Mappings
     if (_customExemptions.isEmpty) {
@@ -1461,7 +1425,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                              RegexUtils.amountExp),
                         ]),
                   ]),
                   actions: [

@@ -72,11 +72,11 @@ class TransactionFilterUtils {
                 (t) => t.date.isAfter(start) || t.date.isAtSameMomentAs(start))
             .toList();
       } else if (range == TimeRange.lastMonth) {
-        final start = DateTime(now.year, now.month - 1, 1); // coverage:ignore-line
-        final end = DateTime(now.year, now.month, 0); // coverage:ignore-line
+        final start = DateTime(now.year, now.month - 1, 1);
+        final end = DateTime(now.year, now.month, 0);
         filtered = filtered
-            .where((t) => t.date.isAfter(start) && t.date.isBefore(end)) // coverage:ignore-line
-            .toList(); // coverage:ignore-line
+            .where((t) => t.date.isAfter(start) && t.date.isBefore(end))
+            .toList();
       } else if (range == TimeRange.custom && customRange != null) {
         final start = customRange.start;
         final end = customRange.end

@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/lending_record.dart';
@@ -47,20 +48,16 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async { // coverage:ignore-line
-    final picked = await showDatePicker( // coverage:ignore-line
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
       context: context,
-      // coverage:ignore-start
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      // coverage:ignore-end
     );
-    // coverage:ignore-start
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-    // coverage:ignore-end
       });
     }
   }
@@ -91,7 +88,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
           type: _selectedType,
           isClosed: _isClosed,
           closedDate: _isClosed
-              ? (widget.recordToEdit!.closedDate ?? DateTime.now()) // coverage:ignore-line
+              ? (widget.recordToEdit!.closedDate ?? DateTime.now())
               : null,
         );
         ref.read(lendingProvider.notifier).updateRecord(updatedRecord);
@@ -131,11 +128,9 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                   ),
                 ],
                 selected: {_selectedType},
-                // coverage:ignore-start
                 onSelectionChanged: (Set<LendingType> newSelection) {
                   setState(() {
                     _selectedType = newSelection.first;
-                // coverage:ignore-end
                   });
                 },
               ),
@@ -161,7 +156,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
                 decoration: const InputDecoration(
                   labelText: 'Amount',
@@ -189,7 +184,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
 
               // Date Picker
               InkWell(
-                onTap: () => _selectDate(context), // coverage:ignore-line
+                onTap: () => _selectDate(context),
                 child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Date',
@@ -208,7 +203,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                 SwitchListTile(
                   title: const Text('Mark as Closed / SETTLED'),
                   value: _isClosed,
-                  onChanged: (val) => setState(() => _isClosed = val), // coverage:ignore-line
+                  onChanged: (val) => setState(() => _isClosed = val),
                 ),
 
               const SizedBox(height: 32),

@@ -40,8 +40,8 @@ class TaxConfigService {
     await _box.put(year, rules);
   }
 
-  Future<void> deleteRulesForYear(int year) async { // coverage:ignore-line
-    await _box.delete(year); // coverage:ignore-line
+  Future<void> deleteRulesForYear(int year) async {
+    await _box.delete(year);
   }
 
   /// Explicitly copy rules from one year to another
@@ -51,14 +51,12 @@ class TaxConfigService {
   }
 
   /// Get all rules across all years for backup
-  // coverage:ignore-start
   Map<int, TaxRules> getAllRules() {
     if (!_box.isOpen) return {};
     final Map<int, TaxRules> all = {};
     for (var key in _box.keys) {
       if (key is int) {
         all[key] = _box.get(key)!;
-  // coverage:ignore-end
       }
     }
     return all;
@@ -67,7 +65,7 @@ class TaxConfigService {
   /// RESTORE: Bulk save rules with Sanitization
   Future<void> restoreAllRules(Map<int, TaxRules> data) async {
     if (!_box.isOpen) {
-      _box = await Hive.openBox<TaxRules>(_boxName); // coverage:ignore-line
+      _box = await Hive.openBox<TaxRules>(_boxName);
     }
 
     await _box.clear();
@@ -107,7 +105,7 @@ class TaxConfigService {
 
     TaxRules? prevYearRules;
     if (_box.containsKey(now.year - 1)) {
-      prevYearRules = _box.get(now.year - 1); // coverage:ignore-line
+      prevYearRules = _box.get(now.year - 1);
     }
 
     // Use previous year's config if available to determine boundary
@@ -117,13 +115,13 @@ class TaxConfigService {
     if (now.month < referenceRules.financialYearStartMonth) {
       return now.year - 1;
     }
-    return now.year; // coverage:ignore-line
+    return now.year;
   }
 
   /// For backward compatibility or convenience property (defaults to CURRENT FY)
-  TaxRules get rules => getRulesForYear(getCurrentFinancialYear()); // coverage:ignore-line
+  TaxRules get rules => getRulesForYear(getCurrentFinancialYear());
 }
 
-final taxConfigServiceProvider = Provider<TaxConfigService>((ref) { // coverage:ignore-line
-  return TaxConfigService(); // coverage:ignore-line
+final taxConfigServiceProvider = Provider<TaxConfigService>((ref) {
+  return TaxConfigService();
 });

@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import '../providers.dart';
 import '../feature_providers.dart';
 import '../models/recurring_transaction.dart';
 import '../widgets/pure_icons.dart';
+
+const adjForHolidaysText = ' (Adj. for Holidays)';
 
 class RecurringManagerScreen extends ConsumerWidget {
   const RecurringManagerScreen({super.key});
@@ -55,16 +58,14 @@ class RecurringManagerScreen extends ConsumerWidget {
                       IconButton(
                         icon: PureIcons.calendar(color: Colors.blueGrey),
                         tooltip: 'Add to System Calendar',
-                        onPressed: () { // coverage:ignore-line
+                        onPressed: () {
                           ref
-                              // coverage:ignore-start
                               .read(calendarServiceProvider)
                               .downloadRecurringEvent(
                                 title: rule.title,
-                              // coverage:ignore-end
                                 description:
-                                    'Recurring payment: ${rule.title} for ${currency.format(rule.amount)}', // coverage:ignore-line
-                                startDate: rule.nextExecutionDate, // coverage:ignore-line
+                                    'Recurring payment: ${rule.title} for ${currency.format(rule.amount)}',
+                                startDate: rule.nextExecutionDate,
                                 occurrences: 12, // Default to 1 year
                               );
                         },
@@ -87,7 +88,7 @@ class RecurringManagerScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')), // coverage:ignore-line
+        error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -97,20 +98,18 @@ class RecurringManagerScreen extends ConsumerWidget {
     switch (rule.scheduleType) {
       case ScheduleType.fixedDate:
         return '$freqStr - Every ${rule.nextExecutionDate.day}${_getDaySuffix(rule.nextExecutionDate.day)}';
-      case ScheduleType.everyWeekend: // coverage:ignore-line
+      case ScheduleType.everyWeekend:
         return 'Every Weekend (Sat/Sun)';
-      case ScheduleType.lastWeekend: // coverage:ignore-line
+      case ScheduleType.lastWeekend:
         return 'Last Weekend of Month';
-      // coverage:ignore-start
       case ScheduleType.specificWeekday:
         return 'Every ${_getWeekdayName(rule.selectedWeekday ?? 1)}';
       case ScheduleType.lastDayOfMonth:
-        return 'Last Day of Month${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
+        return 'Last Day of Month${rule.adjustForHolidays ? adjForHolidaysText : ""}';
       case ScheduleType.lastWorkingDay:
-        return 'Last Working Day${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
+        return 'Last Working Day${rule.adjustForHolidays ? adjForHolidaysText : ""}';
       case ScheduleType.firstWorkingDay:
-        return 'First Working Day${rule.adjustForHolidays ? " (Adj. for Holidays)" : ""}';
-      // coverage:ignore-end
+        return 'First Working Day${rule.adjustForHolidays ? adjForHolidaysText : ""}';
     }
   }
 
@@ -119,16 +118,16 @@ class RecurringManagerScreen extends ConsumerWidget {
     switch (day % 10) {
       case 1:
         return 'st';
-      case 2: // coverage:ignore-line
+      case 2:
         return 'nd';
-      case 3: // coverage:ignore-line
+      case 3:
         return 'rd';
       default:
         return 'th';
     }
   }
 
-  String _getWeekdayName(int day) { // coverage:ignore-line
+  String _getWeekdayName(int day) {
     const names = [
       '',
       'Monday',
@@ -139,7 +138,7 @@ class RecurringManagerScreen extends ConsumerWidget {
       'Saturday',
       'Sunday'
     ];
-    return names[day]; // coverage:ignore-line
+    return names[day];
   }
 
   Future<void> _confirmDelete(
@@ -152,7 +151,7 @@ class RecurringManagerScreen extends ConsumerWidget {
                   'This will stop automatic payments for "${rule.title}". Past transactions will NOT be deleted.'),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context, false), // coverage:ignore-line
+                    onPressed: () => Navigator.pop(context, false),
                     child: const Text('Cancel')),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
@@ -185,22 +184,20 @@ class RecurringManagerScreen extends ConsumerWidget {
             border: OutlineInputBorder(),
           ),
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+            FilteringTextInputFormatter.allow(RegexUtils.amountExp)
           ],
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), // coverage:ignore-line
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           TextButton(
-            // coverage:ignore-start
             onPressed: () {
               final val = double.tryParse(controller.text);
               if (val != null && val > 0) {
                 Navigator.pop(context, val);
-            // coverage:ignore-end
               }
             },
             child: const Text('Save'),
@@ -210,12 +207,10 @@ class RecurringManagerScreen extends ConsumerWidget {
     );
 
     if (updatedAmount != null) {
-      // coverage:ignore-start
       final storage = ref.read(storageServiceProvider);
       rule.amount = updatedAmount;
       await storage.saveRecurringTransaction(rule);
       final _ = ref.refresh(recurringTransactionsProvider);
-      // coverage:ignore-end
     }
   }
 }

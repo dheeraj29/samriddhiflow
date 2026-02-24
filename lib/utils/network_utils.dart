@@ -13,7 +13,7 @@ class NetworkUtils {
     try {
       // 0. Web Optimization: Trust navigator.onLine (Synchronous & Reliable)
       if (kIsWeb) {
-        if (!ConnectivityPlatform.checkWebOnline()) { // coverage:ignore-line
+        if (!ConnectivityPlatform.checkWebOnline()) {
           return true;
         }
       }
@@ -34,16 +34,16 @@ class NetworkUtils {
       // 2. Fallback for Web/PWA
       if (kIsWeb) {
         final isMissingPlugin =
-            e.toString().contains("MissingPluginException") || // coverage:ignore-line
-                e.toString().contains("No implementation found"); // coverage:ignore-line
+            e.toString().contains("MissingPluginException") ||
+                e.toString().contains("No implementation found");
 
         if (isMissingPlugin) {
           try {
             // true if NOT onLine
-            final webOffline = !ConnectivityPlatform.checkWebOnline(); // coverage:ignore-line
+            final webOffline = !ConnectivityPlatform.checkWebOnline();
             return webOffline;
           } catch (webE) {
-            DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE"); // coverage:ignore-line
+            DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE");
             // Fallback failed? Assume online.
             return false;
           }
@@ -60,7 +60,7 @@ class NetworkUtils {
   /// This helps detect DNS resolution delays or captive portals on iOS.
   static Future<bool> hasActualInternet() async {
     if (kIsWeb) {
-      return ConnectivityPlatform.checkActualWebReachability(); // coverage:ignore-line
+      return ConnectivityPlatform.checkActualWebReachability();
     }
     // For non-web, standard connectivity is usually enough or we'd use a package.
     return true;

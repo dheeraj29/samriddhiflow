@@ -66,16 +66,14 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (widget.isFullyPaid)
-                  Container( // coverage:ignore-line
+                  Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.all(8),
-                    // coverage:ignore-start
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                           color: Colors.green.withValues(alpha: 0.3)),
-                    // coverage:ignore-end
                     ),
                     child: const Row(
                       children: [
@@ -100,7 +98,6 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                   subtitle: const Text('Round to nearest ₹1',
                       style: TextStyle(fontSize: 12, color: Colors.grey)),
                   value: _isRounded,
-                  // coverage:ignore-start
                   onChanged: (v) {
                     setState(() {
                       _isRounded = v ?? false;
@@ -109,13 +106,10 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                             double.tryParse(_amountController.text) ?? 0;
                         final rounded = _originalAmount!.roundToDouble();
                         _amountController.text = rounded.toStringAsFixed(2);
-                  // coverage:ignore-end
                       } else {
-                        // coverage:ignore-start
                         if (_originalAmount != null && _originalAmount! > 0) {
                           _amountController.text =
                               _originalAmount!.toStringAsFixed(2);
-                        // coverage:ignore-end
                         }
                       }
                     });
@@ -137,14 +131,14 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                       label: 'Pay From Account',
                     );
                   },
-                  loading: () => const CircularProgressIndicator(), // coverage:ignore-line
-                  error: (_, __) => const Text('Error loading accounts'), // coverage:ignore-line
+                  loading: () => const CircularProgressIndicator(),
+                  error: (_, __) => const Text('Error loading accounts'),
                 ),
                 const SizedBox(height: 16),
                 FormUtils.buildDatePickerField(
                   context: context,
                   selectedDate: _date,
-                  onDateTarget: (picked) => setState(() => _date = picked), // coverage:ignore-line
+                  onDateTarget: (picked) => setState(() => _date = picked),
                   label: 'Payment Date',
                 ),
               ],
@@ -152,7 +146,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context), // coverage:ignore-line
+                onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () async {
@@ -192,25 +186,23 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
                   // Auto-create Rounding Adjustment if enabled
                   if (_isRounded &&
-                      // coverage:ignore-start
                       _originalAmount != null &&
                       (_originalAmount! - amount).abs() > 0.001) {
                     final diff = _originalAmount! - amount;
                     final adjustmentType = diff > 0
-                      // coverage:ignore-end
                         ? TransactionType.income
                         : TransactionType.expense;
 
-                    final adjustmentTxn = Transaction.create( // coverage:ignore-line
+                    final adjustmentTxn = Transaction.create(
                       title: 'Rounding Adjustment',
-                      amount: diff.abs(), // coverage:ignore-line
-                      date: _date, // coverage:ignore-line
+                      amount: diff.abs(),
+                      date: _date,
                       type: adjustmentType,
                       category: 'Adjustment',
-                      accountId: widget.creditCardAccount.id, // coverage:ignore-line
+                      accountId: widget.creditCardAccount.id,
                       toAccountId: null,
                     );
-                    await storage.saveTransaction(adjustmentTxn); // coverage:ignore-line
+                    await storage.saveTransaction(adjustmentTxn);
                   }
 
                   ref.invalidate(accountsProvider);
@@ -228,8 +220,8 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => // coverage:ignore-line
-          AlertDialog(title: const Text('Error'), content: Text('$e')), // coverage:ignore-line
+      error: (e, s) =>
+          AlertDialog(title: const Text('Error'), content: Text('$e')),
     );
   }
 }

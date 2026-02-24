@@ -12,6 +12,8 @@ import '../utils/transaction_filter_utils.dart';
 import '../utils/report_utils.dart';
 import '../widgets/transaction_filter.dart'; // Needed for TimeRange enum
 
+const dateFormatMmmmYyyy = 'MMMM yyyy';
+
 enum ReportType { spending, income, loan }
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -63,7 +65,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   final Set<int> yearsAvailable = {};
 
                   for (var d in dates) {
-                    monthsAvailable.add(DateFormat('MMMM yyyy')
+                    monthsAvailable.add(DateFormat(dateFormatMmmmYyyy)
                         .format(DateTime(d.year, d.month)));
                     yearsAvailable.add(d.year);
                   }
@@ -243,8 +245,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                                     overflow: TextOverflow
                                                         .ellipsis))),
                                       ],
-                                      onChanged: (v) => // coverage:ignore-line
-                                          setState(() => _selectedLoanType = v), // coverage:ignore-line
+                                      onChanged: (v) =>
+                                          setState(() => _selectedLoanType = v),
                                     ),
                                   ),
                                 ] else ...[
@@ -270,16 +272,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                                 overflow:
                                                     TextOverflow.ellipsis)),
                                         ...accounts.map((a) =>
-                                            // coverage:ignore-start
                                             DropdownMenuItem<String?>(
                                                 value: a.id,
                                                 child: Text(a.name,
-                                            // coverage:ignore-end
                                                     overflow: TextOverflow
                                                         .ellipsis))),
                                       ],
-                                      onChanged: (v) => setState( // coverage:ignore-line
-                                          () => _selectedAccountId = v), // coverage:ignore-line
+                                      onChanged: (v) => setState(
+                                          () => _selectedAccountId = v),
                                     ),
                                   ),
                                   // Category Exclusion UI
@@ -303,12 +303,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ),
                             const SizedBox(height: 8),
                             if (_timeFilterMode == 'month')
-                              // coverage:ignore-start
                               DropdownButtonFormField<String>(
                                 initialValue: _selectedMonth != null
-                                    ? DateFormat('MMMM yyyy')
+                                    ? DateFormat(dateFormatMmmmYyyy)
                                         .format(_selectedMonth!)
-                              // coverage:ignore-end
                                     : null,
                                 decoration: const InputDecoration(
                                     labelText: 'Select Month',
@@ -316,35 +314,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                         EdgeInsets.symmetric(horizontal: 10),
                                     border: OutlineInputBorder()),
                                 items: monthsAvailable
-                                    // coverage:ignore-start
                                     .map((m) => DropdownMenuItem(
                                         value: m, child: Text(m)))
                                     .toList(),
                                 onChanged: (v) {
-                                    // coverage:ignore-end
                                   if (v != null) {
                                     final parse =
-                                        DateFormat('MMMM yyyy').parse(v); // coverage:ignore-line
-                                    setState(() => _selectedMonth = parse); // coverage:ignore-line
+                                        DateFormat(dateFormatMmmmYyyy).parse(v);
+                                    setState(() => _selectedMonth = parse);
                                   }
                                 },
                               ),
                             if (_timeFilterMode == 'year')
-                              DropdownButtonFormField<int>( // coverage:ignore-line
-                                initialValue: _selectedYear, // coverage:ignore-line
+                              DropdownButtonFormField<int>(
+                                initialValue: _selectedYear,
                                 decoration: const InputDecoration(
                                     labelText: 'Select Year',
                                     contentPadding:
                                         EdgeInsets.symmetric(horizontal: 10),
                                     border: OutlineInputBorder()),
                                 items: yearsAvailable
-                                    // coverage:ignore-start
                                     .map((y) => DropdownMenuItem(
                                         value: y, child: Text(y.toString())))
                                     .toList(),
                                 onChanged: (v) =>
                                     setState(() => _selectedYear = v),
-                                    // coverage:ignore-end
                               ),
                           ],
                         ),
@@ -372,7 +366,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 return false;
                               }
                               if (_selectedLoanType != null &&
-                                  l.type != _selectedLoanType) { // coverage:ignore-line
+                                  l.type != _selectedLoanType) {
                                 return false;
                               }
                               return true;
@@ -386,35 +380,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 bool inRange = false;
                                 final now = DateTime.now();
                                 if (_timeFilterMode == 'month' &&
-                                    _selectedMonth != null) { // coverage:ignore-line
+                                    _selectedMonth != null) {
                                   inRange =
-                                      txn.date.month == _selectedMonth!.month && // coverage:ignore-line
-                                          txn.date.year == _selectedMonth!.year; // coverage:ignore-line
+                                      txn.date.month == _selectedMonth!.month &&
+                                          txn.date.year == _selectedMonth!.year;
                                 } else if (_timeFilterMode == 'year') {
-                                  inRange = txn.date.year == _selectedYear; // coverage:ignore-line
+                                  inRange = txn.date.year == _selectedYear;
                                 } else if (_timeFilterMode == '30') {
                                   inRange = txn.date.isAfter(
                                       now.subtract(const Duration(days: 30)));
-                                // coverage:ignore-start
                                 } else if (_timeFilterMode == '90') {
                                   inRange = txn.date.isAfter(
                                       now.subtract(const Duration(days: 90)));
                                 } else if (_timeFilterMode == '365') {
                                   inRange = txn.date.isAfter(
                                       now.subtract(const Duration(days: 365)));
-                                // coverage:ignore-end
                                 } else {
                                   inRange = true;
                                 }
 
                                 if (inRange) {
-                                  // coverage:ignore-start
                                   if (txn.type == LoanTransactionType.emi) {
                                     emiPaid += txn.amount;
                                   } else if (txn.type ==
-                                  // coverage:ignore-end
                                       LoanTransactionType.prepayment) {
-                                    prepaymentPaid += txn.amount; // coverage:ignore-line
+                                    prepaymentPaid += txn.amount;
                                   }
                                 }
                               }
@@ -529,12 +519,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                         initialCategory: e.key,
                                         initialRange: TimeRange.custom,
                                         initialCustomRange: _getTimeRange(),
-                                        initialType:
-                                            _type == ReportType.spending
-                                                ? TransactionType.expense
-                                                : (_type == ReportType.income // coverage:ignore-line
-                                                    ? TransactionType.income
-                                                    : null),
+                                        initialType: () {
+                                          if (_type == ReportType.spending) {
+                                            return TransactionType.expense;
+                                          }
+                                          if (_type == ReportType.income) {
+                                            return TransactionType.income;
+                                          }
+                                          return null;
+                                        }(),
                                       ),
                                     ),
                                   );
@@ -547,16 +540,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()), // coverage:ignore-line
-                error: (error, stack) => Center(child: Text('Error: $error')), // coverage:ignore-line
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Error: $error')),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()), // coverage:ignore-line
-            error: (error, stack) => Center(child: Text('Error: $error')), // coverage:ignore-line
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Error: $error')),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')), // coverage:ignore-line
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
   }
@@ -595,7 +588,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
-                            _excludedCategories.remove(category); // coverage:ignore-line
+                            _excludedCategories.remove(category);
                           } else {
                             _excludedCategories.add(category);
                           }
@@ -633,7 +626,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     if (_timeFilterMode == '30') {
       return DateTimeRange(
           start: now.subtract(const Duration(days: 30)), end: now);
-    // coverage:ignore-start
     } else if (_timeFilterMode == '90') {
       return DateTimeRange(
           start: now.subtract(const Duration(days: 90)), end: now);
@@ -648,10 +640,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final start = DateTime(_selectedYear!, 1, 1);
       final end = DateTime(_selectedYear!, 12, 31);
       return DateTimeRange(start: start, end: end);
-    // coverage:ignore-end
     }
     // Default or 'all'
-    return DateTimeRange(start: DateTime(2000), end: now); // coverage:ignore-line
+    return DateTimeRange(start: DateTime(2000), end: now);
   }
 
   Widget _buildCapitalGainsCard(BuildContext context, double total,

@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,9 @@ import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:intl/intl.dart';
+
+const employerPaidText = 'Employer Paid';
+const selectMonthsText = 'Select Months';
 
 class TaxDetailsScreen extends ConsumerStatefulWidget {
   final TaxYearData data;
@@ -257,9 +261,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
 
     if (confirm == true) {
-      if (widget.onDelete != null) {
-        widget.onDelete!();
-      }
+      widget.onDelete?.call();
       if (mounted) {
         setState(() => _hasUnsavedChanges = false);
         Navigator.pop(context);
@@ -843,13 +845,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final newEntry = TaxPaymentEntry(
       amount: estimatedTax,
       date: now,
-      source: 'Employer Paid',
+      source: employerPaidText,
       description: 'Auto-sync from salary/tax estimation',
     );
 
     setState(() {
-      _tdsEntries.removeWhere((e) => e.source == 'Employer Paid');
-      _tdsEntries.add(newEntry.copyWith(source: 'Employer Paid'));
+      _tdsEntries.removeWhere((e) => e.source == employerPaidText);
+      _tdsEntries.add(newEntry.copyWith(source: employerPaidText));
     });
     _updateSummary();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -887,8 +889,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}$'))
+                    FilteringTextInputFormatter.allow(RegexUtils.amountExp)
                   ],
                 ),
               ],
@@ -1254,8 +1255,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                       ]),
                   TextField(
                       controller: taxCtrl,
@@ -1264,8 +1264,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                       ]),
                 ],
                 const Divider(),
@@ -1309,8 +1308,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
+                        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                       ]),
                 if (selectedLoanId != null)
                   Padding(
@@ -1485,8 +1483,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
+                      FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                     ]),
                 TextField(
                     controller: netCtrl,
@@ -1498,8 +1495,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
+                      FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                     ]),
               ],
             ),
@@ -1690,22 +1686,36 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 InputDecorator(
                   decoration: InputDecoration(
                     labelText: 'Asset Sold',
-                    suffixIcon: (selectedAsset == AssetType.equityShares ||
-                            selectedAsset == AssetType.other)
-                        ? Tooltip(
-                            triggerMode: TooltipTriggerMode.tap,
-                            showDuration: const Duration(seconds: 5),
-                            padding: const EdgeInsets.all(12),
-                            message: selectedAsset == AssetType.equityShares
-                                ? 'Equity shares or Equity mutual funds (> 65% equity) and STT tax paid.'
-                                : 'Gold, Debt Funds, International Funds, NPS (Tier-2), Bonds, etc.',
-                            child: const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Icon(Icons.info_outline,
-                                  color: Colors.blue, size: 20),
-                            ),
-                          )
-                        : null,
+                    suffixIcon: (() {
+                      if (selectedAsset == AssetType.equityShares) {
+                        return const Tooltip(
+                          triggerMode: TooltipTriggerMode.tap,
+                          showDuration: Duration(seconds: 5),
+                          padding: EdgeInsets.all(12),
+                          message:
+                              'Equity shares or Equity mutual funds (> 65% equity) and STT tax paid.',
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.info_outline,
+                                color: Colors.blue, size: 20),
+                          ),
+                        );
+                      } else if (selectedAsset == AssetType.other) {
+                        return const Tooltip(
+                          triggerMode: TooltipTriggerMode.tap,
+                          showDuration: Duration(seconds: 5),
+                          padding: EdgeInsets.all(12),
+                          message:
+                              'Gold, Debt Funds, International Funds, NPS (Tier-2), Bonds, etc.',
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.info_outline,
+                                color: Colors.blue, size: 20),
+                          ),
+                        );
+                      }
+                      return null;
+                    })(),
                     floatingLabelBehavior: FloatingLabelBehavior.always,
                   ),
                   child: DropdownButtonHideUnderline(
@@ -1732,8 +1742,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
+                      FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                     ]),
                 TextField(
                     controller: costCtrl,
@@ -1742,8 +1751,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}$')),
+                      FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                     ]),
                 ListTile(
                   title: const Text('Gain Date'),
@@ -1808,7 +1816,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                              RegexUtils.amountExp),
                         ]),
                     ListTile(
                       title: const Text('Reinvest Date'),
@@ -1949,7 +1957,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                              RegexUtils.amountExp),
                         ],
                       ),
                       if (validExemptions.isNotEmpty) ...[
@@ -2034,7 +2042,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       decoration: InputDecoration(labelText: label, helperText: subtitle),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
       ],
     );
   }
@@ -2087,9 +2095,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       contentPadding: EdgeInsets.zero,
       leading: Icon(isTds ? Icons.remove_circle : Icons.add_circle,
           color: isTds ? Colors.red : Colors.green),
-      title: Text(entry.source.isEmpty
-          ? (isTds ? 'TDS Entry' : 'TCS Entry')
-          : entry.source),
+      title: Text(() {
+        if (entry.source.isNotEmpty) return entry.source;
+        return isTds ? 'TDS Entry' : 'TCS Entry';
+      }()),
       subtitle: Text('Date: ${entry.date.toIso8601String().split('T').first}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2143,7 +2152,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
               ),
               const SizedBox(height: 8),
@@ -2265,8 +2274,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}$')),
+                    FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                   ]),
             ],
           ),
@@ -2337,8 +2345,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}$')),
+                    FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                   ],
                   decoration: const InputDecoration(
                     prefixText: '₹ ',
@@ -2483,7 +2490,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                                       decimal: true),
                               inputFormatters: [
                                 FilteringTextInputFormatter.allow(
-                                    RegExp(r'^\d*\.?\d{0,2}$')),
+                                    RegexUtils.amountExp),
                               ],
                               controller: TextEditingController(
                                   text: currentVal.toStringAsFixed(0))
@@ -2567,7 +2574,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   child: ValueListenableBuilder<List<int>>(
                     valueListenable: customMonthsNotifier,
                     builder: (c, list, _) => Text(list.isEmpty
-                        ? 'Select Months'
+                        ? selectMonthsText
                         : '${list.length} Months Selected'),
                   ),
                 );
@@ -2652,7 +2659,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
               ),
               const SizedBox(height: 16),
@@ -2667,7 +2674,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
               ),
               const SizedBox(height: 16),
@@ -2684,8 +2691,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}$')),
+                    FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                   ],
                   decoration: const InputDecoration(
                     isDense: true,
@@ -2792,8 +2798,21 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         title: Text(a.name),
-                        subtitle: Text(
-                            '₹${(a.payoutAmount * (a.frequency == PayoutFrequency.monthly ? 12 : (a.frequency == PayoutFrequency.quarterly ? 4 : (a.frequency == PayoutFrequency.halfYearly ? 2 : 1)))).toStringAsFixed(0)}/yr ${a.isPartial ? "(Partial)" : ""}'),
+                        subtitle: Text(() {
+                          int multiplier = 1;
+                          if (a.frequency == PayoutFrequency.monthly) {
+                            multiplier = 12;
+                          } else if (a.frequency == PayoutFrequency.quarterly) {
+                            multiplier = 4;
+                          } else if (a.frequency == PayoutFrequency.halfYearly) {
+                            multiplier = 2;
+                          }
+
+                          final payout =
+                              (a.payoutAmount * multiplier).toStringAsFixed(0);
+                          final partialText = a.isPartial ? "(Partial)" : "";
+                          return '₹$payout/yr $partialText'.trim();
+                        }()),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, size: 20),
                           onPressed: () {
@@ -3062,7 +3081,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateSB) => AlertDialog(
-          title: const Text('Select Months'),
+          title: const Text(selectMonthsText),
           content: SingleChildScrollView(
             child: Wrap(
               spacing: 8,
@@ -3218,13 +3237,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       context: parentCtx,
       builder: (ctx) => StatefulBuilder(builder: (context, setStateSB) {
         return AlertDialog(
-          title: Text(existing == null
-              ? (isDeduction
+          title: Text(() {
+            if (existing == null) {
+              return isDeduction
                   ? 'Add Independent Deduction'
-                  : 'Add Independent Allowance')
-              : (isDeduction
+                  : 'Add Independent Allowance';
+            } else {
+              return isDeduction
                   ? 'Edit Independent Deduction'
-                  : 'Edit Independent Allowance')),
+                  : 'Edit Independent Allowance';
+            }
+          }()),
           content: SingleChildScrollView(
               child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -3244,7 +3267,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
               ),
               const SizedBox(height: 12),
@@ -3294,7 +3317,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                             child: ValueListenableBuilder<List<int>>(
                               valueListenable: customMonthsNotifier,
                               builder: (c, list, _) => Text(list.isEmpty
-                                  ? 'Select Months'
+                                  ? selectMonthsText
                                   : '${list.length} Months Selected'),
                             ),
                           )

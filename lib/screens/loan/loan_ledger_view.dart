@@ -39,14 +39,12 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
 
     if (_filterDateRange != null) {
       filteredTxns = filteredTxns
-          // coverage:ignore-start
           .where((t) =>
               t.date.isAfter(_filterDateRange!.start
                   .subtract(const Duration(seconds: 1))) &&
               t.date
                   .isBefore(_filterDateRange!.end.add(const Duration(days: 1))))
           .toList();
-          // coverage:ignore-end
     }
 
     filteredTxns.sort((a, b) => b.date.compareTo(a.date));
@@ -63,7 +61,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
     final startIndex = (safeCurrentPage - 1) * _pageSize;
     final endIndex = (startIndex + _pageSize > filteredTxns.length)
         ? filteredTxns.length
-        : startIndex + _pageSize; // coverage:ignore-line
+        : startIndex + _pageSize;
     final paginatedTxns = filteredTxns.isNotEmpty
         ? filteredTxns.sublist(startIndex, endIndex)
         : <LoanTransaction>[];
@@ -102,10 +100,10 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                 IconButton(
                   icon: PureIcons.icon(Icons.date_range,
                       color: _filterDateRange != null
-                          ? Theme.of(context).colorScheme.primary // coverage:ignore-line
+                          ? Theme.of(context).colorScheme.primary
                           : null),
-                  onPressed: () => // coverage:ignore-line
-                      _showFilterDateDialog(), // coverage:ignore-line
+                  onPressed: () =>
+                      _showFilterDateDialog(),
                   tooltip: 'Filter by Date',
                 ),
                 if (_filterType != null || _filterDateRange != null)
@@ -153,14 +151,14 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
               icon = Icons.speed;
               color = Colors.orange;
               subtitle = 'Direct reduction of principal';
-            } else if (txn.type == LoanTransactionType.rateChange) { // coverage:ignore-line
+            } else if (txn.type == LoanTransactionType.rateChange) {
 
 
               title = 'Interest Rate Updated';
               icon = Icons.trending_up;
               color = Colors.purple;
-              subtitle = 'New Rate: ${txn.amount}%'; // coverage:ignore-line
-            } else if (txn.type == LoanTransactionType.topup) { // coverage:ignore-line
+              subtitle = 'New Rate: ${txn.amount}%';
+            } else if (txn.type == LoanTransactionType.topup) {
 
 
               title = 'Loan Top-up';
@@ -241,15 +239,15 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
                     onPressed: safeCurrentPage > 1
-                        ? () => // coverage:ignore-line
-                            setState(() => _currentPage = safeCurrentPage - 1) // coverage:ignore-line
+                        ? () =>
+                            setState(() => _currentPage = safeCurrentPage - 1)
                         : null,
                   ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: safeCurrentPage < totalPages
-                        ? () => // coverage:ignore-line
-                            setState(() => _currentPage = safeCurrentPage + 1) // coverage:ignore-line
+                        ? () =>
+                            setState(() => _currentPage = safeCurrentPage + 1)
                         : null,
                   ),
                 ],
@@ -268,14 +266,12 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
         title: const Text('Filter by Type'),
         children: [
           SimpleDialogOption(
-            // coverage:ignore-start
             onPressed: () {
               setState(() {
                 _filterType = null;
                 _currentPage = 1;
-            // coverage:ignore-end
               });
-              Navigator.pop(context); // coverage:ignore-line
+              Navigator.pop(context);
             },
             child: const Text('All'),
           ),
@@ -294,21 +290,17 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
     );
   }
 
-  // coverage:ignore-start
   void _showFilterDateDialog() async {
     final range = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime(2030),
       initialDateRange: _filterDateRange,
-  // coverage:ignore-end
     );
     if (range != null) {
-      // coverage:ignore-start
       setState(() {
         _filterDateRange = range;
         _currentPage = 1;
-      // coverage:ignore-end
       });
     }
   }
@@ -332,8 +324,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                 ),
                 actions: [
                   TextButton(
-                      onPressed: () => // coverage:ignore-line
-                          Navigator.pop(ctx, false), // coverage:ignore-line
+                      onPressed: () =>
+                          Navigator.pop(ctx, false),
                       child: const Text('Cancel')),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
@@ -346,15 +338,13 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
         var loan = widget.loan;
         // Reverse Impact
         if (txn.type == LoanTransactionType.emi ||
-            txn.type == LoanTransactionType.prepayment) { // coverage:ignore-line
+            txn.type == LoanTransactionType.prepayment) {
 
 
           loan.remainingPrincipal += txn.principalComponent;
-        // coverage:ignore-start
         } else if (txn.type == LoanTransactionType.topup) {
           loan.remainingPrincipal -= txn.amount;
           loan.totalPrincipal -= txn.amount;
-        // coverage:ignore-end
         }
 
         // Remove

@@ -22,8 +22,8 @@ void main() {
     test('downloadExvent generates correct ICS content', () async {
       final startTime = DateTime(2024, 1, 1, 10);
       final endTime = DateTime(2024, 1, 1, 11);
-      final title = 'Test Event';
-      final description = 'Test Description';
+      const title = 'Test Event';
+      const description = 'Test Description';
 
       await calendarService.downloadExvent(
         title: title,
@@ -50,7 +50,7 @@ void main() {
 
     test('downloadRecurringEvent generates RRULE', () async {
       final startDate = DateTime(2024, 1, 1);
-      final title = 'Monthly Bill';
+      const title = 'Monthly Bill';
 
       await calendarService.downloadRecurringEvent(
         title: title,

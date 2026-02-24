@@ -42,11 +42,9 @@ class ReportUtils {
               t.category == 'EMI' ||
               t.category == 'Prepayment' ||
               t.category == 'Loan Payment' ||
-              // coverage:ignore-start
               t.category == 'Loan Repayment' ||
               t.category == 'Loan Principal' ||
               t.category == 'Loan Interest')) {
-              // coverage:ignore-end
         data[t.title] = (data[t.title] ?? 0) + t.amount;
       }
     }

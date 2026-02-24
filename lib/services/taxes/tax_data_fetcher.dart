@@ -39,8 +39,8 @@ class TaxDataFetcher {
       end = customEnd;
     } else {
       if (startMonth == 1) {
-        start = DateTime(year, 1, 1); // coverage:ignore-line
-        end = DateTime(year, 12, 31, 23, 59, 59); // coverage:ignore-line
+        start = DateTime(year, 1, 1);
+        end = DateTime(year, 12, 31, 23, 59, 59);
       } else {
         start = DateTime(year, startMonth, 1);
         end = DateTime(year + 1, startMonth - 1, 0, 23, 59, 59)
@@ -52,8 +52,8 @@ class TaxDataFetcher {
 
       // Correct Logic for End Date:
       if (startMonth == 1) {
-        end = DateTime(year + 1, 1, 1) // coverage:ignore-line
-            .subtract(const Duration(seconds: 1)); // coverage:ignore-line
+        end = DateTime(year + 1, 1, 1)
+            .subtract(const Duration(seconds: 1));
       } else {
         end = DateTime(year + 1, startMonth, 1)
             .subtract(const Duration(seconds: 1));
@@ -130,11 +130,9 @@ class TaxDataFetcher {
           bool descMatch = true;
           if (rule.matchDescriptions.isNotEmpty) {
             descMatch = false;
-            // coverage:ignore-start
             final title = txn.title;
             for (final pattern in rule.matchDescriptions) {
               if (title.contains(pattern)) {
-            // coverage:ignore-end
                 descMatch = true;
                 break;
               }
@@ -145,11 +143,9 @@ class TaxDataFetcher {
             // Check exclusions
             bool excluded = false;
             if (rule.excludeDescriptions.isNotEmpty) {
-              // coverage:ignore-start
               final title = txn.title;
               for (final pattern in rule.excludeDescriptions) {
                 if (title.contains(pattern)) {
-              // coverage:ignore-end
                   excluded = true;
                   break;
                 }
@@ -172,7 +168,7 @@ class TaxDataFetcher {
         matched = true;
       } else if (tagMap.containsKey(catTag.name)) {
 
-        head = tagMap[catTag.name]!; // coverage:ignore-line
+        head = tagMap[catTag.name]!;
         matched = true;
       }
 
@@ -234,19 +230,15 @@ class TaxDataFetcher {
         }
       } else if (head == 'agriIncome') {
         agriTotal += amount;
-      // coverage:ignore-start
       } else if (head == 'other') {
         individualOtherIncomes.add(OtherIncome(
           name: txn.title.isNotEmpty ? txn.title : txn.category,
-      // coverage:ignore-end
           amount: amount,
           type: 'Other',
         ));
-      // coverage:ignore-start
       } else if (head == 'gift') {
         cashGifts.add(OtherIncome(
           name: txn.title.isNotEmpty ? txn.title : txn.category,
-      // coverage:ignore-end
           amount: amount,
           type: 'Gift',
         ));
@@ -291,7 +283,7 @@ class TaxDataFetcher {
     }
 
     // Construct Granular Objects
-    final salaryDetails = const SalaryDetails(
+    const salaryDetails = SalaryDetails(
       grossSalary: 0,
       giftsFromEmployer: 0,
       netSalaryReceived: {},
@@ -354,10 +346,8 @@ class TaxDataFetcher {
   }
 }
 
-// coverage:ignore-start
 final taxDataFetcherProvider = Provider<TaxDataFetcher>((ref) {
   final storage = ref.watch(storageServiceProvider);
   final config = ref.watch(taxConfigServiceProvider);
   return TaxDataFetcher(storage, config);
-// coverage:ignore-end
 });

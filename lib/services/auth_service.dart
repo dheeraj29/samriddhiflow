@@ -27,7 +27,7 @@ class AuthService {
       if (isWeb && !FirebaseWebSafe.isFirebaseJsAvailable) return null;
 
       if (Firebase.apps.isNotEmpty) {
-        return FirebaseAuth.instance; // coverage:ignore-line
+        return FirebaseAuth.instance;
       }
     } catch (_) {}
     return null;
@@ -45,11 +45,11 @@ class AuthService {
     // Lazy Initialization: Try to init Firebase if it failed on startup (offline)
     if (_auth == null) {
       try {
-        await Firebase.initializeApp( // coverage:ignore-line
+        await Firebase.initializeApp(
           options: kDebugMode
               ? dev.DefaultFirebaseOptions.currentPlatform
-              : prod.DefaultFirebaseOptions.currentPlatform, // coverage:ignore-line
-        ).timeout(const Duration(seconds: 10)); // coverage:ignore-line
+              : prod.DefaultFirebaseOptions.currentPlatform,
+        ).timeout(const Duration(seconds: 10));
       } catch (e) {
         DebugLogger().log("AuthService: Lazy Init Failed: $e");
         return AuthResponse(
@@ -61,7 +61,7 @@ class AuthService {
 
     final auth = _auth;
     if (auth == null) {
-      return AuthResponse( // coverage:ignore-line
+      return AuthResponse(
           status: AuthStatus.error,
           message:
               "Firebase Services are not available. Please check your internet connection.");
@@ -87,31 +87,29 @@ class AuthService {
                 "Session expired or account disabled. Please sign in again.");
       } catch (e) {
         // Unknown error -> Block for safety
-        // coverage:ignore-start
         await signOut(ref);
         return AuthResponse(
             status: AuthStatus.error, message: "Session validation failed: $e");
-        // coverage:ignore-end
       }
     }
 
     try {
-      if (isWeb) { // coverage:ignore-line
+      if (isWeb) {
         // Web: Use signInWithRedirect (More reliable for PWAs/COOP)
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider(); // coverage:ignore-line
-        googleProvider.setCustomParameters({'prompt': 'select_account'}); // coverage:ignore-line
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.setCustomParameters({'prompt': 'select_account'});
 
         // TRANSIENT FLAG: Set this in sessionStorage BEFORE redirect.
         // This survives the reload but is tab-specific and clears on tab close.
         // It prevents the "Ghost Session" issue if a user cancels auth.
         try {
-          ConnectivityPlatform.setSessionStorageItem( // coverage:ignore-line
+          ConnectivityPlatform.setSessionStorageItem(
               'auth_redirect_pending', 'true');
         } catch (_) {
           // Fail gracefully if web storage is somehow blocked
         }
 
-        await auth.signInWithRedirect(googleProvider); // coverage:ignore-line
+        await auth.signInWithRedirect(googleProvider);
         // Page will reload, AuthWrapper will handle the resumed session.
       } else {
         // Mobile/Desktop: Use GoogleSignIn package
@@ -142,23 +140,21 @@ class AuthService {
 
       // Optimization: Flag that we are logged in for next startup
       try {
-        // coverage:ignore-start
         if (_storageService != null) {
           await _storageService.setAuthFlag(true);
         } else if (Hive.isBoxOpen('settings')) {
           await Hive.box('settings').put('isLoggedIn', true);
-        // coverage:ignore-end
         }
       } catch (_) {}
 
       // Reset logout flag
       if (ref != null) {
-        ref.read(logoutRequestedProvider.notifier).value = false; // coverage:ignore-line
+        ref.read(logoutRequestedProvider.notifier).value = false;
       }
 
-      return AuthResponse(status: AuthStatus.success); // coverage:ignore-line
+      return AuthResponse(status: AuthStatus.success);
     } catch (e) {
-      return AuthResponse(status: AuthStatus.error, message: e.toString()); // coverage:ignore-line
+      return AuthResponse(status: AuthStatus.error, message: e.toString());
     }
   }
 
@@ -173,8 +169,8 @@ class AuthService {
       // 2. Clear local session flag instantly
       if (_storageService != null) {
         await _storageService.setAuthFlag(false);
-      } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-        await Hive.box('settings').put('isLoggedIn', false); // coverage:ignore-line
+      } else if (Hive.isBoxOpen('settings')) {
+        await Hive.box('settings').put('isLoggedIn', false);
       }
 
       // 3. Fully Decoupled Background Cleanup
@@ -189,8 +185,8 @@ class AuthService {
         }
       }));
     } catch (e) {
-      DebugLogger().log("AuthService: SignOut Error: $e"); // coverage:ignore-line
-      isSignOutInProgress = false; // coverage:ignore-line
+      DebugLogger().log("AuthService: SignOut Error: $e");
+      isSignOutInProgress = false;
     }
   }
 
@@ -241,8 +237,8 @@ class AuthService {
   Future<void> _setLoggedInFlag(bool value) async {
     if (_storageService != null) {
       await _storageService.setAuthFlag(value);
-    } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-      await Hive.box('settings').put('isLoggedIn', value); // coverage:ignore-line
+    } else if (Hive.isBoxOpen('settings')) {
+      await Hive.box('settings').put('isLoggedIn', value);
     }
   }
 

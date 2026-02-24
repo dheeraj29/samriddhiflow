@@ -17,21 +17,17 @@ import 'models/loan.dart';
 // --- Heavy Service Providers (Moved for Bundle Optimization) ---
 
 final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
-  // coverage:ignore-start
   final storage = ref.watch(storageServiceProvider);
   final taxConfig = ref.watch(taxConfigServiceProvider);
   final firestoreStorage = FirestoreStorageService();
   return CloudSyncService(firestoreStorage, storage, taxConfig,
       firebaseAuth: FirebaseAuth.instance);
-  // coverage:ignore-end
 });
 
 final jsonDataServiceProvider = Provider<JsonDataService>((ref) {
-  // coverage:ignore-start
   final storage = ref.watch(storageServiceProvider);
   final taxConfig = ref.watch(taxConfigServiceProvider);
   return JsonDataService(storage, taxConfig);
-  // coverage:ignore-end
 });
 
 final calendarServiceProvider = Provider<CalendarService>((ref) {
@@ -52,14 +48,12 @@ final pendingRemindersProvider = Provider<int>((ref) {
   // 1. Loans
   final loans = ref.watch(loansProvider).value ?? [];
   for (final loan in loans) {
-    if (loan.remainingPrincipal <= 0) continue; // coverage:ignore-line
+    if (loan.remainingPrincipal <= 0) continue;
 
-    // coverage:ignore-start
     DateTime dueDateObj = DateTime(today.year, today.month, loan.emiDay);
     if (today.year == loan.firstEmiDate.year &&
         today.month == loan.firstEmiDate.month) {
       dueDateObj = loan.firstEmiDate;
-    // coverage:ignore-end
     }
 
     // If due date is past, check payment
@@ -74,7 +68,6 @@ final pendingRemindersProvider = Provider<int>((ref) {
 
     // Logic from RemindersScreen:
     final checkDate = dueDateObj;
-    // coverage:ignore-start
     final payments = loan.transactions
         .where((t) =>
             t.type == LoanTransactionType.emi &&
@@ -83,7 +76,6 @@ final pendingRemindersProvider = Provider<int>((ref) {
         .toList();
     final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
     final isFullyPaid = totalPaid >= loan.emiAmount - 1;
-    // coverage:ignore-end
 
     // Condition: today is ON or AFTER the due date month?
     // Usually loan bills are known in advance.
@@ -94,10 +86,10 @@ final pendingRemindersProvider = Provider<int>((ref) {
     // Let's alert if: Overdue OR Due within 7 days.
     bool specificCondition = false;
     if (!isFullyPaid) {
-      final daysToDue = dueDateObj.difference(today).inDays; // coverage:ignore-line
-      if (daysToDue <= 7) specificCondition = true; // Due soon or overdue // coverage:ignore-line
+      final daysToDue = dueDateObj.difference(today).inDays;
+      if (daysToDue <= 7) specificCondition = true; // Due soon or overdue
     }
-    if (specificCondition) count++; // coverage:ignore-line
+    if (specificCondition) count++;
   }
 
   // 2. Credit Cards
@@ -111,21 +103,18 @@ final pendingRemindersProvider = Provider<int>((ref) {
     // Check if bill generated
     // Bill generated if today > billingCycleDay (of this month) or we passed it last month
     // Logic from RemindersScreen:
-    // coverage:ignore-start
     final lastBillDate = today.day > acc.billingCycleDay!
         ? DateTime(today.year, today.month, acc.billingCycleDay!)
         : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
-    // coverage:ignore-end
 
     // If bill generated, is it paid?
-    final billed = BillingHelper.calculateBilledAmount( // coverage:ignore-line
-        acc, txns, now, storage.getLastRollover(acc.id)); // coverage:ignore-line
+    final billed = BillingHelper.calculateBilledAmount(
+        acc, txns, now, storage.getLastRollover(acc.id));
     final totalDue =
-        acc.balance + billed; // Approximation from RemindersScreen logic // coverage:ignore-line
+        acc.balance + billed; // Approximation from RemindersScreen logic
 
     // Check payments since bill date
     final payments = txns
-        // coverage:ignore-start
         .where((t) =>
             !t.isDeleted &&
             t.toAccountId == acc.id &&
@@ -133,22 +122,21 @@ final pendingRemindersProvider = Provider<int>((ref) {
             t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
         .toList();
     final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
-        // coverage:ignore-end
 
     final isFullyPaid =
-        totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue); // coverage:ignore-line
+        totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue);
 
     if (!isFullyPaid) {
-      count++; // coverage:ignore-line
+      count++;
     }
   }
 
   // 3. Recurring
   final recurring = ref.watch(recurringTransactionsProvider).value ?? [];
   for (final r in recurring) {
-    if (r.isActive && !r.nextExecutionDate.isAfter(today)) { // coverage:ignore-line
+    if (r.isActive && !r.nextExecutionDate.isAfter(today)) {
       // Due today or in past
-      count++; // coverage:ignore-line
+      count++;
     }
   }
 
@@ -165,7 +153,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     final saved = storage.getThemeMode();
     return ThemeMode.values.firstWhere(
       (m) => m.name == saved,
-      orElse: () => ThemeMode.system, // coverage:ignore-line
+      orElse: () => ThemeMode.system,
     );
   }
 

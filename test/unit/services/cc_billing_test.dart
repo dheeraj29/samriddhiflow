@@ -4,7 +4,7 @@ import 'package:samriddhi_flow/utils/billing_helper.dart';
 void main() {
   group('BillingHelper Logic Check', () {
     test('isUnbilled on Bill Day should be True (to skip balance update)', () {
-      final cycleDay = 20;
+      const cycleDay = 20;
       // Scenario: Today is Bill Day (Jan 20)
       final now = DateTime(2025, 1, 20, 10, 0);
       // Transaction is today
@@ -22,21 +22,21 @@ void main() {
     });
 
     test('isUnbilled day before Bill Day', () {
-      final cycleDay = 20;
+      const cycleDay = 20;
       final now = DateTime(2025, 1, 19);
       final txnDate = DateTime(2025, 1, 19);
       expect(BillingHelper.isUnbilled(txnDate, now, cycleDay), true);
     });
 
     test('isUnbilled day after Bill Day', () {
-      final cycleDay = 20;
+      const cycleDay = 20;
       final now = DateTime(2025, 1, 21);
       final txnDate = DateTime(2025, 1, 21);
       expect(BillingHelper.isUnbilled(txnDate, now, cycleDay), true);
     });
 
     test('isUnbilled day after Bill Day checking PREVIOUS cycle txn', () {
-      final cycleDay = 20;
+      const cycleDay = 20;
       final now = DateTime(2025, 1, 21);
       final txnDate = DateTime(2025, 1, 20); // Yesterday
 
@@ -45,7 +45,7 @@ void main() {
       expect(BillingHelper.isUnbilled(txnDate, now, cycleDay), false);
     });
     test('Regression: Bill Day 13th, Today 14th', () {
-      final cycleDay = 13;
+      const cycleDay = 13;
       // Today is Feb 14
       final now = DateTime(2025, 2, 14);
 

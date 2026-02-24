@@ -14,6 +14,10 @@ import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/billing_helper.dart';
 
+const dateFormatMmmDd = 'MMM dd';
+const payNowText = 'PAY NOW';
+const dateFormatMmmDdYyyy = 'MMM dd, yyyy';
+
 class RemindersScreen extends ConsumerWidget {
   const RemindersScreen({super.key});
 
@@ -38,7 +42,7 @@ class RemindersScreen extends ConsumerWidget {
               data: (loans) =>
                   _buildLoanReminders(context, ref, loans, currency),
               loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              error: (e, s) => Text('Error: $e'),
             ),
             const SizedBox(height: 24),
             _buildSectionTitle(context, 'Credit Card Bills', Icons.credit_card),
@@ -47,10 +51,10 @@ class RemindersScreen extends ConsumerWidget {
                     data: (txns) => _buildCCReminders(
                         context, ref, accounts, currency, txns),
                     loading: () => const CircularProgressIndicator(),
-                    error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+                    error: (e, s) => Text('Error: $e'),
                   ),
               loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              error: (e, s) => Text('Error: $e'),
             ),
             const SizedBox(height: 24),
             _buildSectionTitle(context, 'Recurring Payments', Icons.repeat),
@@ -58,7 +62,7 @@ class RemindersScreen extends ConsumerWidget {
               data: (recurring) =>
                   _buildRecurringReminders(context, ref, recurring, currency),
               loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              error: (e, s) => Text('Error: $e'),
             ),
           ],
         ),
@@ -98,12 +102,12 @@ class RemindersScreen extends ConsumerWidget {
 
         if (today.year == loan.firstEmiDate.year &&
             today.month == loan.firstEmiDate.month) {
-          dueDateObj = loan.firstEmiDate; // coverage:ignore-line
+          dueDateObj = loan.firstEmiDate;
         }
 
         bool isBeforeStart = today.isBefore(loan.firstEmiDate);
-        if (isBeforeStart && dueDateObj.isBefore(loan.firstEmiDate)) { // coverage:ignore-line
-          dueDateObj = loan.firstEmiDate; // coverage:ignore-line
+        if (isBeforeStart && dueDateObj.isBefore(loan.firstEmiDate)) {
+          dueDateObj = loan.firstEmiDate;
         }
 
         // 2. Check Payment Status
@@ -123,17 +127,15 @@ class RemindersScreen extends ConsumerWidget {
         final isPartiallyPaid = totalPaid > 0 && !isFullyPaid;
 
         if (isBeforeStart &&
-            totalPaid == 0 && // coverage:ignore-line
-            today.isBefore(loan.firstEmiDate)) { // coverage:ignore-line
+            totalPaid == 0 &&
+            today.isBefore(loan.firstEmiDate)) {
           // Display "Wait for Start" card
-          // coverage:ignore-start
           return Card(
             child: ListTile(
               leading: PureIcons.timer(color: Colors.blueGrey),
               title: Text(loan.name),
               subtitle: Text(
-                  'First EMI starts on ${DateFormat('MMM dd, yyyy').format(loan.firstEmiDate)}'),
-          // coverage:ignore-end
+                  'First EMI starts on ${DateFormat(dateFormatMmmDdYyyy).format(loan.firstEmiDate)}'),
               trailing: const Text('Wait for Start',
                   style: TextStyle(fontSize: 10, color: Colors.grey)),
             ),
@@ -159,7 +161,7 @@ class RemindersScreen extends ConsumerWidget {
         }
 
         final displayDueDate = isFullyPaid
-            ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay) // coverage:ignore-line
+            ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay)
             : dueDateObj;
 
         return Card(
@@ -187,7 +189,7 @@ class RemindersScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         if (!isFullyPaid)
                           Text(
-                              'Due on ${DateFormat('MMM dd, yyyy').format(displayDueDate)}',
+                              'Due on ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}',
                               style: TextStyle(
                                   color: statusText == 'Overdue'
                                       ? Colors.red
@@ -197,8 +199,8 @@ class RemindersScreen extends ConsumerWidget {
                                       : null,
                                   fontSize: 13)),
                         if (isFullyPaid)
-                          Text( // coverage:ignore-line
-                              'Next Bill: ${DateFormat('MMM dd, yyyy').format(displayDueDate)}', // coverage:ignore-line
+                          Text(
+                              'Next Bill: ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}',
                               style: const TextStyle(
                                   fontSize: 12, color: Colors.grey)),
                         const SizedBox(height: 4),
@@ -267,14 +269,14 @@ class RemindersScreen extends ConsumerWidget {
                     height: 36,
                     child: ElevatedButton.icon(
                       icon: PureIcons.payment(size: 16),
-                      label: const Text('PAY NOW'),
+                      label: const Text(payNowText),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: () => showDialog( // coverage:ignore-line
+                      onPressed: () => showDialog(
                           context: context,
-                          builder: (_) => RecordLoanPaymentDialog(loan: loan)), // coverage:ignore-line
+                          builder: (_) => RecordLoanPaymentDialog(loan: loan)),
                     ),
                   )
                 ]
@@ -305,19 +307,17 @@ class RemindersScreen extends ConsumerWidget {
         // Reminder Logic: Bill generated AFTER the cycle day is over (e.g. Day 15 if Cycle Day 14)
         final lastBillDate = today.day > acc.billingCycleDay!
             ? DateTime(today.year, today.month, acc.billingCycleDay!)
-            : DateTime(today.year, today.month - 1, acc.billingCycleDay!); // coverage:ignore-line
+            : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 
         final dueDate =
             lastBillDate.add(Duration(days: acc.paymentDueDateDay ?? 20));
 
         final payments = allTransactions
             .where((t) =>
-                // coverage:ignore-start
                 !t.isDeleted &&
                 t.toAccountId == acc.id &&
                 t.type == TransactionType.transfer &&
                 t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
-                // coverage:ignore-end
             .toList();
 
         final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
@@ -351,7 +351,7 @@ class RemindersScreen extends ConsumerWidget {
 
         final nextBillDate = today.day >= acc.billingCycleDay!
             ? DateTime(today.year, today.month + 1, acc.billingCycleDay!)
-            : DateTime(today.year, today.month, acc.billingCycleDay!); // coverage:ignore-line
+            : DateTime(today.year, today.month, acc.billingCycleDay!);
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -377,7 +377,8 @@ class RemindersScreen extends ConsumerWidget {
                                 color: isFullyPaid ? Colors.grey : null)),
                         const SizedBox(height: 4),
                         if (!isFullyPaid)
-                          Text('Due on ${DateFormat('MMM dd').format(dueDate)}',
+                          Text(
+                              'Due on ${DateFormat(dateFormatMmmDd).format(dueDate)}',
                               style: TextStyle(
                                   color: statusText == 'Overdue'
                                       ? Colors.red
@@ -387,8 +388,8 @@ class RemindersScreen extends ConsumerWidget {
                                       : null,
                                   fontSize: 13)),
                         if (isFullyPaid)
-                          Text( // coverage:ignore-line
-                              'Next Bill: ${DateFormat('MMM dd').format(nextBillDate)}', // coverage:ignore-line
+                          Text(
+                              'Next Bill: ${DateFormat(dateFormatMmmDd).format(nextBillDate)}',
                               style: const TextStyle(
                                   fontSize: 12, color: Colors.grey)),
                       ],
@@ -414,13 +415,13 @@ class RemindersScreen extends ConsumerWidget {
                 if (!isFullyPaid) ...[
                   const SizedBox(height: 12),
                   if (isPartiallyPaid)
-                    Container( // coverage:ignore-line
+                    Container(
                       width: double.infinity,
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Text( // coverage:ignore-line
-                        'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue)}', // coverage:ignore-line
+                      child: Text(
+                        'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue)}',
                         style: AppTheme.offlineSafeTextStyle
-                            .copyWith(fontSize: 12, color: Colors.orange), // coverage:ignore-line
+                            .copyWith(fontSize: 12, color: Colors.orange),
                       ),
                     ),
                   SizedBox(
@@ -428,7 +429,7 @@ class RemindersScreen extends ConsumerWidget {
                     height: 36,
                     child: ElevatedButton.icon(
                       icon: PureIcons.payment(size: 16),
-                      label: const Text('PAY NOW'),
+                      label: const Text(payNowText),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
@@ -490,7 +491,8 @@ class RemindersScreen extends ConsumerWidget {
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
-                        Text('Due on ${DateFormat('MMM dd').format(dueDate)}',
+                        Text(
+                            'Due on ${DateFormat(dateFormatMmmDd).format(dueDate)}',
                             style: TextStyle(
                                 color: statusText == 'Overdue'
                                     ? Colors.red
@@ -500,12 +502,13 @@ class RemindersScreen extends ConsumerWidget {
                                     : null,
                                 fontSize: 13)),
                         const SizedBox(height: 2),
-                        Text(
-                            r.frequency == Frequency.monthly
-                                ? 'Monthly'
-                                : (r.frequency == Frequency.weekly // coverage:ignore-line
-                                    ? 'Weekly'
-                                    : 'Other'),
+                        Text(() {
+                          if (r.frequency == Frequency.monthly) {
+                            return 'Monthly';
+                          }
+                          if (r.frequency == Frequency.weekly) return 'Weekly';
+                          return 'Other';
+                        }(),
                             style: const TextStyle(
                                 fontSize: 11, color: Colors.grey)),
                         Text(r.accountId == null ? 'Manual' : 'Auto',
@@ -573,7 +576,7 @@ class RemindersScreen extends ConsumerWidget {
                                   'Advance "${r.title}" to the next cycle without recording a transaction?'),
                               actions: [
                                 TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+                                    onPressed: () => Navigator.pop(ctx, false),
                                     child: const Text('CANCEL')),
                                 TextButton(
                                     onPressed: () => Navigator.pop(ctx, true),
@@ -597,7 +600,7 @@ class RemindersScreen extends ConsumerWidget {
                       flex: 2,
                       child: ElevatedButton.icon(
                         icon: PureIcons.payment(size: 16),
-                        label: const Text('PAY NOW'),
+                        label: const Text(payNowText),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,

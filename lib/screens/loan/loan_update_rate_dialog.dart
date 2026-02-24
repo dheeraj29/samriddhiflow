@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,15 +46,15 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
                 labelText: 'New Annual Rate (%)', suffixText: '%'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+              FilteringTextInputFormatter.allow(RegexUtils.amountExp)
             ],
           ),
           const SizedBox(height: 16),
           FormUtils.buildDatePickerField(
             context: context,
             selectedDate: _selectedDate,
-            onDateTarget: (d) => // coverage:ignore-line
-                setState(() => _selectedDate = d), // coverage:ignore-line
+            onDateTarget: (d) =>
+                setState(() => _selectedDate = d),
             label: 'Effective Date',
           ),
           const SizedBox(height: 16),
@@ -129,11 +130,9 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
 
     // 1. Calculate and lock-in interest at OLD rate until effective date
     final lastDate = loan.transactions.isNotEmpty
-        // coverage:ignore-start
         ? loan.transactions
             .map((t) => t.date)
             .reduce((a, b) => a.isAfter(b) ? a : b)
-        // coverage:ignore-end
         : loan.startDate;
 
     final accruedInterest = loanService.calculateAccruedInterest(

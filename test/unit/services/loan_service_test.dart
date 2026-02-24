@@ -62,8 +62,8 @@ void main() {
           fromDate: DateTime(2024, 12, 30),
           toDate: DateTime(2025, 1, 2));
 
-      final int2024 = (100000 * 12 * 2) / (366 * 100);
-      final int2025 = (100000 * 12 * 1) / (365 * 100);
+      const int2024 = (100000 * 12 * 2) / (366 * 100);
+      const int2025 = (100000 * 12 * 1) / (365 * 100);
       expect(interest, closeTo(int2024 + int2025, 0.1));
     });
 

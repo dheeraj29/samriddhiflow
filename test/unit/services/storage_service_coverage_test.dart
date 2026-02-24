@@ -331,7 +331,7 @@ void main() {
 
   group('StorageService - Maintenance Coverage', () {
     test('clearAllData clears items for current profile', () async {
-      final profileId = 'default';
+      const profileId = 'default';
       final acc = Account(
           id: 'a1',
           name: 'A',

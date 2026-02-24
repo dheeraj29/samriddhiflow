@@ -78,10 +78,10 @@ class BillingHelper {
         spend += t.amount;
       }
       if (t.type == TransactionType.income && t.accountId == acc.id) {
-        spend -= t.amount; // coverage:ignore-line
+        spend -= t.amount;
       }
       if (t.type == TransactionType.transfer) {
-        if (t.accountId == acc.id) spend += t.amount; // Outgoing = Spend // coverage:ignore-line
+        if (t.accountId == acc.id) spend += t.amount; // Outgoing = Spend
         // Payment (Incoming Transfer) is IGNORED here because:
         // 1. StorageService applies payments immediately to Account.balance.
         // 2. We are calculating "Pending Bill", which is the sum of Spends.

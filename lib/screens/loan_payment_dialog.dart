@@ -44,7 +44,7 @@ class _RecordLoanPaymentDialogState
             onChanged: (v) => setState(() {
               _type = v!;
               _amountController.text = _type == LoanTransactionType.emi
-                  ? widget.loan.emiAmount.toStringAsFixed(2) // coverage:ignore-line
+                  ? widget.loan.emiAmount.toStringAsFixed(2)
                   : '';
             }),
             child: const Row(
@@ -75,7 +75,7 @@ class _RecordLoanPaymentDialogState
                 data: (accounts) {
                   final uniqueAccountsMap = <String, Account>{};
                   for (var a in accounts) {
-                    uniqueAccountsMap[a.id] = a; // coverage:ignore-line
+                    uniqueAccountsMap[a.id] = a;
                   }
                   final savingsAccounts = uniqueAccountsMap.values
                       .where((a) => a.type == AccountType.savings)
@@ -84,19 +84,19 @@ class _RecordLoanPaymentDialogState
                   return FormUtils.buildAccountSelector(
                     value: _selectedAccountId,
                     accounts: savingsAccounts,
-                    onChanged: (v) => setState(() => _selectedAccountId = v!), // coverage:ignore-line
+                    onChanged: (v) => setState(() => _selectedAccountId = v!),
                     label: 'Payment Account (Optional)',
                   );
                 },
                 loading: () => const CircularProgressIndicator(),
-                error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+                error: (e, s) => Text('Error: $e'),
               ),
           const SizedBox(height: 16),
           // Date Picker
           FormUtils.buildDatePickerField(
             context: context,
             selectedDate: _date,
-            onDateTarget: (picked) => setState(() => _date = picked), // coverage:ignore-line
+            onDateTarget: (picked) => setState(() => _date = picked),
             label: 'Payment Date',
           ),
           const SizedBox(height: 8),
@@ -106,7 +106,7 @@ class _RecordLoanPaymentDialogState
                 style: TextStyle(fontWeight: FontWeight.bold)),
             RadioGroup<bool>(
               groupValue: _reduceTenure,
-              onChanged: (v) => setState(() => _reduceTenure = v!), // coverage:ignore-line
+              onChanged: (v) => setState(() => _reduceTenure = v!),
               child: const Row(
                 children: [
                   Expanded(
@@ -172,11 +172,9 @@ class _RecordLoanPaymentDialogState
               if (_type == LoanTransactionType.emi) {
                 // Calculate EXACT interest since last transaction (or start date)
                 final lastDate = widget.loan.transactions.isNotEmpty
-                    // coverage:ignore-start
                     ? widget.loan.transactions
                         .map((t) => t.date)
                         .reduce((a, b) => a.isAfter(b) ? a : b)
-                    // coverage:ignore-end
                     : widget.loan.startDate;
 
                 interest = loanService.calculateAccruedInterest(
@@ -216,18 +214,16 @@ class _RecordLoanPaymentDialogState
                     // If we are strictly "keeping tenure", it means the END DATE shouldn't change.
                     // So we need to calculate remaining months from NOW to (StartDate + OriginalTenure).
 
-                    // coverage:ignore-start
                     final endDate = loan.startDate
                         .add(Duration(days: 30 * loan.tenureMonths));
                     final now = DateTime.now();
-                    // coverage:ignore-end
                     int monthsLeft =
-                        (endDate.difference(now).inDays / 30).ceil(); // coverage:ignore-line
-                    if (monthsLeft < 1) monthsLeft = 1; // coverage:ignore-line
+                        (endDate.difference(now).inDays / 30).ceil();
+                    if (monthsLeft < 1) monthsLeft = 1;
 
-                    loan.emiAmount = loanService.calculateEMI( // coverage:ignore-line
+                    loan.emiAmount = loanService.calculateEMI(
                         principal: newPrincipal,
-                        annualRate: loan.interestRate, // coverage:ignore-line
+                        annualRate: loan.interestRate,
                         tenureMonths: monthsLeft);
 
                     // Note: We are NOT changing loan.tenureMonths here because the "Total Tenure" hasn't theoretically changed,

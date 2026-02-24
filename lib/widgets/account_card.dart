@@ -55,16 +55,16 @@ class AccountCard extends ConsumerWidget {
     double displayBilled = billedAmount;
 
     if (account.type == AccountType.creditCard && displayBalance < 0) {
-      double credit = -displayBalance; // coverage:ignore-line
+      double credit = -displayBalance;
       displayBalance = 0;
 
-      if (credit <= displayBilled) { // coverage:ignore-line
-        displayBilled -= credit; // coverage:ignore-line
+      if (credit <= displayBilled) {
+        displayBilled -= credit;
         credit = 0;
       } else {
-        credit -= displayBilled; // coverage:ignore-line
+        credit -= displayBilled;
         displayBilled = 0;
-        displayBalance = -credit; // coverage:ignore-line
+        displayBalance = -credit;
       }
     }
 
@@ -115,8 +115,8 @@ class AccountCard extends ConsumerWidget {
                     runSpacing: 4,
                     children: [
                       if (displayBilled > 0)
-                        _buildMiniInfo( // coverage:ignore-line
-                            'Billed', displayBilled, account.currency), // coverage:ignore-line
+                        _buildMiniInfo(
+                            'Billed', displayBilled, account.currency),
                       _buildMiniInfo(
                           'Unbilled', unbilledAmount, account.currency),
                       if (displayBalance != 0)

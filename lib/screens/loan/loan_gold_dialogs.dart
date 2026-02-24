@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -226,25 +227,21 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                FilteringTextInputFormatter.allow(RegexUtils.amountExp),
               ],
             ),
             const SizedBox(height: 16),
             InkWell(
-              onTap: () async { // coverage:ignore-line
-                final d = await showDatePicker( // coverage:ignore-line
+              onTap: () async {
+                final d = await showDatePicker(
                     context: context,
-                    // coverage:ignore-start
                     initialDate: selectedDate,
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2030));
-                    // coverage:ignore-end
                 if (d != null) {
-                  // coverage:ignore-start
                   setState(() {
                     selectedDate = d;
                     dateController.text = DateFormat('yyyy-MM-dd').format(d);
-                  // coverage:ignore-end
                   });
                 }
               },
@@ -267,7 +264,7 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
                 ...accounts.map(
                     (a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
               ],
-              onChanged: (v) => selectedAccountId = v, // coverage:ignore-line
+              onChanged: (v) => selectedAccountId = v,
             ),
           ],
         ),
@@ -275,7 +272,7 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
       actions: [
         TextButton(
             child: const Text('Cancel'),
-            onPressed: () => Navigator.pop(context)), // coverage:ignore-line
+            onPressed: () => Navigator.pop(context)),
         ElevatedButton(
           style: widget.confirmButtonColor != null
               ? ElevatedButton.styleFrom(

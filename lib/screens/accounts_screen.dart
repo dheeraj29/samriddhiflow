@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,8 +85,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                   const SizedBox(height: 16),
                   const Text('No accounts found.'),
                   TextButton(
-                    onPressed: () => _showAddAccountSheet( // coverage:ignore-line
-                        context, ref), // coverage:ignore-line
+                    onPressed: () => _showAddAccountSheet(
+                        context, ref),
                     child: const Text('Add Account'),
                   ),
                 ],
@@ -299,8 +300,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => // coverage:ignore-line
-            Center(child: Text('Error: $e')), // coverage:ignore-line
+        error: (e, s) =>
+            Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -377,24 +378,20 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     final lastBillDate = today.day > acc.billingCycleDay!
                         ? DateTime(
                             today.year, today.month, acc.billingCycleDay!)
-                        : DateTime( // coverage:ignore-line
+                        : DateTime(
 
-                            // coverage:ignore-start
                             today.year,
                             today.month - 1,
                             acc.billingCycleDay!);
-                            // coverage:ignore-end
 
                     final allTxns = ref.read(transactionsProvider).value ?? [];
                     final payments = allTxns
                         .where((t) =>
-                            // coverage:ignore-start
                             !t.isDeleted &&
                             t.toAccountId == acc.id &&
                             t.type == TransactionType.transfer &&
                             t.date.isAfter(
                                 lastBillDate.subtract(const Duration(days: 1))))
-                            // coverage:ignore-end
                         .toList();
 
                     final totalPaid =
@@ -432,7 +429,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                           'This will set the current "Billed Amount" to 0 without recording a payment transaction. Use this if the bill was calculated incorrectly or paid outside the app.'),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop( // coverage:ignore-line
+                            onPressed: () => Navigator.pop(
                                 context, false),
                             child: const Text('Cancel')),
                         TextButton(
@@ -463,30 +460,28 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     style: TextStyle(
                         color: Colors.orange, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Refreshes billing cycle display'),
-                onTap: () async { // coverage:ignore-line
+                onTap: () async {
 
-                  Navigator.pop(context); // coverage:ignore-line
+                  Navigator.pop(context);
 
-                  ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+                  ScaffoldMessenger.of(context).showSnackBar(
 
                     const SnackBar(content: Text('Recalculating bill...')),
                   );
 
                   await ref
-                      .read(storageServiceProvider) // coverage:ignore-line
-                      .recalculateBilledAmount(acc.id); // coverage:ignore-line
+                      .read(storageServiceProvider)
+                      .recalculateBilledAmount(acc.id);
 
-                  // coverage:ignore-start
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                           content: Text('Bill recalculated for ${acc.name}.')),
-                  // coverage:ignore-end
                     );
                   }
                   // Refresh
-                  ref.invalidate(accountsProvider); // coverage:ignore-line
-                  ref.invalidate(transactionsProvider); // coverage:ignore-line
+                  ref.invalidate(accountsProvider);
+                  ref.invalidate(transactionsProvider);
                 },
               ),
             ListTile(
@@ -543,7 +538,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), // coverage:ignore-line
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -655,18 +650,18 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                             child: Text(t.name.toUpperCase()),
                           ))
                       .toList(),
-                  onChanged: (v) => // coverage:ignore-line
-                      setState(() => _type = v!), // coverage:ignore-line
+                  onChanged: (v) =>
+                      setState(() => _type = v!),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             if (_type == AccountType.wallet) ...[
-              DropdownButtonFormField<String>( // coverage:ignore-line
+              DropdownButtonFormField<String>(
 
-                initialValue: _currency, // coverage:ignore-line
+                initialValue: _currency,
                 decoration: const InputDecoration(labelText: 'Currency'),
-                items: { // coverage:ignore-line
+                items: {
 
                   'en_US': 'US Dollar (\$)',
                   'en_IN': 'Indian Rupee (₹)',
@@ -676,18 +671,14 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
                   'zh_CN': 'Chinese Yuan (¥)',
                   'ar_AE': 'UAE Dirham (د.إ)',
                 }
-                    // coverage:ignore-start
                     .entries
                     .map((e) => DropdownMenuItem(
                           value: e.key,
                           child: Text(e.value),
-                    // coverage:ignore-end
                         ))
-                    // coverage:ignore-start
                     .toList(),
                 onChanged: (v) =>
                     setState(() => _currency = v!),
-                    // coverage:ignore-end
               ),
               const SizedBox(height: 16),
             ],
@@ -704,99 +695,83 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))
+                FilteringTextInputFormatter.allow(RegexUtils.amountExp)
               ],
               onSaved: (v) => _initialBalance = double.tryParse(v ?? '') ?? 0,
             ),
             if (_type == AccountType.creditCard) ...[
               const SizedBox(height: 16),
-              // coverage:ignore-start
               TextFormField(
                 initialValue: _limit?.toString(),
                 decoration: InputDecoration(
-              // coverage:ignore-end
                   labelText: 'Credit Limit',
                   prefixText:
-                      '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ', // coverage:ignore-line
+                      '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [ // coverage:ignore-line
+                inputFormatters: [
 
-                  FilteringTextInputFormatter.allow( // coverage:ignore-line
-                      RegExp(r'^\d*\.?\d{0,2}$')) // coverage:ignore-line
+                  FilteringTextInputFormatter.allow(
+                      RegexUtils.amountExp)
                 ],
-                // coverage:ignore-start
                 validator: (v) =>
                     v!.isEmpty ? 'Required' : null,
                 onSaved: (v) => _limit =
                     double.tryParse(v ?? '') ?? 0,
-                // coverage:ignore-end
               ),
               const SizedBox(height: 16),
-              Row( // coverage:ignore-line
+              Row(
 
                 crossAxisAlignment: CrossAxisAlignment.start,
-                // coverage:ignore-start
                 children: [
                   Expanded(
                     child: TextFormField(
                       initialValue: _billingDay?.toString(),
-                // coverage:ignore-end
                       decoration: const InputDecoration(
                           labelText: 'Bill Gen. Day',
                           hintText: 'e.g. 15',
                           helperText: 'Day of month'),
                       keyboardType: TextInputType.number,
-                      // coverage:ignore-start
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       onChanged: (v) =>
                           setState(() => _billingDay = int.tryParse(v)),
                       onSaved: (v) => _billingDay = int.tryParse(v ?? ''),
-                      // coverage:ignore-end
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // coverage:ignore-start
                   Expanded(
                     child: TextFormField(
                       initialValue: _dueDay?.toString(),
-                  // coverage:ignore-end
                       decoration: const InputDecoration(
                           labelText: 'Payment Period',
                           hintText: 'e.g. 20',
                           helperText: 'Days to pay'),
                       keyboardType: TextInputType.number,
-                      // coverage:ignore-start
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       onChanged: (v) =>
                           setState(() => _dueDay = int.tryParse(v)),
                       onSaved: (v) => _dueDay = int.tryParse(v ?? ''),
-                      // coverage:ignore-end
                     ),
                   ),
                 ],
               ),
-              if (_billingDay != null && _dueDay != null) ...[ // coverage:ignore-line
+              if (_billingDay != null && _dueDay != null) ...[
 
                 const SizedBox(height: 8),
-                Container( // coverage:ignore-line
+                Container(
 
                   padding: const EdgeInsets.all(8),
-                  // coverage:ignore-start
                   decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8)),
                   child: Builder(builder: (context) {
                     final today = DateTime.now();
-                  // coverage:ignore-end
                     final billDate =
-                        // coverage:ignore-start
                         DateTime(today.year, today.month, _billingDay!);
                     final dueDate = billDate.add(Duration(days: _dueDay!));
                     return Text(
                       'Example: Bill on ${_billingDay!}th, Due on ${DateFormat("MMM dd").format(dueDate)}',
-                        // coverage:ignore-end
                       style:
                           const TextStyle(fontSize: 12, color: Colors.blueGrey),
                     );
@@ -830,7 +805,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       // Smart Update Logic: Check if we need to preserve "Billed = 0" status
       bool keepBilledStatus = false;
       if (widget.account != null &&
-          // coverage:ignore-start
           widget.account!.type == AccountType.creditCard &&
           _billingDay != null) {
         final lastRollover = storage.getLastRollover(widget.account!.id);
@@ -838,17 +812,15 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         final now = DateTime.now();
         final currentBilled = BillingHelper.calculateBilledAmount(
             widget.account!, allTxns, now, lastRollover);
-          // coverage:ignore-end
 
-        if (currentBilled == 0 && // coverage:ignore-line
-            widget.account!.billingCycleDay != _billingDay) { // coverage:ignore-line
+        if (currentBilled == 0 &&
+            widget.account!.billingCycleDay != _billingDay) {
 
           keepBilledStatus = true;
         }
       }
 
       if (widget.account != null) {
-        // coverage:ignore-start
         final acc = widget.account!;
         acc.name = _name;
         acc.balance = _initialBalance;
@@ -857,7 +829,6 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         acc.paymentDueDateDay = _dueDay;
         acc.currency = _currency;
         await storage.saveAccount(acc, keepBilledStatus: keepBilledStatus);
-        // coverage:ignore-end
       } else {
         final profileId = ref.read(activeProfileIdProvider);
         final newAccount = Account.create(

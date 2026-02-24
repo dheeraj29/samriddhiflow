@@ -6,21 +6,21 @@ void main() {
   group('BillingHelper Tests', () {
     test('getCycleStart - Date after cycle day', () {
       final date = DateTime(2024, 1, 20);
-      final cycleDay = 15;
+      const cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
       expect(result, DateTime(2024, 1, 16));
     });
 
     test('getCycleStart - Date before cycle day', () {
       final date = DateTime(2024, 1, 10);
-      final cycleDay = 15;
+      const cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
       expect(result, DateTime(2023, 12, 16));
     });
 
     test('getCycleStart - Date exactly on cycle day', () {
       final date = DateTime(2024, 1, 15);
-      final cycleDay = 15;
+      const cycleDay = 15;
       final result = BillingHelper.getCycleStart(date, cycleDay);
       expect(result, DateTime(2023, 12, 16));
     });

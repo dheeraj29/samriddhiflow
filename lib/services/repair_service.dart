@@ -14,15 +14,15 @@ extension WidgetRefReader on WidgetRef {
 class _WidgetRefReader implements RefReader {
   final WidgetRef ref;
   _WidgetRefReader(this.ref);
-  @override // coverage:ignore-line
-  T read<T>(dynamic provider) => ref.read(provider); // coverage:ignore-line
+  @override
+  T read<T>(dynamic provider) => ref.read(provider);
 }
 
 abstract class RepairJob {
   String get id;
   String get name;
   String get description;
-  bool get showInSettings => true; // coverage:ignore-line
+  bool get showInSettings => true;
   Future<int> run(RefReader ref, {Map<String, dynamic>? args});
 }
 
@@ -63,9 +63,9 @@ class RecalculateBilledAmountJob extends RepairJob {
 class RepairAccountCurrencyJob extends RepairJob {
   @override
   String get id => 'repair_account_currency';
-  @override // coverage:ignore-line
+  @override
   String get name => 'Repair Account Currency';
-  @override // coverage:ignore-line
+  @override
   String get description =>
       'Fixes accounts with missing currency codes by setting them to your default currency.';
 

@@ -1,3 +1,4 @@
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:hive_ce/hive.dart';
 
 part 'tax_data_models.g.dart';
@@ -63,7 +64,7 @@ class SalaryDetails {
     List<CustomAllowance>? independentDeductions,
   }) {
     return SalaryDetails(
-      grossSalary: grossSalary ?? this.grossSalary, // coverage:ignore-line
+      grossSalary: grossSalary ?? this.grossSalary,
       npsEmployer: npsEmployer ?? this.npsEmployer,
       leaveEncashment: leaveEncashment ?? this.leaveEncashment,
       gratuity: gratuity ?? this.gratuity,
@@ -104,32 +105,32 @@ class SalaryDetails {
         leaveEncashment: (m['leaveEncashment'] as num?)?.toDouble() ?? 0,
         gratuity: (m['gratuity'] as num?)?.toDouble() ?? 0,
         monthlyGross: (m['monthlyGross'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
         giftsFromEmployer: (m['giftsFromEmployer'] as num?)?.toDouble() ?? 0,
         history: (m['history'] as List?)
                 ?.map((e) =>
-                    SalaryStructure.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    SalaryStructure.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
         independentAllowances: (m['independentAllowances'] as List?)
                 ?.map((e) =>
-                    CustomAllowance.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         independentExemptions: (m['independentExemptions'] as List?)
                 ?.map((e) =>
-                    CustomExemption.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    CustomExemption.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         independentDeductions: (m['independentDeductions'] as List?)
                 ?.map((e) =>
-                    CustomAllowance.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
       );
 }
 
@@ -193,7 +194,7 @@ extension BusinessTypeExt on BusinessType {
         return 'Regular (Actual Profit)';
       case BusinessType.section44AD:
         return 'Section 44AD (Presumptive - 6%)';
-      case BusinessType.section44ADA: // coverage:ignore-line
+      case BusinessType.section44ADA:
         return 'Section 44ADA (Presumptive - 50%)';
     }
   }
@@ -256,9 +257,9 @@ extension AssetTypeExtension on AssetType {
         return 'Equity Shares / Eq. MFs (112A)';
       case AssetType.residentialProperty:
         return 'Residential Property';
-      case AssetType.agriculturalLand: // coverage:ignore-line
+      case AssetType.agriculturalLand:
         return 'Agricultural Land';
-      case AssetType.other: // coverage:ignore-line
+      case AssetType.other:
         return 'Other Assets';
     }
   }
@@ -356,7 +357,7 @@ class CapitalGainEntry {
         reinvestedAmount: (m['reinvestedAmount'] as num?)?.toDouble() ?? 0,
         matchReinvestType: ReinvestmentType.values[m['matchReinvestType'] ?? 0],
         reinvestDate: m['reinvestDate'] != null
-            ? DateTime.parse(m['reinvestDate']) // coverage:ignore-line
+            ? DateTime.parse(m['reinvestDate'])
             : null,
         intendToReinvest: m['intendToReinvest'] ?? false,
       );
@@ -526,7 +527,7 @@ class SalaryStructure {
                 ?.map((e) =>
                     CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         monthlyEmployeePF: (m['monthlyEmployeePF'] as num?)?.toDouble() ?? 0,
         monthlyGratuity: (m['monthlyGratuity'] as num?)?.toDouble() ?? 0,
         performancePayFrequency: PayoutFrequency
@@ -541,47 +542,38 @@ class SalaryStructure {
             (m['variablePayCustomMonths'] as List?)?.cast<int>(),
         isPerformancePayPartial: m['isPerformancePayPartial'] ?? false,
         performancePayAmounts: (m['performancePayAmounts'] as Map?)?.map(
-                // coverage:ignore-start
                 (k, v) =>
                     MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
-                // coverage:ignore-end
         isVariablePayPartial: m['isVariablePayPartial'] ?? false,
         variablePayAmounts: (m['variablePayAmounts'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
         stoppedMonths: (m['stoppedMonths'] as List?)?.cast<int>() ?? [],
       );
 
-  // coverage:ignore-start
   double get estimatedMonthlyGross {
     final m = effectiveDate.month;
     if (stoppedMonths.contains(m)) return 0;
-  // coverage:ignore-end
 
-    double total = monthlyBasic + monthlyFixedAllowances; // coverage:ignore-line
+    double total = monthlyBasic + monthlyFixedAllowances;
 
     // Performance Pay (Use specific amount if partial, or payout month amount)
-    // coverage:ignore-start
     if (SalaryStructure.isPayoutMonth(m, performancePayFrequency,
         performancePayStartMonth, performancePayCustomMonths)) {
       if (isPerformancePayPartial) {
         total += (performancePayAmounts[m] ?? 0.0);
-    // coverage:ignore-end
       } else {
-        total += monthlyPerformancePay; // coverage:ignore-line
+        total += monthlyPerformancePay;
       }
     }
 
     // Variable Pay (Use specific amount if partial, or calculated payout)
-    // coverage:ignore-start
     if (SalaryStructure.isPayoutMonth(m, variablePayFrequency,
         variablePayStartMonth, variablePayCustomMonths)) {
       if (isVariablePayPartial) {
         total += (variablePayAmounts[m] ?? 0.0);
-    // coverage:ignore-end
       } else {
-        // coverage:ignore-start
         double annualVar = annualVariablePay;
         if (variablePayFrequency == PayoutFrequency.annually) {
           total += annualVar;
@@ -595,22 +587,19 @@ class SalaryStructure {
           int count = variablePayCustomMonths?.length ?? 1;
           if (count == 0) count = 1;
           total += annualVar / count;
-        // coverage:ignore-end
         }
       }
     }
 
     // Custom Allowances
-    // coverage:ignore-start
     for (final allowance in customAllowances) {
       if (SalaryStructure.isPayoutMonth(m, allowance.frequency,
           allowance.startMonth, allowance.customMonths)) {
         double amount = allowance.payoutAmount;
         if (allowance.isPartial) {
           amount = allowance.partialAmounts[m] ?? allowance.payoutAmount;
-    // coverage:ignore-end
         }
-        total += amount; // coverage:ignore-line
+        total += amount;
       }
     }
 
@@ -633,7 +622,7 @@ class SalaryStructure {
     // Performance Pay (Regular if Monthly)
     if (performancePayFrequency == PayoutFrequency.monthly) {
       if (isPerformancePayPartial) {
-        monthlyGross += (performancePayAmounts[month] ?? monthlyPerformancePay); // coverage:ignore-line
+        monthlyGross += (performancePayAmounts[month] ?? monthlyPerformancePay);
       } else {
         monthlyGross += monthlyPerformancePay;
       }
@@ -642,7 +631,7 @@ class SalaryStructure {
     // Variable Pay (Regular if Monthly)
     if (variablePayFrequency == PayoutFrequency.monthly) {
       if (isVariablePayPartial) {
-        monthlyGross += (variablePayAmounts[month] ?? (annualVariablePay / 12)); // coverage:ignore-line
+        monthlyGross += (variablePayAmounts[month] ?? (annualVariablePay / 12));
       } else {
         monthlyGross += (annualVariablePay / 12);
       }
@@ -672,14 +661,12 @@ class SalaryStructure {
 
     // Performance Pay (Irregular if NOT Monthly)
     if (performancePayFrequency != PayoutFrequency.monthly) {
-      // coverage:ignore-start
       if (SalaryStructure.isPayoutMonth(month, performancePayFrequency,
           performancePayStartMonth, performancePayCustomMonths)) {
         if (isPerformancePayPartial) {
           irregularGross += (performancePayAmounts[month] ?? 0.0);
-      // coverage:ignore-end
         } else {
-          irregularGross += monthlyPerformancePay; // coverage:ignore-line
+          irregularGross += monthlyPerformancePay;
         }
       }
     }
@@ -689,7 +676,7 @@ class SalaryStructure {
       if (SalaryStructure.isPayoutMonth(month, variablePayFrequency,
           variablePayStartMonth, variablePayCustomMonths)) {
         if (isVariablePayPartial) {
-          irregularGross += (variablePayAmounts[month] ?? 0.0); // coverage:ignore-line
+          irregularGross += (variablePayAmounts[month] ?? 0.0);
         } else {
           double annualVar = annualVariablePay;
           if (variablePayFrequency == PayoutFrequency.annually) {
@@ -712,15 +699,13 @@ class SalaryStructure {
     // Custom Allowances (Irregular if NOT Monthly)
     for (final allowance in customAllowances) {
       if (allowance.frequency != PayoutFrequency.monthly) {
-        // coverage:ignore-start
         if (SalaryStructure.isPayoutMonth(month, allowance.frequency,
             allowance.startMonth, allowance.customMonths)) {
           double amount = allowance.payoutAmount;
           if (allowance.isPartial) {
             amount = allowance.partialAmounts[month] ?? 0.0;
-        // coverage:ignore-end
           }
-          irregularGross += amount; // coverage:ignore-line
+          irregularGross += amount;
         }
       }
     }
@@ -840,7 +825,7 @@ class CustomDeduction {
   @HiveField(7)
   final Map<int, double> partialAmounts;
 
-  const CustomDeduction({ // coverage:ignore-line
+  const CustomDeduction({
     required this.name,
     required this.amount,
     this.isTaxable = true,
@@ -851,7 +836,7 @@ class CustomDeduction {
     this.partialAmounts = const {},
   });
 
-  CustomDeduction copyWith({ // coverage:ignore-line
+  CustomDeduction copyWith({
     String? name,
     double? amount,
     bool? isTaxable,
@@ -861,7 +846,6 @@ class CustomDeduction {
     bool? isPartial,
     Map<int, double>? partialAmounts,
   }) {
-    // coverage:ignore-start
     return CustomDeduction(
       name: name ?? this.name,
       amount: amount ?? this.amount,
@@ -871,11 +855,9 @@ class CustomDeduction {
       customMonths: customMonths ?? this.customMonths,
       isPartial: isPartial ?? this.isPartial,
       partialAmounts: partialAmounts ?? this.partialAmounts,
-    // coverage:ignore-end
     );
   }
 
-  // coverage:ignore-start
   Map<String, dynamic> toMap() => {
         'name': name,
         'amount': amount,
@@ -884,12 +866,10 @@ class CustomDeduction {
         'startMonth': startMonth,
         'customMonths': customMonths,
         'isPartial': isPartial,
-  // coverage:ignore-end
         'partialAmounts':
-            partialAmounts.map((k, v) => MapEntry(k.toString(), v)), // coverage:ignore-line
+            partialAmounts.map((k, v) => MapEntry(k.toString(), v)),
       };
 
-  // coverage:ignore-start
   factory CustomDeduction.fromMap(Map<String, dynamic> m) => CustomDeduction(
         name: m['name'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
@@ -901,7 +881,6 @@ class CustomDeduction {
         partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
                 MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
-  // coverage:ignore-end
       );
 }
 
@@ -949,7 +928,7 @@ class CustomAllowance {
       frequency: frequency ?? this.frequency,
       startMonth: startMonth ?? this.startMonth,
       customMonths: customMonths ?? this.customMonths,
-      partialAmounts: partialAmounts ?? this.partialAmounts, // coverage:ignore-line
+      partialAmounts: partialAmounts ?? this.partialAmounts,
     );
   }
 
@@ -974,7 +953,7 @@ class CustomAllowance {
         startMonth: m['startMonth'],
         customMonths: (m['customMonths'] as List?)?.cast<int>(),
         partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
       );
 }
@@ -1038,19 +1017,17 @@ class TaxPaymentEntry {
     this.description = '',
   });
 
-  TaxPaymentEntry copyWith({ // coverage:ignore-line
+  TaxPaymentEntry copyWith({
     double? amount,
     DateTime? date,
     String? source,
     String? description,
   }) {
-    // coverage:ignore-start
     return TaxPaymentEntry(
       amount: amount ?? this.amount,
       date: date ?? this.date,
       source: source ?? this.source,
       description: description ?? this.description,
-    // coverage:ignore-end
     );
   }
 
@@ -1100,7 +1077,7 @@ extension TaxStringHelpers on String {
     }
 
     // Handle camelCase: 'equityShares' -> 'Equity Shares'
-    final exp = RegExp(r'(?<=[a-z])[A-Z]');
+    final exp = RegexUtils.camelCaseExp;
     String result = replaceAllMapped(exp, (m) => ' ${m.group(0)}');
     // Capitalize first letter
     result = result[0].toUpperCase() + result.substring(1);
@@ -1125,7 +1102,7 @@ class CustomExemption {
   }) {
     return CustomExemption(
       name: name ?? this.name,
-      amount: amount ?? this.amount, // coverage:ignore-line
+      amount: amount ?? this.amount,
     );
   }
 

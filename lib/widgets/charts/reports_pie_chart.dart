@@ -31,18 +31,16 @@ class _ReportsPieChartState extends State<ReportsPieChart> {
           sectionsSpace: 2,
           centerSpaceRadius: 40,
           pieTouchData: PieTouchData(
-            // coverage:ignore-start
             touchCallback: (FlTouchEvent event, pieTouchResponse) {
               setState(() {
                 if (!event.isInterestedForInteractions ||
-            // coverage:ignore-end
                     pieTouchResponse == null ||
-                    pieTouchResponse.touchedSection == null) { // coverage:ignore-line
-                  touchedIndex = -1; // coverage:ignore-line
+                    pieTouchResponse.touchedSection == null) {
+                  touchedIndex = -1;
                   return;
                 }
-                touchedIndex = // coverage:ignore-line
-                    pieTouchResponse.touchedSection!.touchedSectionIndex; // coverage:ignore-line
+                touchedIndex =
+                    pieTouchResponse.touchedSection!.touchedSectionIndex;
               });
             },
           ),
