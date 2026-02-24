@@ -34,6 +34,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(LendingPaymentAdapter());
     registerAdapter(LendingRecordAdapter());
     registerAdapter(LendingTypeAdapter());
     registerAdapter(LoanAdapter());
@@ -78,6 +79,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(LendingPaymentAdapter());
     registerAdapter(LendingRecordAdapter());
     registerAdapter(LendingTypeAdapter());
     registerAdapter(LoanAdapter());

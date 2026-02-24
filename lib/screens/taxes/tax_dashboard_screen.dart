@@ -95,6 +95,12 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                                   .saveTaxYearData(newData);
                               _loadData();
                             },
+                            onDelete: () async {
+                              await ref
+                                  .read(storageServiceProvider)
+                                  .deleteTaxYearData(_selectedYear);
+                              _loadData();
+                            },
                           )));
             },
           ),
@@ -147,7 +153,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     final startMonth = rules.financialYearStartMonth;
 
     // Fixed Start Date (FY Start)
-    final start = DateTime(_selectedYear, startMonth, 1);
+    DateTime start = DateTime(_selectedYear, startMonth, 1);
 
     // Default End Date (Today or FY End)
     DateTime defaultEnd = DateTime.now();
@@ -181,21 +187,28 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
               const Text('Sync Period (YTD)',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              // Start Date (Fixed)
+              // Start Date (Editable now)
               Row(
                 children: [
                   const Icon(Icons.event_available,
-                      size: 16, color: Colors.grey),
+                      size: 16, color: Colors.blue),
                   const SizedBox(width: 8),
-                  const Text('From: ', style: TextStyle(color: Colors.grey)),
-                  Text(
-                    '${start.day}/${start.month}/${start.year}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.grey),
+                  const Text('From: '),
+                  TextButton(
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                          initialDate: start);
+                      if (d != null) setStateBuilder(() => start = d);
+                    },
+                    child: Text(
+                      '${start.day}/${start.month}/${start.year}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  const Text('(FY Start)',
-                      style: TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -313,13 +326,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       TaxYearData finalData;
 
       if (forceReset) {
-        // Force Reset: Overwrite everything, clear locks
-        // Force Reset: Overwrite everything, but PROTECT manual salary history
+        // Force Reset: Overwrite everything, but PROTECT manual salary completely
         finalData = newData.copyWith(
-          salary: newData.salary.copyWith(
-            grossSalary: _taxData?.salary.grossSalary ?? 0,
-            history: _taxData?.salary.history ?? [],
-          ),
+          salary: _taxData?.salary ?? newData.salary,
           houseProperties:
               mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
           lockedFields: [], // Clear locks
@@ -333,38 +342,10 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           final locked = old.lockedFields;
           bool isLocked(String id) => locked.contains(id);
 
-          final mergedSalary = newData.salary.copyWith(
-            grossSalary: isLocked('salary.gross')
-                ? old.salary.grossSalary
-                : newData.salary.grossSalary,
-            npsEmployer: isLocked('salary.nps')
-                ? old.salary.npsEmployer
-                : newData.salary.npsEmployer,
-            leaveEncashment: isLocked('salary.leave')
-                ? old.salary.leaveEncashment
-                : newData.salary.leaveEncashment,
-            gratuity: isLocked('salary.gratuity')
-                ? old.salary.gratuity
-                : newData.salary.gratuity,
-            giftsFromEmployer: isLocked('salary.gifts')
-                ? old.salary.giftsFromEmployer
-                : newData.salary.giftsFromEmployer,
-            monthlyGross: isLocked('salary.monthly')
-                ? old.salary.monthlyGross
-                : newData.salary.monthlyGross,
-          );
-
-          // Granular monthly
-          final combinedMonthly =
-              Map<int, double>.from(newData.salary.monthlyGross);
-          for (int i = 1; i <= 12; i++) {
-            if (isLocked('salary.monthly.$i')) {
-              combinedMonthly[i] = old.salary.monthlyGross[i] ?? 0;
-            }
-          }
+          final mergedSalary = old.salary;
 
           finalData = newData.copyWith(
-            salary: mergedSalary.copyWith(monthlyGross: combinedMonthly),
+            salary: mergedSalary,
             houseProperties:
                 mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
             agricultureIncome: isLocked('agri.income')
@@ -377,12 +358,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           );
         } else {
           // No locks, just overwrite (same as force but keeps locks empty)
-          // No locks, just overwrite but PROTECT manual salary
+          // No locks, just overwrite but PROTECT manual salary completely
           finalData = newData.copyWith(
-            salary: newData.salary.copyWith(
-              grossSalary: _taxData?.salary.grossSalary ?? 0,
-              history: _taxData?.salary.history ?? [],
-            ),
+            salary: _taxData?.salary ?? newData.salary,
             houseProperties:
                 mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
             lastSyncDate: DateTime.now(),
@@ -498,6 +476,12 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                                   ref
                                       .read(storageServiceProvider)
                                       .saveTaxYearData(updated);
+                                },
+                                onDelete: () async {
+                                  await ref
+                                      .read(storageServiceProvider)
+                                      .deleteTaxYearData(gainYearData.year);
+                                  _loadData();
                                 },
                               ),
                             ),

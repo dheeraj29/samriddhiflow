@@ -24,30 +24,27 @@ class SalaryDetailsAdapter extends TypeAdapter<SalaryDetails> {
       monthlyGross:
           fields[4] == null ? const {} : (fields[4] as Map).cast<int, double>(),
       giftsFromEmployer: fields[5] == null ? 0 : (fields[5] as num).toDouble(),
-      customExemptions: fields[6] == null
-          ? const {}
-          : (fields[6] as Map).cast<String, double>(),
       history: fields[7] == null
           ? const []
           : (fields[7] as List).cast<SalaryStructure>(),
       netSalaryReceived:
           fields[8] == null ? const {} : (fields[8] as Map).cast<int, double>(),
-      independentDeductions: fields[9] == null
-          ? const []
-          : (fields[9] as List).cast<CustomDeduction>(),
       independentAllowances: fields[10] == null
           ? const []
           : (fields[10] as List).cast<CustomAllowance>(),
       independentExemptions: fields[11] == null
           ? const []
           : (fields[11] as List).cast<CustomExemption>(),
+      independentDeductions: fields[12] == null
+          ? const []
+          : (fields[12] as List).cast<CustomAllowance>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SalaryDetails obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.grossSalary)
       ..writeByte(1)
@@ -60,18 +57,16 @@ class SalaryDetailsAdapter extends TypeAdapter<SalaryDetails> {
       ..write(obj.monthlyGross)
       ..writeByte(5)
       ..write(obj.giftsFromEmployer)
-      ..writeByte(6)
-      ..write(obj.customExemptions)
       ..writeByte(7)
       ..write(obj.history)
       ..writeByte(8)
       ..write(obj.netSalaryReceived)
-      ..writeByte(9)
-      ..write(obj.independentDeductions)
       ..writeByte(10)
       ..write(obj.independentAllowances)
       ..writeByte(11)
-      ..write(obj.independentExemptions);
+      ..write(obj.independentExemptions)
+      ..writeByte(12)
+      ..write(obj.independentDeductions);
   }
 
   @override
@@ -336,16 +331,13 @@ class SalaryStructureAdapter extends TypeAdapter<SalaryStructure> {
           fields[21] == null ? const [] : (fields[21] as List).cast<int>(),
       monthlyEmployeePF: fields[7] == null ? 0 : (fields[7] as num).toDouble(),
       monthlyGratuity: fields[9] == null ? 0 : (fields[9] as num).toDouble(),
-      customDeductions: fields[10] == null
-          ? const []
-          : (fields[10] as List).cast<CustomDeduction>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SalaryStructure obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -364,8 +356,6 @@ class SalaryStructureAdapter extends TypeAdapter<SalaryStructure> {
       ..write(obj.monthlyEmployeePF)
       ..writeByte(9)
       ..write(obj.monthlyGratuity)
-      ..writeByte(10)
-      ..write(obj.customDeductions)
       ..writeByte(11)
       ..write(obj.performancePayFrequency)
       ..writeByte(12)
@@ -414,7 +404,7 @@ class CustomDeductionAdapter extends TypeAdapter<CustomDeduction> {
     return CustomDeduction(
       name: fields[0] as String,
       amount: (fields[1] as num).toDouble(),
-      isTaxable: fields[2] == null ? false : fields[2] as bool,
+      isTaxable: fields[2] == null ? true : fields[2] as bool,
       frequency: fields[3] == null
           ? PayoutFrequency.monthly
           : fields[3] as PayoutFrequency,
@@ -616,35 +606,17 @@ class CustomExemptionAdapter extends TypeAdapter<CustomExemption> {
     return CustomExemption(
       name: fields[0] as String,
       amount: (fields[1] as num).toDouble(),
-      frequency: fields[2] == null
-          ? PayoutFrequency.monthly
-          : fields[2] as PayoutFrequency,
-      startMonth: (fields[3] as num?)?.toInt(),
-      customMonths: (fields[4] as List?)?.cast<int>(),
-      isPartial: fields[5] == null ? false : fields[5] as bool,
-      partialAmounts:
-          fields[6] == null ? const {} : (fields[6] as Map).cast<int, double>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomExemption obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(2)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.amount)
-      ..writeByte(2)
-      ..write(obj.frequency)
-      ..writeByte(3)
-      ..write(obj.startMonth)
-      ..writeByte(4)
-      ..write(obj.customMonths)
-      ..writeByte(5)
-      ..write(obj.isPartial)
-      ..writeByte(6)
-      ..write(obj.partialAmounts);
+      ..write(obj.amount);
   }
 
   @override

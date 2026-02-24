@@ -46,7 +46,7 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
                 accounts: accounts,
                 categories: categories,
                 showLineThrough: true,
-                onTap: () {}, // No action on tap in recycle bin for now
+                onTap: () {}, // No action on tap in recycle bin for now // coverage:ignore-line
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

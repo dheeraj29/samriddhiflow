@@ -385,6 +385,42 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                         'Values copied from previous year. Click Save to apply.')));
               },
             ),
+            // Restore Defaults
+            IconButton(
+              icon: const Icon(Icons.restore),
+              tooltip: 'Restore System Defaults',
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Restore System Defaults?'),
+                    content: const Text(
+                        'This will delete custom tax rules for this year and revert to system defaults (or previous year). Continue?'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel')),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange),
+                        child: const Text('Restore'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  final config = ref.read(taxConfigServiceProvider);
+                  await config.deleteRulesForYear(_selectedYear);
+                  _loadRulesForYear(_selectedYear);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Tax Rules reset for FY.')));
+                  }
+                }
+              },
+            ),
             // Save
             IconButton(
               icon: PureIcons.save(),
@@ -628,7 +664,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                     child: ListTile(
                       title: Text(r.categoryName),
                       subtitle: Text(
-                          'Maps to: ${r.taxHead.toHumanReadable()}\nPatterns: ${r.matchDescriptions.join(", ")}${r.minHoldingMonths != null ? "\nMin Holding: ${r.minHoldingMonths} mo" : ""}'),
+                          'Maps to: ${r.taxHead.toHumanReadable()}  •  Patterns: ${r.matchDescriptions.join(", ")}${r.minHoldingMonths != null ? "  •  Min Holding: ${r.minHoldingMonths} mo" : ""}'),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
                         onPressed: () {
@@ -697,7 +733,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                         ),
                         Expanded(
                           child: RadioListTile<bool>.adaptive(
-                            title: Text('Cat', style: TextStyle(fontSize: 12)),
+                            title: Text('Category',
+                                style: TextStyle(fontSize: 12)),
                             value: false,
                             contentPadding: EdgeInsets.zero,
                           ),

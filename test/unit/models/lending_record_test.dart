@@ -105,5 +105,81 @@ void main() {
       final record = LendingRecord.fromMap(map);
       expect(record.closedDate, isNull);
     });
+
+    test('LendingRecord calculates totalPaid and remainingAmount correctly',
+        () {
+      final record = LendingRecord.create(
+        personName: 'Frank',
+        amount: 2000.0,
+        reason: 'Loan',
+        date: testDate,
+        type: LendingType.lent,
+      );
+
+      expect(record.totalPaid, 0.0);
+      expect(record.remainingAmount, 2000.0);
+
+      // Add payments
+      final updatedRecord = record.copyWith(
+        payments: [
+          LendingPayment.create(
+              amount: 500,
+              date: DateTime(2024, 1, 5),
+              note: 'First Installment'),
+          LendingPayment.create(amount: 300, date: DateTime(2024, 1, 15)),
+        ],
+      );
+
+      expect(updatedRecord.payments.length, 2);
+      expect(updatedRecord.totalPaid, 800.0);
+      expect(updatedRecord.remainingAmount, 1200.0);
+    });
+
+    test('LendingPayment serialization (toMap / fromMap)', () {
+      final payment = LendingPayment.create(
+        amount: 50.0,
+        date: testDate,
+        note: 'Partial payback',
+      );
+
+      final map = payment.toMap();
+      expect(map['id'], payment.id);
+      expect(map['amount'], 50.0);
+      expect(map['date'], testDate.toIso8601String());
+      expect(map['note'], 'Partial payback');
+
+      final fromMap = LendingPayment.fromMap(map);
+      expect(fromMap.id, payment.id);
+      expect(fromMap.amount, 50.0);
+      expect(fromMap.date, testDate);
+      expect(fromMap.note, 'Partial payback');
+    });
+
+    test('LendingRecord serialization includes payments', () {
+      final record = LendingRecord.create(
+        personName: 'Grace',
+        amount: 800.0,
+        reason: 'Bill split',
+        date: testDate,
+        type: LendingType.borrowed,
+      );
+
+      final updatedRecord = record.copyWith(
+        payments: [
+          LendingPayment.create(amount: 200, date: testDate, note: 'Split 1'),
+        ],
+      );
+
+      final map = updatedRecord.toMap();
+      expect(map['payments'], isNotEmpty);
+      expect(map['payments'][0]['amount'], 200.0);
+
+      final fromMap = LendingRecord.fromMap(map);
+      expect(fromMap.payments.length, 1);
+      expect(fromMap.payments.first.amount, 200.0);
+      expect(fromMap.payments.first.note, 'Split 1');
+      expect(fromMap.totalPaid, 200.0);
+      expect(fromMap.remainingAmount, 600.0);
+    });
   });
 }

@@ -40,6 +40,9 @@ class LendingRecord extends HiveObject {
   @HiveField(8)
   String? profileId;
 
+  @HiveField(9)
+  List<LendingPayment> payments;
+
   LendingRecord({
     required this.id,
     required this.personName,
@@ -50,7 +53,13 @@ class LendingRecord extends HiveObject {
     this.isClosed = false,
     this.closedDate,
     this.profileId,
+    this.payments = const [],
   });
+
+  double get totalPaid =>
+      payments.fold(0.0, (sum, payment) => sum + payment.amount);
+
+  double get remainingAmount => amount - totalPaid;
 
   factory LendingRecord.create({
     required String personName,
@@ -68,6 +77,7 @@ class LendingRecord extends HiveObject {
       date: date,
       type: type,
       profileId: profileId,
+      payments: [],
     );
   }
 
@@ -81,6 +91,7 @@ class LendingRecord extends HiveObject {
     bool? isClosed,
     DateTime? closedDate,
     String? profileId,
+    List<LendingPayment>? payments,
   }) {
     return LendingRecord(
       id: id ?? this.id,
@@ -92,6 +103,7 @@ class LendingRecord extends HiveObject {
       isClosed: isClosed ?? this.isClosed,
       closedDate: closedDate ?? this.closedDate,
       profileId: profileId ?? this.profileId,
+      payments: payments ?? this.payments,
     );
   }
 
@@ -106,6 +118,7 @@ class LendingRecord extends HiveObject {
       'isClosed': isClosed,
       'closedDate': closedDate?.toIso8601String(),
       'profileId': profileId,
+      'payments': payments.map((p) => p.toMap()).toList(),
     };
   }
 
@@ -121,6 +134,63 @@ class LendingRecord extends HiveObject {
       closedDate:
           map['closedDate'] != null ? DateTime.parse(map['closedDate']) : null,
       profileId: map['profileId'],
+      payments: (map['payments'] as List?)
+              ?.map((p) => LendingPayment.fromMap(Map<String, dynamic>.from(p)))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+@HiveType(typeId: 32)
+class LendingPayment extends HiveObject {
+  @HiveField(0)
+  final String id;
+
+  @HiveField(1)
+  final double amount;
+
+  @HiveField(2)
+  final DateTime date;
+
+  @HiveField(3)
+  final String? note;
+
+  LendingPayment({
+    required this.id,
+    required this.amount,
+    required this.date,
+    this.note,
+  });
+
+  factory LendingPayment.create({
+    required double amount,
+    required DateTime date,
+    String? note,
+  }) {
+    return LendingPayment(
+      id: const Uuid().v4(),
+      amount: amount,
+      date: date,
+      note: note,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'note': note,
+    };
+  }
+
+  factory LendingPayment.fromMap(Map<String, dynamic> map) {
+    return LendingPayment(
+      id: map['id'],
+      amount: (map['amount'] as num).toDouble(),
+      date: DateTime.parse(map['date']),
+      note: map['note'],
     );
   }
 }

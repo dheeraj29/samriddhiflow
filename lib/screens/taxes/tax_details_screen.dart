@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 class TaxDetailsScreen extends ConsumerStatefulWidget {
   final TaxYearData data;
   final Function(TaxYearData) onSave;
+  final VoidCallback? onDelete;
   final int? initialTabIndex;
 
   const TaxDetailsScreen({
@@ -21,6 +22,7 @@ class TaxDetailsScreen extends ConsumerStatefulWidget {
     required this.data,
     required this.onSave,
     this.initialTabIndex,
+    this.onDelete,
   });
 
   @override
@@ -45,8 +47,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   List<OtherIncome> _otherIncomes = [];
   List<OtherIncome> _cashGifts = [];
   List<CustomAllowance> _independentAllowances = [];
-  List<CustomDeduction> _independentDeductions = [];
   List<CustomExemption> _independentExemptions = [];
+  List<CustomAllowance> _independentDeductions = [];
 
   // Controllers for Other Income / Agri / Tax
   late TextEditingController _otherIncomeNameCtrl;
@@ -112,10 +114,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     _cashGifts = List.from(_currentData.cashGifts);
     _independentAllowances =
         List.from(_currentData.salary.independentAllowances);
-    _independentDeductions =
-        List.from(_currentData.salary.independentDeductions);
     _independentExemptions =
         List.from(_currentData.salary.independentExemptions);
+    _independentDeductions =
+        List.from(_currentData.salary.independentDeductions);
   }
 
   void _updateSummary() {
@@ -134,8 +136,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         gratuity: double.tryParse(_salaryGratuityCtrl.text) ?? 0,
         giftsFromEmployer: double.tryParse(_salaryEmployerGiftsCtrl.text) ?? 0,
         independentAllowances: _independentAllowances,
-        independentDeductions: _independentDeductions,
         independentExemptions: _independentExemptions,
+        independentDeductions: _independentDeductions,
       );
 
       _currentData = _currentData.copyWith(
@@ -196,19 +198,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     double finalGross = _calculateAnnualGross(_currentData.salary.history);
 
     // Other deductions are typically annual figures
-    final newSalary = SalaryDetails(
+    final newSalary = _currentData.salary.copyWith(
       grossSalary: finalGross,
       npsEmployer: (double.tryParse(_salaryNpsEmployerCtrl.text) ?? 0),
       leaveEncashment: (double.tryParse(_salaryLeaveEncashCtrl.text) ?? 0),
       gratuity: (double.tryParse(_salaryGratuityCtrl.text) ?? 0),
       giftsFromEmployer: (double.tryParse(_salaryEmployerGiftsCtrl.text) ?? 0),
       monthlyGross: const {}, // No longer projecting monthly
-      customExemptions: const {},
-      history: _currentData.salary.history,
-      netSalaryReceived: _currentData.salary.netSalaryReceived,
       independentAllowances: _independentAllowances,
-      independentDeductions: _independentDeductions,
       independentExemptions: _independentExemptions,
+      independentDeductions: _independentDeductions,
     );
 
     final updatedData = _currentData.copyWith(
@@ -235,6 +234,39 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     setState(() {
       _hasUnsavedChanges = false;
     });
+  }
+
+  Future<void> _clearTaxData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Clear FY ${_currentData.year} Data?'),
+        content: const Text(
+            'This will permanently delete all tax details for this financial year.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      if (widget.onDelete != null) {
+        widget.onDelete!();
+      }
+      if (mounted) {
+        setState(() => _hasUnsavedChanges = false);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Tax data cleared.')));
+      }
+    }
   }
 
   int _selectedIndex = 0;
@@ -352,6 +384,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 icon: const Icon(Icons.copy),
                 tooltip: 'Copy Previous Year Data',
                 onPressed: _copyHousePropFromPreviousYear,
+              ),
+
+            if (widget.onDelete != null)
+              IconButton(
+                icon: PureIcons.delete(),
+                tooltip: 'Clear Data for FY',
+                onPressed: _clearTaxData,
               ),
 
             IconButton(
@@ -555,9 +594,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             );
           }),
         const SizedBox(height: 16),
-        _buildSalarySummaryCard(),
-        const SizedBox(height: 16),
-        _buildConsolidatedAdjustments(),
         const Divider(height: 32),
         _buildSectionTitle('Exemptions & Deductions'),
         _buildNumberField('Employer NPS (80CCD(2))', _salaryNpsEmployerCtrl),
@@ -572,14 +608,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         _buildSectionTitle('Independent Allowances'),
         _buildIndependentAllowances(),
         const SizedBox(height: 16),
-        _buildSectionTitle('Independent Deductions'),
-        _buildIndependentDeductions(),
-        const SizedBox(height: 16),
         _buildSectionTitle('Custom Ad-hoc Exemptions'),
         _buildIndependentExemptions(),
         const SizedBox(height: 16),
+        _buildSalarySummaryCard(),
+        const SizedBox(height: 16),
         _buildSectionTitle('TDS / Taxes Already Paid'),
         _buildTdsSummarySection(),
+        const SizedBox(height: 16),
+        _buildSectionTitle('Independent Deductions'),
+        _buildIndependentDeductions(),
         const SizedBox(height: 16),
         _buildTakeHomeBreakdown(),
       ],
@@ -606,6 +644,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     _updateSummary();
                   },
                 ),
+                onTap: () => _addCustomAllowanceDialog(context, (updated) {
+                  setState(() {
+                    int idx = _independentAllowances.indexOf(a);
+                    _independentAllowances[idx] = updated;
+                  });
+                  _updateSummary();
+                }, existing: a),
               )),
         TextButton.icon(
           onPressed: () => _addCustomAllowanceDialog(context, (a) {
@@ -614,39 +659,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           }),
           icon: const Icon(Icons.add),
           label: const Text('Add Independent Allowance'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIndependentDeductions() {
-    return Column(
-      children: [
-        if (_independentDeductions.isEmpty)
-          const Text('No independent deductions',
-              style: TextStyle(color: Colors.grey, fontSize: 12))
-        else
-          ..._independentDeductions.map((d) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(d.name),
-                subtitle: Text(
-                    '₹${d.amount.toStringAsFixed(0)} (${d.frequency.name})'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, size: 20),
-                  onPressed: () {
-                    setState(() => _independentDeductions.remove(d));
-                    _updateSummary();
-                  },
-                ),
-              )),
-        TextButton.icon(
-          onPressed: () => _addCustomDeductionDialog(onAdd: (d) {
-            setState(() => _independentDeductions.add(d));
-            _updateSummary();
-          }),
-          icon: const Icon(Icons.add),
-          label: const Text('Add Independent Deduction'),
         ),
       ],
     );
@@ -663,8 +675,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(e.name),
-                subtitle: Text(
-                    '₹${e.amount.toStringAsFixed(0)} (${e.frequency.name})'),
+                subtitle: Text('₹${e.amount.toStringAsFixed(0)}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -694,8 +705,85 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
+  Widget _buildIndependentDeductions() {
+    return Column(
+      children: [
+        if (_independentDeductions.isEmpty)
+          const Text('No independent deductions',
+              style: TextStyle(color: Colors.grey, fontSize: 12))
+        else
+          ..._independentDeductions.map((a) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(a.name),
+                subtitle: Text(
+                    '₹${a.payoutAmount.toStringAsFixed(0)} (${a.frequency.name})'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, size: 20),
+                  onPressed: () {
+                    setState(() => _independentDeductions.remove(a));
+                    _updateSummary();
+                  },
+                ),
+                onTap: () => _addCustomAllowanceDialog(context, (updated) {
+                  setState(() {
+                    int idx = _independentDeductions.indexOf(a);
+                    _independentDeductions[idx] = updated;
+                  });
+                  _updateSummary();
+                }, existing: a, isDeduction: true),
+              )),
+        TextButton.icon(
+          onPressed: () => _addCustomAllowanceDialog(context, (a) {
+            setState(() => _independentDeductions.add(a));
+            _updateSummary();
+          }, isDeduction: true),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Independent Deduction'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTdsSummarySection() {
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final taxService = ref.read(indianTaxServiceProvider);
+
+    // Create salary data mapping planning scenario:
+    double totalUserPlannedExemptions =
+        _independentExemptions.fold(0.0, (sum, e) => sum + e.amount);
+
+    final salaryOnlyData = _currentData.copyWith(
+      houseProperties: [],
+      businessIncomes: [],
+      capitalGains: [],
+      otherIncomes: [],
+      dividendIncome: const DividendIncome(),
+      cashGifts: [],
+      agricultureIncome: 0,
+    );
+
+    double gross = taxService.calculateSalaryGross(salaryOnlyData, rules);
+    double exemptions =
+        taxService.calculateSalaryExemptions(salaryOnlyData, rules);
+    double baseSalaryIncome = (gross - exemptions).clamp(0.0, double.infinity);
+    double plannedSalaryIncome = (baseSalaryIncome - totalUserPlannedExemptions)
+        .clamp(0.0, double.infinity);
+
+    final resultsWithPlanning = taxService.calculateDetailedLiability(
+        salaryOnlyData, rules,
+        salaryIncomeOverride: plannedSalaryIncome);
+    double newTaxAfterAdhocExemptions = resultsWithPlanning['totalTax'] ?? 0;
+
     final totalTds = _tdsEntries.fold(0.0, (sum, e) => sum + e.amount);
+
+    double refundForecast = 0;
+    if (totalTds > newTaxAfterAdhocExemptions &&
+        _independentExemptions.isNotEmpty) {
+      refundForecast = totalTds - newTaxAfterAdhocExemptions;
+    }
+
     return Column(
       children: [
         ListTile(
@@ -705,6 +793,22 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           trailing: Text('₹${totalTds.toStringAsFixed(0)}',
               style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
+        if (refundForecast > 0)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text('Tax Refund Forecast',
+                style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.green.shade700
+                        : Colors.green.shade400)),
+            trailing: Text('₹${refundForecast.toStringAsFixed(0)}',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.green.shade700
+                        : Colors.green.shade400)),
+          ),
         Row(
           children: [
             Expanded(
@@ -756,19 +860,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   void _addCustomExemptionDialog(
       {CustomExemption? existing, required Function(CustomExemption) onAdd}) {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final amtCtrl = TextEditingController(
-        text: existing == null
-            ? ''
-            : (existing.frequency == PayoutFrequency.monthly
-                ? (existing.amount * 12).toStringAsFixed(0)
-                : existing.amount.toStringAsFixed(0)));
 
-    final freqNotifier = ValueNotifier<PayoutFrequency>(
-        existing?.frequency ?? PayoutFrequency.monthly);
-    final startMonthNotifier = ValueNotifier<int?>(existing?.startMonth);
-    final customMonthsNotifier =
-        ValueNotifier<List<int>>(existing?.customMonths ?? []);
-    final isPartialNotifier = ValueNotifier<bool>(existing?.isPartial ?? false);
+    final amtCtrl = TextEditingController(
+        text: existing != null ? existing.amount.toStringAsFixed(2) : '');
 
     showDialog(
       context: context,
@@ -789,83 +883,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   controller: amtCtrl,
                   decoration: const InputDecoration(
                       labelText: 'Annual Amount',
-                      helperText:
-                          'For monthly, total yearly. For others, payout amt.'),
+                      helperText: 'Total yearly amount.'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(
                         RegExp(r'^\d*\.?\d{0,2}$'))
                   ],
-                ),
-                const SizedBox(height: 12),
-                ValueListenableBuilder<PayoutFrequency>(
-                  valueListenable: freqNotifier,
-                  builder: (context, val, _) => Column(
-                    children: [
-                      DropdownButtonFormField<PayoutFrequency>(
-                        decoration:
-                            const InputDecoration(labelText: 'Frequency'),
-                        initialValue: val,
-                        items: PayoutFrequency.values
-                            .map((f) => DropdownMenuItem(
-                                value: f, child: Text(f.name.toUpperCase())))
-                            .toList(),
-                        onChanged: (v) => freqNotifier.value = v!,
-                      ),
-                      if (val == PayoutFrequency.custom) ...[
-                        const SizedBox(height: 8),
-                        ValueListenableBuilder<List<int>>(
-                          valueListenable: customMonthsNotifier,
-                          builder: (context, list, _) => InkWell(
-                            onTap: () async {
-                              final selected =
-                                  await _showMonthMultiSelect(context, list);
-                              if (selected != null) {
-                                customMonthsNotifier.value = selected;
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                  labelText: 'Select Months'),
-                              child: Text(list.isEmpty
-                                  ? 'None'
-                                  : '${list.length} months'),
-                            ),
-                          ),
-                        ),
-                      ] else if (val != PayoutFrequency.monthly) ...[
-                        const SizedBox(height: 8),
-                        ValueListenableBuilder<int?>(
-                          valueListenable: startMonthNotifier,
-                          builder: (context, smth, _) =>
-                              DropdownButtonFormField<int>(
-                            decoration:
-                                const InputDecoration(labelText: 'Start Month'),
-                            initialValue: smth,
-                            items: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
-                                .map((m) => DropdownMenuItem(
-                                      value: m,
-                                      child: Text(DateFormat('MMM')
-                                          .format(DateTime(2023, m, 1))),
-                                    ))
-                                .toList(),
-                            onChanged: (v) => startMonthNotifier.value = v,
-                          ),
-                        ),
-                      ]
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ValueListenableBuilder<bool>(
-                  valueListenable: isPartialNotifier,
-                  builder: (context, val, _) => CheckboxListTile(
-                    title: const Text('Is Partial / Irregular?'),
-                    value: val,
-                    onChanged: (v) => isPartialNotifier.value = v ?? false,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
                 ),
               ],
             ),
@@ -877,28 +901,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             FilledButton(
               onPressed: () {
                 if (nameCtrl.text.isEmpty) return;
-                final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
-                double payoutAmount = inputAmount;
-                if (freqNotifier.value == PayoutFrequency.monthly) {
-                  payoutAmount = inputAmount / 12;
-                }
+                final amountText = amtCtrl.text.replaceAll(',', '');
+                final amount = double.tryParse(amountText) ?? 0;
 
-                Map<int, double> partialAmounts = {};
-                if (isPartialNotifier.value) {
-                  for (int m = 1; m <= 12; m++) {
-                    partialAmounts[m] = payoutAmount;
-                  }
-                }
-
-                onAdd(CustomExemption(
+                final ex = CustomExemption(
                   name: nameCtrl.text,
-                  amount: payoutAmount,
-                  frequency: freqNotifier.value,
-                  startMonth: startMonthNotifier.value,
-                  customMonths: customMonthsNotifier.value,
-                  isPartial: isPartialNotifier.value,
-                  partialAmounts: partialAmounts,
-                ));
+                  amount: amount,
+                );
+                onAdd(ex);
                 Navigator.pop(ctx);
               },
               child: const Text('Save'),
@@ -926,6 +936,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const Text(
           'Tax for bonuses/extras is applied in the month received.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        TextButton.icon(
+          onPressed: () {
+            setState(() {});
+          },
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('Refresh Breakdown'),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
@@ -1008,243 +1025,43 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
-  // FIXED DIALOG: Using StateSetter correctly
-  Widget _buildConsolidatedAdjustments() {
-    final history = _currentData.salary.history;
-    if (history.isEmpty) return const SizedBox.shrink();
-
-    bool hasPerformance = history.any((s) => s.isPerformancePayPartial);
-    bool hasVariable = history.any((s) => s.isVariablePayPartial);
-    List<String> customNames = history
-        .expand((s) => s.customAllowances)
-        .where((c) => c.isPartial)
-        .map((c) => c.name)
-        .toSet()
-        .toList();
-
-    if (!hasPerformance && !hasVariable && customNames.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Monthly Adjustments (Partial Payouts)'),
-        const Text(
-          'Actual amounts received for items marked as "Partial"',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        if (hasPerformance)
-          _buildAdjustmentTile('Performance Pay', (month) {
-            final s = _getStructureForMonth(month);
-            return (s?.isPerformancePayPartial ?? false)
-                ? s?.performancePayAmounts[month] ?? 0.0
-                : null;
-          }, (month, val) {
-            _updatePartialAmount(month, 'perf', val);
-          }, (month) {
-            // Check if this month is a payout month for the active structure
-            final s = _getStructureForMonth(month);
-            if (s == null) return false;
-            return _isPayoutMonth(month, s.performancePayFrequency,
-                s.performancePayStartMonth, s.performancePayCustomMonths);
-          }, getReferenceAmount: (month) {
-            return _getStructureForMonth(month)?.monthlyPerformancePay;
-          }),
-        if (hasVariable)
-          _buildAdjustmentTile('Variable Pay', (month) {
-            final s = _getStructureForMonth(month);
-            return (s?.isVariablePayPartial ?? false)
-                ? s?.variablePayAmounts[month] ?? 0.0
-                : null;
-          }, (month, val) {
-            _updatePartialAmount(month, 'var', val);
-          }, (month) {
-            final s = _getStructureForMonth(month);
-            if (s == null) return false;
-            return _isPayoutMonth(month, s.variablePayFrequency,
-                s.variablePayStartMonth, s.variablePayCustomMonths);
-          }, getReferenceAmount: (month) {
-            // Variable pay base is Annual/12 usually for monthly comparison?
-            // Or full amount if Annual?
-            // "Employer Cut" implies difference from expected.
-            // Let's use (Annual / 12) if monthly, or Annual otherwise.
-            final s = _getStructureForMonth(month);
-            if (s == null) return 0;
-            if (s.variablePayFrequency == PayoutFrequency.monthly) {
-              return s.annualVariablePay / 12;
-            } else {
-              return s.annualVariablePay;
-            }
-          }),
-        ...customNames
-            .map((name) => _buildAdjustmentTile('Custom: $name', (month) {
-                  final s = _getStructureForMonth(month);
-                  final allowance = s?.customAllowances
-                      .where((c) => c.name == name && c.isPartial)
-                      .firstOrNull;
-                  return allowance?.partialAmounts[month];
-                }, (month, val) {
-                  _updatePartialAmount(month, 'custom:$name', val);
-                }, (month) {
-                  final s = _getStructureForMonth(month);
-                  if (s == null) return false;
-                  final allowance = s.customAllowances
-                      .where((c) => c.name == name && c.isPartial)
-                      .firstOrNull;
-                  if (allowance == null) return false;
-                  return _isPayoutMonth(month, allowance.frequency,
-                      allowance.startMonth, allowance.customMonths);
-                }, getReferenceAmount: (month) {
-                  final s = _getStructureForMonth(month);
-                  final allowance = s?.customAllowances
-                      .where((c) => c.name == name && c.isPartial)
-                      .firstOrNull;
-                  return allowance?.payoutAmount;
-                })),
-      ],
-    );
-  }
-
-  bool _isPayoutMonth(int month, PayoutFrequency freq, int? startMonth,
-      List<int>? customMonths) {
-    if (freq == PayoutFrequency.monthly) return true;
-    if (freq == PayoutFrequency.custom) {
-      return customMonths?.contains(month) ?? false;
-    }
-
-    if (startMonth == null) return false;
-
-    // Calculate sequence
-    // Apr=4.
-    // Quarterly: 4, 7, 10, 1 (13->1)
-    List<int> months = [];
-    int current = startMonth;
-    int step = 1;
-    if (freq == PayoutFrequency.quarterly) step = 3;
-    if (freq == PayoutFrequency.trimester) step = 4;
-    if (freq == PayoutFrequency.halfYearly) step = 6;
-    if (freq == PayoutFrequency.annually) step = 12;
-
-    while (months.length < (12 / step).ceil()) {
-      int m = current > 12 ? current - 12 : current;
-      months.add(m);
-      current += step;
-    }
-
-    return months.contains(month);
-  }
-
-  Widget _buildAdjustmentTile(String title, double? Function(int) getVal,
-      Function(int, double) setVal, bool Function(int) isAllowedMonth,
-      {double? Function(int)? getReferenceAmount}) {
-    int count = 0;
-    // Count ONLY configured months that are allowed
-    for (int m = 1; m <= 12; m++) {
-      if (isAllowedMonth(m) && (getVal(m) ?? 0) > 0) {
-        count++;
-      }
-    }
-
-    return Card(
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(count == 0 ? 'Not set' : '$count months configured'),
-        trailing: const Icon(Icons.edit_note),
-        onTap: () async {
-          // List ordered by Financial Year logic if possible, or just 1-12
-          // Let's use standard FY order: Apr -> Mar
-          final months = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
-          Map<int, double> currentMap = {};
-
-          for (final m in months) {
-            if (isAllowedMonth(m)) {
-              currentMap[m] = getVal(m) ?? 0;
-            }
-          }
-
-          await showDialog(
-            context: context,
-            builder: (ctx) => StatefulBuilder(
-              builder: (context, setStateBuilder) => AlertDialog(
-                title: Text('Edit Monthly Amounts: $title'),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: months.length,
-                    itemBuilder: (context, index) {
-                      final m = months[index];
-                      // If not allowed, show disabled or just date
-                      if (!isAllowedMonth(m)) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 16),
-                          child: Text(
-                              DateFormat('MMMM').format(DateTime(2023, m, 1)),
-                              style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontStyle: FontStyle.italic)),
-                        );
-                      }
-
-                      double currentVal = currentMap[m] ?? 0;
-                      double? ref = getReferenceAmount?.call(m);
-                      double cut = (ref != null && ref > currentVal)
-                          ? ref - currentVal
-                          : 0;
-
-                      // Allowed month - show input
-                      return ListTile(
-                        title: Text(
-                            DateFormat('MMMM').format(DateTime(2023, m, 1))),
-                        subtitle: cut > 0
-                            ? Text('Employer Cut: ₹${cut.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                    color: Colors.red, fontSize: 12))
-                            : null,
-                        trailing: SizedBox(
-                          width: 120,
-                          child: TextFormField(
-                            initialValue: currentVal.toStringAsFixed(0),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              prefixText: '₹',
-                              isDense: true,
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (v) {
-                              final val = double.tryParse(v) ?? 0;
-                              currentMap[m] = val;
-                              setVal(m, val);
-                              setStateBuilder(
-                                  () {}); // Rebuild to show updated cut
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Done')),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  // Removed _buildConsolidatedAdjustments, _isPayoutMonth, _buildAdjustmentTile, _updatePartialAmount
 
   Widget _buildSalarySummaryCard() {
-    double historyGross = _calculateAnnualGross(_currentData.salary.history);
-    double independentAllowances =
-        _independentAllowances.fold(0.0, (sum, a) => sum + a.payoutAmount);
-    double totalAnnualGross = historyGross + independentAllowances;
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final taxService = ref.read(indianTaxServiceProvider);
+
+    // Create a salary-only data object to avoid blending business/HP incomes
+    final salaryOnlyData = _currentData.copyWith(
+      houseProperties: [],
+      businessIncomes: [],
+      capitalGains: [],
+      otherIncomes: [],
+      dividendIncome: const DividendIncome(),
+      cashGifts: [],
+      agricultureIncome: 0,
+    );
+
+    double gross = taxService.calculateSalaryGross(salaryOnlyData, rules);
+    double statutoryExemptions =
+        taxService.calculateSalaryExemptions(salaryOnlyData, rules);
+
+    double standardDeduction =
+        rules.isStdDeductionSalaryEnabled ? rules.stdDeductionSalary : 0;
+    double nps = salaryOnlyData.salary.npsEmployer;
+    double customExemptions =
+        _independentExemptions.fold(0.0, (sum, e) => sum + e.amount);
+
+    double baseTaxableIncome =
+        (gross - statutoryExemptions - standardDeduction - nps)
+            .clamp(0.0, double.infinity);
+    double totalTaxableIncome =
+        (baseTaxableIncome - customExemptions).clamp(0.0, double.infinity);
+
+    final bool isLight = Theme.of(context).brightness == Brightness.light;
+    final Color deductColor =
+        isLight ? Colors.orange.shade800 : Colors.orange.shade300;
 
     return Card(
       color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
@@ -1264,30 +1081,87 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('From History / Structures:'),
-                Text('₹${historyGross.toStringAsFixed(0)}',
+                const Text('Total Gross Salary:'),
+                Text('₹${gross.toStringAsFixed(0)}',
                     style: const TextStyle(fontWeight: FontWeight.w500)),
               ],
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Independent Allowances:'),
-                Text('₹${independentAllowances.toStringAsFixed(0)}',
-                    style: const TextStyle(fontWeight: FontWeight.w500)),
-              ],
-            ),
+            if (standardDeduction > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Less: Standard Deduction:',
+                        style: TextStyle(fontSize: 12)),
+                    Text('- ₹${standardDeduction.toStringAsFixed(0)}',
+                        style: TextStyle(color: deductColor, fontSize: 12)),
+                  ],
+                ),
+              ),
+            if (statutoryExemptions > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Less: Statutory Exemptions:',
+                        style: TextStyle(fontSize: 12)),
+                    Text('- ₹${statutoryExemptions.toStringAsFixed(0)}',
+                        style: TextStyle(color: deductColor, fontSize: 12)),
+                  ],
+                ),
+              ),
+            if (nps > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Less: Employer NPS (80CCD(2)):',
+                        style: TextStyle(fontSize: 12)),
+                    Text('- ₹${nps.toStringAsFixed(0)}',
+                        style: TextStyle(color: deductColor, fontSize: 12)),
+                  ],
+                ),
+              ),
+            if (customExemptions > 0) ...[
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Taxable Before Ad-hoc Exemptions:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                  Text('₹${baseTaxableIncome.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 13)),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Less: Custom Ad-hoc Exemptions:',
+                        style: TextStyle(fontSize: 12)),
+                    Text('- ₹${customExemptions.toStringAsFixed(0)}',
+                        style: TextStyle(color: deductColor, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
             const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total Annual Gross:',
+                const Text('Total Taxable Salary Income:',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('₹${totalAnnualGross.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                Text('₹${totalTaxableIncome.toStringAsFixed(0)}',
+                    style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        color: Colors.blue)),
+                        color: Theme.of(context).colorScheme.primary)),
               ],
             ),
           ],
@@ -1310,46 +1184,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       }
     }
     return _currentData.salary.history.lastOrNull;
-  }
-
-  void _updatePartialAmount(int month, String key, double value) {
-    final s = _getStructureForMonth(month);
-    if (s == null) return;
-
-    SalaryStructure updated;
-    if (key == 'perf') {
-      final newMap = Map<int, double>.from(s.performancePayAmounts);
-      newMap[month] = value;
-      updated = s.copyWith(performancePayAmounts: newMap);
-    } else if (key == 'var') {
-      final newMap = Map<int, double>.from(s.variablePayAmounts);
-      newMap[month] = value;
-      updated = s.copyWith(variablePayAmounts: newMap);
-    } else if (key.startsWith('custom:')) {
-      final name = key.substring(7);
-      final newAllowances = s.customAllowances.map((c) {
-        if (c.name == name) {
-          final newMap = Map<int, double>.from(c.partialAmounts);
-          newMap[month] = value;
-          return c.copyWith(partialAmounts: newMap);
-        }
-        return c;
-      }).toList();
-      updated = s.copyWith(customAllowances: newAllowances);
-    } else {
-      return;
-    }
-
-    final newHistory = _currentData.salary.history.map((item) {
-      if (item.id == s.id) return updated;
-      return item;
-    }).toList();
-
-    _currentData = _currentData.copyWith(
-      salary: _currentData.salary.copyWith(history: newHistory),
-    );
-    _hasUnsavedChanges = true;
-    _updateSummary();
   }
 
   void _addHousePropertyDialog({HouseProperty? existing, int? index}) {
@@ -1593,7 +1427,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       padding: EdgeInsets.all(12),
                       margin: EdgeInsets.symmetric(horizontal: 20),
                       message:
-                          '• Section 44AD: For Business (6% of Turnover).\n• Section 44ADA: For Professionals (50% of Receipts).\n• Regular: Actual Profit (Audit required if < limit).',
+                          '• Section 44AD: For Business (6% of Turnover).  • Section 44ADA: For Professionals (50% of Receipts).  • Regular: Actual Profit (Audit required if < limit).',
                       child: Icon(Icons.info_outline, color: Colors.blue),
                     ),
                   ),
@@ -1783,7 +1617,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                                     existing: entry, index: i),
                               ),
                             Text(
-                                'Gain\n₹${entry.capitalGainAmount.toStringAsFixed(0)}',
+                                'Gain: ₹${entry.capitalGainAmount.toStringAsFixed(0)}',
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
@@ -2589,8 +2423,93 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         text: existing != null
             ? (existing.monthlyGratuity * 12).toStringAsFixed(0)
             : '');
-    final customDeductionsNotifier = ValueNotifier<List<CustomDeduction>>(
-        List.from(existing?.customDeductions ?? []));
+
+    // Define helper first
+    Widget buildPartialAmountsGrid(
+        ValueNotifier<Map<int, double>> amountsNotifier,
+        ValueNotifier<PayoutFrequency> freqNotifier,
+        ValueNotifier<int?> startMonthNotifier,
+        ValueNotifier<List<int>> customMonthsNotifier,
+        double defaultAmount) {
+      return ValueListenableBuilder<PayoutFrequency>(
+        valueListenable: freqNotifier,
+        builder: (context, freq, _) {
+          return ValueListenableBuilder<int?>(
+            valueListenable: startMonthNotifier,
+            builder: (context, startMonth, _) {
+              return ValueListenableBuilder<List<int>>(
+                valueListenable: customMonthsNotifier,
+                builder: (context, customMonths, _) {
+                  // Determine applicable months
+                  List<int> applicableMonths = [];
+                  for (int m = 1; m <= 12; m++) {
+                    if (SalaryStructure.isPayoutMonth(
+                        m, freq, startMonth, customMonths)) {
+                      applicableMonths.add(m);
+                    }
+                  }
+
+                  if (applicableMonths.isEmpty) {
+                    return const Text(
+                        'No payout months selected based on frequency.');
+                  }
+
+                  return Column(
+                    children: [
+                      const Text(
+                          'Enter amounts for each payout month (overrides default):',
+                          style: TextStyle(
+                              fontSize: 12, fontStyle: FontStyle.italic)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: applicableMonths.map((m) {
+                          // Get existing value or default
+                          final currentVal =
+                              amountsNotifier.value[m] ?? defaultAmount;
+                          return SizedBox(
+                            width: 100,
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: DateFormat('MMM')
+                                    .format(DateTime(2023, m, 1)),
+                                isDense: true,
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.all(8),
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d*\.?\d{0,2}$')),
+                              ],
+                              controller: TextEditingController(
+                                  text: currentVal.toStringAsFixed(0))
+                                ..selection = TextSelection.collapsed(
+                                    offset:
+                                        currentVal.toStringAsFixed(0).length),
+                              onChanged: (val) {
+                                final d = double.tryParse(val) ?? 0;
+                                final newMap = Map<int, double>.from(
+                                    amountsNotifier.value);
+                                newMap[m] = d;
+                                amountsNotifier.value = newMap;
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+    }
 
     // Helper to build Frequency Row
     Widget buildFrequencyRow(
@@ -2785,15 +2704,23 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       CheckboxListTile(
                         title: const Text('Partial Payout / Taxable Factor?'),
                         subtitle: isPartial
-                            ? const Text(
-                                'Currently using default distribution (Annual/12). Edit in Adjustments.')
-                            : null,
+                            ? null
+                            : const Text('Default: Equal distribution'),
                         value: isPartial,
                         onChanged: (v) =>
                             perfPartialNotifier.value = v ?? false,
                         controlAffinity: ListTileControlAffinity.leading,
                         dense: true,
                       ),
+                      if (isPartial)
+                        buildPartialAmountsGrid(
+                            perfAmountsNotifier,
+                            perfFreqNotifier,
+                            perfStartMonthNotifier,
+                            perfCustomMonthsNotifier,
+                            (double.tryParse(perfCtrl.text) ?? 0) /
+                                12 // Default assumption might be wrong, but serves as baseline
+                            ),
                     ],
                   );
                 },
@@ -2812,14 +2739,22 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       CheckboxListTile(
                         title: const Text('Partial Payout / Taxable Factor?'),
                         subtitle: isPartial
-                            ? const Text(
-                                'Currently using default distribution (Annual/12). Edit in Adjustments.')
-                            : null,
+                            ? null
+                            : const Text('Default: Equal distribution'),
                         value: isPartial,
                         onChanged: (v) => varPartialNotifier.value = v ?? false,
                         controlAffinity: ListTileControlAffinity.leading,
                         dense: true,
                       ),
+                      if (isPartial)
+                        buildPartialAmountsGrid(
+                            varAmountsNotifier,
+                            varFreqNotifier,
+                            varStartMonthNotifier,
+                            varCustomMonthsNotifier,
+                            (double.tryParse(variableCtrl.text) ??
+                                0) // Variable pay is usually annual 1-shot
+                            ),
                     ],
                   );
                 },
@@ -2866,6 +2801,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                                 list.where((x) => x != a).toList();
                           },
                         ),
+                        onTap: () {
+                          _addCustomAllowanceDialog(ctx, (updated) {
+                            final idx = list.indexOf(a);
+                            final newList = List<CustomAllowance>.from(list);
+                            newList[idx] = updated;
+                            customAllowancesNotifier.value = newList;
+                          }, existing: a);
+                        },
                       );
                     }).toList(),
                   );
@@ -2880,53 +2823,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               const SizedBox(height: 12),
               _buildNumberField('Gratuity Accrual', gratuityCtrl),
               const SizedBox(height: 24),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Custom Deductions',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      _addCustomDeductionDialog(onAdd: (newDeduction) {
-                        customDeductionsNotifier.value = [
-                          ...customDeductionsNotifier.value,
-                          newDeduction
-                        ];
-                      });
-                    },
-                  ),
-                ],
-              ),
-              ValueListenableBuilder<List<CustomDeduction>>(
-                valueListenable: customDeductionsNotifier,
-                builder: (context, list, _) {
-                  if (list.isEmpty) {
-                    return const Text('No custom deductions',
-                        style: TextStyle(color: Colors.grey, fontSize: 12));
-                  }
-                  return Column(
-                    children: list.map((d) {
-                      return ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(d.name),
-                        subtitle: Text(
-                            '₹${(d.amount * (d.frequency == PayoutFrequency.monthly ? 12 : 1)).toStringAsFixed(0)}/yr ${d.isTaxable ? "(Taxable)" : "(Post-Tax)"}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, size: 20),
-                          onPressed: () {
-                            customDeductionsNotifier.value =
-                                list.where((x) => x != d).toList();
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
               const Divider(),
               const Text('Unemployment / No Salary',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -3065,7 +2961,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 stoppedMonths: stoppedMonthsNotifier.value,
                 monthlyEmployeePF: (double.tryParse(pfCtrl.text) ?? 0) / 12,
                 monthlyGratuity: (double.tryParse(gratuityCtrl.text) ?? 0) / 12,
-                customDeductions: customDeductionsNotifier.value,
               );
 
               setState(() {
@@ -3203,34 +3098,149 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   void _addCustomAllowanceDialog(
-      BuildContext parentCtx, Function(CustomAllowance) onAdd) {
-    final nameCtrl = TextEditingController();
-    final amtCtrl = TextEditingController();
-    final isPartialNotifier = ValueNotifier<bool>(false);
+      BuildContext parentCtx, Function(CustomAllowance) onAdd,
+      {CustomAllowance? existing, bool isDeduction = false}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
 
-    // Frequency state
-    final freqNotifier =
-        ValueNotifier<PayoutFrequency>(PayoutFrequency.monthly);
-    final startMonthNotifier = ValueNotifier<int?>(null);
-    final customMonthsNotifier = ValueNotifier<List<int>>([]);
+    // Fix: Show ANNUAL amount if existing
+    double initialAmount = existing?.payoutAmount ?? 0;
+    if (existing != null) {
+      if (existing.frequency == PayoutFrequency.monthly) {
+        initialAmount *= 12;
+      } else if (existing.frequency == PayoutFrequency.quarterly) {
+        initialAmount *= 4;
+      } else if (existing.frequency == PayoutFrequency.halfYearly) {
+        initialAmount *= 2;
+      } else if (existing.frequency == PayoutFrequency.trimester) {
+        initialAmount *= 3;
+      } else if (existing.frequency == PayoutFrequency.custom) {
+        initialAmount *= (existing.customMonths?.length ?? 1);
+      }
+    }
+
+    final amtCtrl = TextEditingController(
+        text: existing != null ? initialAmount.toStringAsFixed(2) : '');
+    // Note: Input field says "Annual Payout Amount".
+    // If Monthly, logic divides by 12.
+    // If existing, we should probably reverse logic or just show existing amount?
+    // Let's assume stored amount is what we show.
+    final isPartialNotifier = ValueNotifier<bool>(existing?.isPartial ?? false);
+    final freqNotifier = ValueNotifier<PayoutFrequency>(
+        existing?.frequency ?? PayoutFrequency.monthly);
+    final startMonthNotifier = ValueNotifier<int?>(existing?.startMonth ?? 4);
+    final customMonthsNotifier =
+        ValueNotifier<List<int>>(existing?.customMonths ?? []);
+
+    // PARTIAL PAY Helpers
+    final partialAmountsNotifier = ValueNotifier<Map<int, double>>(
+        Map.from(existing?.partialAmounts ?? {}));
+
+    Widget buildPartialGrid() {
+      return ValueListenableBuilder<PayoutFrequency>(
+          valueListenable: freqNotifier,
+          builder: (context, freq, _) {
+            return ValueListenableBuilder<int?>(
+                valueListenable: startMonthNotifier,
+                builder: (ctx, startMonth, _) {
+                  return ValueListenableBuilder<List<int>>(
+                      valueListenable: customMonthsNotifier,
+                      builder: (ctx, customMonths, _) {
+                        List<int> applicable = [];
+                        for (int m = 1; m <= 12; m++) {
+                          if (SalaryStructure.isPayoutMonth(
+                              m, freq, startMonth, customMonths)) {
+                            applicable.add(m);
+                          }
+                        }
+                        if (applicable.isEmpty) return const SizedBox.shrink();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text('Monthly Amounts (₹):',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: applicable.map((m) {
+                                // Default payout
+                                double inputAmt =
+                                    double.tryParse(amtCtrl.text) ?? 0;
+                                double defaultPayout = inputAmt;
+                                if (freq == PayoutFrequency.monthly) {
+                                  defaultPayout = inputAmt / 12;
+                                } else if (freq == PayoutFrequency.quarterly) {
+                                  defaultPayout = inputAmt / 4;
+                                } else if (freq == PayoutFrequency.halfYearly) {
+                                  defaultPayout = inputAmt / 2;
+                                } else if (freq == PayoutFrequency.trimester) {
+                                  defaultPayout = inputAmt / 3;
+                                } else if (freq == PayoutFrequency.custom) {
+                                  defaultPayout = inputAmt /
+                                      (customMonths.isEmpty
+                                          ? 1
+                                          : customMonths.length);
+                                }
+
+                                final val = partialAmountsNotifier.value[m] ??
+                                    defaultPayout;
+                                return SizedBox(
+                                  width: 80,
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                        labelText: DateFormat('MMM')
+                                            .format(DateTime(2023, m, 1)),
+                                        isDense: true,
+                                        border: const OutlineInputBorder()),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    controller: TextEditingController(
+                                        text: val.toStringAsFixed(0)),
+                                    onChanged: (v) {
+                                      final d = double.tryParse(v) ?? 0;
+                                      partialAmountsNotifier.value[m] = d;
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            )
+                          ],
+                        );
+                      });
+                });
+          });
+    }
 
     showDialog(
       context: parentCtx,
       builder: (ctx) => StatefulBuilder(builder: (context, setStateSB) {
         return AlertDialog(
-          title: const Text('Add Custom Allowance'),
+          title: Text(existing == null
+              ? (isDeduction
+                  ? 'Add Independent Deduction'
+                  : 'Add Independent Allowance')
+              : (isDeduction
+                  ? 'Edit Independent Deduction'
+                  : 'Edit Independent Allowance')),
           content: SingleChildScrollView(
               child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Allowance Name'),
+                decoration: InputDecoration(
+                    labelText:
+                        isDeduction ? 'Deduction Name' : 'Allowance Name'),
               ),
               TextField(
                 controller: amtCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Annual Payout Amount'),
+                decoration: InputDecoration(
+                    labelText: isDeduction
+                        ? 'Annual Deduction Amount'
+                        : 'Annual Payout Amount'),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
@@ -3322,12 +3332,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               const SizedBox(height: 12),
               ValueListenableBuilder<bool>(
                 valueListenable: isPartialNotifier,
-                builder: (context, val, _) => CheckboxListTile(
-                  title: const Text('Is Partial / Irregular?'),
-                  subtitle: const Text('Requires monthly input on main screen'),
-                  value: val,
-                  onChanged: (v) => isPartialNotifier.value = v ?? false,
-                  controlAffinity: ListTileControlAffinity.leading,
+                builder: (context, val, _) => Column(
+                  children: [
+                    CheckboxListTile(
+                      title: const Text('Is Partial / Irregular?'),
+                      subtitle:
+                          const Text('View/Edit specific monthly amounts'),
+                      value: val,
+                      onChanged: (v) => isPartialNotifier.value = v ?? false,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    if (val) buildPartialGrid(),
+                  ],
                 ),
               ),
             ],
@@ -3341,22 +3357,21 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   if (nameCtrl.text.isEmpty) return;
                   final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
 
-                  // Calculate payout amount based on frequency
+                  // FIXED LOGIC: Divide Annual Amount by Frequency Count
                   double payoutAmount = inputAmount;
-                  if (freqNotifier.value == PayoutFrequency.monthly) {
+                  final freq = freqNotifier.value;
+                  if (freq == PayoutFrequency.monthly) {
                     payoutAmount = inputAmount / 12;
-                  }
-                  // For other frequencies, the "Annual Amount" entered might be the payout amount?
-                  // User said "accept annual payouts". Usually means "I will get X per year".
-                  // If it's a bonus, Annual Amount = Payout Amount.
-                  // If it's a monthly allowance, Annual Amount / 12 = Payout Amount.
-
-                  // Auto-fill partial amounts if partial is selected
-                  Map<int, double> partialAmounts = {};
-                  if (isPartialNotifier.value) {
-                    for (int m = 1; m <= 12; m++) {
-                      partialAmounts[m] = payoutAmount;
-                    }
+                  } else if (freq == PayoutFrequency.quarterly) {
+                    payoutAmount = inputAmount / 4;
+                  } else if (freq == PayoutFrequency.halfYearly) {
+                    payoutAmount = inputAmount / 2;
+                  } else if (freq == PayoutFrequency.trimester) {
+                    payoutAmount = inputAmount / 3;
+                  } else if (freq == PayoutFrequency.custom) {
+                    int count = customMonthsNotifier.value.length;
+                    if (count == 0) count = 1;
+                    payoutAmount = inputAmount / count;
                   }
 
                   onAdd(CustomAllowance(
@@ -3366,165 +3381,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     frequency: freqNotifier.value,
                     startMonth: startMonthNotifier.value,
                     customMonths: customMonthsNotifier.value,
-                    partialAmounts: partialAmounts,
-                  ));
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Add')),
-          ],
-        );
-      }),
-    );
-  }
-
-  void _addCustomDeductionDialog(
-      {CustomDeduction? existing, required Function(CustomDeduction) onAdd}) {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final amtCtrl = TextEditingController(
-        text: existing != null ? existing.amount.toString() : '');
-    final isTaxableNotifier = ValueNotifier<bool>(existing?.isTaxable ?? false);
-    final freqNotifier = ValueNotifier<PayoutFrequency>(
-        existing?.frequency ?? PayoutFrequency.monthly);
-    final startMonthNotifier = ValueNotifier<int?>(existing?.startMonth ?? 4);
-    final customMonthsNotifier =
-        ValueNotifier<List<int>>(existing?.customMonths ?? []);
-    final isPartialNotifier = ValueNotifier<bool>(existing?.isPartial ?? false);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
-        return AlertDialog(
-          title: Text(existing == null ? 'Add Deduction' : 'Edit Deduction'),
-          content: SingleChildScrollView(
-              child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                  controller: nameCtrl,
-                  decoration:
-                      const InputDecoration(labelText: 'Deduction Name')),
-              TextField(
-                controller: amtCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Annual Amount',
-                    helperText:
-                        'For monthly, total yearly. For others, payout amt.'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ValueListenableBuilder<bool>(
-                valueListenable: isTaxableNotifier,
-                builder: (context, val, _) => SwitchListTile(
-                  title: const Text('Taxable?'),
-                  subtitle: const Text(
-                      'Reduces taxable gross before tax calculation'),
-                  value: val,
-                  onChanged: (v) => isTaxableNotifier.value = v,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ValueListenableBuilder<PayoutFrequency>(
-                valueListenable: freqNotifier,
-                builder: (context, val, _) => Column(
-                  children: [
-                    DropdownButtonFormField<PayoutFrequency>(
-                      decoration: const InputDecoration(labelText: 'Frequency'),
-                      initialValue: val,
-                      items: PayoutFrequency.values
-                          .map((f) => DropdownMenuItem(
-                              value: f, child: Text(f.name.toUpperCase())))
-                          .toList(),
-                      onChanged: (v) => freqNotifier.value = v!,
-                    ),
-                    if (val == PayoutFrequency.custom) ...[
-                      const SizedBox(height: 8),
-                      ValueListenableBuilder<List<int>>(
-                        valueListenable: customMonthsNotifier,
-                        builder: (context, list, _) => InkWell(
-                          onTap: () async {
-                            final selected =
-                                await _showMonthMultiSelect(context, list);
-                            if (selected != null) {
-                              customMonthsNotifier.value = selected;
-                            }
-                          },
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                                labelText: 'Select Months'),
-                            child: Text(list.isEmpty
-                                ? 'None'
-                                : '${list.length} months'),
-                          ),
-                        ),
-                      ),
-                    ] else if (val != PayoutFrequency.monthly) ...[
-                      const SizedBox(height: 8),
-                      ValueListenableBuilder<int?>(
-                        valueListenable: startMonthNotifier,
-                        builder: (context, smth, _) =>
-                            DropdownButtonFormField<int>(
-                          decoration:
-                              const InputDecoration(labelText: 'Start Month'),
-                          initialValue: smth,
-                          items: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
-                              .map((m) => DropdownMenuItem(
-                                    value: m,
-                                    child: Text(DateFormat('MMM')
-                                        .format(DateTime(2023, m, 1))),
-                                  ))
-                              .toList(),
-                          onChanged: (v) => startMonthNotifier.value = v,
-                        ),
-                      ),
-                    ]
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              ValueListenableBuilder<bool>(
-                valueListenable: isPartialNotifier,
-                builder: (context, val, _) => CheckboxListTile(
-                  title: const Text('Is Partial / Irregular?'),
-                  value: val,
-                  onChanged: (v) => isPartialNotifier.value = v ?? false,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              ),
-            ],
-          )),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () {
-                  if (nameCtrl.text.isEmpty) return;
-                  final inputAmount = double.tryParse(amtCtrl.text) ?? 0;
-                  double payoutAmount = inputAmount;
-                  if (freqNotifier.value == PayoutFrequency.monthly) {
-                    payoutAmount = inputAmount / 12;
-                  }
-
-                  Map<int, double> partialAmounts = {};
-                  if (isPartialNotifier.value) {
-                    for (int m = 1; m <= 12; m++) {
-                      partialAmounts[m] = payoutAmount;
-                    }
-                  }
-
-                  onAdd(CustomDeduction(
-                    name: nameCtrl.text,
-                    amount: payoutAmount,
-                    isTaxable: isTaxableNotifier.value,
-                    frequency: freqNotifier.value,
-                    startMonth: startMonthNotifier.value,
-                    customMonths: customMonthsNotifier.value,
-                    isPartial: isPartialNotifier.value,
-                    partialAmounts: partialAmounts,
+                    partialAmounts: partialAmountsNotifier.value,
                   ));
                   Navigator.pop(ctx);
                 },

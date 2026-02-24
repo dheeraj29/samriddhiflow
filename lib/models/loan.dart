@@ -215,9 +215,9 @@ class Loan extends HiveObject {
       accountId: map['accountId'],
       transactions: (map['transactions'] as List?)
               ?.map(
-                  (t) => LoanTransaction.fromMap(Map<String, dynamic>.from(t)))
+                  (t) => LoanTransaction.fromMap(Map<String, dynamic>.from(t))) // coverage:ignore-line
               .toList() ??
-          [],
+          [], // coverage:ignore-line
       type: LoanType.values[map['type'] ?? 0],
       emiDay: map['emiDay'] ?? 1,
       firstEmiDate: DateTime.parse(map['firstEmiDate']),

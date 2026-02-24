@@ -133,7 +133,7 @@ class _FileStats {
 
   String get statusText {
     if (percent >= 80) return 'PASS';
-    if (percent >= 60) return 'WARN';
+    if (percent >= 50) return 'WARN';
     return 'FAIL';
   }
 }

@@ -42,12 +42,12 @@ final totalLentProvider = Provider<double>((ref) {
   final records = ref.watch(lendingProvider);
   return records
       .where((r) => r.type == LendingType.lent && !r.isClosed)
-      .fold(0.0, (sum, r) => sum + r.amount);
+      .fold(0.0, (sum, r) => sum + r.remainingAmount);
 });
 
 final totalBorrowedProvider = Provider<double>((ref) {
   final records = ref.watch(lendingProvider);
   return records
       .where((r) => r.type == LendingType.borrowed && !r.isClosed)
-      .fold(0.0, (sum, r) => sum + r.amount);
+      .fold(0.0, (sum, r) => sum + r.remainingAmount);
 });

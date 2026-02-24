@@ -303,7 +303,7 @@ void main() {
     });
 
     test('TaxData store/retrieve', () async {
-      final tax = TaxYearData(year: 2024);
+      const tax = TaxYearData(year: 2024);
       when(() => mockTaxBox.get(2024)).thenReturn(tax);
       expect(storageService.getTaxYearData(2024), tax);
 

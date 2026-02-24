@@ -222,6 +222,7 @@ void main() {
       when(() => mockLoanBox.toMap()).thenReturn({});
       when(() => mockRecurringBox.toMap()).thenReturn({});
       when(() => mockCategoryBox.toMap()).thenReturn({});
+      when(() => mockLendingBox.toMap()).thenReturn({});
 
       when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
       when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});

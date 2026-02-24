@@ -105,6 +105,8 @@ void main() {
 
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
       when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
       when(() => mockStorageService.saveProfile(any()))
           .thenAnswer((_) async {});
@@ -136,6 +138,8 @@ void main() {
 
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudDataWithTimestamp);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
       when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
       when(() => mockStorageService.saveTransaction(any(), applyImpact: false))
           .thenAnswer((_) async {});

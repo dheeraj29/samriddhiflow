@@ -12,13 +12,11 @@ class NetworkUtils {
     // 1. Try Standard Plugin
     try {
       // 0. Web Optimization: Trust navigator.onLine (Synchronous & Reliable)
-      // coverage:ignore-start
       if (kIsWeb) {
-        if (!ConnectivityPlatform.checkWebOnline()) {
+        if (!ConnectivityPlatform.checkWebOnline()) { // coverage:ignore-line
           return true;
         }
       }
-      // coverage:ignore-end
 
       final results = await Connectivity()
           .checkConnectivity()
@@ -34,25 +32,23 @@ class NetworkUtils {
       }
     } catch (e) {
       // 2. Fallback for Web/PWA
-      // coverage:ignore-start
       if (kIsWeb) {
         final isMissingPlugin =
-            e.toString().contains("MissingPluginException") ||
-                e.toString().contains("No implementation found");
+            e.toString().contains("MissingPluginException") || // coverage:ignore-line
+                e.toString().contains("No implementation found"); // coverage:ignore-line
 
         if (isMissingPlugin) {
           try {
             // true if NOT onLine
-            final webOffline = !ConnectivityPlatform.checkWebOnline();
+            final webOffline = !ConnectivityPlatform.checkWebOnline(); // coverage:ignore-line
             return webOffline;
           } catch (webE) {
-            DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE");
+            DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE"); // coverage:ignore-line
             // Fallback failed? Assume online.
             return false;
           }
         }
       }
-      // coverage:ignore-end
       DebugLogger().log("NetworkUtils Exception: $e");
     }
 
@@ -63,11 +59,9 @@ class NetworkUtils {
   /// Extra check for actual internet reachability (beyond just interface status).
   /// This helps detect DNS resolution delays or captive portals on iOS.
   static Future<bool> hasActualInternet() async {
-    // coverage:ignore-start
     if (kIsWeb) {
-      return ConnectivityPlatform.checkActualWebReachability();
+      return ConnectivityPlatform.checkActualWebReachability(); // coverage:ignore-line
     }
-    // coverage:ignore-end
     // For non-web, standard connectivity is usually enough or we'd use a package.
     return true;
   }

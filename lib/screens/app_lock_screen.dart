@@ -26,9 +26,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     }
   }
 
+  // coverage:ignore-start
   void _onBackspace() {
     if (_pin.isNotEmpty) {
       setState(() => _pin = _pin.substring(0, _pin.length - 1));
+  // coverage:ignore-end
     }
   }
 

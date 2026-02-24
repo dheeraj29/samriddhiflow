@@ -214,8 +214,10 @@ class PureIcons {
   static Widget pieChart({double size = 24, Color? color}) =>
       Icon(Icons.pie_chart, size: size, color: color);
 
-  static Widget notifications({double size = 24, Color? color}) =>
-      Icon(Icons.notifications_none, size: size, color: color);
+  static Widget notifications(
+          {double size = 24, Color? color, bool isActive = false}) =>
+      Icon(isActive ? Icons.notifications_active : Icons.notifications_none,
+          size: size, color: color);
 
   static Widget ledger({double size = 24, Color? color}) =>
       Icon(Icons.list_alt, size: size, color: color);

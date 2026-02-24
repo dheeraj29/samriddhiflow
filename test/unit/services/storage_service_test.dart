@@ -118,6 +118,7 @@ void main() {
       when(() => mockLoanBox.toMap()).thenReturn({});
       when(() => mockRecurringBox.toMap()).thenReturn({});
       when(() => mockCategoryBox.toMap()).thenReturn({});
+      when(() => mockLendingBox.toMap()).thenReturn({});
       when(() => mockProfileBox.toMap()).thenReturn({});
 
       await storageService.deleteProfile(profileId);

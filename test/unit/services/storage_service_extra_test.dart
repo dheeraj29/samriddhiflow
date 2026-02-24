@@ -66,7 +66,7 @@ void main() {
         reason: 'f',
         date: DateTime.now(),
         type: LendingType.lent));
-    registerFallbackValue(TaxYearData(year: 2025));
+    registerFallbackValue(const TaxYearData(year: 2025));
     registerFallbackValue(Account(
         id: 'f',
         name: 'f',
@@ -233,7 +233,7 @@ void main() {
     });
 
     test('Tax Year Data Operations', () async {
-      final taxData = TaxYearData(year: 2025);
+      const taxData = TaxYearData(year: 2025);
       when(() => mockTaxBox.put(2025, any())).thenAnswer((_) async {});
       when(() => mockTaxBox.get(2025)).thenReturn(taxData);
 

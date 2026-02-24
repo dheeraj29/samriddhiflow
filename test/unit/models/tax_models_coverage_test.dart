@@ -163,7 +163,7 @@ void main() {
     });
 
     test('TaxYearData serialization', () {
-      final data = TaxYearData(year: 2024);
+      const data = TaxYearData(year: 2024);
       final map = data.toMap();
       final fromMap = TaxYearData.fromMap(map);
       expect(fromMap.year, 2024);

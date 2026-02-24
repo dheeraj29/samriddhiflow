@@ -127,5 +127,69 @@ void main() {
       expect(container.read(lendingProvider).isEmpty, true);
       expect(container.read(totalBorrowedProvider), 0);
     });
+
+    test('Recording a payment reduces total and updates history', () async {
+      final notifier = container.read(lendingProvider.notifier);
+      final record = LendingRecord.create(
+        personName: 'Charlie',
+        amount: 3000,
+        reason: 'Rent',
+        date: DateTime.now(),
+        type: LendingType.lent,
+      );
+      await notifier.addRecord(record);
+
+      expect(container.read(totalLentProvider), 3000);
+
+      // Record a partial payment
+      final payment = LendingPayment.create(amount: 1000, date: DateTime.now());
+      final updated = record.copyWith(payments: [payment]);
+      await notifier.updateRecord(updated);
+
+      final stateRecords = container.read(lendingProvider);
+      expect(stateRecords.length, 1);
+      final savedRecord = stateRecords.first;
+      expect(savedRecord.payments.length, 1);
+      expect(savedRecord.totalPaid, 1000);
+      expect(savedRecord.remainingAmount, 2000);
+
+      // Total lent provider should reflect the remaining amount, not the original principal
+      expect(container.read(totalLentProvider), 2000);
+    });
+
+    test(
+        'Record is manually closed when fully paid in UI (or auto-closes based on UI caller)',
+        () async {
+      // Note: The auto-close logic itself lives in the UI button press (lending_dashboard_screen.dart).
+      // Here we just test that a record with 0 balance can be closed manually.
+      final notifier = container.read(lendingProvider.notifier);
+      final record = LendingRecord.create(
+        personName: 'Dan',
+        amount: 1500,
+        reason: 'Groceries',
+        date: DateTime.now(),
+        type: LendingType.borrowed,
+      );
+      await notifier.addRecord(record);
+
+      expect(container.read(totalBorrowedProvider), 1500);
+
+      // Full payment + closed flag
+      final payment = LendingPayment.create(amount: 1500, date: DateTime.now());
+      final updated = record.copyWith(
+        payments: [payment],
+        isClosed: true,
+        closedDate: DateTime.now(),
+      );
+      await notifier.updateRecord(updated);
+
+      final saved = container.read(lendingProvider).first;
+      expect(saved.isClosed, true);
+      expect(saved.totalPaid, 1500);
+      expect(saved.remainingAmount, 0);
+
+      // Should drop from active totals
+      expect(container.read(totalBorrowedProvider), 0);
+    });
   });
 }

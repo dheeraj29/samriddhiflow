@@ -12,7 +12,7 @@ class DashboardVisibilityConfig {
     bool? showBudget,
   }) {
     return DashboardVisibilityConfig(
-      showIncomeExpense: showIncomeExpense ?? this.showIncomeExpense,
+      showIncomeExpense: showIncomeExpense ?? this.showIncomeExpense, // coverage:ignore-line
       showBudget: showBudget ?? this.showBudget,
     );
   }

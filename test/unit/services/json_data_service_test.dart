@@ -71,7 +71,7 @@ void main() {
         sumAssured: 0,
         startDate: DateTime.now(),
         maturityDate: DateTime.now()));
-    registerFallbackValue(TaxYearData(year: 2024));
+    registerFallbackValue(const TaxYearData(year: 2024));
     registerFallbackValue(LendingRecord(
         id: 'lr',
         personName: 'n',

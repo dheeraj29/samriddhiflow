@@ -30,9 +30,9 @@ void main() {
         isRetirementExemptionEnabled: false,
       );
 
-      final data = TaxYearData(
+      const data = TaxYearData(
           year: 2025,
-          salary: const SalaryDetails(
+          salary: SalaryDetails(
             grossSalary: 100000,
             giftsFromEmployer: 8000, // 3000 excess
           ));
@@ -52,9 +52,9 @@ void main() {
         isStdDeductionSalaryEnabled: false,
       );
 
-      final data = TaxYearData(
+      const data = TaxYearData(
           year: 2025,
-          salary: const SalaryDetails(
+          salary: SalaryDetails(
             grossSalary: 100000,
             giftsFromEmployer: 4000, // No excess
           ));
@@ -72,9 +72,9 @@ void main() {
         isStdDeductionSalaryEnabled: false,
       );
 
-      final data = TaxYearData(
+      const data = TaxYearData(
           year: 2025,
-          salary: const SalaryDetails(
+          salary: SalaryDetails(
             grossSalary: 100000,
             giftsFromEmployer: 10000,
           ));

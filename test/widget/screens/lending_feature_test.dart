@@ -111,7 +111,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap Settle
-      await tester.tap(find.text('Settle'));
+      await tester.tap(find.text('Settle Full'));
       await tester.pumpAndSettle();
 
       expect(find.text('Mark as Settled?'), findsOneWidget);
