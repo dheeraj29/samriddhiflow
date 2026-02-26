@@ -157,29 +157,43 @@ class JsonDataService {
         'transactions',
         (t) async => await _storageService
             .saveTransaction(Transaction.fromMap(t), applyImpact: false));
-    await _restoreEntityList(getJson, 'loans.json', stats, 'loans',
-        (l) async => await _storageService.saveLoan(Loan.fromMap(l))); // coverage:ignore-line
+    await _restoreEntityList(
+        getJson,
+        'loans.json',
+        stats,
+        'loans',
+        (l) async => await _storageService // coverage:ignore-line
+            .saveLoan(Loan.fromMap(l))); // coverage:ignore-line
     await _restoreEntityList(
         getJson,
         'recurring.json',
         stats,
         'recurring',
-        (r) async => await _storageService // coverage:ignore-line
-            .saveRecurringTransaction(RecurringTransaction.fromMap(r))); // coverage:ignore-line
+        // coverage:ignore-start
+        (r) async => await _storageService
+            .saveRecurringTransaction(
+                RecurringTransaction.fromMap(r)));
+        // coverage:ignore-end
     await _restoreEntityList(
         getJson,
         'tax_data.json',
         stats,
         'tax_data',
-        (td) async => // coverage:ignore-line
-            await _storageService.saveTaxYearData(TaxYearData.fromMap(td))); // coverage:ignore-line
+        // coverage:ignore-start
+        (td) async =>
+            await _storageService.saveTaxYearData(
+                TaxYearData.fromMap(td)));
+        // coverage:ignore-end
     await _restoreEntityList(
         getJson,
         'lending_records.json',
         stats,
         'lending_records',
-        (l) async => // coverage:ignore-line
-            await _storageService.saveLendingRecord(LendingRecord.fromMap(l))); // coverage:ignore-line
+        // coverage:ignore-start
+        (l) async =>
+            await _storageService.saveLendingRecord(
+                LendingRecord.fromMap(l)));
+        // coverage:ignore-end
 
     // G. Settings
     await _restoreSettings(getJson, stats);
@@ -213,6 +227,12 @@ class JsonDataService {
       dynamic Function(String) getJson, Map<String, int> stats) async {
     final settingsMap = getJson('settings.json');
     if (settingsMap == null) return;
+
+    if (settingsMap is Map) {
+      settingsMap.remove('isLoggedIn');
+      settingsMap.remove('last_sync');
+    }
+
     await _storageService.saveSettings(settingsMap);
     stats['settings'] = (settingsMap as Map).length;
   }

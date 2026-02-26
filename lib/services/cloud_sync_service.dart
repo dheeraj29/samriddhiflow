@@ -35,24 +35,30 @@ class CloudSyncService {
   FirebaseAuth? get _auth {
     if (_firebaseAuth != null) return _firebaseAuth;
     try {
-      if (Firebase.apps.isNotEmpty) return FirebaseAuth.instance; // coverage:ignore-line
+      if (Firebase.apps.isNotEmpty) { // coverage:ignore-line
+        return FirebaseAuth.instance; // coverage:ignore-line
+      }
     } catch (_) {}
     return null;
   }
 
   Future<void> syncToCloud({String? passcode}) async {
     final auth = _auth;
-    if (auth == null) throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    if (auth == null) {
+      throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    }
 
     final user = auth.currentUser;
     if (user == null) throw Exception(errUserNotLoggedIn);
 
-    final encryption =
-        (passcode != null && passcode.isNotEmpty) ? EncryptionService() : null; // coverage:ignore-line
+    final encryption = (passcode != null && passcode.isNotEmpty) // coverage:ignore-line
+        ? EncryptionService() // coverage:ignore-line
+        : null;
 
     dynamic encryptIfRequested(dynamic payload) {
       if (encryption == null) return payload;
-      return encryption.encryptData(jsonEncode(payload), passcode!); // coverage:ignore-line
+      return encryption.encryptData( // coverage:ignore-line
+          jsonEncode(payload), passcode!); // coverage:ignore-line
     }
 
     final settings = _storageService.getAllSettings();
@@ -99,6 +105,7 @@ class CloudSyncService {
   dynamic _sanitizeForSync(dynamic data) {
     if (data is double) {
       if (data.isInfinite || data.isNaN) { // coverage:ignore-line
+
         return 0.0;
       }
       return data;
@@ -115,30 +122,43 @@ class CloudSyncService {
 
   Future<void> restoreFromCloud({String? passcode}) async {
     final auth = _auth;
-    if (auth == null) throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    if (auth == null) {
+      throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    }
 
     final user = auth.currentUser;
-    if (user == null) throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    if (user == null) {
+      throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    }
 
     final rawData = await _cloudStorage.fetchData(user.uid);
-    if (rawData == null) throw Exception("No cloud data found"); // coverage:ignore-line
+    if (rawData == null) {
+      throw Exception("No cloud data found"); // coverage:ignore-line
+    }
 
     final data = _sanitizeFirestoreData(rawData) as Map<String, dynamic>;
 
     final bool isEncrypted = data['is_encrypted'] == true;
-    final encryption = isEncrypted ? EncryptionService() : null; // coverage:ignore-line
+    final encryption =
+        isEncrypted ? EncryptionService() : null; // coverage:ignore-line
 
     if (isEncrypted && (passcode == null || passcode.isEmpty)) { // coverage:ignore-line
-      throw Exception("Passcode required for encrypted backup"); // coverage:ignore-line
+
+      throw Exception( // coverage:ignore-line
+          "Passcode required for encrypted backup");
     }
 
     dynamic decrypt(dynamic payload) {
-      if (!isEncrypted || payload == null || payload is! String) return payload; // coverage:ignore-line
+      if (!isEncrypted || payload == null || payload is! String) { // coverage:ignore-line
+        return payload;
+      }
       try {
-        final decryptedString = encryption!.decryptData(payload, passcode!); // coverage:ignore-line
+        final decryptedString =
+            encryption!.decryptData(payload, passcode!); // coverage:ignore-line
         return jsonDecode(decryptedString); // coverage:ignore-line
       } catch (e) {
-        throw Exception("Incorrect passcode or corrupted data"); // coverage:ignore-line
+        throw Exception( // coverage:ignore-line
+            "Incorrect passcode or corrupted data");
       }
     }
 
@@ -189,7 +209,9 @@ class CloudSyncService {
 
       if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
         await _storageService.initRolloverForImport( // coverage:ignore-line
-            acc.id, acc.billingCycleDay!); // coverage:ignore-line
+
+            acc.id, // coverage:ignore-line
+            acc.billingCycleDay!); // coverage:ignore-line
       }
     }
   }
@@ -232,20 +254,23 @@ class CloudSyncService {
   Future<void> _restoreSettings(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['settings'] == null) return;
-    final Map<String, dynamic> finalSettings = {}; // coverage:ignore-line
+    final Map<String, dynamic> finalSettings = {};
 
-    if (data['settings'] is Map) { // coverage:ignore-line
-      finalSettings.addAll(Map<String, dynamic>.from(data['settings'])); // coverage:ignore-line
+    if (data['settings'] is Map) {
+      finalSettings.addAll(Map<String, dynamic>.from(data['settings']));
     } else {
       final decoded = decrypt(data['settings']); // coverage:ignore-line
       finalSettings.addAll(Map<String, dynamic>.from(decoded)); // coverage:ignore-line
     }
 
-    if (data['last_sync'] != null) { // coverage:ignore-line
+    // Never restore active connection info from backup payload
+    finalSettings.remove('isLoggedIn');
+
+    if (data['last_sync'] != null) {
       finalSettings['last_sync'] = data['last_sync']; // coverage:ignore-line
     }
 
-    await _storageService.saveSettings(finalSettings); // coverage:ignore-line
+    await _storageService.saveSettings(finalSettings);
   }
 
   Future<void> _restoreInsurancePolicies(
@@ -258,7 +283,8 @@ class CloudSyncService {
       policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
     // coverage:ignore-end
     }
-    await _storageService.saveInsurancePolicies(policies); // coverage:ignore-line
+    await _storageService // coverage:ignore-line
+        .saveInsurancePolicies(policies); // coverage:ignore-line
   }
 
   Future<void> _restoreTaxRules(Map<String, dynamic> data) async {
@@ -301,7 +327,9 @@ class CloudSyncService {
   }
 
   List<CapitalGainEntry> _deduplicateCapitalGains( // coverage:ignore-line
-      List<CapitalGainEntry> existing, List<CapitalGainEntry> incoming) {
+
+      List<CapitalGainEntry> existing,
+      List<CapitalGainEntry> incoming) {
     // coverage:ignore-start
     final mergedCG = List<CapitalGainEntry>.from(existing);
     for (final newEntry in incoming) {
@@ -321,13 +349,16 @@ class CloudSyncService {
       List<TaxYearData> localTaxData, Set<int> restoredTaxYears) async {
     for (final local in localTaxData) {
       if (!restoredTaxYears.contains(local.year)) { // coverage:ignore-line
+
         await _storageService.saveTaxYearData(local); // coverage:ignore-line
         continue;
       }
 
-      final restored = _storageService.getTaxYearData(local.year); // coverage:ignore-line
+      final restored =
+          _storageService.getTaxYearData(local.year); // coverage:ignore-line
       if (restored == null) continue;
       if (restored.salary.grossSalary != 0 || local.salary.grossSalary <= 0) { // coverage:ignore-line
+
         continue;
       }
 
@@ -361,9 +392,13 @@ class CloudSyncService {
 
   Future<void> deleteCloudData() async {
     final auth = _auth;
-    if (auth == null) throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    if (auth == null) {
+      throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    }
     final user = auth.currentUser;
-    if (user == null) throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    if (user == null) {
+      throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    }
 
     await _cloudStorage.deleteData(user.uid);
   }

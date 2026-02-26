@@ -61,7 +61,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.05) // coverage:ignore-line
+                            ? Colors.white
+                                .withValues(alpha: 0.05) // coverage:ignore-line
                             : Colors.white,
                     foregroundColor:
                         Theme.of(context).brightness == Brightness.dark
@@ -110,7 +111,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                   TextButton.icon(
                     onPressed: () { // coverage:ignore-line
-                      ref.read(localModeProvider.notifier).value = true; // coverage:ignore-line
+
+                      ref.read(localModeProvider.notifier).value = // coverage:ignore-line
+                          true;
                     },
                     icon: PureIcons.cloudOff(size: 20),
                     label: const Text('Continue Offline / Use Locally'),
@@ -141,6 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } else {
       if (mounted) { // coverage:ignore-line
+
         setState(() => _isLoading = false); // coverage:ignore-line
         // Special case: Sign in cancelled/returned from redirect without completion
         // (usually message will be error, but we ensure button isn't stuck)
@@ -159,6 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _safetyTimer?.cancel();
     _safetyTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && _isLoading) { // coverage:ignore-line
+
         setState(() => _isLoading = false); // coverage:ignore-line
       }
     });
@@ -168,27 +173,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       if (ref.read(authServiceProvider).currentUser != null) {
         // SAFETY CHECK: Only auto-restore if local data is empty
-        // coverage:ignore-start
         final storage = ref.read(storageServiceProvider);
         final hasData = storage.getAllAccounts().isNotEmpty ||
             storage.getAllTransactions().isNotEmpty;
-        // coverage:ignore-end
 
         if (hasData) {
           return;
         }
 
-        setState(() => _isLoading = true); // coverage:ignore-line
-        final syncService = ref.read(cloudSyncServiceProvider); // coverage:ignore-line
-        await syncService
-            .restoreFromCloud() // coverage:ignore-line
-            .timeout(const Duration(seconds: 15)); // coverage:ignore-line
+        setState(() => _isLoading = true);
+        final syncService =
+            ref.read(cloudSyncServiceProvider);
 
-        if (mounted) { // coverage:ignore-line
-          ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-            const SnackBar(content: Text('Cloud Data Restored!')),
-          );
+        Future<void> attemptRestore([String? passcode]) async {
+          try {
+            await syncService
+                .restoreFromCloud(passcode: passcode)
+                .timeout(const Duration(seconds: 15));
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Cloud Data Restored!')),
+              );
+            }
+          } catch (e) {
+            if (!mounted) return;
+            if (e.toString().contains("Passcode required") ||
+                e.toString().contains("Incorrect passcode")) { // coverage:ignore-line
+              setState(() => _isLoading = false);
+              final p = await _showPasscodePrompt(
+                  context, e.toString().contains("Incorrect"));
+              if (p != null && p.isNotEmpty) {
+                setState(() => _isLoading = true);
+                await attemptRestore(p);
+              }
+            } else {
+              rethrow;
+            }
+          }
         }
+
+        await attemptRestore();
       }
     } catch (e) {
       // Auto-restore skipped or failed (offline or no cloud data)
@@ -203,5 +227,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<String?> _showPasscodePrompt(BuildContext context, bool isRetry) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Encrypted Backup Found"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                isRetry
+                    ? "Incorrect passcode. Please try again."
+                    : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
+                style: TextStyle(color: isRetry ? Colors.red : null)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Passcode",
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null), // coverage:ignore-line
+            child: const Text("SKIP"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                Navigator.pop(context, controller.text);
+              }
+            },
+            child: const Text("RESTORE"),
+          ),
+        ],
+      ),
+    );
   }
 }

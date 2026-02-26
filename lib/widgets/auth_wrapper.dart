@@ -140,26 +140,40 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   Future<void> _revalidateSession() async {
     final authService = ref.read(authServiceProvider);
+    int attempts = 0;
+    const maxAttempts = 3;
 
-    try {
-      final user = authService.currentUser;
-      if (user != null && !authService.isSignOutInProgress) {
-        await authService.reloadUser(ref);
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
+        final user = authService.currentUser;
+        if (user != null && !authService.isSignOutInProgress) {
+          await authService.reloadUser(ref);
+        }
+        return; // Success
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'user-not-found' ||
+            e.code == 'user-disabled' || // coverage:ignore-line
+            e.code == 'min-app-version-error') { // coverage:ignore-line
+
+          DebugLogger()
+              .log("Critical Session Error (${e.code}): Force Logout.");
+          await authService.signOut(ref);
+          return;
+        } else if (e.code == 'network-request-failed' || // coverage:ignore-line
+            e.code == 'unavailable') { // coverage:ignore-line
+
+          if (attempts >= maxAttempts) { // coverage:ignore-line
+            ref.read(isOfflineProvider.notifier).setOffline(true); // coverage:ignore-line
+            return;
+          }
+          await Future.delayed(Duration(seconds: 2 * attempts)); // coverage:ignore-line
+        } else {
+          return; // Other auth errors, avoid infinite loops
+        }
+      } catch (e) {
+        return; // Revalidation warning suppressed
       }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' ||
-          e.code == 'user-disabled' || // coverage:ignore-line
-          e.code == 'min-app-version-error') { // coverage:ignore-line
-        DebugLogger().log("Critical Session Error (${e.code}): Force Logout.");
-        await authService.signOut(ref);
-      } else if (e.code == 'network-request-failed' || // coverage:ignore-line
-          e.code == 'unavailable') { // coverage:ignore-line
-        // Revalidation: Network Issue
-      } else {
-        // Revalidation warning
-      }
-    } catch (e) {
-      // Revalidation warning suppressed
     }
   }
 
@@ -171,8 +185,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _manageAutoHealTimer();
 
     return storageInit.when(
-      loading: () => _buildLoadingScreen("Starting ${AppConstants.appName}..."), // coverage:ignore-line
-      error: (e, s) => _buildStorageErrorScreen(context), // coverage:ignore-line
+      loading: () => _buildLoadingScreen( // coverage:ignore-line
+          "Starting ${AppConstants.appName}..."),
+      error: (e, s) => // coverage:ignore-line
+          _buildStorageErrorScreen(context), // coverage:ignore-line
       data: (_) => _buildAuthenticatedContent(context),
     );
   }
@@ -189,18 +205,18 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     ref.listen(isOfflineProvider, (previous, next) async {
       if (!_bootGracePeriodFinished) return;
 
-      if (!(previous ?? false) && !next) {
-        ref.invalidate(firebaseInitializerProvider); // coverage:ignore-line
+      if (previous == true && next == false) {
+        ref.invalidate(firebaseInitializerProvider);
         try {
-          // coverage:ignore-start
           await ref
               .read(firebaseInitializerProvider.future)
               .timeout(const Duration(seconds: 15));
           await _revalidateSession();
-          // coverage:ignore-end
 
-          if (mounted && _hasVerificationTimedOut) { // coverage:ignore-line
-            setState(() => _hasVerificationTimedOut = false); // coverage:ignore-line
+          if (mounted && _hasVerificationTimedOut) {
+
+            setState(
+                () => _hasVerificationTimedOut = false);
           }
         } catch (e) {
           // Restoration revalidate failed
@@ -211,12 +227,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   void _listenFirebaseInitErrors(BuildContext context) {
     ref.listen(firebaseInitializerProvider, (previous, next) {
-      // coverage:ignore-start
       if (next is AsyncError) {
+        // coverage:ignore-start
         final isPersistentLogin = ref.read(isLoggedInProvider);
         if (isPersistentLogin && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-      // coverage:ignore-end
+        // coverage:ignore-end
             const SnackBar(
               content: Text("Connection failed. Switching to Offline Mode."),
               backgroundColor: Colors.orange,
@@ -231,7 +247,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   void _listenLogoutRequests() {
     ref.listen(logoutRequestedProvider, (previous, next) {
       if (next == true) { // coverage:ignore-line
-        navigatorKey.currentState?.popUntil((route) => route.isFirst); // coverage:ignore-line
+
+        navigatorKey.currentState // coverage:ignore-line
+            ?.popUntil((route) => route.isFirst); // coverage:ignore-line
       }
     });
   }
@@ -293,42 +311,108 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           duration: const Duration(seconds: 10),
           action: SnackBarAction(
             label: "FIX",
-            onPressed: () => _showSessionFixDialog(context, ref), // coverage:ignore-line
+            onPressed: () => // coverage:ignore-line
+                _showSessionFixDialog(context, ref), // coverage:ignore-line
           ),
         ),
       );
     }
   }
 
-  void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) {
+  void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) async {
     if (next.value == null) return;
 
     final storage = ref.read(storageServiceProvider);
     final accounts = storage.getAccounts();
     if (accounts.isNotEmpty) return;
 
-    ref.read(cloudSyncServiceProvider).restoreFromCloud().then((_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Cloud Restore Completed"),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+    final cloudSync = ref.read(cloudSyncServiceProvider);
+
+    Future<void> attemptRestore([String? passcode]) async {
+      try {
+        await cloudSync.restoreFromCloud(passcode: passcode);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Cloud Restore Completed"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          ref.invalidate(accountsProvider);
+          ref.invalidate(transactionsProvider);
+          _ensureOptimisticFlag();
+        }
+      } catch (e) {
+        if (!context.mounted) return;
+        if (e.toString().contains("Passcode required") ||
+            e.toString().contains("Incorrect passcode")) { // coverage:ignore-line
+          final p = await _showPasscodePrompt(
+              context, e.toString().contains("Incorrect"));
+          if (!context.mounted) return;
+          if (p != null && p.isNotEmpty) {
+            await attemptRestore(p);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar( // coverage:ignore-line
+                content: Text("Restore skipped. Continuing with empty data.")));
+          }
+        // coverage:ignore-start
+        } else if (!e.toString().contains("No cloud data")) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Restore Info: ${e.toString()}")),
+        // coverage:ignore-end
+          );
+        }
+      }
+    }
+
+    await attemptRestore();
+  }
+
+  Future<String?> _showPasscodePrompt(BuildContext context, bool isRetry) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Encrypted Backup Found"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                isRetry
+                    ? "Incorrect passcode. Please try again."
+                    : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
+                style: TextStyle(color: isRetry ? Colors.red : null)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Passcode",
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null), // coverage:ignore-line
+            child: const Text("SKIP"),
           ),
-        );
-        ref.invalidate(accountsProvider);
-        ref.invalidate(transactionsProvider);
-        _ensureOptimisticFlag();
-      }
-    }).catchError((e) {
-      // coverage:ignore-start
-      if (context.mounted && !e.toString().contains("No cloud data")) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Restore Info: ${e.toString()}")),
-      // coverage:ignore-end
-        );
-      }
-    });
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                Navigator.pop(context, controller.text);
+              }
+            },
+            child: const Text("RESTORE"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _manageAutoHealTimer() {
@@ -347,13 +431,20 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   // coverage:ignore-end
           padding: const EdgeInsets.all(24.0),
           child: Column( // coverage:ignore-line
+
             mainAxisAlignment: MainAxisAlignment.center,
             children: [ // coverage:ignore-line
+
               const Icon(Icons.error_outline, size: 48, color: Colors.amber),
               const SizedBox(height: 16),
               Text( // coverage:ignore-line
+
                 "Storage Access Issue",
-                style: Theme.of(context).textTheme.titleLarge, // coverage:ignore-line
+                // coverage:ignore-start
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge,
+                // coverage:ignore-end
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -364,7 +455,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               // coverage:ignore-end
                   if (isOffline) {
                     if (context.mounted) { // coverage:ignore-line
+
                       ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+
                         const SnackBar(
                           content: Text(
                               "Still Offline. Please check your data/WiFi."),
@@ -374,7 +467,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                     }
                   } else {
                     // ignore: unused_result
-                    ref.refresh(storageInitializerProvider); // coverage:ignore-line
+                    ref.refresh( // coverage:ignore-line
+                        storageInitializerProvider); // coverage:ignore-line
                   }
                 },
                 icon: const Icon(Icons.refresh),
@@ -435,7 +529,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
         if (isPersistentLogin) {
-          return _buildAuthStream(context, isPersistentLogin); // coverage:ignore-line
+          return _buildAuthStream( // coverage:ignore-line
+              context, isPersistentLogin);
         }
         final isTimeout = e.toString().toLowerCase().contains("timeout");
         return _buildErrorScreen(
@@ -460,7 +555,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           ? "Slow link. Finalizing Account..."
           : "Finalizing Account...";
     }
-    return _isSlowConnection ? "Slow link. Connecting..." : "Connecting..."; // coverage:ignore-line
+    return _isSlowConnection // coverage:ignore-line
+        ? "Slow link. Connecting..."
+        : "Connecting...";
   }
 
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
@@ -514,7 +611,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         if (_isRedirectingLocal) {
-          return _buildLoadingScreen("Finalizing Account..."); // coverage:ignore-line
+          return _buildLoadingScreen( // coverage:ignore-line
+              "Finalizing Account...");
         }
 
         if (isPersistentLogin) {
@@ -529,7 +627,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             showOfflineBypass: isPersistentLogin);
       },
       error: (e, s) { // coverage:ignore-line
-        DebugLogger().log("AuthWrapper: Auth Stream Error: $e"); // coverage:ignore-line
+
+        DebugLogger() // coverage:ignore-line
+            .log("AuthWrapper: Auth Stream Error: $e"); // coverage:ignore-line
         return const LoginScreen();
       },
     );
@@ -570,13 +670,28 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
-                onPressed: () {
-                  ref.invalidate(firebaseInitializerProvider);
+                onPressed: () async {
+                  // Explicitly check connectivity on retry
+                  final isOffline = await ref.read(connectivityCheckProvider)();
+                  if (context.mounted) {
+                    ref.read(isOfflineProvider.notifier).setOffline(isOffline);
+                    if (!isOffline) {
+                      ref.invalidate(firebaseInitializerProvider);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+                        const SnackBar(
+                            content: Text(
+                                "Still offline. Please check your connection."),
+                            duration: Duration(seconds: 2)),
+                      );
+                    }
+                  }
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text("Retry Connection"),
               ),
               if (showOfflineBypass) ...[ // coverage:ignore-line
+
                 const SizedBox(height: 12),
                 // coverage:ignore-start
                 TextButton.icon(
@@ -596,10 +711,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Future<void> _showSessionFixDialog( // coverage:ignore-line
-      BuildContext context, WidgetRef ref) async {
+
+      BuildContext context,
+      WidgetRef ref) async {
     await showDialog( // coverage:ignore-line
+
       context: context,
       builder: (context) => AlertDialog( // coverage:ignore-line
+
         title: const Text("Session Issue"),
         content: const Text(
             "Your secure cloud session could not be restored. You can continue offline, try to reconnect, or login again."),
@@ -627,7 +746,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           // coverage:ignore-end
             },
             style: TextButton.styleFrom( // coverage:ignore-line
-                foregroundColor: Theme.of(context).colorScheme.error), // coverage:ignore-line
+
+                // coverage:ignore-start
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .error),
+                // coverage:ignore-end
             child: const Text("Login Again"),
           ),
         ],

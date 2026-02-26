@@ -11,6 +11,7 @@ class NetworkUtils {
   static Future<bool> isOffline() async {
     // 1. Web Optimization: Trust navigator.onLine (Synchronous & Reliable)
     if (kIsWeb && !ConnectivityPlatform.checkWebOnline()) { // coverage:ignore-line
+
       return true;
     }
 
@@ -18,7 +19,7 @@ class NetworkUtils {
     try {
       final results = await Connectivity()
           .checkConnectivity()
-          .timeout(const Duration(seconds: 2));
+          .timeout(const Duration(milliseconds: 500));
       if (results.isNotEmpty) {
         final isOffline = !results.contains(ConnectivityResult.mobile) &&
             !results.contains(ConnectivityResult.wifi) &&
@@ -46,7 +47,8 @@ class NetworkUtils {
       try {
         return !ConnectivityPlatform.checkWebOnline(); // coverage:ignore-line
       } catch (webE) {
-        DebugLogger().log("NetworkUtils: Web Fallback Failed: $webE"); // coverage:ignore-line
+        DebugLogger().log( // coverage:ignore-line
+            "NetworkUtils: Web Fallback Failed: $webE"); // coverage:ignore-line
         return false;
       }
     }
@@ -58,7 +60,8 @@ class NetworkUtils {
   /// This helps detect DNS resolution delays or captive portals on iOS.
   static Future<bool> hasActualInternet() async {
     if (kIsWeb) {
-      return ConnectivityPlatform.checkActualWebReachability(); // coverage:ignore-line
+      return ConnectivityPlatform
+          .checkActualWebReachability(); // coverage:ignore-line
     }
     // For non-web, standard connectivity is usually enough or we'd use a package.
     return true;

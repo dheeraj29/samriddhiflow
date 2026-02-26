@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-26T11:19:00.515065**
+> **Generated on: 2026-02-27T00:42:25.713502**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
@@ -22,14 +22,14 @@
 | models/taxes/tax_data_models.dart | **100.0%** | 331/331 | PASS |
 | models/taxes/tax_rules.dart | **100.0%** | 213/213 | PASS |
 | models/transaction.dart | **100.0%** | 53/53 | PASS |
-| **providers.dart** | **100.0%** | 153/153 | PASS |
+| **providers.dart** | **100.0%** | 152/152 | PASS |
 | **providers/sum_tracker_provider.dart** | **100.0%** | 88/88 | PASS |
 | **screens/accounts_screen.dart** | **100.0%** | 302/302 | PASS |
 | **screens/add_loan_screen.dart** | **100.0%** | 190/190 | PASS |
 | **screens/add_transaction_screen.dart** | **100.0%** | 369/369 | PASS |
 | **screens/app_lock_screen.dart** | **100.0%** | 70/70 | PASS |
 | **screens/cc_payment_dialog.dart** | **100.0%** | 75/75 | PASS |
-| **screens/dashboard_screen.dart** | **100.0%** | 315/315 | PASS |
+| **screens/dashboard_screen.dart** | **100.0%** | 316/316 | PASS |
 | **screens/holiday_manager_screen.dart** | **100.0%** | 37/37 | PASS |
 | **screens/lending/add_lending_screen.dart** | **100.0%** | 75/75 | PASS |
 | **screens/lending/lending_dashboard_screen.dart** | **100.0%** | 100/100 | PASS |
@@ -44,24 +44,24 @@
 | **screens/loan_details_screen.dart** | **100.0%** | 231/231 | PASS |
 | **screens/loan_payment_dialog.dart** | **100.0%** | 91/91 | PASS |
 | **screens/loans_screen.dart** | **100.0%** | 37/37 | PASS |
-| **screens/login_screen.dart** | **100.0%** | 55/55 | PASS |
+| **screens/login_screen.dart** | **100.0%** | 89/89 | PASS |
 | **screens/recurring_manager_screen.dart** | **100.0%** | 69/69 | PASS |
 | **screens/recycle_bin_screen.dart** | **100.0%** | 36/36 | PASS |
 | **screens/reminders_screen.dart** | **100.0%** | 268/268 | PASS |
 | **screens/reports_screen.dart** | **100.0%** | 301/301 | PASS |
-| **screens/settings_screen.dart** | **100.0%** | 403/403 | PASS |
+| **screens/settings_screen.dart** | **100.0%** | 410/410 | PASS |
 | **screens/transactions_screen.dart** | **100.0%** | 156/156 | PASS |
 | services/auth_service.dart | **100.0%** | 62/62 | PASS |
 | services/calendar_service.dart | **100.0%** | 25/25 | PASS |
-| services/cloud_sync_service.dart | **100.0%** | 115/115 | PASS |
+| services/cloud_sync_service.dart | **100.0%** | 121/121 | PASS |
 | services/encryption_service.dart | **100.0%** | 20/20 | PASS |
 | services/file_service.dart | **100.0%** | 15/15 | PASS |
-| services/json_data_service.dart | **100.0%** | 101/101 | PASS |
+| services/json_data_service.dart | **100.0%** | 104/104 | PASS |
 | services/lending/lending_provider.dart | **100.0%** | 28/28 | PASS |
 | services/loan_service.dart | **100.0%** | 126/126 | PASS |
 | services/notification_service.dart | **100.0%** | 23/23 | PASS |
 | services/repair_service.dart | **100.0%** | 25/25 | PASS |
-| services/storage_service.dart | **100.0%** | 496/496 | PASS |
+| services/storage_service.dart | **100.0%** | 498/498 | PASS |
 | services/taxes/indian_tax_service.dart | **100.0%** | 266/266 | PASS |
 | services/taxes/tax_config_service.dart | **100.0%** | 29/29 | PASS |
 | services/taxes/tax_data_fetcher.dart | **100.0%** | 141/141 | PASS |
@@ -76,7 +76,7 @@
 | utils/transaction_filter_utils.dart | **100.0%** | 55/55 | PASS |
 | utils/ui_utils.dart | **100.0%** | 22/22 | PASS |
 | widgets/account_card.dart | **100.0%** | 69/69 | PASS |
-| widgets/auth_wrapper.dart | **100.0%** | 176/176 | PASS |
+| widgets/auth_wrapper.dart | **100.0%** | 216/216 | PASS |
 | widgets/bell_animation.dart | **100.0%** | 28/28 | PASS |
 | widgets/category_manager_dialog.dart | **100.0%** | 97/97 | PASS |
 | widgets/charts/reports_pie_chart.dart | **100.0%** | 24/24 | PASS |

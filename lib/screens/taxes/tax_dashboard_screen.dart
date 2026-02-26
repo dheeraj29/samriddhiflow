@@ -389,6 +389,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     final trackingGains = <MapEntry<TaxYearData, CapitalGainEntry>>[];
     for (var yearData in _allTaxData) {
       for (var gain in yearData.capitalGains) {
+        if (!gain.intendToReinvest) continue;
         int gainFyStart = gain.gainDate.year;
         if (gain.gainDate.month < 4) gainFyStart -= 1;
         final yearsPassed = data.year - gainFyStart;
@@ -542,6 +543,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             ),
             const Divider(height: 32),
             _buildRow('Gross Income', taxDetails['grossIncome'] ?? 0),
+            _buildRow('Capital Gains', taxDetails['capitalGainsTotal'] ?? 0),
             _buildRow('Deductions', taxDetails['totalDeductions'] ?? 0),
             _buildRow('Taxable Income', taxDetails['taxableIncome'] ?? 0),
             const Divider(),
@@ -631,7 +633,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           // Year Selector
           Row(
             children: [
-              const Text('FY: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Tax Year: ',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               DropdownButton<int>(
                 value:
                     years.contains(_selectedYear) ? _selectedYear : years.first,

@@ -1,56 +1,23 @@
-name: Build
+name: Main Pipeline
 on:
   push:
     branches:
       - main
   pull_request:
     types: [synchronize]
+
 jobs:
-  samriddhiflow:
-    name: SamriddhiFlow
-    runs-on: ubuntu-slim
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      
-      - name: Setup Flutter (Manual)
-        run: |
-          git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
-          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+  build-and-test:
+    uses: ./.github/workflows/build-test.yml
+    secrets: inherit
 
+  sonarcloud:
+    needs: build-and-test
+    uses: ./.github/workflows/sonarcloud.yml
+    secrets: inherit
 
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Run Tests
-        run: flutter test --coverage --no-pub
-
-      - name: Build Web
-        env:
-          FIREBASE_API_KEY_WEB: ${{ secrets.FIREBASE_API_KEY_WEB }}
-          FIREBASE_API_KEY_ANDROID: ${{ secrets.FIREBASE_API_KEY_ANDROID }}
-          FIREBASE_API_KEY_WINDOWS: ${{ secrets.FIREBASE_API_KEY_WEB }}
-        run: |
-          flutter build web --no-web-resources-cdn --release \
-            --dart-define=FIREBASE_API_KEY_WEB="$FIREBASE_API_KEY_WEB" \
-            --dart-define=FIREBASE_API_KEY_ANDROID="$FIREBASE_API_KEY_ANDROID" \
-            --dart-define=FIREBASE_API_KEY_WINDOWS="$FIREBASE_API_KEY_WINDOWS"
-
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Deploy to Firebase Hosting
-        if: github.ref == 'refs/heads/main'
-        uses: FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c
-        env:
-          FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          repoToken: ${{ env.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
-          channelId: live
-          projectId: samriddhiflow
+  deploy:
+    needs: sonarcloud
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

@@ -1,0 +1,48 @@
+name: Build and Test
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter (Manual)
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test --coverage --no-pub
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 1
+
+      - name: Build Web
+        env:
+          FIREBASE_API_KEY_WEB: ${{ secrets.FIREBASE_API_KEY_WEB }}
+          FIREBASE_API_KEY_ANDROID: ${{ secrets.FIREBASE_API_KEY_ANDROID }}
+          FIREBASE_API_KEY_WINDOWS: ${{ secrets.FIREBASE_API_KEY_WEB }}
+        run: |
+          flutter build web --no-web-resources-cdn --release \
+            --dart-define=FIREBASE_API_KEY_WEB="$FIREBASE_API_KEY_WEB" \
+            --dart-define=FIREBASE_API_KEY_ANDROID="$FIREBASE_API_KEY_ANDROID" \
+            --dart-define=FIREBASE_API_KEY_WINDOWS="$FIREBASE_API_KEY_WINDOWS"
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+          retention-days: 1

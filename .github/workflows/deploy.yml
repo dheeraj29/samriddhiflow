@@ -1,0 +1,27 @@
+name: Deploy to Firebase
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    name: Deploy to Firebase Hosting
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Web Build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c
+        env:
+          FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          repoToken: ${{ env.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT_SAMRIDDHIFLOW }}
+          channelId: live
+          projectId: samriddhiflow
