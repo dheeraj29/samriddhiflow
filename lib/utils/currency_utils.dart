@@ -39,31 +39,33 @@ class CurrencyUtils {
     final sign = value < 0 ? '-' : '';
     final symbol = getSymbol(locale);
 
-    if (locale == 'en_IN' || locale == 'INR') {
-      // Indian Numbering System (Lakhs, Crores)
-      if (absValue >= 10000000) {
-        // Crores
-        return '$symbol$sign${(absValue / 10000000).toStringAsFixed(absValue % 10000000 == 0 ? 0 : 2)}Cr';
-      } else if (absValue >= 100000) {
-        // Lakhs
-        return '$symbol$sign${(absValue / 100000).toStringAsFixed(absValue % 100000 == 0 ? 0 : 2)}L';
-      } else if (absValue >= 1000) {
-        // K
-        return '$symbol$sign${(absValue / 1000).toStringAsFixed(absValue % 1000 == 0 ? 0 : 2)}K';
-      }
-    } else {
-      // International System (Million, Billion)
-      if (absValue >= 1000000000) {
-        return '$symbol$sign${(absValue / 1000000000).toStringAsFixed(absValue % 1000000000 == 0 ? 0 : 2)}B';
-      } else if (absValue >= 1000000) {
-        return '$symbol$sign${(absValue / 1000000).toStringAsFixed(absValue % 1000000 == 0 ? 0 : 2)}M';
-      } else if (absValue >= 1000) {
-        return '$symbol$sign${(absValue / 1000).toStringAsFixed(absValue % 1000 == 0 ? 0 : 2)}K';
+    final compact = (locale == 'en_IN' || locale == 'INR')
+        ? _formatIndianSystem(absValue, sign, symbol)
+        : _formatInternationalSystem(absValue, sign, symbol);
+
+    return compact ?? getFormatter(locale).format(value);
+  }
+
+  static String? _formatIndianSystem(
+      double absValue, String sign, String symbol) {
+    return _formatSystem(
+        absValue, sign, symbol, [10000000, 100000, 1000], ['Cr', 'L', 'K']);
+  }
+
+  static String? _formatInternationalSystem(
+      double absValue, String sign, String symbol) {
+    return _formatSystem(
+        absValue, sign, symbol, [1000000000, 1000000, 1000], ['B', 'M', 'K']);
+  }
+
+  static String? _formatSystem(double absValue, String sign, String symbol,
+      List<double> thresholds, List<String> suffixes) {
+    for (int i = 0; i < thresholds.length; i++) {
+      if (absValue >= thresholds[i]) {
+        return '$symbol$sign${(absValue / thresholds[i]).toStringAsFixed(absValue % thresholds[i] == 0 ? 0 : 2)}${suffixes[i]}';
       }
     }
-
-    // Default formatting if under 1000
-    return getFormatter(locale).format(value);
+    return null;
   }
 
   static double roundTo2Decimals(double value) {

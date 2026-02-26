@@ -279,6 +279,84 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     }
   }
 
+  Future<void> _handleYearChange(int? val) async {
+    if (val == null) return;
+    if (_hasUnsavedChanges) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Unsaved Changes'),
+          content: const Text(
+              'You have unsaved changes. Switching years will discard them. Continue?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Continue')),
+          ],
+        ),
+      );
+      if (!(confirm ?? false)) return;
+    }
+    setState(() => _selectedYear = val);
+    _loadRulesForYear(val);
+  }
+
+  void _handleJurisdictionChange(String? val) {
+    if (val == null) return;
+    setState(() {
+      _jurisdiction = val;
+      if (val != 'India') {
+        _isStdDedSalaryEnabled = false;
+        _isStdDedHPEnabled = false;
+        _isRebateEnabled = false;
+        _isCessEnabled = false;
+        _isLTCGExemption112AEnabled = false;
+        _isInsuranceExemptEnabled = false;
+        _isInsuranceAggregateLimitEnabled = false;
+        _isInsurancePremiumPercentEnabled = false;
+        _isRetirementExemptionEnabled = false;
+        _isHPMaxInterestEnabled = false;
+        _isCGReinvestmentEnabled = false;
+        _isCGRatesEnabled = false;
+        _isAgriIncomeEnabled = false;
+      }
+      _hasUnsavedChanges = true;
+    });
+  }
+
+  Future<void> _handleRestoreDefaults(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore System Defaults?'),
+        content: const Text(
+            'This will delete custom tax rules for this year and revert to system defaults (or previous year). Continue?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final config = ref.read(taxConfigServiceProvider);
+      await config.deleteRulesForYear(_selectedYear);
+      _loadRulesForYear(_selectedYear);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tax Rules reset for FY.')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Fix: Use the calculated Financial Year as the anchor, not calendar year.
@@ -348,31 +426,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           child: Text('FY $y-${y + 1}'),
                         ))
                     .toList(),
-                onChanged: (val) async {
-                  if (val != null) {
-                    if (_hasUnsavedChanges) {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Unsaved Changes'),
-                          content: const Text(
-                              'You have unsaved changes. Switching years will discard them. Continue?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Continue')),
-                          ],
-                        ),
-                      );
-                      if (!(confirm ?? false)) return;
-                    }
-                    setState(() => _selectedYear = val);
-                    _loadRulesForYear(val);
-                  }
-                },
+                onChanged: (val) => _handleYearChange(val),
               ),
             ),
             // Copy Previous Year
@@ -390,37 +444,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
             IconButton(
               icon: const Icon(Icons.restore),
               tooltip: 'Restore System Defaults',
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Restore System Defaults?'),
-                    content: const Text(
-                        'This will delete custom tax rules for this year and revert to system defaults (or previous year). Continue?'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel')),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange),
-                        child: const Text('Restore'),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (confirm == true) {
-                  final config = ref.read(taxConfigServiceProvider);
-                  await config.deleteRulesForYear(_selectedYear);
-                  _loadRulesForYear(_selectedYear);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Tax Rules reset for FY.')));
-                  }
-                }
-              },
+              onPressed: () => _handleRestoreDefaults(context),
             ),
             // Save
             IconButton(
@@ -469,31 +493,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                                     .map((j) => DropdownMenuItem(
                                         value: j, child: Text(j)))
                                     .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _jurisdiction = val;
-                                      if (val != 'India') {
-                                        _isStdDedSalaryEnabled = false;
-                                        _isStdDedHPEnabled = false;
-                                        _isRebateEnabled = false;
-                                        _isCessEnabled = false;
-                                        _isLTCGExemption112AEnabled = false;
-                                        _isInsuranceExemptEnabled = false;
-                                        _isInsuranceAggregateLimitEnabled =
-                                            false;
-                                        _isInsurancePremiumPercentEnabled =
-                                            false;
-                                        _isRetirementExemptionEnabled = false;
-                                        _isHPMaxInterestEnabled = false;
-                                        _isCGReinvestmentEnabled = false;
-                                        _isCGRatesEnabled = false;
-                                        _isAgriIncomeEnabled = false;
-                                      }
-                                      _hasUnsavedChanges = true;
-                                    });
-                                  }
-                                },
+                                onChanged: (val) =>
+                                    _handleJurisdictionChange(val),
                               ),
                             ),
                           ),
@@ -692,7 +693,6 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     String selectedCat = existingRule?.categoryName ?? '';
     String selectedHead = existingRule?.taxHead ?? 'other';
 
-    // Descriptions list for advanced rules
     List<String> matchDescriptions =
         existingRule != null ? List.from(existingRule.matchDescriptions) : [];
     List<String> excludeDescriptions =
@@ -701,7 +701,6 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     final matchDescCtrl = TextEditingController();
     final excludeDescCtrl = TextEditingController();
 
-    // Min months
     final minMonthsCtrl = TextEditingController(
         text: existingRule?.minHoldingMonths?.toString() ?? '');
     final storage = ref.read(storageServiceProvider);
@@ -720,189 +719,27 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  RadioGroup<bool>(
-                    groupValue: mapByTag,
-                    onChanged: (v) => setStateBuilder(() => mapByTag = v!),
-                    child: const Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<bool>.adaptive(
-                            title: Text('Tag', style: TextStyle(fontSize: 12)),
-                            value: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<bool>.adaptive(
-                            title: Text('Category',
-                                style: TextStyle(fontSize: 12)),
-                            value: false,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildMappingTypeSelector(
+                      mapByTag, (v) => setStateBuilder(() => mapByTag = v!)),
                   const SizedBox(height: 16),
-                  if (mapByTag)
-                    DropdownButtonFormField<CategoryTag>(
-                      initialValue: selectedTag,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Tag',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: CategoryTag.values
-                          .where((t) => t != CategoryTag.none)
-                          .map((t) => DropdownMenuItem(
-                                value: t,
-                                child: Text(t.name.toHumanReadable()),
-                              ))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setStateBuilder(() => selectedTag = v);
-                      },
-                    )
-                  else
-                    DropdownButtonFormField<String>(
-                      initialValue:
-                          selectedCat.isEmpty && incomeCategories.isNotEmpty
-                              ? (selectedCat = incomeCategories.first.name)
-                              : selectedCat,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Category',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: incomeCategories
-                          .map((c) => DropdownMenuItem(
-                                value: c.name,
-                                child: Text(c.name),
-                              ))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setStateBuilder(() => selectedCat = v);
-                      },
-                    ),
+                  _buildTagOrCategoryDropdown(
+                      mapByTag, selectedTag, selectedCat, incomeCategories,
+                      onTagChanged: (v) =>
+                          setStateBuilder(() => selectedTag = v),
+                      onCatChanged: (v) =>
+                          setStateBuilder(() => selectedCat = v)),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedHead,
-                    decoration: const InputDecoration(
-                      labelText: 'Maps to Tax Head',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      'houseProp',
-                      'business',
-                      'ltcg',
-                      'stcg',
-                      'dividend',
-                      'other',
-                      'agriIncome',
-                      'gift',
-                      if (selectedHead == 'salary') 'salary',
-                    ]
-                        .map((h) => DropdownMenuItem(
-                            value: h, child: Text(h.toHumanReadable())))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) setStateBuilder(() => selectedHead = v);
-                    },
-                  ),
-                  if (selectedHead == 'ltcg' || selectedHead == 'stcg') ...[
-                    const SizedBox(height: 16),
-                    const Text('Advanced Mapping Criteria',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: minMonthsCtrl,
-                      decoration: InputDecoration(
-                        labelText: () {
-                          if (selectedHead == 'stcg') {
-                            return 'STCG if holding period < (months)';
-                          }
-                          if (selectedHead == 'ltcg') {
-                            return 'LTCG if holding period >= (months)';
-                          }
-                          return 'Holding period threshold (months)';
-                        }(),
-                        border: const OutlineInputBorder(),
-                        helperText: 'Leave empty for any period',
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: false),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDescriptionAutocomplete(
-                            controller: matchDescCtrl,
-                            labelText: 'Must Match Description',
-                            hintText: 'e.g., Sold',
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            if (matchDescCtrl.text.isNotEmpty) {
-                              setStateBuilder(() {
-                                matchDescriptions.add(matchDescCtrl.text);
-                                matchDescCtrl.clear();
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    if (matchDescriptions.isNotEmpty)
-                      Wrap(
-                        spacing: 8,
-                        children: matchDescriptions.map((d) {
-                          return Chip(
-                            label:
-                                Text(d, style: const TextStyle(fontSize: 10)),
-                            onDeleted: () => setStateBuilder(
-                                () => matchDescriptions.remove(d)),
-                          );
-                        }).toList(),
-                      ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDescriptionAutocomplete(
-                            controller: excludeDescCtrl,
-                            labelText: 'Exclude Description',
-                            hintText: 'e.g., Transfer',
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            if (excludeDescCtrl.text.isNotEmpty) {
-                              setStateBuilder(() {
-                                excludeDescriptions.add(excludeDescCtrl.text);
-                                excludeDescCtrl.clear();
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    if (excludeDescriptions.isNotEmpty)
-                      Wrap(
-                        spacing: 8,
-                        children: excludeDescriptions.map((d) {
-                          return Chip(
-                            label: Text(d,
-                                style: const TextStyle(
-                                    fontSize: 10, color: Colors.red)),
-                            onDeleted: () => setStateBuilder(
-                                () => excludeDescriptions.remove(d)),
-                          );
-                        }).toList(),
-                      ),
-                  ],
+                  _buildTaxHeadDropdown(selectedHead,
+                      (v) => setStateBuilder(() => selectedHead = v)),
+                  if (selectedHead == 'ltcg' || selectedHead == 'stcg')
+                    _buildAdvancedCriteria(
+                        selectedHead,
+                        minMonthsCtrl,
+                        matchDescCtrl,
+                        matchDescriptions,
+                        excludeDescCtrl,
+                        excludeDescriptions,
+                        setStateBuilder),
                 ],
               ),
             ),
@@ -912,36 +749,17 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                   child: const Text('Cancel')),
               FilledButton(
                 onPressed: () {
-                  // Add any pending text from controllers
-                  if (matchDescCtrl.text.isNotEmpty) {
-                    matchDescriptions.add(matchDescCtrl.text);
-                  }
-                  if (excludeDescCtrl.text.isNotEmpty) {
-                    excludeDescriptions.add(excludeDescCtrl.text);
-                  }
-
-                  setState(() {
-                    if (selectedHead == 'ltcg' || selectedHead == 'stcg') {
-                      final newRule = TaxMappingRule(
-                        categoryName: mapByTag ? selectedTag.name : selectedCat,
-                        taxHead: selectedHead,
-                        matchDescriptions: matchDescriptions,
-                        excludeDescriptions: excludeDescriptions,
-                        minHoldingMonths: int.tryParse(minMonthsCtrl.text),
-                      );
-                      if (index != null) {
-                        _advancedMappings[index] = newRule;
-                      } else {
-                        _advancedMappings.add(newRule);
-                      }
-                    } else {
-                      final key = mapByTag ? selectedTag.name : selectedCat;
-                      if (key.isNotEmpty) {
-                        _tagMappings[key] = selectedHead;
-                      }
-                    }
-                    _hasUnsavedChanges = true;
-                  });
+                  _handleMappingSave(
+                      mapByTag,
+                      selectedTag,
+                      selectedCat,
+                      selectedHead,
+                      matchDescCtrl,
+                      matchDescriptions,
+                      excludeDescCtrl,
+                      excludeDescriptions,
+                      minMonthsCtrl,
+                      index);
                   Navigator.pop(ctx);
                 },
                 child: Text(index != null ? 'Update' : 'Add'),
@@ -951,6 +769,253 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         },
       ),
     );
+  }
+
+  Widget _buildMappingTypeSelector(
+      bool mapByTag, ValueChanged<bool?> onChanged) {
+    return RadioGroup<bool>(
+      groupValue: mapByTag,
+      onChanged: onChanged,
+      child: const Row(
+        children: [
+          Expanded(
+            child: RadioListTile<bool>.adaptive(
+              title: Text('Tag', style: TextStyle(fontSize: 12)),
+              value: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          Expanded(
+            child: RadioListTile<bool>.adaptive(
+              title: Text('Category', style: TextStyle(fontSize: 12)),
+              value: false,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagOrCategoryDropdown(bool mapByTag, CategoryTag selectedTag,
+      String selectedCat, List<Category> incomeCategories,
+      {required ValueChanged<CategoryTag> onTagChanged,
+      required ValueChanged<String> onCatChanged}) {
+    if (mapByTag) {
+      return DropdownButtonFormField<CategoryTag>(
+        initialValue: selectedTag,
+        decoration: const InputDecoration(
+          labelText: 'Select Tag',
+          border: OutlineInputBorder(),
+        ),
+        items: CategoryTag.values
+            .where((t) => t != CategoryTag.none)
+            .map((t) => DropdownMenuItem(
+                  value: t,
+                  child: Text(t.name.toHumanReadable()),
+                ))
+            .toList(),
+        onChanged: (v) {
+          if (v != null) onTagChanged(v);
+        },
+      );
+    }
+    return DropdownButtonFormField<String>(
+      initialValue: selectedCat.isEmpty && incomeCategories.isNotEmpty
+          ? incomeCategories.first.name
+          : selectedCat,
+      decoration: const InputDecoration(
+        labelText: 'Select Category',
+        border: OutlineInputBorder(),
+      ),
+      items: incomeCategories
+          .map((c) => DropdownMenuItem(
+                value: c.name,
+                child: Text(c.name),
+              ))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onCatChanged(v);
+      },
+    );
+  }
+
+  Widget _buildTaxHeadDropdown(
+      String selectedHead, ValueChanged<String> onChanged) {
+    return DropdownButtonFormField<String>(
+      initialValue: selectedHead,
+      decoration: const InputDecoration(
+        labelText: 'Maps to Tax Head',
+        border: OutlineInputBorder(),
+      ),
+      items: [
+        'houseProp',
+        'business',
+        'ltcg',
+        'stcg',
+        'dividend',
+        'other',
+        'agriIncome',
+        'gift',
+        if (selectedHead == 'salary') 'salary',
+      ]
+          .map((h) =>
+              DropdownMenuItem(value: h, child: Text(h.toHumanReadable())))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+
+  String _getHoldingPeriodLabel(String selectedHead) {
+    if (selectedHead == 'stcg') return 'STCG if holding period < (months)';
+    if (selectedHead == 'ltcg') return 'LTCG if holding period >= (months)';
+    return 'Holding period threshold (months)';
+  }
+
+  Widget _buildAdvancedCriteria(
+      String selectedHead,
+      TextEditingController minMonthsCtrl,
+      TextEditingController matchDescCtrl,
+      List<String> matchDescriptions,
+      TextEditingController excludeDescCtrl,
+      List<String> excludeDescriptions,
+      StateSetter setStateBuilder) {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        const Text('Advanced Mapping Criteria',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: minMonthsCtrl,
+          decoration: InputDecoration(
+            labelText: _getHoldingPeriodLabel(selectedHead),
+            border: const OutlineInputBorder(),
+            helperText: 'Leave empty for any period',
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: false),
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 12),
+        _buildDescriptionField(matchDescCtrl, 'Must Match Description',
+            'e.g., Sold', matchDescriptions, setStateBuilder),
+        if (matchDescriptions.isNotEmpty)
+          _buildDescriptionChips(matchDescriptions, setStateBuilder),
+        const SizedBox(height: 12),
+        _buildDescriptionField(excludeDescCtrl, 'Exclude Description',
+            'e.g., Transfer', excludeDescriptions, setStateBuilder,
+            isExclude: true),
+        if (excludeDescriptions.isNotEmpty)
+          _buildDescriptionChips(excludeDescriptions, setStateBuilder,
+              isExclude: true),
+      ],
+    );
+  }
+
+  Widget _buildDescriptionField(TextEditingController ctrl, String labelText,
+      String hintText, List<String> descriptions, StateSetter setStateBuilder,
+      {bool isExclude = false}) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildDescriptionAutocomplete(
+            controller: ctrl,
+            labelText: labelText,
+            hintText: hintText,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () {
+            if (ctrl.text.isNotEmpty) {
+              setStateBuilder(() {
+                descriptions.add(ctrl.text);
+                ctrl.clear();
+              });
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDescriptionChips(
+      List<String> descriptions, StateSetter setStateBuilder,
+      {bool isExclude = false}) {
+    return Wrap(
+      spacing: 8,
+      children: descriptions.map((d) {
+        return Chip(
+          label: Text(d,
+              style: TextStyle(
+                  fontSize: 10, color: isExclude ? Colors.red : null)),
+          onDeleted: () => setStateBuilder(() => descriptions.remove(d)),
+        );
+      }).toList(),
+    );
+  }
+
+  void _handleMappingSave(
+      bool mapByTag,
+      CategoryTag selectedTag,
+      String selectedCat,
+      String selectedHead,
+      TextEditingController matchDescCtrl,
+      List<String> matchDescriptions,
+      TextEditingController excludeDescCtrl,
+      List<String> excludeDescriptions,
+      TextEditingController minMonthsCtrl,
+      int? index) {
+    // Add any pending text from controllers
+    if (matchDescCtrl.text.isNotEmpty) {
+      matchDescriptions.add(matchDescCtrl.text);
+    }
+    if (excludeDescCtrl.text.isNotEmpty) {
+      excludeDescriptions.add(excludeDescCtrl.text);
+    }
+
+    setState(() {
+      if (selectedHead == 'ltcg' || selectedHead == 'stcg') {
+        _saveAdvancedMapping(mapByTag, selectedTag, selectedCat, selectedHead,
+            matchDescriptions, excludeDescriptions, minMonthsCtrl, index);
+      } else {
+        _saveSimpleMapping(mapByTag, selectedTag, selectedCat, selectedHead);
+      }
+      _hasUnsavedChanges = true;
+    });
+  }
+
+  void _saveAdvancedMapping(
+      bool mapByTag,
+      CategoryTag selectedTag,
+      String selectedCat,
+      String selectedHead,
+      List<String> matchDescriptions,
+      List<String> excludeDescriptions,
+      TextEditingController minMonthsCtrl,
+      int? index) {
+    final newRule = TaxMappingRule(
+      categoryName: mapByTag ? selectedTag.name : selectedCat,
+      taxHead: selectedHead,
+      matchDescriptions: matchDescriptions,
+      excludeDescriptions: excludeDescriptions,
+      minHoldingMonths: int.tryParse(minMonthsCtrl.text),
+    );
+    if (index != null) {
+      _advancedMappings[index] = newRule;
+    } else {
+      _advancedMappings.add(newRule);
+    }
+  }
+
+  void _saveSimpleMapping(bool mapByTag, CategoryTag selectedTag,
+      String selectedCat, String selectedHead) {
+    final key = mapByTag ? selectedTag.name : selectedCat;
+    if (key.isNotEmpty) {
+      _tagMappings[key] = selectedHead;
+    }
   }
 
   Widget _buildSlabsEditor() {
@@ -992,8 +1057,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegexUtils.amountExp),
+                        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -1015,8 +1079,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegexUtils.amountExp),
+                        FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                       ],
                       onChanged: (val) {
                         setState(() {

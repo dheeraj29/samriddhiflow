@@ -20,45 +20,18 @@ class InsuranceTaxService {
   /// 3. Aggregate Premium Rule (1 Apr 2023 onwards): Total premium of claimed policies <= 5L.
   List<InsurancePolicy> optimizeMaturityTax(List<InsurancePolicy> allPolicies) {
     final updatedPolicies = <InsurancePolicy>[];
-
-    // Sort policies: We want to prioritize exempting policies with highest profitability (Maturity - Premium)
-    // OR simply by Maturity Amount to save max tax.
-    // Let's assume we prioritize tax saving on the largest chunks.
     final sorted = List<InsurancePolicy>.from(allPolicies);
-    // Sorting by Sum Assured as a proxy for Maturity Amount
     sorted.sort((a, b) => b.sumAssured.compareTo(a.sumAssured));
 
     double currentAggregatePremiumNonULIP = 0;
     double currentAggregatePremiumULIP = 0;
 
     final rules = _configService.rules;
-    final limitNonULIP = rules.limitInsuranceNonULIP;
-    final dateNonULIP = rules.dateEffectiveNonULIP;
-
-    // --- Dynamic Rule Application ---
     final premiumRules = rules.insurancePremiumRules;
 
     for (final policy in sorted) {
-      bool isEligiblePercent = false;
-
-      // Find valid rule for this policy date
-      // Default to 100% (exempt) if no specific rule restricts it (e.g. ancient policies)
-      double applicableLimit = 100.0;
-
-      // Sort rules newest first to find the most recent applicable start date
-      final sortedRules = List<InsurancePremiumRule>.from(premiumRules)
-        ..sort((a, b) => b.startDate.compareTo(a.startDate));
-
-      for (final rule in sortedRules) {
-        if (policy.startDate.isAfter(rule.startDate) ||
-            policy.startDate.isAtSameMomentAs(rule.startDate)) {
-          applicableLimit = rule.limitPercentage;
-          break;
-        }
-      }
-
-      // Check if premium is within the % limit of Sum Assured
-      isEligiblePercent =
+      final applicableLimit = _findApplicableLimit(policy, premiumRules);
+      final isEligiblePercent =
           policy.annualPremium <= ((applicableLimit / 100) * policy.sumAssured);
 
       if (!isEligiblePercent) {
@@ -66,42 +39,83 @@ class InsuranceTaxService {
         continue;
       }
 
-      // Rule 3: Aggregate Limits based on Policy Type & Date
-      if (policy.isUnitLinked) {
-        // ULIP Logic
-        if (policy.startDate.isBefore(rules.dateEffectiveULIP)) {
-          // Old ULIPs are exempt irrespective of 2.5L limit (if they meet 10% rule)
-          updatedPolicies.add(policy.copyWith(isTaxExempt: true));
-        } else {
-          // New ULIPs Check Aggregate
-          if (currentAggregatePremiumULIP + policy.annualPremium <=
-              rules.limitInsuranceULIP) {
-            updatedPolicies.add(policy.copyWith(isTaxExempt: true));
-            currentAggregatePremiumULIP += policy.annualPremium;
-          } else {
-            updatedPolicies.add(policy.copyWith(isTaxExempt: false));
-          }
-        }
-      } else {
-        // Non-ULIP (Traditional) Logic
-        if (policy.startDate.isBefore(dateNonULIP)) {
-          // Old Traditional Policies are exempt
-          updatedPolicies.add(policy.copyWith(isTaxExempt: true));
-        } else {
-          // New Traditional Policies Check Aggregate
-          if (currentAggregatePremiumNonULIP + policy.annualPremium <=
-              limitNonULIP) {
-            updatedPolicies.add(policy.copyWith(isTaxExempt: true));
-            currentAggregatePremiumNonULIP += policy.annualPremium;
-          } else {
-            updatedPolicies.add(policy.copyWith(isTaxExempt: false));
-          }
-        }
-      }
+      // Apply aggregate limit rules
+      final result = _applyAggregateLimit(
+        policy: policy,
+        rules: rules,
+        currentULIP: currentAggregatePremiumULIP,
+        currentNonULIP: currentAggregatePremiumNonULIP,
+      );
+
+      updatedPolicies.add(result.policy);
+      currentAggregatePremiumULIP = result.updatedULIP;
+      currentAggregatePremiumNonULIP = result.updatedNonULIP;
     }
 
     return updatedPolicies;
   }
+
+  double _findApplicableLimit(
+      InsurancePolicy policy, List<InsurancePremiumRule> premiumRules) {
+    double applicableLimit = 100.0;
+    final sortedRules = List<InsurancePremiumRule>.from(premiumRules)
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    for (final rule in sortedRules) {
+      if (policy.startDate.isAfter(rule.startDate) ||
+          policy.startDate.isAtSameMomentAs(rule.startDate)) {
+        applicableLimit = rule.limitPercentage;
+        break;
+      }
+    }
+    return applicableLimit;
+  }
+
+  _AggregateLimitResult _applyAggregateLimit({
+    required InsurancePolicy policy,
+    required TaxRules rules,
+    required double currentULIP,
+    required double currentNonULIP,
+  }) {
+    if (policy.isUnitLinked) {
+      return _applyULIPLimit(policy, rules, currentULIP, currentNonULIP);
+    }
+    return _applyNonULIPLimit(policy, rules, currentULIP, currentNonULIP);
+  }
+
+  _AggregateLimitResult _applyULIPLimit(InsurancePolicy policy, TaxRules rules,
+      double currentULIP, double currentNonULIP) {
+    if (policy.startDate.isBefore(rules.dateEffectiveULIP)) {
+      return _AggregateLimitResult(
+          policy.copyWith(isTaxExempt: true), currentULIP, currentNonULIP);
+    }
+    if (currentULIP + policy.annualPremium <= rules.limitInsuranceULIP) {
+      return _AggregateLimitResult(policy.copyWith(isTaxExempt: true),
+          currentULIP + policy.annualPremium, currentNonULIP);
+    }
+    return _AggregateLimitResult(
+        policy.copyWith(isTaxExempt: false), currentULIP, currentNonULIP);
+  }
+
+  _AggregateLimitResult _applyNonULIPLimit(InsurancePolicy policy,
+      TaxRules rules, double currentULIP, double currentNonULIP) {
+    if (policy.startDate.isBefore(rules.dateEffectiveNonULIP)) {
+      return _AggregateLimitResult(
+          policy.copyWith(isTaxExempt: true), currentULIP, currentNonULIP);
+    }
+    if (currentNonULIP + policy.annualPremium <= rules.limitInsuranceNonULIP) {
+      return _AggregateLimitResult(policy.copyWith(isTaxExempt: true),
+          currentULIP, currentNonULIP + policy.annualPremium);
+    }
+    return _AggregateLimitResult(
+        policy.copyWith(isTaxExempt: false), currentULIP, currentNonULIP);
+  }
+}
+
+class _AggregateLimitResult {
+  final InsurancePolicy policy;
+  final double updatedULIP;
+  final double updatedNonULIP;
+  _AggregateLimitResult(this.policy, this.updatedULIP, this.updatedNonULIP);
 }
 
 final insuranceTaxServiceProvider = Provider<InsuranceTaxService>((ref) {

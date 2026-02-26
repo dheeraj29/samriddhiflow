@@ -80,7 +80,6 @@ class LendingRecord extends HiveObject {
       payments: [],
     );
   }
-
   LendingRecord copyWith({
     String? id,
     String? personName,

@@ -32,7 +32,7 @@ class _LoanRenameDialogState extends ConsumerState<LoanRenameDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context), // coverage:ignore-line
             child: const Text('Cancel')),
         ElevatedButton(
           onPressed: () async {

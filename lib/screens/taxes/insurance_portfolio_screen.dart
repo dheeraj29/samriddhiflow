@@ -123,108 +123,177 @@ class _InsurancePortfolioScreenState
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(builder: (context, setState) {
-        return AlertDialog(
-          title: Text(existing == null ? 'Add Policy' : 'Edit Policy'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                    controller: nameCtrl,
-                    decoration:
-                        const InputDecoration(labelText: 'Policy Name')),
-                TextField(
-                    controller: premiumCtrl,
-                    decoration:
-                        const InputDecoration(labelText: 'Annual Premium'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegexUtils.amountExp),
-                    ]),
-                TextField(
-                    controller: sumAssuredCtrl,
-                    decoration: const InputDecoration(labelText: 'Sum Assured'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegexUtils.amountExp),
-                    ]),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Text('Issue Date: '),
-                    TextButton(
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime.now(),
-                            initialDate: selectedDate);
-                        if (d != null) setState(() => selectedDate = d);
-                      },
-                      child: Text(
-                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-                    )
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Text('Maturity Date: '),
-                    TextButton(
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                            context: context,
-                            firstDate: selectedDate,
-                            lastDate: DateTime(2050),
-                            initialDate: maturityDate);
-                        if (d != null) setState(() => maturityDate = d);
-                      },
-                      child: Text(
-                          '${maturityDate.day}/${maturityDate.month}/${maturityDate.year}'),
-                    )
-                  ],
-                ),
-                CheckboxListTile(
-                  title: const Text('Is ULIP?'),
-                  value: isUlip,
-                  onChanged: (v) => setState(() => isUlip = v ?? false),
-                )
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () {
-                  final newPolicy = InsurancePolicy.create(
-                    name: nameCtrl.text,
-                    number: 'POL-${DateTime.now().millisecondsSinceEpoch}',
-                    premium: double.tryParse(premiumCtrl.text) ?? 0,
-                    sumAssured: double.tryParse(sumAssuredCtrl.text) ?? 0,
-                    start: selectedDate,
-                    maturity: maturityDate,
-                    isUlip: isUlip,
-                    isTaxExempt: null, // Reset status on edit
-                  );
-
-                  if (existing != null && key != null) {
-                    _box.put(key, newPolicy);
-                  } else {
-                    _box.add(newPolicy);
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Save')),
-          ],
-        );
-      }),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => _buildPolicyDialog(
+          ctx: ctx,
+          existing: existing,
+          key: key,
+          nameCtrl: nameCtrl,
+          premiumCtrl: premiumCtrl,
+          sumAssuredCtrl: sumAssuredCtrl,
+          selectedDate: selectedDate,
+          maturityDate: maturityDate,
+          isUlip: isUlip,
+          onDateChanged: (d) => setState(() => selectedDate = d),
+          onMaturityChanged: (d) => setState(() => maturityDate = d),
+          onUlipChanged: (v) => setState(() => isUlip = v),
+        ),
+      ),
     );
+  }
+
+  Widget _buildPolicyDialog({
+    required BuildContext ctx,
+    required InsurancePolicy? existing,
+    required dynamic key,
+    required TextEditingController nameCtrl,
+    required TextEditingController premiumCtrl,
+    required TextEditingController sumAssuredCtrl,
+    required DateTime selectedDate,
+    required DateTime maturityDate,
+    required bool isUlip,
+    required ValueChanged<DateTime> onDateChanged,
+    required ValueChanged<DateTime> onMaturityChanged,
+    required ValueChanged<bool> onUlipChanged,
+  }) {
+    return AlertDialog(
+      title: Text(existing == null ? 'Add Policy' : 'Edit Policy'),
+      content: SingleChildScrollView(
+        child: _buildPolicyInputs(
+          nameCtrl,
+          premiumCtrl,
+          sumAssuredCtrl,
+          selectedDate,
+          maturityDate,
+          isUlip,
+          onDateChanged,
+          onMaturityChanged,
+          onUlipChanged,
+          ctx,
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => _savePolicy(
+                  existing,
+                  key,
+                  nameCtrl,
+                  premiumCtrl,
+                  sumAssuredCtrl,
+                  selectedDate,
+                  maturityDate,
+                  isUlip,
+                ),
+            child: const Text('Save')),
+      ],
+    );
+  }
+
+  Widget _buildPolicyInputs(
+    TextEditingController nameCtrl,
+    TextEditingController premiumCtrl,
+    TextEditingController sumAssuredCtrl,
+    DateTime selectedDate,
+    DateTime maturityDate,
+    bool isUlip,
+    void Function(DateTime) onStartSelected,
+    void Function(DateTime) onMaturitySelected,
+    void Function(bool) onUlipChanged,
+    BuildContext context,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+            controller: nameCtrl,
+            decoration: const InputDecoration(labelText: 'Policy Name')),
+        TextField(
+            controller: premiumCtrl,
+            decoration: const InputDecoration(labelText: 'Annual Premium'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegexUtils.amountExp),
+            ]),
+        TextField(
+            controller: sumAssuredCtrl,
+            decoration: const InputDecoration(labelText: 'Sum Assured'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegexUtils.amountExp),
+            ]),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Text('Issue Date: '),
+            TextButton(
+              onPressed: () async {
+                final d = await showDatePicker(
+                    context: context,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                    initialDate: selectedDate);
+                if (d != null) onStartSelected(d);
+              },
+              child: Text(
+                  '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+            )
+          ],
+        ),
+        Row(
+          children: [
+            const Text('Maturity Date: '),
+            TextButton(
+              onPressed: () async {
+                final d = await showDatePicker(
+                    context: context,
+                    firstDate: selectedDate,
+                    lastDate: DateTime(2050),
+                    initialDate: maturityDate);
+                if (d != null) onMaturitySelected(d);
+              },
+              child: Text(
+                  '${maturityDate.day}/${maturityDate.month}/${maturityDate.year}'),
+            )
+          ],
+        ),
+        CheckboxListTile(
+          title: const Text('Is ULIP?'),
+          value: isUlip,
+          onChanged: (v) => onUlipChanged(v ?? false),
+        )
+      ],
+    );
+  }
+
+  void _savePolicy(
+    InsurancePolicy? existing,
+    dynamic key,
+    TextEditingController nameCtrl,
+    TextEditingController premiumCtrl,
+    TextEditingController sumAssuredCtrl,
+    DateTime selectedDate,
+    DateTime maturityDate,
+    bool isUlip,
+  ) {
+    final newPolicy = InsurancePolicy.create(
+      name: nameCtrl.text,
+      number: 'POL-${DateTime.now().millisecondsSinceEpoch}',
+      premium: double.tryParse(premiumCtrl.text) ?? 0,
+      sumAssured: double.tryParse(sumAssuredCtrl.text) ?? 0,
+      start: selectedDate,
+      maturity: maturityDate,
+      isUlip: isUlip,
+      isTaxExempt: null, // Reset status on edit
+    );
+
+    if (existing != null && key != null) {
+      _box.put(key, newPolicy);
+    } else {
+      _box.add(newPolicy);
+    }
+    Navigator.pop(context);
   }
 
   @override
@@ -289,15 +358,23 @@ class _InsurancePortfolioScreenState
   }
 
   Widget _buildPolicyCard(InsurancePolicy p, dynamic key) {
+    IconData getIcon() {
+      if (p.isTaxExempt == true) return Icons.shield;
+      if (p.isTaxExempt == false) return Icons.warning;
+      return Icons.help_outline;
+    }
+
+    Color getColor() {
+      if (p.isTaxExempt == true) return Colors.green;
+      if (p.isTaxExempt == false) return Colors.orange;
+      return Colors.grey;
+    }
+
     return Card(
       child: ListTile(
         leading: Icon(
-          p.isTaxExempt == true
-              ? Icons.shield
-              : (p.isTaxExempt == false ? Icons.warning : Icons.help_outline),
-          color: p.isTaxExempt == true
-              ? Colors.green
-              : (p.isTaxExempt == false ? Colors.orange : Colors.grey),
+          getIcon(),
+          color: getColor(),
         ),
         title: Text(p.policyName),
         subtitle: Column(
@@ -409,60 +486,69 @@ class _InsurancePortfolioScreenState
     final pctCtrl = TextEditingController(text: '10.0');
 
     showDialog(
-        context: context,
-        builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
-              return AlertDialog(
-                title: const Text('Add Premium Rule'),
-                content: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Row(children: [
-                    const Text('Start Date: '),
-                    TextButton(
-                        onPressed: () async {
-                          final d = await showDatePicker(
-                              context: context,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(1990),
-                              lastDate: DateTime.now());
-                          if (d != null) {
-                            setStateBuilder(() => selectedDate = d);
-                          }
-                        },
-                        child: Text(
-                            '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'))
-                  ]),
-                  TextField(
-                    controller: pctCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Limit % (of Sum Assured)'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegexUtils.amountExp),
-                    ],
-                  )
-                ]),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel')),
-                  FilledButton(
-                      onPressed: () {
-                        final pct = double.tryParse(pctCtrl.text);
-                        if (pct != null) {
-                          setState(() {
-                            _premiumRules
-                                .add(InsurancePremiumRule(selectedDate, pct));
-                            _premiumRules.sort(
-                                (a, b) => a.startDate.compareTo(b.startDate));
-                          });
-                          Navigator.pop(ctx);
-                        }
-                      },
-                      child: const Text('Add'))
-                ],
-              );
-            }));
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateBuilder) => _buildPremiumRuleDialog(
+          ctx: ctx,
+          selectedDate: selectedDate,
+          pctCtrl: pctCtrl,
+          onDateChanged: (d) => setStateBuilder(() => selectedDate = d),
+          onAdd: () {
+            final pct = double.tryParse(pctCtrl.text);
+            if (pct != null) {
+              setState(() {
+                _premiumRules.add(InsurancePremiumRule(selectedDate, pct));
+                _premiumRules
+                    .sort((a, b) => a.startDate.compareTo(b.startDate));
+              });
+              Navigator.pop(ctx);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumRuleDialog({
+    required BuildContext ctx,
+    required DateTime selectedDate,
+    required TextEditingController pctCtrl,
+    required ValueChanged<DateTime> onDateChanged,
+    required VoidCallback onAdd,
+  }) {
+    return AlertDialog(
+      title: const Text('Add Premium Rule'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          const Text('Start Date: '),
+          TextButton(
+              onPressed: () async {
+                final d = await showDatePicker(
+                    context: ctx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(1990),
+                    lastDate: DateTime.now());
+                if (d != null) onDateChanged(d);
+              },
+              child: Text(
+                  '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'))
+        ]),
+        TextField(
+          controller: pctCtrl,
+          decoration:
+              const InputDecoration(labelText: 'Limit % (of Sum Assured)'),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegexUtils.amountExp),
+          ],
+        )
+      ]),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        FilledButton(onPressed: onAdd, child: const Text('Add'))
+      ],
+    );
   }
 
   Widget _buildDatePickerRow(

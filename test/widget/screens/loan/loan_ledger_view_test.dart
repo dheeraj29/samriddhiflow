@@ -74,7 +74,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: SingleChildScrollView(child: LoanLedgerView(loan: loan)),
+            body: LoanLedgerView(loan: loan),
           ),
         ),
       ),
@@ -146,7 +146,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: SingleChildScrollView(child: LoanLedgerView(loan: loan)),
+            body: LoanLedgerView(loan: loan),
           ),
         ),
       ),

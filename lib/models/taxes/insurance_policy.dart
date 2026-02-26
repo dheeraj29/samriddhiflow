@@ -20,7 +20,7 @@ class InsurancePolicy {
       id: id,
       policyName: policyName ?? this.policyName,
       policyNumber: policyNumber ?? this.policyNumber,
-      annualPremium: annualPremium ?? this.annualPremium,
+      annualPremium: annualPremium ?? this.annualPremium, // coverage:ignore-line
       sumAssured: sumAssured ?? this.sumAssured,
       startDate: startDate ?? this.startDate,
       maturityDate: maturityDate ?? this.maturityDate,

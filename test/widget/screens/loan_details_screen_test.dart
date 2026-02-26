@@ -187,7 +187,7 @@ void main() {
     await tester.tap(find.text('Ledger'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ListView), findsWidgets);
+    expect(find.text('No transactions match the filters.'), findsOneWidget);
   });
 
   testWidgets('Standard Loan - Actions (Delete)', (tester) async {
@@ -205,7 +205,9 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest(loan));
     await tester.pump(const Duration(seconds: 2));
 
-    await tester.tap(find.byTooltip('Delete Loan'));
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete Loan').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Delete Loan?'), findsOneWidget);
@@ -229,6 +231,13 @@ void main() {
       emiDay: 1,
       firstEmiDate: DateTime.now(),
     );
+
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     await tester.pumpWidget(createWidgetUnderTest(loan));
     await tester.pumpAndSettle();

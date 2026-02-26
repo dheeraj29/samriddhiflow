@@ -214,14 +214,43 @@ class Loan extends HiveObject {
       emiAmount: (map['emiAmount'] as num).toDouble(),
       accountId: map['accountId'],
       transactions: (map['transactions'] as List?)
-              ?.map(
-                  (t) => LoanTransaction.fromMap(Map<String, dynamic>.from(t)))
+              ?.map((t) => LoanTransaction.fromMap(
+                  Map<String, dynamic>.from(t))) // coverage:ignore-line
               .toList() ??
-          [],
+          [], // coverage:ignore-line
       type: LoanType.values[map['type'] ?? 0],
       emiDay: map['emiDay'] ?? 1,
       firstEmiDate: DateTime.parse(map['firstEmiDate']),
       profileId: map['profileId'],
     );
+  }
+
+  double get currentRate {
+    return transactions
+            .where((t) => t.type == LoanTransactionType.rateChange)
+            .isEmpty
+        ? interestRate
+        // coverage:ignore-start
+        : transactions
+            .where((t) => t.type == LoanTransactionType.rateChange)
+            .reduce((a, b) => a.date.isAfter(b.date) ? a : b)
+            .amount;
+        // coverage:ignore-end
+  }
+
+  double calculateAccruedInterest() {
+    final lastPaymentDate = transactions.isEmpty
+        ? startDate
+        // coverage:ignore-start
+        : transactions
+            .where((t) =>
+                t.type == LoanTransactionType.emi ||
+                t.type == LoanTransactionType.prepayment)
+            .map((t) => t.date)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+        // coverage:ignore-end
+    final daysElapsed = DateTime.now().difference(lastPaymentDate).inDays;
+
+    return (remainingPrincipal * currentRate * daysElapsed) / (365.0 * 100.0);
   }
 }

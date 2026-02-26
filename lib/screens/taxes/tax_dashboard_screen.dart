@@ -286,91 +286,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           customStart: start, customEnd: end);
       final newData = result.data;
 
-      // Preserve existing HP config but update Interest
-      List<HouseProperty> mergedHP = [];
-      if (_taxData != null) {
-        mergedHP = List.from(_taxData!.houseProperties);
-      }
+      final mergedHP = await _mergeHousePropertyInterest(start, end);
+      final finalData =
+          _buildFinalSyncData(newData, mergedHP, forceReset: forceReset);
 
-      // Update Interest for each HP
-      final loans = await ref.read(loansProvider.future);
-
-      for (int i = 0; i < mergedHP.length; i++) {
-        final hp = mergedHP[i];
-        if (hp.loanId != null) {
-          try {
-            final loan = loans.firstWhere((l) => l.id == hp.loanId);
-            double interest = 0;
-            for (var txn in loan.transactions) {
-              if (txn.date.isAfter(start.subtract(const Duration(days: 1))) &&
-                  txn.date.isBefore(end.add(const Duration(days: 1)))) {
-                interest += txn.interestComponent;
-              }
-            }
-            if (interest > 0) {
-              mergedHP[i] = HouseProperty(
-                name: hp.name,
-                isSelfOccupied: hp.isSelfOccupied,
-                rentReceived: hp.rentReceived,
-                municipalTaxes: hp.municipalTaxes,
-                interestOnLoan: interest,
-                loanId: hp.loanId,
-              );
-            }
-          } catch (e) {
-            // Loan not found
-          }
-        }
-      }
-
-      TaxYearData finalData;
-
-      if (forceReset) {
-        // Force Reset: Overwrite everything, but PROTECT manual salary completely
-        finalData = newData.copyWith(
-          salary: _taxData?.salary ?? newData.salary,
-          houseProperties:
-              mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
-          lockedFields: [], // Clear locks
-          lastSyncDate: DateTime.now(),
-        );
-      } else {
-        // Smart Sync: Respect Locks
-        // logic similar to previous overwriteAll=true
-        final old = _taxData;
-        if (old != null && old.lockedFields.isNotEmpty) {
-          final locked = old.lockedFields;
-          bool isLocked(String id) => locked.contains(id);
-
-          final mergedSalary = old.salary;
-
-          finalData = newData.copyWith(
-            salary: mergedSalary,
-            houseProperties:
-                mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
-            agricultureIncome: isLocked('agri.income')
-                ? old.agricultureIncome
-                : newData.agricultureIncome,
-            advanceTax:
-                isLocked('tax.advance') ? old.advanceTax : newData.advanceTax,
-            lockedFields: old.lockedFields,
-            lastSyncDate: DateTime.now(),
-          );
-        } else {
-          // No locks, just overwrite (same as force but keeps locks empty)
-          // No locks, just overwrite but PROTECT manual salary completely
-          finalData = newData.copyWith(
-            salary: _taxData?.salary ?? newData.salary,
-            houseProperties:
-                mergedHP.isNotEmpty ? mergedHP : newData.houseProperties,
-            lastSyncDate: DateTime.now(),
-          );
-        }
-      }
-
-      setState(() {
-        _taxData = finalData;
-      });
+      setState(() => _taxData = finalData);
       await ref.read(storageServiceProvider).saveTaxYearData(finalData);
 
       if (mounted) {
@@ -385,28 +305,187 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     }
   }
 
+  Future<List<HouseProperty>> _mergeHousePropertyInterest(
+      DateTime start, DateTime end) async {
+    List<HouseProperty> mergedHP = [];
+    if (_taxData != null) {
+      mergedHP = List.from(_taxData!.houseProperties);
+    }
+
+    final loans = await ref.read(loansProvider.future);
+
+    for (int i = 0; i < mergedHP.length; i++) {
+      final hp = mergedHP[i];
+      if (hp.loanId == null) continue;
+
+      try {
+        final loan = loans.firstWhere((l) => l.id == hp.loanId);
+        double interest = 0;
+        for (var txn in loan.transactions) {
+          if (txn.date.isAfter(start.subtract(const Duration(days: 1))) &&
+              txn.date.isBefore(end.add(const Duration(days: 1)))) {
+            interest += txn.interestComponent;
+          }
+        }
+        if (interest > 0) {
+          mergedHP[i] = HouseProperty(
+            name: hp.name,
+            isSelfOccupied: hp.isSelfOccupied,
+            rentReceived: hp.rentReceived,
+            municipalTaxes: hp.municipalTaxes,
+            interestOnLoan: interest,
+            loanId: hp.loanId,
+          );
+        }
+      } catch (e) {
+        // Loan not found
+      }
+    }
+    return mergedHP;
+  }
+
+  TaxYearData _buildFinalSyncData(
+      TaxYearData newData, List<HouseProperty> mergedHP,
+      {required bool forceReset}) {
+    final hpToUse = mergedHP.isNotEmpty ? mergedHP : newData.houseProperties;
+
+    if (forceReset) {
+      return newData.copyWith(
+        salary: _taxData?.salary ?? newData.salary,
+        houseProperties: hpToUse,
+        lockedFields: [],
+        lastSyncDate: DateTime.now(),
+      );
+    }
+
+    final old = _taxData;
+    if (old != null && old.lockedFields.isNotEmpty) {
+      final locked = old.lockedFields;
+      bool isLocked(String id) => locked.contains(id);
+
+      return newData.copyWith(
+        salary: old.salary,
+        houseProperties: hpToUse,
+        agricultureIncome: isLocked('agri.income')
+            ? old.agricultureIncome
+            : newData.agricultureIncome,
+        advanceTax:
+            isLocked('tax.advance') ? old.advanceTax : newData.advanceTax,
+        lockedFields: old.lockedFields,
+        lastSyncDate: DateTime.now(),
+      );
+    }
+
+    // No locks, overwrite but PROTECT manual salary
+    return newData.copyWith(
+      salary: _taxData?.salary ?? newData.salary,
+      houseProperties: hpToUse,
+      lastSyncDate: DateTime.now(),
+    );
+  }
+
+  List<MapEntry<TaxYearData, CapitalGainEntry>> _collectTrackingGains(
+      TaxYearData data, int reinvestWindow) {
+    final trackingGains = <MapEntry<TaxYearData, CapitalGainEntry>>[];
+    for (var yearData in _allTaxData) {
+      for (var gain in yearData.capitalGains) {
+        int gainFyStart = gain.gainDate.year;
+        if (gain.gainDate.month < 4) gainFyStart -= 1;
+        final yearsPassed = data.year - gainFyStart;
+        if (yearsPassed >= 0 && yearsPassed <= reinvestWindow) {
+          trackingGains.add(MapEntry(yearData, gain));
+        }
+      }
+    }
+    return trackingGains;
+  }
+
+  Color _getDeadlineColor(int remainingDays) {
+    if (remainingDays < 0) return Colors.red;
+    if (remainingDays < 180) return Colors.orange;
+    return Colors.grey;
+  }
+
+  Widget _buildGainStatusIcon(CapitalGainEntry gain, bool isExpired) {
+    if (isExpired) {
+      return const Chip(
+          label: Text('Expired'),
+          backgroundColor: Colors.redAccent,
+          labelStyle: TextStyle(color: Colors.white));
+    }
+    if (gain.reinvestedAmount >= gain.capitalGainAmount) {
+      return const Icon(Icons.check_circle, color: Colors.green);
+    }
+    return const Icon(Icons.timelapse, color: Colors.orange);
+  }
+
+  Widget _buildGainTile(
+      TaxYearData gainYearData, CapitalGainEntry gain, int reinvestWindow) {
+    final days = (reinvestWindow * 365.25).round();
+    final deadline = gain.gainDate.add(Duration(days: days));
+    final remainingDays = deadline.difference(DateTime.now()).inDays;
+    final isExpired = remainingDays < 0;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+          '${gain.description.isNotEmpty ? gain.description : 'Capital Gain'} (${gain.matchAssetType.toHumanReadable()})'),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              'FY ${gainYearData.year}-${gainYearData.year + 1} | Gain: ₹${gain.capitalGainAmount.toStringAsFixed(0)}'),
+          Text(
+              'Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
+              style: TextStyle(
+                  color: _getDeadlineColor(remainingDays),
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isExpired && gain.reinvestedAmount < gain.capitalGainAmount)
+            IconButton(
+              icon: const Icon(Icons.add_task, color: Colors.blue),
+              tooltip: 'Add Reinvestment',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TaxDetailsScreen(
+                      data: gainYearData,
+                      initialTabIndex: 3,
+                      onSave: (updated) {
+                        ref
+                            .read(storageServiceProvider)
+                            .saveTaxYearData(updated);
+                      },
+                      onDelete: () async {
+                        await ref
+                            .read(storageServiceProvider)
+                            .deleteTaxYearData(gainYearData.year);
+                        _loadData();
+                      },
+                    ),
+                  ),
+                );
+                _loadData();
+              },
+            ),
+          _buildGainStatusIcon(gain, isExpired),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExemptionsCard(TaxYearData data) {
     if (_allTaxData.isEmpty) return const SizedBox.shrink();
 
     final rules =
         ref.watch(taxConfigServiceProvider).getRulesForYear(data.year);
-
-    // Filter relevant gains for tracking (Active Window across ALL years)
-    final trackingGains = <MapEntry<TaxYearData, CapitalGainEntry>>[];
-    for (var yearData in _allTaxData) {
-      for (var gain in yearData.capitalGains) {
-        // Calculate years passed
-        int gainFyStart = gain.gainDate.year;
-        if (gain.gainDate.month < 4) gainFyStart -= 1;
-        int currentFYStart = data.year;
-
-        // Display if within reinvestment window and not fully reinvested (or just show all active)
-        if ((currentFYStart - gainFyStart) >= 0 &&
-            (currentFYStart - gainFyStart) <= rules.windowGainReinvest) {
-          trackingGains.add(MapEntry(yearData, gain));
-        }
-      }
-    }
+    final trackingGains =
+        _collectTrackingGains(data, rules.windowGainReinvest.toInt());
 
     if (trackingGains.isEmpty) return const SizedBox.shrink();
 
@@ -425,89 +504,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 'Reinvest within ${rules.windowGainReinvest} years to claim exemption under 54/54F',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             const Divider(),
-            ...trackingGains.map((entry) {
-              final gainYearData = entry.key;
-              final gain = entry.value;
-
-              // days = years * 365.25 approx, or just 365.
-              final days = (rules.windowGainReinvest * 365.25).round();
-              final deadline = gain.gainDate.add(Duration(days: days));
-              final remainingDays = deadline.difference(DateTime.now()).inDays;
-
-              // Warning color if deadline is close (< 180 days)
-              final isUrgent = remainingDays > 0 && remainingDays < 180;
-              final isExpired = remainingDays < 0;
-
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                    '${gain.description.isNotEmpty ? gain.description : 'Capital Gain'} (${gain.matchAssetType.toHumanReadable()})'),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        'FY ${gainYearData.year}-${gainYearData.year + 1} | Gain: ₹${gain.capitalGainAmount.toStringAsFixed(0)}'),
-                    Text(
-                        'Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
-                        style: TextStyle(
-                            color: () {
-                              if (isExpired) return Colors.red;
-                              if (isUrgent) return Colors.orange;
-                              return Colors.grey;
-                            }(),
-                            fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isExpired &&
-                        gain.reinvestedAmount < gain.capitalGainAmount)
-                      IconButton(
-                        icon: const Icon(Icons.add_task, color: Colors.blue),
-                        tooltip: 'Add Reinvestment',
-                        onPressed: () async {
-                          // Navigate to Details -> Cap Gains Tab (Index 3) for the SPECIFIC year the gain occurred
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TaxDetailsScreen(
-                                data: gainYearData,
-                                initialTabIndex: 3,
-                                onSave: (updated) {
-                                  ref
-                                      .read(storageServiceProvider)
-                                      .saveTaxYearData(updated);
-                                },
-                                onDelete: () async {
-                                  await ref
-                                      .read(storageServiceProvider)
-                                      .deleteTaxYearData(gainYearData.year);
-                                  _loadData();
-                                },
-                              ),
-                            ),
-                          );
-                          _loadData();
-                        },
-                      ),
-                    () {
-                      if (isExpired) {
-                        return const Chip(
-                            label: Text('Expired'),
-                            backgroundColor: Colors.redAccent,
-                            labelStyle: TextStyle(color: Colors.white));
-                      }
-                      if (gain.reinvestedAmount >= gain.capitalGainAmount) {
-                        return const Icon(Icons.check_circle,
-                            color: Colors.green);
-                      }
-                      return const Icon(Icons.timelapse, color: Colors.orange);
-                    }(),
-                  ],
-                ),
-              );
-            }),
+            ...trackingGains.map((entry) => _buildGainTile(
+                entry.key, entry.value, rules.windowGainReinvest.toInt())),
           ],
         ),
       ),
