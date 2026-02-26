@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../widgets/pure_icons.dart';
+import '../utils/ui_utils.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -110,9 +111,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const Divider(),
                   const SizedBox(height: 16),
                   TextButton.icon(
-                    onPressed: () { // coverage:ignore-line
+                    onPressed: () {
+                      // coverage:ignore-line
 
-                      ref.read(localModeProvider.notifier).value = // coverage:ignore-line
+                      ref
+                              .read(localModeProvider.notifier)
+                              .value = // coverage:ignore-line
                           true;
                     },
                     icon: PureIcons.cloudOff(size: 20),
@@ -143,7 +147,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await _autoRestore();
       }
     } else {
-      if (mounted) { // coverage:ignore-line
+      if (mounted) {
+        // coverage:ignore-line
 
         setState(() => _isLoading = false); // coverage:ignore-line
         // Special case: Sign in cancelled/returned from redirect without completion
@@ -152,7 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (response.message != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Login Status: ${response.message}')),
-        // coverage:ignore-end
+            // coverage:ignore-end
           );
         }
       }
@@ -162,7 +167,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // and we are still loading, reset after 10s to let user try again.
     _safetyTimer?.cancel();
     _safetyTimer = Timer(const Duration(seconds: 10), () {
-      if (mounted && _isLoading) { // coverage:ignore-line
+      if (mounted && _isLoading) {
+        // coverage:ignore-line
 
         setState(() => _isLoading = false); // coverage:ignore-line
       }
@@ -177,100 +183,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final hasData = storage.getAllAccounts().isNotEmpty ||
             storage.getAllTransactions().isNotEmpty;
 
-        if (hasData) {
-          return;
-        }
+        if (hasData) return;
 
         setState(() => _isLoading = true);
-        final syncService =
-            ref.read(cloudSyncServiceProvider);
-
-        Future<void> attemptRestore([String? passcode]) async {
-          try {
-            await syncService
-                .restoreFromCloud(passcode: passcode)
-                .timeout(const Duration(seconds: 15));
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cloud Data Restored!')),
-              );
-            }
-          } catch (e) {
-            if (!mounted) return;
-            if (e.toString().contains("Passcode required") ||
-                e.toString().contains("Incorrect passcode")) { // coverage:ignore-line
-              setState(() => _isLoading = false);
-              final p = await _showPasscodePrompt(
-                  context, e.toString().contains("Incorrect"));
-              if (p != null && p.isNotEmpty) {
-                setState(() => _isLoading = true);
-                await attemptRestore(p);
-              }
-            } else {
-              rethrow;
-            }
-          }
-        }
-
-        await attemptRestore();
+        await _performCloudRestoreOperation();
       }
     } catch (e) {
       // Auto-restore skipped or failed (offline or no cloud data)
     } finally {
-      // Invalidate providers so Dashboard sees the new logged-in state and data
-      // (This is safe to call even if unmounted as it updates the global Provider state)
-      ref.invalidate(authStreamProvider);
-      ref.invalidate(firebaseInitializerProvider);
-      ref.invalidate(isLoggedInProvider);
-
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _invalidateProviders();
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<String?> _showPasscodePrompt(BuildContext context, bool isRetry) {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("Encrypted Backup Found"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-                isRetry
-                    ? "Incorrect passcode. Please try again."
-                    : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
-                style: TextStyle(color: isRetry ? Colors.red : null)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Passcode",
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, null), // coverage:ignore-line
-            child: const Text("SKIP"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                Navigator.pop(context, controller.text);
-              }
-            },
-            child: const Text("RESTORE"),
-          ),
-        ],
-      ),
-    );
+  void _invalidateProviders() {
+    ref.invalidate(authStreamProvider);
+    ref.invalidate(firebaseInitializerProvider);
+    ref.invalidate(isLoggedInProvider);
+  }
+
+  Future<void> _performCloudRestoreOperation([String? passcode]) async {
+    final syncService = ref.read(cloudSyncServiceProvider);
+    try {
+      await syncService
+          .restoreFromCloud(passcode: passcode)
+          .timeout(const Duration(seconds: 15));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cloud Data Restored!')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      await _handleAutoRestoreError(e);
+    }
+  }
+
+  Future<void> _handleAutoRestoreError(dynamic e) async {
+    final errorStr = e.toString();
+    if (errorStr.contains("Passcode required") ||
+        errorStr.contains("Incorrect passcode")) {
+      // coverage:ignore-line
+      setState(() => _isLoading = false);
+      final p = await UIUtils.showPasscodePrompt(
+          context, errorStr.contains("Incorrect"));
+      if (!mounted) return;
+      if (p != null && p.isNotEmpty) {
+        await _performCloudRestoreOperation(p);
+      }
+    } else if (!errorStr.contains("No cloud data")) {
+      throw e;
+    }
   }
 }
