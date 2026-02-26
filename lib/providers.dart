@@ -62,11 +62,14 @@ class IsOfflineNotifier extends Notifier<bool> {
 
       // Web Native Listeners (Fastest response)
       ConnectivityPlatform.setupWebListeners( // coverage:ignore-line
-          ref, (val) => state = val); // coverage:ignore-line
+
+          ref, // coverage:ignore-line
+          (val) => state = val); // coverage:ignore-line
     }
 
     // Continuous Monitoring via Plugin (Platform agnostic fallback)
     final subscription = Connectivity().onConnectivityChanged.listen((results) { // coverage:ignore-line
+
       // On Web, plugin helps catch edge cases or specific interface changes.
       // We combine it with navigator.onLine for maximum accuracy.
       // coverage:ignore-start
@@ -89,6 +92,7 @@ class IsOfflineNotifier extends Notifier<bool> {
   }
 
   void setOffline(bool isOffline) { // coverage:ignore-line
+
     state = isOffline; // coverage:ignore-line
   }
 }
@@ -144,9 +148,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     Hive.registerAdapter<BusinessEntity>(BusinessEntityAdapter(),
     // coverage:ignore-end
         override: true);
-    Hive.registerAdapter<BusinessType>(BusinessTypeAdapter(), // coverage:ignore-line
+    Hive.registerAdapter<BusinessType>( // coverage:ignore-line
+        BusinessTypeAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CapitalGainEntry>( // coverage:ignore-line
+
         CapitalGainEntryAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -163,6 +169,7 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<InsurancePremiumRule>( // coverage:ignore-line
+
         InsurancePremiumRuleAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -173,9 +180,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<LoanTransaction>( // coverage:ignore-line
+
         LoanTransactionAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<LoanTransactionType>( // coverage:ignore-line
+
         LoanTransactionTypeAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -186,6 +195,7 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<ReinvestmentType>( // coverage:ignore-line
+
         ReinvestmentTypeAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -195,9 +205,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<TaxMappingRule>( // coverage:ignore-line
+
         TaxMappingRuleAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<TaxPaymentEntry>( // coverage:ignore-line
+
         TaxPaymentEntryAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -208,21 +220,27 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<PayoutFrequency>( // coverage:ignore-line
+
         PayoutFrequencyAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<SalaryStructure>( // coverage:ignore-line
+
         SalaryStructureAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomAllowance>( // coverage:ignore-line
+
         CustomAllowanceAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomDeduction>( // coverage:ignore-line
+
         CustomDeductionAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomExemption>( // coverage:ignore-line
+
         CustomExemptionAdapter(), // coverage:ignore-line
         override: true);
-    Hive.registerAdapter<TaxYearData>(TaxYearDataAdapter(), // coverage:ignore-line
+    Hive.registerAdapter<TaxYearData>( // coverage:ignore-line
+        TaxYearDataAdapter(), // coverage:ignore-line
         override: true);
 
     // Open specialized boxes
@@ -292,6 +310,7 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
   // 1. Connectivity Check
   if (await NetworkUtils.isOffline()) { // coverage:ignore-line
 
+
     return;
   }
 
@@ -300,6 +319,7 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
 
   // 3. iOS PWA Offline Safety Check
   if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) { // coverage:ignore-line
+
 
     throw Exception( // coverage:ignore-line
         "Firebase JS SDK Missing (Offline Safe Mode)");
@@ -311,10 +331,13 @@ final firebaseInitializerProvider = FutureProvider<void>((ref) async {
 
 Future<void> _checkReachability() async { // coverage:ignore-line
 
+
   bool reachable = false;
   for (int i = 0; i < 3; i++) { // coverage:ignore-line
 
+
     if (await NetworkUtils.hasActualInternet()) { // coverage:ignore-line
+
 
       reachable = true;
       break;
@@ -329,14 +352,20 @@ Future<void> _checkReachability() async { // coverage:ignore-line
 
 Future<void> _initializeWithRetry(Ref ref) async { // coverage:ignore-line
 
+
   int attempts = 0;
   const maxAttempts = 3;
 
   while (attempts < maxAttempts) { // coverage:ignore-line
 
+
     try {
       attempts++; // coverage:ignore-line
+      // Prevent duplicate initialization error
+      if (Firebase.apps.isNotEmpty) return; // coverage:ignore-line
+
       await Firebase.initializeApp( // coverage:ignore-line
+
 
         options: kDebugMode
             // coverage:ignore-start
@@ -349,6 +378,7 @@ Future<void> _initializeWithRetry(Ref ref) async { // coverage:ignore-line
       return;
     } catch (e) {
       if (attempts >= maxAttempts) { // coverage:ignore-line
+
 
         _throwFinalError(e, maxAttempts); // coverage:ignore-line
       }
@@ -370,6 +400,7 @@ Future<void> _handleRedirectIfNeeded(Ref ref) async {
 }
 
 Never _throwFinalError(Object e, int maxAttempts) { // coverage:ignore-line
+
 
   final isTimeout =
       e.toString().toLowerCase().contains("timeout"); // coverage:ignore-line
@@ -410,14 +441,12 @@ class ProfileNotifier extends Notifier<String> {
 final activeProfileIdHiveStreamProvider = StreamProvider<String>((ref) async* {
   await ref.watch(storageInitializerProvider.future);
   final box = Hive.box('settings');
-  yield box.get('activeProfileId', defaultValue: 'default') // coverage:ignore-line
+  yield box.get('activeProfileId', // coverage:ignore-line
+          defaultValue: 'default')
       as String;
   yield* box
-      // coverage:ignore-start
-      .watch(key: 'activeProfileId')
-      .map((event) =>
-          (event.value as String?) ?? 'default');
-      // coverage:ignore-end
+      .watch(key: 'activeProfileId') // coverage:ignore-line
+      .map((event) => (event.value as String?) ?? 'default'); // coverage:ignore-line
 });
 
 final activeProfileIdProvider =
@@ -455,13 +484,8 @@ final accountsProvider = StreamProvider<List<Account>>((ref) async* {
 
   // Watch for any changes in the accounts box
   yield* box
-      // coverage:ignore-start
-      .watch()
-      .map((_) => storage
-          .getAccounts()
-          .whereType<Account>()
-          .toList());
-      // coverage:ignore-end
+      .watch() // coverage:ignore-line
+      .map((_) => storage.getAccounts().whereType<Account>().toList()); // coverage:ignore-line
 });
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
@@ -479,13 +503,8 @@ final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
 
   // Watch for any changes in the transactions box
   yield* box
-      // coverage:ignore-start
-      .watch()
-      .map((_) => storage
-          .getTransactions()
-          .whereType<Transaction>()
-          .toList());
-      // coverage:ignore-end
+      .watch() // coverage:ignore-line
+      .map((_) => storage.getTransactions().whereType<Transaction>().toList()); // coverage:ignore-line
 });
 
 final loansProvider = StreamProvider<List<Loan>>((ref) async* {

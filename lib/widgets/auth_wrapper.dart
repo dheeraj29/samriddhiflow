@@ -170,6 +170,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         e.code == 'user-disabled' || // coverage:ignore-line
         e.code == 'min-app-version-error') { // coverage:ignore-line
 
+
       DebugLogger().log("Critical Session Error (${e.code}): Force Logout.");
       await authService.signOut(ref);
       return false;
@@ -178,13 +179,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (e.code == 'network-request-failed' || // coverage:ignore-line
         e.code == 'unavailable') { // coverage:ignore-line
 
+
       if (attempts >= maxAttempts) { // coverage:ignore-line
 
-        // coverage:ignore-start
-        ref
-            .read(isOfflineProvider.notifier)
-            .setOffline(true);
-        // coverage:ignore-end
+
+        ref.read(isOfflineProvider.notifier).setOffline(true); // coverage:ignore-line
         return false;
       }
       await Future.delayed( // coverage:ignore-line
@@ -373,13 +372,16 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (errorStr.contains("Passcode required") ||
         errorStr.contains("Incorrect passcode")) { // coverage:ignore-line
 
+
       final p = await UIUtils.showPasscodePrompt(
           context, errorStr.contains("Incorrect"));
 
       if (context.mounted && p != null && p.isNotEmpty) {
         await _performAutoRestoreOperation(context, p);
       } else if (context.mounted) { // coverage:ignore-line
+
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar( // coverage:ignore-line
+
 
             content: Text("Restore skipped. Continuing with empty data.")));
       }
@@ -422,7 +424,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
 
                 "Storage Access Issue",
-                style: Theme.of(context).textTheme.titleLarge, // coverage:ignore-line
+                // coverage:ignore-start
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge,
+                // coverage:ignore-end
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -510,6 +516,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
         if (isPersistentLogin) {
           return _buildAuthStream( // coverage:ignore-line
+
 
               context,
               isPersistentLogin);
@@ -610,6 +617,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       },
       error: (e, s) { // coverage:ignore-line
 
+        // If we have a persistent session, STAY on Dashboard even if Firebase is flapping
+        if (isPersistentLogin) return const DashboardScreen();
 
         DebugLogger() // coverage:ignore-line
             .log("AuthWrapper: Auth Stream Error: $e"); // coverage:ignore-line
@@ -662,6 +671,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                       ref.invalidate(firebaseInitializerProvider);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+
 
                         const SnackBar(
                             content: Text(
@@ -736,7 +746,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             style: TextButton.styleFrom( // coverage:ignore-line
 
 
-                foregroundColor: Theme.of(context).colorScheme.error), // coverage:ignore-line
+                // coverage:ignore-start
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .error),
+                // coverage:ignore-end
             child: const Text("Login Again"),
           ),
         ],

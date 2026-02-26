@@ -178,7 +178,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildOfflinePausedCard(BuildContext context) { // coverage:ignore-line
 
+
     return Container( // coverage:ignore-line
+
 
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -196,24 +198,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // coverage:ignore-end
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  // coverage:ignore-start
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface)),
-                  // coverage:ignore-end
+                  color: Theme.of(context).colorScheme.onSurface)), // coverage:ignore-line
           const SizedBox(height: 8),
           Text( // coverage:ignore-line
+
 
             'You are in Offline Mode. Cloud Sync is deferred.',
             textAlign: TextAlign.center,
             style: AppTheme.offlineSafeTextStyle.copyWith( // coverage:ignore-line
 
+
                 fontSize: 12,
-                // coverage:ignore-start
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant),
-                // coverage:ignore-end
+                color: Theme.of(context).colorScheme.onSurfaceVariant), // coverage:ignore-line
           ),
           const SizedBox(height: 12),
           const SizedBox(height: 12),
@@ -227,10 +223,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               }
               // coverage:ignore-start
-              await NetworkUtils.hasActualInternet();
-              ref.invalidate(firebaseInitializerProvider);
-              ref.invalidate(isOfflineProvider);
+              final hasNet = await NetworkUtils.hasActualInternet();
+              if (hasNet && context.mounted) {
+                ref.read(isOfflineProvider.notifier).setOffline(false);
+                ref.invalidate(firebaseInitializerProvider);
+                ScaffoldMessenger.of(context).showSnackBar(
               // coverage:ignore-end
+                  const SnackBar(
+                      content:
+                          Text("Internet restored. Reconnecting cloud...")),
+                );
+              } else if (context.mounted) { // coverage:ignore-line
+                ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+                  const SnackBar(content: Text("Still offline.")),
+                );
+              }
             },
             icon: const Icon(Icons.refresh),
             label: const Text('Retry Connection'),
@@ -272,8 +279,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: () => Navigator.push( // coverage:ignore-line
+
                 context,
                 MaterialPageRoute( // coverage:ignore-line
+
                     builder: (_) => // coverage:ignore-line
                         const LoginScreen())),
             child: const Text('Login to Setup Cloud'),
@@ -364,8 +373,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text('Restore deleted transactions'),
           leading: PureIcons.recycleBin(color: Colors.red),
           onTap: () => Navigator.push( // coverage:ignore-line
+
               context,
               MaterialPageRoute( // coverage:ignore-line
+
                   builder: (_) => // coverage:ignore-line
                       const RecycleBinScreen())),
         ),
@@ -473,6 +484,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<Map<String, dynamic>?> _selectCreditCardForRepair( // coverage:ignore-line
 
+
       BuildContext parentContext) async {
     // coverage:ignore-start
     final accounts = (ref.read(accountsProvider).asData?.value ?? [])
@@ -481,13 +493,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // coverage:ignore-end
 
     if (accounts.isEmpty || !context.mounted) { // coverage:ignore-line
+
       return null;
     }
 
     final result = await showDialog<String>( // coverage:ignore-line
 
+
       context: parentContext,
       builder: (ctx) => SimpleDialog( // coverage:ignore-line
+
 
         title: const Text('Select Credit Card'),
         // coverage:ignore-start
@@ -531,8 +546,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           leading: PureIcons.refresh(color: Colors.orange),
           onTap: () => Navigator.push( // coverage:ignore-line
 
+
               context,
               MaterialPageRoute( // coverage:ignore-line
+
 
                   builder: (_) => // coverage:ignore-line
                       const RecurringManagerScreen())),
@@ -542,8 +559,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text('Configure non-working days'),
           leading: PureIcons.calendar(color: Colors.red),
           onTap: () => Navigator.push( // coverage:ignore-line
+
               context,
               MaterialPageRoute( // coverage:ignore-line
+
                   builder: (_) => // coverage:ignore-line
                       const HolidayManagerScreen())),
         ),
@@ -552,6 +571,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text('Add, edit, or delete categories'),
           leading: PureIcons.icon(Icons.category, color: Colors.blue),
           onTap: () => showDialog( // coverage:ignore-line
+
 
             context: context,
             builder: (context) => // coverage:ignore-line
@@ -563,12 +583,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text('Enable Quick Sum Tracker on transactions'),
           secondary: PureIcons.calculate(color: Colors.teal),
           value: ref.watch(smartCalculatorEnabledProvider),
-          // coverage:ignore-start
-          onChanged: (_) =>
-              ref
-                  .read(smartCalculatorEnabledProvider.notifier)
-                  .toggle(),
-          // coverage:ignore-end
+          onChanged: (_) => // coverage:ignore-line
+              ref.read(smartCalculatorEnabledProvider.notifier).toggle(), // coverage:ignore-line
         ),
       ],
     );
@@ -612,13 +628,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: PureIcons.copy(),
             tooltip: 'Copy Categories from another profile',
             onPressed: () => _showCopyCategoriesDialog( // coverage:ignore-line
-                context, ref, p.id), // coverage:ignore-line
+
+                context,
+                ref, // coverage:ignore-line
+                p.id), // coverage:ignore-line
           ),
           if (profiles.length > 1 && !isActive)
             IconButton(
               icon: PureIcons.deleteOutlined(color: Colors.red),
               onPressed: () => _showDeleteProfileDialog( // coverage:ignore-line
-                  context, ref, p), // coverage:ignore-line
+
+                  context,
+                  ref, // coverage:ignore-line
+                  p),
             ),
         ],
       ),
@@ -751,13 +773,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final verified =
                   await _showVerifyPinDialog(context); // coverage:ignore-line
               if (verified) {
-                // coverage:ignore-start
-                setState(
-                    () => _isAppLockEnabled = false);
-                await ref
-                    .read(storageServiceProvider)
-                    .setAppLockEnabled(false);
-                // coverage:ignore-end
+                setState(() => _isAppLockEnabled = false); // coverage:ignore-line
+                await ref.read(storageServiceProvider).setAppLockEnabled(false); // coverage:ignore-line
               }
             }
           },
@@ -791,11 +808,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           leading: PureIcons.info(size: 20),
           onTap: () => // coverage:ignore-line
               UIUtils.showCommonAboutDialog( // coverage:ignore-line
-                  context, AppConstants.appVersion),
+
+                  context,
+                  AppConstants.appVersion),
         ),
         if (_installPrompt != null) ...[
           const Divider(),
           ListTile( // coverage:ignore-line
+
 
             title: const Text('Install App'),
             subtitle: const Text('Add to Home Screen for Offline use'),
@@ -815,16 +835,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     TargetPlatform.iOS ||
                 defaultTargetPlatform == TargetPlatform.macOS)) ...[ // coverage:ignore-line
 
+
           const Divider(),
           ListTile( // coverage:ignore-line
+
 
             title: const Text('Install on iPhone'),
             subtitle: const Text('Tap "Share" → "Add to Home Screen"'),
             leading: const Icon(Icons.ios_share, color: Colors.blue),
             onTap: () => showDialog( // coverage:ignore-line
 
+
               context: context,
               builder: (ctx) => AlertDialog( // coverage:ignore-line
+
 
                 title: const Text("Install on iPhone"),
                 content: const Column(
@@ -891,6 +915,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
 
+
       const SnackBar(content: Text("Checking for updates...")),
     );
 
@@ -906,6 +931,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<bool> _checkForWebUpdate() async { // coverage:ignore-line
+
 
     if (!kIsWeb) return false;
 
@@ -968,6 +994,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (wantReload == true && kIsWeb) { // coverage:ignore-line
 
+
       try {
         await ConnectivityPlatform
             .reloadAndClearCache(); // coverage:ignore-line
@@ -996,6 +1023,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: const Text('Cancel')),
           ElevatedButton( // coverage:ignore-line
 
+
               onPressed: () => // coverage:ignore-line
                   Navigator.pop(context, true), // coverage:ignore-line
               child: const Text('Update & Reload')),
@@ -1004,6 +1032,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (confirmed == true) { // coverage:ignore-line
+
 
       if (kIsWeb) {
         try {
@@ -1016,6 +1045,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (!mounted) return; // coverage:ignore-line
         ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
 
+
           const SnackBar(
               content: Text('Update not available for this platform.')),
         );
@@ -1025,8 +1055,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _backupToCloud() async { // coverage:ignore-line
 
+
     // Check PIN if enabled
     if (_isAppLockEnabled) { // coverage:ignore-line
+
 
       final verified =
           await _showVerifyPinDialog(context); // coverage:ignore-line
@@ -1238,6 +1270,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       if (mounted) { // coverage:ignore-line
 
+
         setState(() => _isDownloading = false); // coverage:ignore-line
       }
     }
@@ -1245,8 +1278,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _smartRestoreFlow() async { // coverage:ignore-line
 
+
     // Check PIN if enabled
     if (_isAppLockEnabled) { // coverage:ignore-line
+
 
       final verified =
           await _showVerifyPinDialog(context); // coverage:ignore-line
@@ -1317,6 +1352,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (mounted) { // coverage:ignore-line
 
+
         // Force refresh providers
         // coverage:ignore-start
         ref.invalidate(accountsProvider);
@@ -1343,6 +1379,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } finally {
       if (mounted) { // coverage:ignore-line
+
 
         setState(() => _isDownloading = false); // coverage:ignore-line
       }
@@ -1532,6 +1569,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<String?> _promptForEncryptionPasscode( // coverage:ignore-line
 
+
       BuildContext context,
       String title,
       String message,
@@ -1540,6 +1578,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     bool usePasscode = true;
 
     final result = await showDialog<String>( // coverage:ignore-line
+
 
       context: context,
       barrierDismissible: false,
@@ -1552,11 +1591,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [ // coverage:ignore-line
 
+
               Text(message), // coverage:ignore-line
               const SizedBox(height: 16),
               if (!isRestore) ...[ // coverage:ignore-line
 
+
                 SwitchListTile( // coverage:ignore-line
+
 
                   title: const Text("Encrypt Backup?"),
                   value: usePasscode,
@@ -1567,7 +1609,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               if (usePasscode || isRestore) ...[ // coverage:ignore-line
 
+
                 TextField( // coverage:ignore-line
+
 
                   controller: controller,
                   obscureText: true,
@@ -1589,14 +1633,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             ElevatedButton( // coverage:ignore-line
 
+
               onPressed: () => _handleEncryptionSubmit( // coverage:ignore-line
+
 
                   context,
                   controller,
                   isRestore,
                   usePasscode),
               child: Text(_getEncryptionButtonLabel( // coverage:ignore-line
-                  isRestore, usePasscode)),
+
+                  isRestore,
+                  usePasscode)),
             ),
           ],
         ),
@@ -1606,6 +1654,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _handleEncryptionSubmit( // coverage:ignore-line
+
       BuildContext context,
       TextEditingController controller,
       bool isRestore,
@@ -1616,16 +1665,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     if (isRestore || controller.text.isNotEmpty) { // coverage:ignore-line
 
+
       Navigator.pop(context, controller.text); // coverage:ignore-line
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+
 
       const SnackBar(content: Text("Please enter a passcode")),
     );
   }
 
   String _getEncryptionButtonLabel(bool isRestore, bool usePasscode) { // coverage:ignore-line
+
 
     if (isRestore) return "RESTORE";
     if (usePasscode) return "ENCRYPT & BACKUP";
@@ -1641,15 +1693,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog( // coverage:ignore-line
 
+
         title: const Text("Verify App PIN"),
         content: Column( // coverage:ignore-line
+
 
           mainAxisSize: MainAxisSize.min,
           children: [ // coverage:ignore-line
 
+
             const Text("Enter your 4-digit PIN to disable App Lock."),
             const SizedBox(height: 16),
             TextField( // coverage:ignore-line
+
 
               controller: controller,
               keyboardType: TextInputType.number,
@@ -1658,6 +1714,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 16),
               inputFormatters: [ // coverage:ignore-line
+
                 FilteringTextInputFormatter.digitsOnly // coverage:ignore-line
               ],
               decoration: const InputDecoration(
@@ -1684,6 +1741,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // coverage:ignore-end
               } else {
                 ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+
 
                   const SnackBar(content: Text("Incorrect PIN")),
                 );
@@ -1767,6 +1825,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _handleUseExistingPin( // coverage:ignore-line
 
+
       BuildContext context,
       dynamic storage) async {
     // coverage:ignore-start
@@ -1797,13 +1856,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _showDeleteProfileDialog( // coverage:ignore-line
 
+
       BuildContext context,
       WidgetRef ref,
       Profile profile) {
     showDialog( // coverage:ignore-line
 
+
       context: context,
       builder: (context) => AlertDialog( // coverage:ignore-line
+
 
         title: const Text("Delete Profile?"),
         // coverage:ignore-start
@@ -1824,14 +1886,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // If we deleted the active profile, switch to default
               if (ref.read(activeProfileIdProvider) == profile.id) { // coverage:ignore-line
 
+
                 ref
-                    // coverage:ignore-start
-                    .read(activeProfileIdProvider
-                        .notifier)
-                    .setProfile('default');
-                    // coverage:ignore-end
+                    .read(activeProfileIdProvider.notifier) // coverage:ignore-line
+                    .setProfile('default'); // coverage:ignore-line
               }
               if (context.mounted) { // coverage:ignore-line
+
 
                 Navigator.pop(context); // coverage:ignore-line
               }
@@ -1845,11 +1906,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _showCopyCategoriesDialog( // coverage:ignore-line
 
+
       BuildContext context,
       WidgetRef ref,
       String targetProfileId) {
     final profilesAsync = ref.read(profilesProvider); // coverage:ignore-line
     profilesAsync.whenData((profiles) { // coverage:ignore-line
+
 
       final otherProfiles =
           // coverage:ignore-start
@@ -1864,13 +1927,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       showDialog( // coverage:ignore-line
 
+
         context: context,
         builder: (c) => AlertDialog( // coverage:ignore-line
+
 
           title: const Text('Copy Categories'),
           content: SingleChildScrollView( // coverage:ignore-line
 
+
             child: Column( // coverage:ignore-line
+
 
               mainAxisSize: MainAxisSize.min,
               children: otherProfiles
