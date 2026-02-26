@@ -195,6 +195,41 @@ void main() {
     expect(stats['transactions'], 1);
   });
 
+  test('restoreFromPackage strips isLoggedIn and last_sync from settings',
+      () async {
+    // Setup
+    final archive = Archive();
+    void add(String name, dynamic content) {
+      final bytes = utf8.encode(jsonEncode(content));
+      archive.addFile(ArchiveFile(name, bytes.length, bytes));
+    }
+
+    add('metadata.json', {'version': '1.0.0'});
+    add('settings.json', {
+      'theme': 'dark',
+      'isLoggedIn': true, // This should be stripped
+      'last_sync': 1234567, // This should be stripped
+    });
+
+    final zipBytes = ZipEncoder().encode(archive);
+    when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+
+    Map<String, dynamic>? savedSettings;
+    when(() => mockStorageService.saveSettings(any()))
+        .thenAnswer((invocation) async {
+      savedSettings = invocation.positionalArguments[0] as Map<String, dynamic>;
+    });
+
+    // Run
+    await jsonDataService.restoreFromPackage(zipBytes);
+
+    // Verify
+    expect(savedSettings, isNotNull);
+    expect(savedSettings!['theme'], 'dark');
+    expect(savedSettings!.containsKey('isLoggedIn'), isFalse);
+    expect(savedSettings!.containsKey('last_sync'), isFalse);
+  });
+
   test('createBackupPackage sanitizes Infinity and NaN values', () async {
     // Setup with Infinity in accounts and transactions
     final accountMap = Account(

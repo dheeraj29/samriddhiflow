@@ -71,6 +71,7 @@ class StorageService {
       } else {
         // Initial defaults
         if (_defaultCategoryCache.isEmpty) { // coverage:ignore-line
+
           await _loadDefaultCategoriesJson(); // coverage:ignore-line
         }
         // coverage:ignore-start
@@ -92,7 +93,8 @@ class StorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       _defaultCategoryCache = List<Map<String, dynamic>>.from(jsonList);
     } catch (e) {
-      DebugLogger().log('Error loading default categories: $e'); // coverage:ignore-line
+      DebugLogger() // coverage:ignore-line
+          .log('Error loading default categories: $e'); // coverage:ignore-line
       // Fallback empty or handle critical error
     }
   }
@@ -140,7 +142,12 @@ class StorageService {
   }
 
   Future<void> saveProfile(Profile profile) async { // coverage:ignore-line
-    await _hive.box<Profile>(boxProfiles).put(profile.id, profile); // coverage:ignore-line
+
+    // coverage:ignore-start
+    await _hive
+        .box<Profile>(boxProfiles)
+        .put(profile.id, profile);
+    // coverage:ignore-end
   }
 
   Future<void> deleteProfile(String profileId) async {
@@ -243,7 +250,8 @@ class StorageService {
   }
 
   // --- Account Operations ---
-  List<Account> getAccounts() => _getByProfile<Account>(boxAccounts); // coverage:ignore-line
+  List<Account> getAccounts() => // coverage:ignore-line
+      _getByProfile<Account>(boxAccounts); // coverage:ignore-line
 
   // coverage:ignore-start
   List<Account> getAllAccounts() {
@@ -352,26 +360,33 @@ class StorageService {
 
       await setLastRollover(acc.id, newRolloverDate.millisecondsSinceEpoch);
     } catch (e) {
-      DebugLogger().log('Error resetting cycle for ${acc.name}: $e'); // coverage:ignore-line
+      DebugLogger().log( // coverage:ignore-line
+          'Error resetting cycle for ${acc.name}: $e'); // coverage:ignore-line
     }
   }
 
   /// Explicitly refreshes the billing cycle dates to SHOW the bill (Billed Amount > 0).
   /// Reverts any "Paid" status for the current cycle.
   Future<void> recalculateBilledAmount(String accountId) async { // coverage:ignore-line
-    final acc = _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
+
+    final acc =
+        _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
     if (acc == null) return;
     // Force keepBilledStatus = false to ensure the previous cycle is treated as "Billed"
-    await resetCreditCardRollover(acc, keepBilledStatus: false); // coverage:ignore-line
+    await resetCreditCardRollover(acc, // coverage:ignore-line
+        keepBilledStatus: false);
   }
 
   /// Manually clears the billed amount (Mark as Paid/Advance Cycle).
   /// Doesn't record a transaction, just updates the pointer.
   Future<void> clearBilledAmount(String accountId) async { // coverage:ignore-line
-    final acc = _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
+
+    final acc =
+        _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
     if (acc == null) return;
     // Force keepBilledStatus = true to advance pointer to current cycle start
-    await resetCreditCardRollover(acc, keepBilledStatus: true); // coverage:ignore-line
+    await resetCreditCardRollover(acc, // coverage:ignore-line
+        keepBilledStatus: true);
   }
 
   Future<void> deleteAccount(String id) async {
@@ -431,7 +446,9 @@ class StorageService {
       final now = nowOverride ?? DateTime.now(); // coverage:ignore-line
 
       for (var acc in accounts) {
-        if (accountId != null && acc.id != accountId) continue; // coverage:ignore-line
+        if (accountId != null && acc.id != accountId) { // coverage:ignore-line
+          continue;
+        }
         if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
           continue;
         }
@@ -496,7 +513,8 @@ class StorageService {
             t.accountId == acc.id &&
             t.date.isAfter(lastRollover) &&
             (t.date.isBefore(targetRolloverDate) ||
-                t.date.isAtSameMomentAs(targetRolloverDate))) // coverage:ignore-line
+                t.date.isAtSameMomentAs( // coverage:ignore-line
+                    targetRolloverDate)))
         .toList();
 
     double adhocAmount = 0;
@@ -588,25 +606,33 @@ class StorageService {
   /// Corrects standard 'Storage' skipping logic which doesn't auto-rollover.
   /// Returns the number of accounts updated.
   Future<int> recalculateCCBalances( // coverage:ignore-line
-      {String? accountId, bool ignorePayments = false}) async {
+
+      {String? accountId,
+      bool ignorePayments = false}) async {
     // Reruns the rollover logic.
     // NOTE: This will only "repair" if a rollover was MISSED (i.e. due to app not opening).
     // It will NOT recalculate history if the history is already marked as rolled over.
     // This aligns with user request: "only consider previous cycle".
     await checkCreditCardRollovers( // coverage:ignore-line
-        accountId: accountId, ignorePayments: ignorePayments);
+
+        accountId: accountId,
+        ignorePayments: ignorePayments);
     return 1; // Dummy return as we don't track count deeply in rollover
   }
 
-  Future<void> saveTransactions(List<Transaction> transactions, // coverage:ignore-line
-      {bool applyImpact = true, DateTime? now}) async {
+  Future<void> saveTransactions( // coverage:ignore-line
+      List<Transaction> transactions,
+      {bool applyImpact = true,
+      DateTime? now}) async {
     final box = _hive.box<Transaction>(boxTransactions); // coverage:ignore-line
     final Map<dynamic, Transaction> batch = {}; // coverage:ignore-line
 
     for (var txn in transactions) { // coverage:ignore-line
+
       if (applyImpact) {
         final existingTxn = box.get(txn.id); // coverage:ignore-line
         await _handleTransactionImpacts( // coverage:ignore-line
+
           oldTxn: existingTxn,
           newTxn: txn,
           now: now,
@@ -766,12 +792,16 @@ class StorageService {
       txn.isDeleted = true;
       await box.put(txn.id, txn);
     } catch (e) {
-      DebugLogger().log("StorageService: deleteTransaction error: $e"); // coverage:ignore-line
+      DebugLogger().log( // coverage:ignore-line
+          "StorageService: deleteTransaction error: $e"); // coverage:ignore-line
     }
   }
 
   Future<int> getSimilarTransactionCount( // coverage:ignore-line
-      String title, String category, String excludeId) async {
+
+      String title,
+      String category,
+      String excludeId) async {
     final box = _hive.box<Transaction>(boxTransactions); // coverage:ignore-line
     final profileId = getActiveProfileId(); // coverage:ignore-line
     return box
@@ -893,9 +923,12 @@ class StorageService {
 
   // --- Category Operations ---
   List<Category> getCategories() { // coverage:ignore-line
-    final profileCategories = _getByProfile<Category>(boxCategories); // coverage:ignore-line
+
+    final profileCategories =
+        _getByProfile<Category>(boxCategories); // coverage:ignore-line
 
     if (profileCategories.isEmpty) { // coverage:ignore-line
+
       // Create defaults for this profile
       // coverage:ignore-start
       final profileId = getActiveProfileId();
@@ -921,6 +954,9 @@ class StorageService {
 
   Future<void> addCategory(Category category) async {
     final box = _hive.box<Category>(boxCategories);
+    if (category.profileId == null || category.profileId!.isEmpty) {
+      category.profileId = getActiveProfileId();
+    }
     await box.put(category.id, category);
   }
 
@@ -978,9 +1014,12 @@ class StorageService {
   }
 
   List<Category> _getDefaultCategories(String profileId) { // coverage:ignore-line
+
     if (_defaultCategoryCache.isEmpty) { // coverage:ignore-line
+
       // Emergency fallback if JSON failed or init didn't run (should not happen in prod flow)
-      DebugLogger().log('Warning: Default categories cache is empty.'); // coverage:ignore-line
+      DebugLogger().log( // coverage:ignore-line
+          'Warning: Default categories cache is empty.');
       return []; // coverage:ignore-line
     }
 
@@ -1005,6 +1044,7 @@ class StorageService {
       );
 
       return Category.create( // coverage:ignore-line
+
         name: data['name'] as String, // coverage:ignore-line
         usage: usage,
         tag: tag,
@@ -1258,7 +1298,9 @@ class StorageService {
   }
 
   Box<InsurancePolicy> getInsurancePoliciesBox() { // coverage:ignore-line
-    return _hive.box<InsurancePolicy>(boxInsurancePolicies); // coverage:ignore-line
+
+    return _hive // coverage:ignore-line
+        .box<InsurancePolicy>(boxInsurancePolicies); // coverage:ignore-line
   }
 
   Future<void> saveInsurancePolicies(List<InsurancePolicy> policies) async {
@@ -1421,6 +1463,7 @@ class StorageService {
     }
 
     for (var key in corruptedKeys) { // coverage:ignore-line
+
       await dynamicBox.delete(key); // coverage:ignore-line
     }
 
@@ -1449,7 +1492,13 @@ class StorageService {
   }
 
   List<TaxYearData> getAllTaxYearData() { // coverage:ignore-line
-    return _hive.box<TaxYearData>(boxTaxData).values.toList(); // coverage:ignore-line
+
+    // coverage:ignore-start
+    return _hive
+        .box<TaxYearData>(boxTaxData)
+        .values
+        .toList();
+    // coverage:ignore-end
   }
 
   // coverage:ignore-start

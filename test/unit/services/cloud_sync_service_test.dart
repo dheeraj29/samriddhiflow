@@ -121,6 +121,34 @@ void main() {
       verify(() => mockStorageService.saveAccount(any())).called(1);
     });
 
+    test('restoreFromCloud strips isLoggedIn from settings', () async {
+      final cloudData = {
+        'settings': {
+          'theme': 'dark',
+          'isLoggedIn': true, // This should be stripped
+        },
+      };
+
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+
+      Map<String, dynamic>? savedSettings;
+      when(() => mockStorageService.saveSettings(any()))
+          .thenAnswer((invocation) async {
+        savedSettings =
+            invocation.positionalArguments[0] as Map<String, dynamic>;
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      expect(savedSettings, isNotNull);
+      expect(savedSettings!['theme'], 'dark');
+      expect(savedSettings!.containsKey('isLoggedIn'), isFalse);
+    });
+
     test('sanitizes Firestore timestamps recursively', () async {
       final now = DateTime.now();
       final cloudDataWithTimestamp = {

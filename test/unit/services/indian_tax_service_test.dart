@@ -227,6 +227,13 @@ void main() {
       expect(cgResults['LTCG_Equity'], 200000);
       expect(cgResults['LTCG_Other'], 100000);
       expect(cgResults['STCG'], 50000);
+
+      final detailedLiability =
+          taxService.calculateDetailedLiability(data, defaultRules);
+      expect(detailedLiability['capitalGainsTotal'], 350000);
+      expect(detailedLiability['LTCG_Equity'], 200000);
+      expect(detailedLiability['LTCG_Other'], 100000);
+      expect(detailedLiability['STCG'], 50000);
     });
 
     test('Handles Reinvestment Exemption (u/s 54F for Equity)', () {

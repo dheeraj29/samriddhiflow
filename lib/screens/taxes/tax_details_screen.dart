@@ -6,6 +6,7 @@ import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/widgets/pure_icons.dart';
+import 'dart:math';
 
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
@@ -1622,10 +1623,52 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     _updateSummary();
   }
 
-  // --- Granular Capital Gains UI ---
   Widget _buildCapitalGainsTab() {
+    double stcg = 0;
+    double ltcgEquity = 0;
+    double ltcgOther = 0;
+
+    for (var gain in _capitalGains) {
+      double amt = gain.capitalGainAmount;
+      // Determine net gain if reinvested
+      if (gain.intendToReinvest) {
+        amt = max(0, amt - gain.reinvestedAmount);
+      }
+      if (gain.isLTCG) {
+        if (gain.matchAssetType == AssetType.equityShares) {
+          ltcgEquity += amt;
+        } else {
+          ltcgOther += amt;
+        }
+      } else {
+        stcg += amt;
+      }
+    }
+
     return Column(
       children: [
+        if (_capitalGains.isNotEmpty)
+          Card(
+            margin: const EdgeInsets.all(16),
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Net Capital Gains Summary',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('Short Term (STCG)', stcg, isBold: true),
+                  _buildSummaryRow('Long Term (Equity)', ltcgEquity,
+                      isBold: true),
+                  _buildSummaryRow('Long Term (Other)', ltcgOther,
+                      isBold: true),
+                ],
+              ),
+            ),
+          ),
         Expanded(
           child: _capitalGains.isEmpty
               ? const Center(child: Text('No Capital Gains entries added.'))

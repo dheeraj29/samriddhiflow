@@ -123,4 +123,59 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
+
+  testWidgets(
+      'LoginScreen autoRestore shows passcode prompt on encrypted backup',
+      (tester) async {
+    when(() => mockAuthService.signInWithGoogle(any()))
+        .thenAnswer((_) async => AuthResponse(status: AuthStatus.success));
+    when(() => mockAuthService.currentUser).thenReturn(MockUser());
+    when(() => mockStorageService.getAllAccounts()).thenReturn([]);
+    when(() => mockStorageService.getAllTransactions()).thenReturn([]);
+
+    // First call throws passcode required, second call succeeds
+    int callCount = 0;
+    when(() => mockCloudSyncService.restoreFromCloud(
+        passcode: any(named: 'passcode'))).thenAnswer((invocation) async {
+      callCount++;
+      if (callCount == 1) {
+        throw Exception("Passcode required");
+      }
+    });
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authServiceProvider.overrideWithValue(mockAuthService),
+        storageServiceProvider.overrideWithValue(mockStorageService),
+        cloudSyncServiceProvider.overrideWithValue(mockCloudSyncService),
+        localModeProvider.overrideWith(MockLocalModeNotifier.new),
+        isLoggedInProvider.overrideWith(() => mockIsLoggedInNotifier),
+      ],
+      child: const MaterialApp(home: LoginScreen()),
+    ));
+
+    await tester.pumpAndSettle();
+
+    // Tap sign in
+    await tester.tap(find.text('Continue with Google'));
+    await tester.pump(); // Start animation
+    await tester.pumpAndSettle(); // Wait for dialog
+
+    // Verify dialog appears
+    expect(find.text('Encrypted Backup Found'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('RESTORE'), findsOneWidget);
+
+    // Enter passcode and submit
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.tap(find.text('RESTORE'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockCloudSyncService.restoreFromCloud(passcode: '1234'))
+        .called(1);
+
+    // Cleanup
+    await tester.pumpWidget(const SizedBox());
+    addTearDown(tester.view.resetPhysicalSize);
+  });
 }

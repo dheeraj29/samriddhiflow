@@ -48,6 +48,7 @@ class MockIsOfflineNotifier extends IsOfflineNotifier {
     _initialState = v;
   }
 
+  @override
   void setOffline(bool v) => state = v;
   @override
   bool build() => _initialState;
@@ -428,24 +429,105 @@ void main() {
     await streamController.close();
   });
 
-  testWidgets('AuthWrapper handles Network Recovery', (tester) async {
+  testWidgets(
+      'AuthWrapper autoRestore shows passcode prompt on encrypted backup',
+      (tester) async {
+    final mockCloudSync = MockCloudSyncService();
+    int callCount = 0;
+
+    // First call throws passcode required, second call succeeds
+    when(() => mockCloudSync.restoreFromCloud(passcode: any(named: 'passcode')))
+        .thenAnswer((invocation) async {
+      callCount++;
+      if (callCount == 1) {
+        throw Exception("Passcode required");
+      }
+    });
+
+    final streamController = StreamController<User?>();
+    addTearDown(() => streamController.close());
+
     await tester.pumpWidget(createAuthWrapper(
-      isOffline: true,
       isLoggedIn: true,
-      firebaseInit: const AsyncValue.loading(),
-      authStream: const Stream.empty(),
+      authStream: streamController.stream,
+      cloudSync: mockCloudSync,
+    ));
+
+    await tester.pump(const Duration(seconds: 6)); // Past boot grace
+
+    // Emit the user to trigger auto restore
+    streamController.add(mockUser);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Verify dialog appears
+    expect(find.text('Encrypted Backup Found'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('RESTORE'), findsOneWidget);
+
+    // Enter passcode and submit
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.tap(find.text('RESTORE'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockCloudSync.restoreFromCloud(passcode: '1234')).called(1);
+  });
+
+  testWidgets('AuthWrapper handles Network Recovery', (tester) async {
+    int initCalls = 0;
+
+    mockIsOfflineNotifier.setInitial(true);
+    mockIsLoggedInNotifier.setInitial(true);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storageInitializerProvider
+            .overrideWithValue(const AsyncValue.data(null)),
+        firebaseInitializerProvider.overrideWith((ref) async {
+          initCalls++;
+        }),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        storageServiceProvider.overrideWithValue(mockStorageService),
+        isLoggedInProvider.overrideWith(() => mockIsLoggedInNotifier),
+        isOfflineProvider.overrideWith(() => mockIsOfflineNotifier),
+        connectivityCheckProvider
+            .overrideWithValue(() async => mockIsOfflineNotifier.value),
+        authStreamProvider.overrideWith((ref) => const Stream.empty()),
+        accountsProvider.overrideWith((ref) => Stream.value([])),
+        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        loansProvider.overrideWith((ref) => Stream.value([])),
+        recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+        sumTrackerProvider.overrideWith(MockSumTrackerNotifier.new),
+        activeProfileIdProvider.overrideWith(MockProfileNotifier.new),
+        currencyProvider.overrideWith(MockCurrencyNotifier.new),
+        categoriesProvider.overrideWith(MockCategoriesNotifier.new),
+        activeProfileProvider.overrideWith((ref) => null),
+        txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
+        backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
+        smartCalculatorEnabledProvider
+            .overrideWith(MockSmartCalculatorEnabledNotifier.new),
+        calculatorVisibleProvider
+            .overrideWith(MockCalculatorVisibleNotifier.new),
+        dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+      ],
+      child: const MaterialApp(
+        home: AuthWrapper(),
+      ),
     ));
 
     expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(initCalls, 1);
 
-    // Simulating Online
+    // Wait past the 5-second boot grace period where network listeners are ignored
+    await tester.pump(const Duration(seconds: 6));
+
+    // Simulating Offline -> Online transition
     mockIsOfflineNotifier.setOffline(false);
     await tester.pump();
-    // Advance past network settling delay (2s)
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 3)); // Wait for settling
 
-    // In actual code, it checks actual reachability and invalidates firebaseInitializerProvider.
-    // We can't easily check for provider invalidation but we can see if it starts loading.
+    // Provider rebuilds because listener triggered invalidate
+    expect(initCalls, 2);
   });
 }
 

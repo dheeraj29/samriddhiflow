@@ -38,7 +38,8 @@ class IndianTaxService implements TaxStrategy {
       agricultureIncome: 0,
       dividendIncome: const DividendIncome(),
     );
-    final details = calculateDetailedLiability(salaryOnlyData, rules); // coverage:ignore-line
+    final details = calculateDetailedLiability( // coverage:ignore-line
+        salaryOnlyData, rules);
     return details['totalTax'] ?? 0; // coverage:ignore-line
   }
 
@@ -116,6 +117,10 @@ class IndianTaxService implements TaxStrategy {
       'tds': data.tds,
       'tcs': data.tcs,
       'totalDeductions': totalDisplayDeductions,
+      'capitalGainsTotal': specialRateIncome,
+      'LTCG_Equity': incomeLTCGEquity,
+      'LTCG_Other': incomeLTCGOther,
+      'STCG': incomeSTCG,
     };
   }
 
@@ -384,7 +389,8 @@ class IndianTaxService implements TaxStrategy {
   }
 
   @override // coverage:ignore-line
-  Map<String, double> getDeductionSuggestions(TaxYearData data) => {}; // coverage:ignore-line
+  Map<String, double> getDeductionSuggestions(TaxYearData data) =>
+      {}; // coverage:ignore-line
 
   @override // coverage:ignore-line
   String suggestITR(TaxYearData data) {
@@ -400,6 +406,7 @@ class IndianTaxService implements TaxStrategy {
   bool isInsuranceMaturityTaxable(
       double annualPremium, double sumAssured, DateTime issueDate) {
     if (issueDate.isBefore(DateTime(2012, 4, 1))) { // coverage:ignore-line
+
       return annualPremium > (0.20 * sumAssured); // coverage:ignore-line
     } else {
       return annualPremium > (0.10 * sumAssured); // coverage:ignore-line

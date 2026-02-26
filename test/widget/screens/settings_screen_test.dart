@@ -34,6 +34,24 @@ class MockJsonDataService extends Mock implements JsonDataService {}
 
 class MockFileService extends Mock implements FileService {}
 
+class MockIsLoggedInNotifier extends IsLoggedInNotifier {
+  bool _initialState = false;
+  void setInitial(bool v) => _initialState = v;
+  @override
+  Future<void> setLoggedIn(bool v) async => state = v;
+  @override
+  bool build() => _initialState;
+}
+
+class MockIsOfflineNotifier extends IsOfflineNotifier {
+  bool _initialState = false;
+  void setInitial(bool v) => _initialState = v;
+  @override
+  void setOffline(bool v) => state = v;
+  @override
+  bool build() => _initialState;
+}
+
 void main() {
   late MockStorageService mockStorage;
   late MockCloudSyncService mockCloudSync;
@@ -80,6 +98,7 @@ void main() {
     when(() => mockStorage.saveProfile(any())).thenAnswer((_) async {});
     when(() => mockStorage.setAppPin(any())).thenAnswer((_) async {});
     when(() => mockStorage.setAppLockEnabled(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
     when(() => mockStorage.recalculateBilledAmount(any()))
         .thenAnswer((_) async {});
     when(() => mockStorage.repairAccountCurrencies(any()))
@@ -111,7 +130,8 @@ void main() {
         monthlyBudgetProvider.overrideWith(BudgetNotifier.new),
         backupThresholdProvider.overrideWith(BackupThresholdNotifier.new),
         activeProfileIdProvider.overrideWith(ProfileNotifier.new),
-        isOfflineProvider.overrideWith(IsOfflineNotifier.new),
+        isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
+        isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
       ],
       child: const MaterialApp(
         home: SettingsScreen(),

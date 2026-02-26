@@ -49,6 +49,8 @@ void main() {
         date: DateTime.now(),
         type: TransactionType.expense,
         category: 'c'));
+    registerFallbackValue(
+        Category(id: 'c', name: 'c', usage: CategoryUsage.expense));
   });
 
   setUp(() {
@@ -251,6 +253,26 @@ void main() {
 
       await storageService.setCurrencyLocale('hi_IN');
       verify(() => mockProfileBox.put('default', any())).called(1);
+    });
+  });
+
+  group('StorageService - Category Operations', () {
+    test('addCategory uses active profileId if null or empty', () async {
+      final cat = Category(
+        id: 'cat1',
+        name: 'Test Category',
+        usage: CategoryUsage.expense,
+        profileId: null,
+      );
+
+      when(() => mockCategoryBox.put('cat1', any())).thenAnswer((_) async {});
+      when(() => mockSettingsBox.get('activeProfileId',
+          defaultValue: any(named: 'defaultValue'))).thenReturn('p2');
+
+      await storageService.addCategory(cat);
+
+      expect(cat.profileId, 'p2');
+      verify(() => mockCategoryBox.put('cat1', cat)).called(1);
     });
   });
 }
