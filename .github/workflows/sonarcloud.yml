@@ -11,6 +11,14 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
+      - name: Setup Flutter (Manual)
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: flutter pub get
+
       - name: Download coverage
         uses: actions/download-artifact@v4
         with:
