@@ -15,5 +15,3 @@ To build the application for production (Offline-First):
 ```bash
 flutter build web --no-web-resources-cdn --release
 ```
-
-**Version:** v1.6.0
