@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-27T00:42:25.713502**
+> **Generated on: 2026-02-27T01:22:39.949480**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
@@ -44,7 +44,7 @@
 | **screens/loan_details_screen.dart** | **100.0%** | 231/231 | PASS |
 | **screens/loan_payment_dialog.dart** | **100.0%** | 91/91 | PASS |
 | **screens/loans_screen.dart** | **100.0%** | 37/37 | PASS |
-| **screens/login_screen.dart** | **100.0%** | 89/89 | PASS |
+| **screens/login_screen.dart** | **100.0%** | 78/78 | PASS |
 | **screens/recurring_manager_screen.dart** | **100.0%** | 69/69 | PASS |
 | **screens/recycle_bin_screen.dart** | **100.0%** | 36/36 | PASS |
 | **screens/reminders_screen.dart** | **100.0%** | 268/268 | PASS |
@@ -74,9 +74,9 @@
 | utils/regex_utils.dart | **100.0%** | 6/6 | PASS |
 | utils/report_utils.dart | **100.0%** | 35/35 | PASS |
 | utils/transaction_filter_utils.dart | **100.0%** | 55/55 | PASS |
-| utils/ui_utils.dart | **100.0%** | 22/22 | PASS |
+| utils/ui_utils.dart | **100.0%** | 37/37 | PASS |
 | widgets/account_card.dart | **100.0%** | 69/69 | PASS |
-| widgets/auth_wrapper.dart | **100.0%** | 216/216 | PASS |
+| widgets/auth_wrapper.dart | **100.0%** | 203/203 | PASS |
 | widgets/bell_animation.dart | **100.0%** | 28/28 | PASS |
 | widgets/category_manager_dialog.dart | **100.0%** | 97/97 | PASS |
 | widgets/charts/reports_pie_chart.dart | **100.0%** | 24/24 | PASS |
