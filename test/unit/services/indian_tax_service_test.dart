@@ -467,6 +467,50 @@ void main() {
     });
   });
 
+  group('IndianTaxService - Aggregate Summaries (UI Helpers)', () {
+    test('Calculates total Business turnover and income', () {
+      const data = TaxYearData(
+        year: 2025,
+        businessIncomes: [
+          BusinessEntity(name: 'B1', grossTurnover: 100000, netIncome: 10000),
+          BusinessEntity(name: 'B2', grossTurnover: 200000, netIncome: 30000),
+        ],
+      );
+
+      final totalTurnover =
+          data.businessIncomes.fold(0.0, (sum, b) => sum + b.grossTurnover);
+      final totalNet =
+          data.businessIncomes.fold(0.0, (sum, b) => sum + b.netIncome);
+
+      expect(totalTurnover, 300000);
+      expect(totalNet, 40000);
+    });
+
+    test('Calculates total House Property rent and interest', () {
+      const data = TaxYearData(
+        year: 2025,
+        houseProperties: [
+          HouseProperty(
+              name: 'HP1',
+              isSelfOccupied: false,
+              rentReceived: 100000,
+              interestOnLoan: 10000),
+          HouseProperty(
+              name: 'HP2', isSelfOccupied: true, interestOnLoan: 20000),
+        ],
+      );
+
+      final totalRent = data.houseProperties
+          .where((h) => !h.isSelfOccupied)
+          .fold(0.0, (sum, h) => sum + h.rentReceived);
+      final totalInterest =
+          data.houseProperties.fold(0.0, (sum, h) => sum + h.interestOnLoan);
+
+      expect(totalRent, 100000);
+      expect(totalInterest, 30000);
+    });
+  });
+
   group('IndianTaxService Partial Integration', () {
     late IndianTaxService service;
     late TaxRules rules;

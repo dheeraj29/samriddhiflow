@@ -39,7 +39,9 @@ class IndianTaxService implements TaxStrategy {
       dividendIncome: const DividendIncome(),
     );
     final details = calculateDetailedLiability( // coverage:ignore-line
-        salaryOnlyData, rules);
+
+        salaryOnlyData,
+        rules);
     return details['totalTax'] ?? 0; // coverage:ignore-line
   }
 
@@ -52,6 +54,10 @@ class IndianTaxService implements TaxStrategy {
     double incomeSalary =
         salaryIncomeOverride ?? (salaryGross - salaryExemptions);
 
+    double hpGross = 0;
+    for (var hp in data.houseProperties) {
+      if (!hp.isSelfOccupied) hpGross += hp.rentReceived;
+    }
     double incomeHP = calculateHousePropertyIncome(data, rules);
     double incomeBusiness = calculateBusinessIncome(data, rules);
 
@@ -61,8 +67,25 @@ class IndianTaxService implements TaxStrategy {
     double incomeSTCG = cgResults['STCG']!;
     double incomeOther = calculateOtherSources(data, rules);
 
+    // Apply Custom Rules Exemptions
+    incomeSalary = (incomeSalary -
+            _getCustomExemptionForHead('Salary', salaryGross, rules))
+        .clamp(0.0, double.infinity);
+    incomeHP = (incomeHP -
+            _getCustomExemptionForHead('House Property', hpGross, rules))
+        .clamp(0.0, double.infinity);
+    incomeBusiness = (incomeBusiness -
+            _getCustomExemptionForHead('Business', incomeBusiness, rules))
+        .clamp(0.0, double.infinity);
+    incomeOther =
+        (incomeOther - _getCustomExemptionForHead('Other', incomeOther, rules))
+            .clamp(0.0, double.infinity);
+    incomeOther =
+        (incomeOther - _getCustomExemptionForHead('Gift', incomeOther, rules))
+            .clamp(0.0, double.infinity);
+
     double grossTotalIncome = salaryGross +
-        incomeHP +
+        hpGross +
         incomeBusiness +
         incomeLTCGEquity +
         incomeLTCGOther +
@@ -78,14 +101,24 @@ class IndianTaxService implements TaxStrategy {
     if (salaryIncomeOverride == null) {}
 
     // 3. Tax Calculation
-    final specialRateIncome = incomeLTCGEquity + incomeLTCGOther + incomeSTCG;
+    final specialRateIncome = rules.isCGRatesEnabled
+        ? (incomeLTCGEquity + incomeLTCGOther + incomeSTCG)
+        : 0.0;
     double taxableHeadsSum =
         incomeSalary + incomeHP + incomeBusiness + incomeOther;
+    if (!rules.isCGRatesEnabled) {
+      taxableHeadsSum += incomeLTCGEquity + incomeLTCGOther + incomeSTCG;
+    }
     double netTaxableNormalIncome =
         (taxableHeadsSum - deductions).clamp(0.0, double.infinity);
 
-    double slabTax = _computeSlabTaxWithAgri(
-        netTaxableNormalIncome, data.agricultureIncome, rules);
+    double netAgri = (data.agricultureIncome -
+            _getCustomExemptionForHead(
+                'Agriculture', data.agricultureIncome, rules))
+        .clamp(0.0, double.infinity);
+
+    double slabTax =
+        _computeSlabTaxWithAgri(netTaxableNormalIncome, netAgri, rules);
     double ltcgTax =
         _calculateLTCGTax(incomeLTCGEquity, incomeLTCGOther, rules);
     double stcgTax = _calculateSTCGTax(incomeSTCG, rules);
@@ -251,10 +284,27 @@ class IndianTaxService implements TaxStrategy {
       }
     }
 
-    // 4. Independent Non-Taxable Allowances (Removed)
-    // All independent allowances are now inherently taxable
+    // 4. Independent Exemptions
+    for (var ex in data.salary.independentExemptions) {
+      totalExemptions += ex.amount;
+    }
 
     return totalExemptions;
+  }
+
+  double _getCustomExemptionForHead(String head, double gross, TaxRules rules) {
+    double total = 0;
+    for (var rule in rules.customExemptions) {
+      if (rule.isEnabled &&
+          rule.incomeHead.toLowerCase() == head.toLowerCase()) {
+        if (rule.isPercentage) {
+          total += gross * (rule.limit / 100);
+        } else {
+          total += rule.limit;
+        }
+      }
+    }
+    return total;
   }
 
   double calculateHousePropertyIncome(TaxYearData data, TaxRules rules) {
@@ -282,15 +332,13 @@ class IndianTaxService implements TaxStrategy {
   double calculateBusinessIncome(TaxYearData data, TaxRules rules) {
     double total = 0;
     for (var biz in data.businessIncomes) {
-      // coverage:ignore-start
       if (biz.type == BusinessType.section44AD && rules.is44ADEnabled) {
-        total += biz.presumptiveIncome;
+        total += biz.presumptiveIncome; // coverage:ignore-line
       } else if (biz.type == BusinessType.section44ADA &&
-          rules.is44ADAEnabled) {
-        total += biz.presumptiveIncome;
-      // coverage:ignore-end
+          rules.is44ADAEnabled) { // coverage:ignore-line
+        total += biz.presumptiveIncome; // coverage:ignore-line
       } else {
-        total += biz.netIncome; // coverage:ignore-line
+        total += biz.netIncome;
       }
     }
     return total;
@@ -328,7 +376,7 @@ class IndianTaxService implements TaxStrategy {
   double calculateOtherSources(TaxYearData data, TaxRules rules) {
     double other = 0;
     for (var o in data.otherIncomes) {
-      other += o.amount; // coverage:ignore-line
+      other += o.amount;
     }
     other += data.dividendIncome.grossDividend;
 
@@ -406,6 +454,7 @@ class IndianTaxService implements TaxStrategy {
   bool isInsuranceMaturityTaxable(
       double annualPremium, double sumAssured, DateTime issueDate) {
     if (issueDate.isBefore(DateTime(2012, 4, 1))) { // coverage:ignore-line
+
 
       return annualPremium > (0.20 * sumAssured); // coverage:ignore-line
     } else {

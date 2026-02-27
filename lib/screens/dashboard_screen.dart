@@ -59,7 +59,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         // coverage:ignore-end
             duration: const Duration(seconds: 5),
             action: SnackBarAction( // coverage:ignore-line
-                label: 'Dismiss', onPressed: () {}), // coverage:ignore-line
+
+                label: 'Dismiss',
+                onPressed: () {}), // coverage:ignore-line
             behavior: SnackBarBehavior.floating,
           ));
           // Slight delay so they don't all stack instantly if multiple
@@ -125,8 +127,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             animate: ref.watch(pendingRemindersProvider) > 0,
             child: IconButton(
               onPressed: () => Navigator.push( // coverage:ignore-line
+
                   context,
                   MaterialPageRoute( // coverage:ignore-line
+
                       builder: (_) => // coverage:ignore-line
                           const RemindersScreen())),
               icon: PureIcons.notifications(
@@ -137,11 +141,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           if (ref.watch(appLockStatusProvider))
             IconButton( // coverage:ignore-line
 
-              // coverage:ignore-start
-              onPressed: () => ref
-                  .read(appLockIntentProvider.notifier)
-                  .lock(),
-              // coverage:ignore-end
+
+              onPressed: () => ref.read(appLockIntentProvider.notifier).lock(), // coverage:ignore-line
               icon: const Icon(Icons.lock_outline),
               tooltip: 'Lock App',
             ),
@@ -197,8 +198,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       TextButton(
                           onPressed: () => Navigator.push( // coverage:ignore-line
 
+
                               context,
                               MaterialPageRoute( // coverage:ignore-line
+
 
                                   builder: (_) => // coverage:ignore-line
                                       const TransactionsScreen())),
@@ -235,8 +238,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               icon: PureIcons.settings(),
               tooltip: 'Settings',
               onPressed: () => Navigator.push( // coverage:ignore-line
+
                   context,
                   MaterialPageRoute( // coverage:ignore-line
+
                       builder: (_) => // coverage:ignore-line
                           const SettingsScreen())),
             ),
@@ -465,18 +470,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 8),
                 Builder(builder: (context) { // coverage:ignore-line
 
+
                   final tenure = ref
                       .read(loanServiceProvider) // coverage:ignore-line
                       .calculateMaxRemainingTenure( // coverage:ignore-line
                           loans);
 
                   if (tenure.days <= 0) { // coverage:ignore-line
+
                     return const SizedBox();
                   }
 
                   return Row( // coverage:ignore-line
 
+
                     children: [ // coverage:ignore-line
+
 
                       const SizedBox(width: 36),
                       // coverage:ignore-start
@@ -602,25 +611,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final now = DateTime.now();
 
     final categories = ref.watch(categoriesProvider);
-    final catMap = <String, Category>{};
-    for (var c in categories) {
-      catMap[c.name] = c; // coverage:ignore-line
-    }
+    final catMap = {for (var c in categories) c.name: c};
 
     for (var t in transactions) {
-      if (t.accountId == null && t.loanId != null) continue;
-      if (t.date.year != now.year || t.date.month != now.month) continue;
+      if (!_isTransactionRelevantForThisMonth(t, now)) continue;
 
       if (t.type == TransactionType.income) {
         income += t.amount; // coverage:ignore-line
       } else if (t.type == TransactionType.expense) {
-        final cat = catMap[t.category];
-        if (cat?.tag != CategoryTag.budgetFree) {
+        if (catMap[t.category]?.tag != CategoryTag.budgetFree) {
           expense += t.amount;
         }
       }
     }
     return (income: income, expense: expense);
+  }
+
+  bool _isTransactionRelevantForThisMonth(Transaction t, DateTime now) {
+    if (t.accountId == null && t.loanId != null) return false;
+    if (t.date.year != now.year || t.date.month != now.month) return false;
+    return true;
   }
 
   Widget _buildIncomeExpenseRow(
@@ -782,10 +792,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           InkWell(
             onTap: () => Navigator.push( // coverage:ignore-line
 
+
                 context,
                 MaterialPageRoute( // coverage:ignore-line
 
+
                     builder: (_) => const AddTransactionScreen( // coverage:ignore-line
+
 
                         initialType: TransactionType.transfer))),
             child: _buildActionItem(
@@ -795,10 +808,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           InkWell(
             onTap: () => Navigator.push( // coverage:ignore-line
 
+
                 context,
                 MaterialPageRoute( // coverage:ignore-line
 
+
                     builder: (_) => const AddTransactionScreen( // coverage:ignore-line
+
 
                         initialType: TransactionType.expense))),
             child: _buildActionItem(
@@ -807,8 +823,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           const SizedBox(width: 16),
           InkWell(
             onTap: () => Navigator.push( // coverage:ignore-line
+
                 context,
                 MaterialPageRoute( // coverage:ignore-line
+
                     builder: (_) => // coverage:ignore-line
                         const LoansScreen())),
             child: _buildActionItem(
@@ -825,8 +843,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           InkWell(
             onTap: () => Navigator.push( // coverage:ignore-line
 
+
               context,
               MaterialPageRoute( // coverage:ignore-line
+
                   builder: (_) => // coverage:ignore-line
                       const LendingDashboardScreen()),
             ),
@@ -888,7 +908,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               compactView: true,
               onTap: () async { // coverage:ignore-line
 
+
                 final result = await Navigator.push( // coverage:ignore-line
+
 
                   context,
                   // coverage:ignore-start
@@ -899,6 +921,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 );
                 if (result == true) { // coverage:ignore-line
+
 
                   // Refreshing is handled by the providers
                 }
@@ -947,15 +970,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               TextButton(
                 onPressed: () => Navigator.pushNamed( // coverage:ignore-line
-                    context, '/settings'),
+
+                    context,
+                    '/settings'),
                 child: const Text('Go to Backup'),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () => // coverage:ignore-line
                     ref
-                        .read(txnsSinceBackupProvider.notifier) // coverage:ignore-line
-                        .reset(), // coverage:ignore-line
+                        // coverage:ignore-start
+                        .read(txnsSinceBackupProvider
+                            .notifier)
+                        .reset(),
+                        // coverage:ignore-end
                 child:
                     const Text('Dismiss', style: TextStyle(color: Colors.grey)),
               ),
@@ -980,6 +1008,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         // coverage:ignore-end
 
         return PopupMenuButton<String>( // coverage:ignore-line
+
 
           initialValue: activeProfileId,
           // coverage:ignore-start

@@ -8,6 +8,7 @@ import '../../models/taxes/tax_data_models.dart';
 import '../../widgets/pure_icons.dart';
 import '../../models/category.dart';
 import '../../providers.dart';
+import '../../utils/currency_utils.dart';
 
 class TaxRulesScreen extends ConsumerStatefulWidget {
   const TaxRulesScreen({super.key});
@@ -592,7 +593,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           onChanged: (v) => setState(() => _isRebateEnabled = v),
         ),
         if (_isRebateEnabled)
-          _buildNumberField('Rebate Limit', _rebateLimitCtrl),
+          _buildNumberField('Rebate Limit', _rebateLimitCtrl, isAmount: true),
         SwitchListTile(
           title: const Text('Enable Health & Edu Cess'),
           value: _isCessEnabled,
@@ -605,7 +606,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           onChanged: (v) => setState(() => _isCashGiftExempt = v),
         ),
         if (_isCashGiftExempt)
-          _buildNumberField('Cash Gift Exemption Limit', _cashGiftLimitCtrl),
+          _buildNumberField('Cash Gift Exemption Limit', _cashGiftLimitCtrl,
+              isAmount: true),
         const SizedBox(height: 8),
         _buildSlabsEditor(),
         const Divider(),
@@ -1045,7 +1047,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
               final slab = entry.value;
               return Row(
                 children: [
-                  const Text('Up to  '),
+                  Text(
+                      '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))}  '),
                   SizedBox(
                     width: 100,
                     child: TextFormField(
@@ -1120,7 +1123,9 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildNumberField(String label, TextEditingController controller,
-      {bool isInt = false, String? subtitle}) {
+      {bool isInt = false, bool isAmount = false, String? subtitle}) {
+    final currencySymbol =
+        ref.watch(currencyProvider.select((l) => CurrencyUtils.getSymbol(l)));
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -1133,6 +1138,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         decoration: InputDecoration(
           labelText: label,
           helperText: subtitle,
+          prefixText: isAmount ? '$currencySymbol ' : null,
           border: const OutlineInputBorder(),
         ),
         keyboardType: TextInputType.numberWithOptions(decimal: !isInt),
@@ -1165,7 +1171,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isStdDedSalaryEnabled)
-          _buildNumberField('Standard Deduction (Salary)', _stdDedSalaryCtrl),
+          _buildNumberField('Standard Deduction (Salary)', _stdDedSalaryCtrl,
+              isAmount: true),
         const Divider(),
         _buildSectionHeader('Retirement Exemptions'),
         SwitchListTile(
@@ -1179,9 +1186,11 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         ),
         if (_isRetirementExemptionEnabled) ...[
           _buildNumberField(
-              'Gratuity Exemption Limit (10(10))', _limitGratuityCtrl),
+              'Gratuity Exemption Limit (10(10))', _limitGratuityCtrl,
+              isAmount: true),
           _buildNumberField(
-              'Leave Encashment Limit (10(10AA))', _limitLeaveEncashmentCtrl),
+              'Leave Encashment Limit (10(10AA))', _limitLeaveEncashmentCtrl,
+              isAmount: true),
         ],
         const Divider(),
         _buildSectionHeader('Employer Gifts'),
@@ -1196,7 +1205,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         ),
         if (_isEmployerGiftEnabled)
           _buildNumberField('Gift Exemption Limit', _employerGiftLimitCtrl,
-              subtitle: 'Default: 5000'),
+              isAmount: true, subtitle: 'Default: 5000'),
       ],
     );
   }
@@ -1218,7 +1227,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         ),
         if (_is44ADEnabled) ...[
           _buildNumberField('Turnover Limit for 44AD', _limit44ADCtrl,
-              isInt: true),
+              isInt: true, isAmount: true),
           _buildNumberField('Presumptive Profit Rate (%)', _rate44ADCtrl),
         ],
         const Divider(),
@@ -1233,7 +1242,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         ),
         if (_is44ADAEnabled) ...[
           _buildNumberField('Gross Receipts Limit for 44ADA', _limit44ADACtrl,
-              isInt: true),
+              isInt: true, isAmount: true),
           _buildNumberField('Presumptive Profit Rate (%)', _rate44ADACtrl),
         ],
       ],
@@ -1268,8 +1277,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isHPMaxInterestEnabled)
-          _buildNumberField(
-              'Max Interest Deduction (Self-Occ)', _maxHPDedLimit),
+          _buildNumberField('Max Interest Deduction (Self-Occ)', _maxHPDedLimit,
+              isAmount: true),
       ],
     );
   }
@@ -1302,7 +1311,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         ),
         if (_isLTCGExemption112AEnabled)
           _buildNumberField(
-              'Standard Exemption 112A (LTCG)', _stdExempt112ACtrl),
+              'Standard Exemption 112A (LTCG)', _stdExempt112ACtrl,
+              isAmount: true),
         const Divider(),
         _buildSectionHeader('Reinvestment Rules'),
         SwitchListTile(
@@ -1316,7 +1326,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         if (_isCGReinvestmentEnabled) ...[
           _buildNumberField('Reinvestment Window (Years)', _winReinvestCtrl),
           _buildNumberField(
-              'Max Capital Gain Reinvest Limit', _maxCGReinvestLimitCtrl),
+              'Max Capital Gain Reinvest Limit', _maxCGReinvestLimitCtrl,
+              isAmount: true),
         ],
       ],
     );
@@ -1342,9 +1353,13 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
               'Partial Integration Method determines tax on Agriculture Income if it exceeds the threshold and non-agri income exceeds basic exemption.'),
           const SizedBox(height: 16),
           _buildNumberField('Agriculture Income Threshold', _agriThresholdCtrl,
-              subtitle: 'Default: ₹5,000'),
+              isAmount: true,
+              subtitle:
+                  'Default: ${CurrencyUtils.formatCurrency(5000, ref.watch(currencyProvider))}'),
           _buildNumberField('Agri Basic Exemption Limit', _agriBasicLimitCtrl,
-              subtitle: 'Default: ₹4,00,000 (Used for Partial Integration)'),
+              isAmount: true,
+              subtitle:
+                  'Default: ${CurrencyUtils.formatCurrency(400000, ref.watch(currencyProvider))} (Used for Partial Integration)'),
         ],
       ],
     );
@@ -1416,25 +1431,15 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           padding: EdgeInsets.all(8),
           child: Text('No custom exemptions defined.'));
     }
-    final otherExemptions = _customExemptions
-        .asMap()
-        .entries
-        .where((e) => e.value.incomeHead == 'Other') // Restrict to 'Other'
-        .toList();
-
-    if (otherExemptions.isEmpty) {
-      return const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text('No custom exemptions defined for Other Income.'));
-    }
 
     return Column(
-        children: otherExemptions.map((e) {
+        children: _customExemptions.asMap().entries.map((e) {
       final i = e.key;
       final rule = e.value;
       return SwitchListTile(
         title: Text(rule.name),
-        subtitle: Text('Other Income • Max: ₹${rule.limit}'),
+        subtitle: Text(
+            '${rule.incomeHead} • Max: ${CurrencyUtils.formatCurrency(rule.limit, ref.watch(currencyProvider))}'),
         value: rule.isEnabled,
         onChanged: (val) {
           setState(() {
@@ -1456,6 +1461,14 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     final nameCtrl = TextEditingController();
     final limitCtrl = TextEditingController();
     String head = 'Other';
+    final heads = [
+      'Salary',
+      'House Property',
+      'Business',
+      'Other',
+      'Gift',
+      'Agriculture'
+    ];
 
     showDialog(
         context: context,
@@ -1468,17 +1481,21 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                         decoration: const InputDecoration(labelText: 'Name'),
                         textCapitalization: TextCapitalization.words),
                     const SizedBox(height: 12),
-                    InputDecorator(
+                    DropdownButtonFormField<String>(
+                      initialValue: head,
                       decoration: const InputDecoration(
                         labelText: 'Income Head',
                         border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
-                      child: Text(
-                        'Other',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      items: heads
+                          .map(
+                              (h) => DropdownMenuItem(value: h, child: Text(h)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setStateBuilder(() => head = val);
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextField(

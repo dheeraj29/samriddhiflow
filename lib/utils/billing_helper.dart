@@ -72,22 +72,19 @@ class BillingHelper {
         !t.date.isBefore(start) &&
         (t.date.isBefore(end) || t.date.isAtSameMomentAs(end)));
 
-    double spend = 0;
-    for (var t in relevantTxns) {
-      if (t.type == TransactionType.expense && t.accountId == acc.id) {
-        spend += t.amount;
-      }
-      if (t.type == TransactionType.income && t.accountId == acc.id) {
-        spend -= t.amount; // coverage:ignore-line
-      }
-      if (t.type == TransactionType.transfer) {
-        if (t.accountId == acc.id) spend += t.amount; // Outgoing = Spend // coverage:ignore-line
-        // Payment (Incoming Transfer) is IGNORED here because:
-        // 1. StorageService applies payments immediately to Account.balance.
-        // 2. We are calculating "Pending Bill", which is the sum of Spends.
-        // 3. Net Debt = Balance (lowered by payment) + Pending Bill (Spends).
-      }
+    return relevantTxns.fold<double>(
+        0, (sum, t) => sum + _getTxnSpendImpact(t, acc.id));
+  }
+
+  static double _getTxnSpendImpact(Transaction t, String accountId) {
+    if (t.accountId != accountId) return 0;
+
+    switch (t.type) {
+      case TransactionType.expense:
+      case TransactionType.transfer: // Outgoing = Spend // coverage:ignore-line
+        return t.amount;
+      case TransactionType.income: // coverage:ignore-line
+        return -t.amount; // coverage:ignore-line
     }
-    return spend;
   }
 }

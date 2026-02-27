@@ -140,31 +140,39 @@ class RecurringTransaction extends HiveObject {
   }
 
   DateTime calculateNextOccurrence(DateTime fromDate) {
-    DateTime next = fromDate;
+    DateTime next = _getBaseNextDate(fromDate);
+    return _applyScheduleTypeAdjustments(next);
+  }
 
-    // Basic increment based on frequency
-    if (frequency == Frequency.daily) {
-      next = fromDate.add(Duration(days: interval));
-    } else if (frequency == Frequency.weekly) {
-      next = fromDate.add(Duration(days: 7 * interval));
-    } else if (frequency == Frequency.monthly) {
-      next = DateTime(fromDate.year, fromDate.month + interval, fromDate.day);
-    } else if (frequency == Frequency.yearly) {
-      next = DateTime(fromDate.year + interval, fromDate.month, fromDate.day);
+  DateTime _getBaseNextDate(DateTime fromDate) {
+    switch (frequency) {
+      case Frequency.daily:
+        return fromDate.add(Duration(days: interval));
+      case Frequency.weekly:
+        return fromDate.add(Duration(days: 7 * interval));
+      case Frequency.monthly:
+        return DateTime(fromDate.year, fromDate.month + interval, fromDate.day);
+      case Frequency.yearly:
+        return DateTime(fromDate.year + interval, fromDate.month, fromDate.day);
     }
+  }
 
-    // Apply schedule type specific logic if needed (e.g. last day of month)
+  DateTime _applyScheduleTypeAdjustments(DateTime date) {
     if (scheduleType == ScheduleType.lastDayOfMonth) {
-      next = DateTime(next.year, next.month + 1, 0); // Last day of that month
-    } else if (scheduleType == ScheduleType.specificWeekday &&
-        selectedWeekday != null) {
-      // Ensure it falls on the correct weekday
-      while (next.weekday != selectedWeekday) {
-        next = next.add(const Duration(days: 1));
-      }
+      return DateTime(date.year, date.month + 1, 0); // Last day of that month
     }
 
-    return next;
+    if (scheduleType == ScheduleType.specificWeekday &&
+        selectedWeekday != null) {
+      DateTime adjusted = date;
+      // Ensure it falls on the correct weekday
+      while (adjusted.weekday != selectedWeekday) {
+        adjusted = adjusted.add(const Duration(days: 1));
+      }
+      return adjusted;
+    }
+
+    return date;
   }
 
   Map<String, dynamic> toMap() {

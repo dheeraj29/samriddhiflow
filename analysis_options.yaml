@@ -1,5 +1,7 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+
 linter:
   rules:
     prefer_const_constructors: true

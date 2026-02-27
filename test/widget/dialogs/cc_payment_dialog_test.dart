@@ -40,6 +40,10 @@ void main() {
   setUp(() {
     mockStorage = LocalMockStorageService();
     when(() => mockStorage.saveTransaction(any())).thenAnswer((_) async {});
+    when(() => mockStorage.getLastRollover(any())).thenReturn(null);
+    when(() =>
+            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
+        .thenAnswer((_) async {});
   });
 
   testWidgets('RecordCCPaymentDialog renders and submits payment',
@@ -203,5 +207,202 @@ void main() {
     verify(() =>
             mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
         .called(1);
+  });
+
+  testWidgets('RecordCCPaymentDialog does NOT advance cycle on partial payment',
+      (tester) async {
+    final ccAccount = Account(
+      id: 'cc_3',
+      name: 'Test CC 3',
+      type: AccountType.creditCard,
+      balance: 1000.00,
+      profileId: 'p1',
+      billingCycleDay: 1,
+      paymentDueDateDay: 20,
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storageServiceProvider.overrideWithValue(mockStorage),
+        storageInitializerProvider.overrideWith((ref) => Future.value()),
+        accountsProvider.overrideWith((ref) => Stream.value([ccAccount])),
+        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        currencyProvider.overrideWith(MockCurrencyNotifier.new),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(builder: (context) {
+            return ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => RecordCCPaymentDialog(
+                    creditCardAccount: ccAccount,
+                    isFullyPaid: false,
+                  ),
+                );
+              },
+              child: const Text('Open Dialog'),
+            );
+          }),
+        ),
+      ),
+    ));
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    // Pay 500 (Partial)
+    await tester.enterText(find.byType(TextField), '500.00');
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    // Verify transaction saved
+    verify(() => mockStorage.saveTransaction(any())).called(1);
+
+    // Verify reset Rollover NOT called
+    verifyNever(() =>
+        mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true));
+  });
+
+  testWidgets('RecordCCPaymentDialog advances cycle within 0.01 threshold',
+      (tester) async {
+    final ccAccount = Account(
+      id: 'cc_4',
+      name: 'Test CC 4',
+      type: AccountType.creditCard,
+      balance: 1000.00,
+      profileId: 'p1',
+      billingCycleDay: 1,
+      paymentDueDateDay: 20,
+    );
+
+    when(() =>
+            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
+        .thenAnswer((_) async {});
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storageServiceProvider.overrideWithValue(mockStorage),
+        storageInitializerProvider.overrideWith((ref) => Future.value()),
+        accountsProvider.overrideWith((ref) => Stream.value([ccAccount])),
+        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        currencyProvider.overrideWith(MockCurrencyNotifier.new),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(builder: (context) {
+            return ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => RecordCCPaymentDialog(
+                      creditCardAccount: ccAccount,
+                      isFullyPaid: false,
+                    ),
+                  );
+                },
+                child: const Text('Open Dialog'));
+          }),
+        ),
+      ),
+    ));
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    // Pay 999.99 (matches 1000.0 - 0.01 threshold exactly)
+    await tester.enterText(find.byType(TextField), '999.99');
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    // Verify main transaction was saved
+    verify(() => mockStorage.saveTransaction(any())).called(1);
+
+    verify(() =>
+            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
+        .called(1);
+  });
+
+  testWidgets('RecordCCPaymentDialog creates adjustment when Round Off is used',
+      (tester) async {
+    final ccAccount = Account(
+      id: 'cc_5',
+      name: 'Test CC 5',
+      type: AccountType.creditCard,
+      balance: 1000.56,
+      profileId: 'p1',
+      billingCycleDay: 1,
+      paymentDueDateDay: 20,
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        storageServiceProvider.overrideWithValue(mockStorage),
+        storageInitializerProvider.overrideWith((ref) => Future.value()),
+        accountsProvider.overrideWith((ref) => Stream.value([ccAccount])),
+        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        currencyProvider.overrideWith(MockCurrencyNotifier.new),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(builder: (context) {
+            return ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => RecordCCPaymentDialog(
+                      creditCardAccount: ccAccount,
+                      isFullyPaid: false,
+                    ),
+                  );
+                },
+                child: const Text('Open Dialog'));
+          }),
+        ),
+      ),
+    ));
+
+    when(() =>
+            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
+        .thenAnswer((_) async {});
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    // Verify initial value is 1000.56
+    expect(find.text('1000.56'), findsOneWidget);
+
+    // Toggle Round Off
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+
+    // Value should become 1001.00
+    expect(find.text('1001.00'), findsOneWidget);
+
+    // Tap Confirm
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    // Verify TWO transactions saved: 1001.00 transfer and 0.44 adjustment
+    // 1000.56 -> 1001.00 is a diff of 0.44.
+    // Amount increased, so it's a "gain" adjustment to the credit card (it covers more balance).
+    // Or rather, in `_createRoundingAdjustment`: diff = 1000.56 - 1001.00 = -0.44.
+    // adjustmentType = expense (since diff < 0). Wait, let's check code logic.
+    // diffRow = _originalAmount! - amount; (1000.56 - 1001.00 = -0.44)
+    // if diff > 0 -> income, else expense.
+    // So expense of 0.44 to CC account.
+    verify(() => mockStorage.saveTransaction(any(
+        that: isA<Transaction>()
+            .having((t) => t.type, 'type', TransactionType.transfer)
+            .having((t) => t.amount, 'amount', 1001.0)))).called(1);
+
+    verify(() => mockStorage.saveTransaction(any(
+        that: isA<Transaction>()
+            .having((t) => t.type, 'type', TransactionType.expense)
+            .having((t) => t.amount, 'amount', 0.44)))).called(1);
   });
 }

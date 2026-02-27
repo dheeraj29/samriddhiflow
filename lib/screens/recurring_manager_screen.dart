@@ -59,6 +59,7 @@ class RecurringManagerScreen extends ConsumerWidget {
                         icon: PureIcons.calendar(color: Colors.blueGrey),
                         tooltip: 'Add to System Calendar',
                         onPressed: () { // coverage:ignore-line
+
                           ref
                               // coverage:ignore-start
                               .read(calendarServiceProvider)
@@ -67,7 +68,8 @@ class RecurringManagerScreen extends ConsumerWidget {
                               // coverage:ignore-end
                                 description:
                                     'Recurring payment: ${rule.title} for ${currency.format(rule.amount)}', // coverage:ignore-line
-                                startDate: rule.nextExecutionDate, // coverage:ignore-line
+                                startDate: rule
+                                    .nextExecutionDate, // coverage:ignore-line
                                 occurrences: 12, // Default to 1 year
                               );
                         },
@@ -90,31 +92,31 @@ class RecurringManagerScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')), // coverage:ignore-line
+        error: (e, s) => // coverage:ignore-line
+            Center(child: Text('Error: $e')), // coverage:ignore-line
       ),
     );
   }
 
   String _getScheduleDescription(RecurringTransaction rule) {
     String freqStr = rule.frequency.name.toUpperCase();
-    switch (rule.scheduleType) {
-      case ScheduleType.fixedDate:
-        return '$freqStr - Every ${rule.nextExecutionDate.day}${_getDaySuffix(rule.nextExecutionDate.day)}';
-      case ScheduleType.everyWeekend: // coverage:ignore-line
-        return 'Every Weekend (Sat/Sun)';
-      case ScheduleType.lastWeekend: // coverage:ignore-line
-        return 'Last Weekend of Month';
+    final adjText = rule.adjustForHolidays ? adjForHolidaysText : "";
+
+    return switch (rule.scheduleType) {
+      ScheduleType.fixedDate =>
+        '$freqStr - Every ${rule.nextExecutionDate.day}${_getDaySuffix(rule.nextExecutionDate.day)}',
+      ScheduleType.everyWeekend => // coverage:ignore-line
+        'Every Weekend (Sat/Sun)',
+      ScheduleType.lastWeekend => // coverage:ignore-line
+        'Last Weekend of Month',
       // coverage:ignore-start
-      case ScheduleType.specificWeekday:
-        return 'Every ${_getWeekdayName(rule.selectedWeekday ?? 1)}';
-      case ScheduleType.lastDayOfMonth:
-        return 'Last Day of Month${rule.adjustForHolidays ? adjForHolidaysText : ""}';
-      case ScheduleType.lastWorkingDay:
-        return 'Last Working Day${rule.adjustForHolidays ? adjForHolidaysText : ""}';
-      case ScheduleType.firstWorkingDay:
-        return 'First Working Day${rule.adjustForHolidays ? adjForHolidaysText : ""}';
+      ScheduleType.specificWeekday =>
+        'Every ${_getWeekdayName(rule.selectedWeekday ?? 1)}',
+      ScheduleType.lastDayOfMonth => 'Last Day of Month$adjText',
+      ScheduleType.lastWorkingDay => 'Last Working Day$adjText',
+      ScheduleType.firstWorkingDay => 'First Working Day$adjText',
       // coverage:ignore-end
-    }
+    };
   }
 
   String _getDaySuffix(int day) {
@@ -132,6 +134,7 @@ class RecurringManagerScreen extends ConsumerWidget {
   }
 
   String _getWeekdayName(int day) { // coverage:ignore-line
+
     const names = [
       '',
       'Monday',
@@ -155,7 +158,8 @@ class RecurringManagerScreen extends ConsumerWidget {
                   'This will stop automatic payments for "${rule.title}". Past transactions will NOT be deleted.'),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context, false), // coverage:ignore-line
+                    onPressed: () => // coverage:ignore-line
+                        Navigator.pop(context, false), // coverage:ignore-line
                     child: const Text('Cancel')),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),

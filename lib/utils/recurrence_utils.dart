@@ -91,26 +91,24 @@ class RecurrenceUtils {
 
   static bool _matchesMonthly(
       DateTime date, ScheduleType type, int? weekday, List<DateTime> holidays) {
-    switch (type) {
-      case ScheduleType.fixedDate:
-        return true;
-      case ScheduleType.lastDayOfMonth:
-        final nextDay = date.add(const Duration(days: 1)); // coverage:ignore-line
-        return nextDay.month != date.month; // coverage:ignore-line
-      case ScheduleType.lastWorkingDay:
-        return _isLastWorkingDay(date, holidays);
-      case ScheduleType.everyWeekend:
-        return date.weekday == 6 || date.weekday == 7; // coverage:ignore-line
-      case ScheduleType.lastWeekend:
-        if (date.weekday != 6 && date.weekday != 7) return false;
-        final nextWeek = date.add(const Duration(days: 7));
-        return nextWeek.month != date.month;
-      case ScheduleType.specificWeekday:
-        if (weekday != null) return date.weekday == weekday;
-        return true;
-      case ScheduleType.firstWorkingDay:
-        return _isFirstWorkingDay(date, holidays);
-    }
+    return switch (type) {
+      ScheduleType.fixedDate => true,
+      ScheduleType.lastDayOfMonth => date.add(const Duration(days: 1)).month !=
+          date.month, // coverage:ignore-line
+      ScheduleType.lastWorkingDay => _isLastWorkingDay(date, holidays),
+      ScheduleType.everyWeekend =>
+        date.weekday == 6 || date.weekday == 7, // coverage:ignore-line
+      ScheduleType.lastWeekend => _matchesLastWeekend(date),
+      ScheduleType.specificWeekday =>
+        weekday != null ? date.weekday == weekday : true,
+      ScheduleType.firstWorkingDay => _isFirstWorkingDay(date, holidays),
+    };
+  }
+
+  static bool _matchesLastWeekend(DateTime date) {
+    if (date.weekday != 6 && date.weekday != 7) return false;
+    final nextWeek = date.add(const Duration(days: 7));
+    return nextWeek.month != date.month;
   }
 
   static bool _isLastWorkingDay(DateTime date, List<DateTime> holidays) {
@@ -211,6 +209,7 @@ class RecurrenceUtils {
       case ScheduleType.specificWeekday:
         if (selectedWeekday != null) {
           while (next.weekday != selectedWeekday) { // coverage:ignore-line
+
             next = next.add(const Duration(days: 1)); // coverage:ignore-line
           }
         }
@@ -287,11 +286,14 @@ class RecurrenceUtils {
   }
 
   static DateTime _findFirstWorkingDayInMonth( // coverage:ignore-line
-      RecurringTransaction rt, List<DateTime> holidays) {
-    DateTime base =
-        DateTime(rt.nextExecutionDate.year, rt.nextExecutionDate.month, 1); // coverage:ignore-line
+
+      RecurringTransaction rt,
+      List<DateTime> holidays) {
+    DateTime base = DateTime(rt.nextExecutionDate.year, // coverage:ignore-line
+        rt.nextExecutionDate.month, 1); // coverage:ignore-line
     DateTime cursor = base;
     while (_isHolidayOrWeekend(cursor, holidays)) { // coverage:ignore-line
+
       cursor = cursor.add(const Duration(days: 1)); // coverage:ignore-line
     }
     return cursor;

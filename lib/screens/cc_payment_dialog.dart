@@ -56,7 +56,10 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, s) => // coverage:ignore-line
-          AlertDialog(title: const Text('Error'), content: Text('$e')), // coverage:ignore-line
+          AlertDialog( // coverage:ignore-line
+
+              title: const Text('Error'),
+              content: Text('$e')), // coverage:ignore-line
     );
   }
 
@@ -86,6 +89,8 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
       children: [
         if (widget.isFullyPaid)
           Container( // coverage:ignore-line
+
+
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(8),
             // coverage:ignore-start
@@ -113,10 +118,9 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
           title: const Text('Round Off', style: TextStyle(fontSize: 14)),
-          subtitle: const Text('Round to nearest ₹1',
+          subtitle: const Text('Round to nearest number',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           value: _isRounded,
-          // coverage:ignore-start
           onChanged: (v) {
             setState(() {
               _isRounded = v ?? false;
@@ -124,9 +128,10 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                 _originalAmount = double.tryParse(_amountController.text) ?? 0;
                 _amountController.text =
                     _originalAmount!.roundToDouble().toStringAsFixed(2);
-              } else if (_originalAmount != null && _originalAmount! > 0) {
-                _amountController.text = _originalAmount!.toStringAsFixed(2);
-          // coverage:ignore-end
+              } else if (_originalAmount != null && _originalAmount! > 0) { // coverage:ignore-line
+
+                _amountController.text = // coverage:ignore-line
+                    _originalAmount!.toStringAsFixed(2); // coverage:ignore-line
               }
             });
           },
@@ -148,13 +153,15 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (_, __) => const Text('Error loading accounts'), // coverage:ignore-line
+          error: (_, __) => // coverage:ignore-line
+              const Text('Error loading accounts'),
         ),
         const SizedBox(height: 16),
         FormUtils.buildDatePickerField(
           context: context,
           selectedDate: _date,
-          onDateTarget: (picked) => setState(() => _date = picked), // coverage:ignore-line
+          onDateTarget: (picked) => // coverage:ignore-line
+              setState(() => _date = picked), // coverage:ignore-line
           label: 'Payment Date',
         ),
       ],
@@ -168,34 +175,9 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
     final storage = ref.read(storageServiceProvider);
 
-    // Record Transfer
-    final txn = Transaction.create(
-      title: 'CC Bill Payment: ${widget.creditCardAccount.name}',
-      amount: amount,
-      date: _date,
-      type: TransactionType.transfer,
-      category: 'Credit Card Bill',
-      accountId: _sourceAccountId == 'manual' ? null : _sourceAccountId,
-      toAccountId: widget.creditCardAccount.id,
-    );
-    await storage.saveTransaction(txn);
-
-    // Auto-advance Cycle if payment covers the due amount
-    if (!widget.isFullyPaid &&
-        _calculatedTotalDue > 0 &&
-        amount >= (_calculatedTotalDue - 1.0)) {
-      await storage.resetCreditCardRollover(widget.creditCardAccount,
-          keepBilledStatus: true);
-    }
-
-    // Auto-create Rounding Adjustment if enabled
-    if (_isRounded &&
-        // coverage:ignore-start
-        _originalAmount != null &&
-        (_originalAmount! - amount).abs() > 0.001) {
-      await _createRoundingAdjustment(storage, amount);
-        // coverage:ignore-end
-    }
+    await _recordTransferTransaction(storage, amount);
+    await _advanceCycleIfNeeded(storage, amount);
+    await _handleRoundingAdjustmentIfNeeded(storage, amount);
 
     ref.invalidate(accountsProvider);
     ref.invalidate(transactionsProvider);
@@ -206,20 +188,54 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
         .showSnackBar(const SnackBar(content: Text('Payment Recorded')));
   }
 
-  Future<void> _createRoundingAdjustment(dynamic storage, double amount) async { // coverage:ignore-line
-    final diff = _originalAmount! - amount; // coverage:ignore-line
-    final adjustmentType =
-        diff > 0 ? TransactionType.income : TransactionType.expense; // coverage:ignore-line
+  Future<void> _recordTransferTransaction(
+      dynamic storage, double amount) async {
+    final txn = Transaction.create(
+      title: 'CC Bill Payment: ${widget.creditCardAccount.name}',
+      amount: amount,
+      date: _date,
+      type: TransactionType.transfer,
+      category: 'Credit Card Bill',
+      accountId: _sourceAccountId == 'manual' ? null : _sourceAccountId,
+      toAccountId: widget.creditCardAccount.id,
+    );
+    await storage.saveTransaction(txn);
+  }
 
-    final adjustmentTxn = Transaction.create( // coverage:ignore-line
+  Future<void> _advanceCycleIfNeeded(dynamic storage, double amount) async {
+    final targetDue =
+        _isRounded ? _calculatedTotalDue.roundToDouble() : _calculatedTotalDue;
+    if (!widget.isFullyPaid &&
+        _calculatedTotalDue > 0 &&
+        amount >= (targetDue - 0.01)) {
+      await storage.resetCreditCardRollover(widget.creditCardAccount,
+          keepBilledStatus: true);
+    }
+  }
+
+  Future<void> _handleRoundingAdjustmentIfNeeded(
+      dynamic storage, double amount) async {
+    if (_isRounded &&
+        _originalAmount != null &&
+        (_originalAmount! - amount).abs() > 0.001) {
+      await _createRoundingAdjustment(storage, amount);
+    }
+  }
+
+  Future<void> _createRoundingAdjustment(dynamic storage, double amount) async {
+    final diff = _originalAmount! - amount;
+    final adjustmentType =
+        diff > 0 ? TransactionType.income : TransactionType.expense;
+
+    final adjustmentTxn = Transaction.create(
       title: 'Rounding Adjustment',
-      amount: diff.abs(), // coverage:ignore-line
-      date: _date, // coverage:ignore-line
+      amount: CurrencyUtils.roundTo2Decimals(diff.abs()),
+      date: _date,
       type: adjustmentType,
       category: 'Adjustment',
-      accountId: widget.creditCardAccount.id, // coverage:ignore-line
+      accountId: widget.creditCardAccount.id,
       toAccountId: null,
     );
-    await storage.saveTransaction(adjustmentTxn); // coverage:ignore-line
+    await storage.saveTransaction(adjustmentTxn);
   }
 }

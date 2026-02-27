@@ -25,8 +25,6 @@ class FirestoreStorageService implements CloudStorageInterface {
   @override
   Future<void> syncData(String uid, Map<String, dynamic> data) async {
     try {
-      // Use a single document for the 'latest' state as per user requirement (single backup)
-      // but stored as a structured map instead of a file/string.
       await _firestore
           .collection('users')
           .doc(uid)
@@ -36,8 +34,10 @@ class FirestoreStorageService implements CloudStorageInterface {
         ...data,
         'lastSync': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
-      throw Exception("Firestore sync failed: $e");
+    } on FirebaseException {
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore sync failed");
     }
   }
 
@@ -53,8 +53,10 @@ class FirestoreStorageService implements CloudStorageInterface {
 
       if (!doc.exists) return null;
       return doc.data();
-    } catch (e) {
-      throw Exception("Firestore fetch failed: $e");
+    } on FirebaseException {
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore fetch failed");
     }
   }
 
@@ -67,10 +69,11 @@ class FirestoreStorageService implements CloudStorageInterface {
           .collection('data')
           .doc('current')
           .delete();
-      // Optionally delete the user doc itself if no other subcollections exist
       await _firestore.collection('users').doc(uid).delete();
-    } catch (e) {
-      throw Exception("Firestore deletion failed: $e");
+    } on FirebaseException {
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore deletion failed");
     }
   }
 }

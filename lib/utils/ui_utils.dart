@@ -72,47 +72,53 @@ class UIUtils {
   static Future<String?> showPasscodePrompt(
       BuildContext context, bool isRetry) {
     final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("Encrypted Backup Found"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-                isRetry
-                    ? "Incorrect passcode. Please try again."
-                    : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
-                style: TextStyle(color: isRetry ? Colors.red : null)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Passcode",
-                border: OutlineInputBorder(),
+    // Use Future.delayed(Duration.zero) to ensure this is pushed after any current
+    // build/screen transition, resolving the "DevTools trigger" issue on Web.
+    return Future.delayed(Duration.zero, () {
+      if (!context.mounted) return null;
+      return showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true, // Show above all app state transitions
+        builder: (context) => AlertDialog(
+          title: const Text("Encrypted Backup Found"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                  isRetry
+                      ? "Incorrect passcode. Please try again."
+                      : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
+                  style: TextStyle(color: isRetry ? Colors.red : null)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Passcode",
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
               ),
-              autofocus: true,
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => // coverage:ignore-line
+                  Navigator.pop(context, null), // coverage:ignore-line
+              child: const Text("SKIP"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  Navigator.pop(context, controller.text);
+                }
+              },
+              child: const Text("RESTORE"),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => // coverage:ignore-line
-                Navigator.pop(context, null), // coverage:ignore-line
-            child: const Text("SKIP"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                Navigator.pop(context, controller.text);
-              }
-            },
-            child: const Text("RESTORE"),
-          ),
-        ],
-      ),
-    );
+      );
+    });
   }
 }

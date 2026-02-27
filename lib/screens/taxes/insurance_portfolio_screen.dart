@@ -8,6 +8,7 @@ import '../../services/taxes/insurance_tax_service.dart';
 import '../../services/taxes/tax_config_service.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../../providers.dart';
+import '../../utils/currency_utils.dart';
 import '../../widgets/pure_icons.dart';
 
 class InsurancePortfolioScreen extends ConsumerStatefulWidget {
@@ -211,14 +212,18 @@ class _InsurancePortfolioScreenState
             decoration: const InputDecoration(labelText: 'Policy Name')),
         TextField(
             controller: premiumCtrl,
-            decoration: const InputDecoration(labelText: 'Annual Premium'),
+            decoration: InputDecoration(
+                labelText:
+                    'Annual Premium (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
             ]),
         TextField(
             controller: sumAssuredCtrl,
-            decoration: const InputDecoration(labelText: 'Sum Assured'),
+            decoration: InputDecoration(
+                labelText:
+                    'Sum Assured (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
@@ -380,8 +385,10 @@ class _InsurancePortfolioScreenState
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Premium: ₹${p.annualPremium.toStringAsFixed(0)} / yr'),
-            Text('Sum Assured: ₹${p.sumAssured.toStringAsFixed(0)}'),
+            Text(
+                'Premium: ${CurrencyUtils.formatCurrency(p.annualPremium, ref.watch(currencyProvider))} / yr'),
+            Text(
+                'Sum Assured: ${CurrencyUtils.formatCurrency(p.sumAssured, ref.watch(currencyProvider))}'),
             if (p.isTaxExempt == null)
               const Text('Status: Pending Calc',
                   style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
@@ -437,8 +444,9 @@ class _InsurancePortfolioScreenState
               (d) => setState(() => _dateNonUlip = d)),
           const Divider(),
           _buildSectionHeader('Aggregate Premium Limits'),
-          _buildNumberField('ULIP Limit (₹)', _limitUlipCtrl),
-          _buildNumberField('Non-ULIP Limit (₹)', _limitNonUlipCtrl),
+          _buildNumberField('ULIP Limit', _limitUlipCtrl, isAmount: true),
+          _buildNumberField('Non-ULIP Limit', _limitNonUlipCtrl,
+              isAmount: true),
         ],
         const Divider(),
         SwitchListTile(
@@ -581,13 +589,17 @@ class _InsurancePortfolioScreenState
     );
   }
 
-  Widget _buildNumberField(String label, TextEditingController controller) {
+  Widget _buildNumberField(String label, TextEditingController controller,
+      {bool isAmount = false}) {
+    final currencySymbol =
+        ref.watch(currencyProvider.select((l) => CurrencyUtils.getSymbol(l)));
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
+          prefixText: isAmount ? '$currencySymbol ' : null,
           border: const OutlineInputBorder(),
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -668,7 +680,7 @@ class _InsurancePortfolioScreenState
     return Column(
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        Text('₹${val.toStringAsFixed(0)}',
+        Text(CurrencyUtils.formatCurrency(val, ref.watch(currencyProvider)),
             style: TextStyle(
                 fontWeight: FontWeight.bold, color: color, fontSize: 16)),
       ],

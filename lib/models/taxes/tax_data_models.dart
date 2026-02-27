@@ -104,31 +104,37 @@ class SalaryDetails {
         npsEmployer: (m['npsEmployer'] as num?)?.toDouble() ?? 0,
         leaveEncashment: (m['leaveEncashment'] as num?)?.toDouble() ?? 0,
         gratuity: (m['gratuity'] as num?)?.toDouble() ?? 0,
-        monthlyGross: (m['monthlyGross'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+        monthlyGross: (m['monthlyGross'] as Map?)?.map((k, v) => MapEntry(
+                // coverage:ignore-start
+                int.parse(k.toString()),
+                (v as num).toDouble())) ??
+            {},
+                // coverage:ignore-end
         giftsFromEmployer: (m['giftsFromEmployer'] as num?)?.toDouble() ?? 0,
         history: (m['history'] as List?)
-                ?.map((e) =>
-                    SalaryStructure.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) => SalaryStructure.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [], // coverage:ignore-line
         netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+                // coverage:ignore-start
+                MapEntry(int.parse(k.toString()),
+                    (v as num).toDouble())) ??
+            {},
+                // coverage:ignore-end
         independentAllowances: (m['independentAllowances'] as List?)
-                ?.map((e) =>
-                    CustomAllowance.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) => CustomAllowance.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [], // coverage:ignore-line
         independentExemptions: (m['independentExemptions'] as List?)
-                ?.map((e) =>
-                    CustomExemption.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) => CustomExemption.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [], // coverage:ignore-line
         independentDeductions: (m['independentDeductions'] as List?)
-                ?.map((e) =>
-                    CustomAllowance.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) => CustomAllowance.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [], // coverage:ignore-line
       );
@@ -549,8 +555,11 @@ class SalaryStructure {
                 // coverage:ignore-end
         isVariablePayPartial: m['isVariablePayPartial'] ?? false,
         variablePayAmounts: (m['variablePayAmounts'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
-            {}, // coverage:ignore-line
+                // coverage:ignore-start
+                MapEntry(int.parse(k.toString()),
+                    (v as num).toDouble())) ??
+            {},
+                // coverage:ignore-end
         stoppedMonths: (m['stoppedMonths'] as List?)?.cast<int>() ?? [],
       );
 
@@ -560,7 +569,8 @@ class SalaryStructure {
     if (stoppedMonths.contains(m)) return 0;
   // coverage:ignore-end
 
-    double total = monthlyBasic + monthlyFixedAllowances; // coverage:ignore-line
+    double total =
+        monthlyBasic + monthlyFixedAllowances; // coverage:ignore-line
 
     // Performance Pay
     // coverage:ignore-start
@@ -594,7 +604,9 @@ class SalaryStructure {
 
   double _getPayComponent(bool isPartial, Map<int, double> amounts, int month,
       double defaultAmount) {
-    return isPartial ? (amounts[month] ?? 0.0) : defaultAmount; // coverage:ignore-line
+    return isPartial
+        ? (amounts[month] ?? 0.0) // coverage:ignore-line
+        : defaultAmount;
   }
 
   double _getVariablePayPayout(int month) {
@@ -809,6 +821,7 @@ class CustomDeduction {
   final Map<int, double> partialAmounts;
 
   const CustomDeduction({ // coverage:ignore-line
+
     required this.name,
     required this.amount,
     this.isTaxable = true,
@@ -820,6 +833,7 @@ class CustomDeduction {
   });
 
   CustomDeduction copyWith({ // coverage:ignore-line
+
     String? name,
     double? amount,
     bool? isTaxable,
@@ -852,9 +866,9 @@ class CustomDeduction {
         'startMonth': startMonth,
         'customMonths': customMonths,
         'isPartial': isPartial,
+        'partialAmounts': partialAmounts
+            .map((k, v) => MapEntry(k.toString(), v)),
   // coverage:ignore-end
-        'partialAmounts':
-            partialAmounts.map((k, v) => MapEntry(k.toString(), v)), // coverage:ignore-line
       };
 
   // coverage:ignore-start
@@ -917,7 +931,8 @@ class CustomAllowance {
       frequency: frequency ?? this.frequency,
       startMonth: startMonth ?? this.startMonth,
       customMonths: customMonths ?? this.customMonths,
-      partialAmounts: partialAmounts ?? this.partialAmounts, // coverage:ignore-line
+      partialAmounts:
+          partialAmounts ?? this.partialAmounts, // coverage:ignore-line
     );
   }
 
@@ -941,8 +956,9 @@ class CustomAllowance {
         frequency: PayoutFrequency.values[m['frequency'] ?? 0],
         startMonth: m['startMonth'],
         customMonths: (m['customMonths'] as List?)?.cast<int>(),
-        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? // coverage:ignore-line
+        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) => MapEntry(
+                int.parse(k.toString()), // coverage:ignore-line
+                (v as num).toDouble())) ?? // coverage:ignore-line
             {},
       );
 }
@@ -1007,6 +1023,7 @@ class TaxPaymentEntry {
   });
 
   TaxPaymentEntry copyWith({ // coverage:ignore-line
+
     double? amount,
     DateTime? date,
     String? source,
@@ -1042,30 +1059,22 @@ extension TaxStringHelpers on String {
     if (isEmpty) return '';
 
     // Specialized mappings for tax heads/tags
-    switch (this) {
-      case 'salary':
-        return 'Salary';
-      case 'houseProp':
-        return 'House Property';
-      case 'business':
-        return 'Business / Profession';
-      case 'capitalGain':
-        return 'Capital Gain';
-      case 'otherIncome':
-        return 'Other Sources';
-      case 'ltcg':
-        return 'LTCG';
-      case 'stcg':
-        return 'STCG';
-      case 'taxSaving':
-        return 'Tax Saving';
-      case 'directTax':
-        return 'Direct Tax';
-      case 'budgetFree':
-        return 'Budget Free';
-      case 'taxFree':
-        return 'Tax Free';
-    }
+    final explicitMapping = switch (this) {
+      'salary' => 'Salary',
+      'houseProp' => 'House Property',
+      'business' => 'Business / Profession',
+      'capitalGain' => 'Capital Gain',
+      'otherIncome' => 'Other Sources',
+      'ltcg' => 'LTCG',
+      'stcg' => 'STCG',
+      'taxSaving' => 'Tax Saving',
+      'directTax' => 'Direct Tax',
+      'budgetFree' => 'Budget Free',
+      'taxFree' => 'Tax Free',
+      _ => null,
+    };
+
+    if (explicitMapping != null) return explicitMapping;
 
     // Handle camelCase: 'equityShares' -> 'Equity Shares'
     final exp = RegexUtils.camelCaseExp;

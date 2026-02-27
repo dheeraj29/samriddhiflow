@@ -429,4 +429,38 @@ void main() {
     // Note: We avoid tapping 'OK, Reload' here because it navigates to DashboardScreen,
     // which requires many more provider mocks than are relevant for this SettingsScreen test.
   });
+
+  testWidgets('Restore Data (ZIP) triggers PIN dialog before file picker',
+      (WidgetTester tester) async {
+    // 1. Enable App Lock
+    when(() => mockStorage.isAppLockEnabled()).thenReturn(true);
+    when(() => mockStorage.getAppPin()).thenReturn('1111');
+    when(() => mockFileService.pickFile(
+            allowedExtensions: any(named: 'allowedExtensions')))
+        .thenAnswer((_) async => Uint8List.fromList([1, 2, 3]));
+
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    final restoreTile = find.text('Restore Data (ZIP)');
+    await tester.scrollUntilVisible(restoreTile, 500);
+    await tester.tap(restoreTile);
+    await tester.pumpAndSettle();
+
+    // 2. Verify PIN dialog appears first
+    expect(find.text('Verify App PIN'), findsOneWidget);
+
+    // 3. Verify pickFile has NOT been called yet
+    verifyNever(() => mockFileService.pickFile(
+        allowedExtensions: any(named: 'allowedExtensions')));
+
+    // 4. Enter PIN
+    await tester.enterText(find.byType(TextField), '1111');
+    await tester.tap(find.text('VERIFY'));
+    await tester.pumpAndSettle();
+
+    // 5. Now pickFile should be called
+    verify(() => mockFileService.pickFile(
+        allowedExtensions: any(named: 'allowedExtensions'))).called(1);
+  });
 }

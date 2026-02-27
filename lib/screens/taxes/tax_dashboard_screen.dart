@@ -7,6 +7,7 @@ import '../../widgets/pure_icons.dart';
 import '../../widgets/smart_currency_text.dart';
 import '../../models/taxes/tax_data.dart';
 import '../../models/taxes/tax_data_models.dart';
+import '../../utils/currency_utils.dart';
 import 'tax_rules_screen.dart';
 
 import 'tax_details_screen.dart';
@@ -435,9 +436,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-              'FY ${gainYearData.year}-${gainYearData.year + 1} | Gain: ₹${gain.capitalGainAmount.toStringAsFixed(0)}'),
+              'FY ${gainYearData.year}-${gainYearData.year + 1} | Gain: ${CurrencyUtils.formatCurrency(gain.capitalGainAmount, ref.watch(currencyProvider))}'),
           Text(
-              'Reinvested: ₹${gain.reinvestedAmount.toStringAsFixed(0)} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
+              'Reinvested: ${CurrencyUtils.formatCurrency(gain.reinvestedAmount, ref.watch(currencyProvider))} | Deadline: ${deadline.day}/${deadline.month}/${deadline.year}',
               style: TextStyle(
                   color: _getDeadlineColor(remainingDays),
                   fontWeight: FontWeight.bold)),
@@ -535,7 +536,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             const SizedBox(height: 8),
             SmartCurrencyText(
               value: taxDetails['totalTax'] ?? 0,
-              locale: 'en_IN',
+              locale: ref.watch(currencyProvider),
               style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -601,7 +602,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                   isBold ? const TextStyle(fontWeight: FontWeight.bold) : null),
           SmartCurrencyText(
             value: amount,
-            locale: 'en_IN',
+            locale: ref.watch(currencyProvider),
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               color: color,
