@@ -2,7 +2,7 @@
 
 **Premium Personal Finance PWA Component**
 
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=dheeraj29_samriddhiflow)](https://sonarcloud.io/summary/new_code?id=dheeraj29_samriddhiflow)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=dheeraj29_samriddhiflow&metric=alert_status&token=271a9868b388ced7d853322416759434b8e3248c)](https://sonarcloud.io/summary/new_code?id=dheeraj29_samriddhiflow)
 
 Samriddhi Flow is a local-first, aesthetic, and comprehensive financial tracking application built with Flutter Web.
 
