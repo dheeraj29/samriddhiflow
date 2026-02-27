@@ -17,6 +17,7 @@ import 'package:samriddhi_flow/utils/currency_utils.dart';
 
 const employerPaidText = 'Employer Paid';
 const selectMonthsText = 'Select Months';
+const _adhocExemptionsLabel = 'Less: Ad-hoc Exemptions';
 
 class TaxDetailsScreen extends ConsumerStatefulWidget {
   final TaxYearData data;
@@ -1078,7 +1079,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 _buildSummaryRow('Total Interest on Loan', totalInterest,
                     isDeduction: true),
                 if (hpRuleExemptions > 0)
-                  _buildSummaryRow('Less: Ad-hoc Exemptions', hpRuleExemptions,
+                  _buildSummaryRow(_adhocExemptionsLabel, hpRuleExemptions,
                       isDeduction: true),
                 const Divider(),
                 _buildSummaryRow('Taxable HP Income', taxableHP, isBold: true),
@@ -1529,8 +1530,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   _buildSummaryRow('Total Turnover', totalTurnover),
                   _buildSummaryRow('Total Net Income', totalNet),
                   if (bizRuleExemptions > 0)
-                    _buildSummaryRow(
-                        'Less: Ad-hoc Exemptions', bizRuleExemptions,
+                    _buildSummaryRow(_adhocExemptionsLabel, bizRuleExemptions,
                         isDeduction: true),
                   const Divider(),
                   _buildSummaryRow('Taxable Business Income', taxableBusiness,
@@ -2188,8 +2188,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 _buildSummaryRow('Dividend Income', totalDividend),
                 _buildSummaryRow('Other Sources', totalOtherList),
                 if (otherRuleExemptions > 0)
-                  _buildSummaryRow(
-                      'Less: Ad-hoc Exemptions', otherRuleExemptions,
+                  _buildSummaryRow(_adhocExemptionsLabel, otherRuleExemptions,
                       isDeduction: true),
                 const Divider(),
                 _buildSummaryRow('Taxable Other Income', taxableOther,
