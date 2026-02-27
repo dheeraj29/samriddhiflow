@@ -201,6 +201,6 @@ void main() {
 
   test('authStateChanges returns null stream if _auth is null', () {
     final authServiceNull = AuthService(null, mockStorage);
-    expect(authServiceNull.authStateChanges, emits(null));
+    expect(authServiceNull.authStateChanges, emitsDone);
   });
 }

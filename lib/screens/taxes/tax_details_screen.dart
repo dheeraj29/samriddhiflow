@@ -502,7 +502,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             children: [
               const Text('Approx. Gross Income',
                   style: TextStyle(fontSize: 12)),
-              Text('₹${totalIncome.toStringAsFixed(0)}',
+              Text(
+                  CurrencyUtils.formatCurrency(
+                      totalIncome, ref.watch(currencyProvider)),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
             ],
@@ -512,7 +514,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('Est. Tax Liability', style: TextStyle(fontSize: 12)),
-              Text('₹${estimatedTax.toStringAsFixed(0)}',
+              Text(
+                  CurrencyUtils.formatCurrency(
+                      estimatedTax, ref.watch(currencyProvider)),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -569,7 +573,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ListTile(
             title: const Text('Total Dividend Income'),
             trailing: Text(
-                '₹${div.grossDividend.toStringAsFixed(0)}', // This updates on Save only unless we listen
+                CurrencyUtils.formatCurrency(
+                    div.grossDividend, ref.watch(currencyProvider)),
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 16))),
         const Padding(
@@ -620,7 +625,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 title: Text(
                     'Effective: ${DateFormat('MMM d, yyyy').format(s.effectiveDate)}'),
                 subtitle: Text(
-                    'Basic: ₹${s.monthlyBasic.toStringAsFixed(0)} + Allowances'),
+                    'Basic: ${CurrencyUtils.formatCurrency(s.monthlyBasic, ref.watch(currencyProvider))} + Allowances'),
                 trailing: IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () => _editSalaryStructure(s),
@@ -671,7 +676,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 contentPadding: EdgeInsets.zero,
                 title: Text(a.name),
                 subtitle: Text(
-                    '₹${a.payoutAmount.toStringAsFixed(0)} (${a.frequency.name})'),
+                    '${CurrencyUtils.formatCurrency(a.payoutAmount, ref.watch(currencyProvider))} (${a.frequency.name})'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -710,7 +715,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(e.name),
-                subtitle: Text('₹${e.amount.toStringAsFixed(0)}'),
+                subtitle: Text(CurrencyUtils.formatCurrency(
+                    e.amount, ref.watch(currencyProvider))),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -752,7 +758,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 contentPadding: EdgeInsets.zero,
                 title: Text(a.name),
                 subtitle: Text(
-                    '₹${a.payoutAmount.toStringAsFixed(0)} (${a.frequency.name})'),
+                    '${CurrencyUtils.formatCurrency(a.payoutAmount, ref.watch(currencyProvider))} (${a.frequency.name})'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -825,7 +831,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           dense: true,
           contentPadding: EdgeInsets.zero,
           title: const Text('Total TDS tracked'),
-          trailing: Text('₹${totalTds.toStringAsFixed(0)}',
+          trailing: Text(
+              CurrencyUtils.formatCurrency(
+                  totalTds, ref.watch(currencyProvider)),
               style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         if (refundForecast > 0)
@@ -837,7 +845,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     color: Theme.of(context).brightness == Brightness.light
                         ? Colors.green.shade700
                         : Colors.green.shade400)),
-            trailing: Text('₹${refundForecast.toStringAsFixed(0)}',
+            trailing: Text(
+                CurrencyUtils.formatCurrency(
+                    refundForecast, ref.watch(currencyProvider)),
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).brightness == Brightness.light
@@ -1002,13 +1012,27 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
               return DataRow(cells: [
                 DataCell(Text(DateFormat('MMM').format(DateTime(2023, m, 1)))),
-                DataCell(
-                    Text(isStopped ? '-' : '₹${gross.toStringAsFixed(0)}')),
-                DataCell(Text(isStopped ? '-' : '₹${tax.toStringAsFixed(0)}',
+                DataCell(Text(isStopped
+                    ? '-'
+                    : CurrencyUtils.formatCurrency(
+                        gross, ref.watch(currencyProvider)))),
+                DataCell(Text(
+                    isStopped
+                        ? '-'
+                        : CurrencyUtils.formatCurrency(
+                            tax, ref.watch(currencyProvider)),
                     style: const TextStyle(color: Colors.red))),
-                DataCell(Text(isStopped ? '-' : '₹${ded.toStringAsFixed(0)}',
+                DataCell(Text(
+                    isStopped
+                        ? '-'
+                        : CurrencyUtils.formatCurrency(
+                            ded, ref.watch(currencyProvider)),
                     style: const TextStyle(color: Colors.orange))),
-                DataCell(Text(isStopped ? '-' : '₹${net.toStringAsFixed(0)}',
+                DataCell(Text(
+                    isStopped
+                        ? '-'
+                        : CurrencyUtils.formatCurrency(
+                            net, ref.watch(currencyProvider)),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, color: Colors.green))),
               ]);
@@ -1020,9 +1044,49 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildHousePropertyTab() {
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final taxService = ref.read(indianTaxServiceProvider);
+    final taxableHP =
+        taxService.calculateHousePropertyIncome(_currentData, rules);
+    final totalRent = _houseProperties
+        .where((h) => !h.isSelfOccupied)
+        .fold(0.0, (sum, h) => sum + h.rentReceived);
+    final totalInterest =
+        _houseProperties.fold(0.0, (sum, h) => sum + h.interestOnLoan);
+
+    final hpRuleExemptions = rules.customExemptions
+        .where((e) => e.isEnabled && e.incomeHead == 'House Property')
+        .fold(
+            0.0,
+            (sum, e) =>
+                sum + (e.isPercentage ? (totalRent * e.limit / 100) : e.limit));
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Card(
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                _buildSummaryRow('Total Rent Received', totalRent),
+                _buildSummaryRow('Total Interest on Loan', totalInterest,
+                    isDeduction: true),
+                if (hpRuleExemptions > 0)
+                  _buildSummaryRow('Less: Ad-hoc Exemptions', hpRuleExemptions,
+                      isDeduction: true),
+                const Divider(),
+                _buildSummaryRow('Taxable HP Income', taxableHP, isBold: true),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
         if (_houseProperties.isEmpty)
           const Center(
             child: Column(
@@ -1040,8 +1104,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             child: ListTile(
               title: Text(hp.name),
               subtitle: Text(hp.isSelfOccupied
-                  ? 'Self Occupied • Interest: ₹${hp.interestOnLoan.toStringAsFixed(0)}'
-                  : 'Let Out • Gross Income: ₹${hp.rentReceived.toStringAsFixed(0)}'),
+                  ? 'Self Occupied • Interest: ${CurrencyUtils.formatCurrency(hp.interestOnLoan, ref.watch(currencyProvider))}'
+                  : 'Let Out • Gross Income: ${CurrencyUtils.formatCurrency(hp.rentReceived, ref.watch(currencyProvider))}'),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
@@ -1084,8 +1148,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     double standardDeduction =
         rules.isStdDeductionSalaryEnabled ? rules.stdDeductionSalary : 0;
     double nps = salaryOnlyData.salary.npsEmployer;
+    double salaryRuleExemptions = rules.customExemptions
+        .where((e) => e.isEnabled && e.incomeHead == 'Salary')
+        .fold(
+            0.0,
+            (sum, e) =>
+                sum + (e.isPercentage ? (gross * e.limit / 100) : e.limit));
+
     double customExemptions =
-        _independentExemptions.fold(0.0, (sum, e) => sum + e.amount);
+        _independentExemptions.fold(0.0, (sum, e) => sum + e.amount) +
+            salaryRuleExemptions;
 
     double baseTaxableIncome =
         (gross - statutoryExemptions - standardDeduction - nps)
@@ -1167,7 +1239,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       bool isDeduction = false,
       double fontSize = 12,
       Color? color}) {
-    final locale = ref.read(currencyProvider);
+    final locale = ref.watch(currencyProvider);
     final formattedValue = _useCompactNumberFormat
         ? CurrencyUtils.getSmartFormat(value, locale)
         : CurrencyUtils.formatCurrency(value, locale);
@@ -1425,32 +1497,80 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildBusinessTab() {
-    return _businessIncomes.isEmpty
-        ? const Center(child: Text('No Business Income added.'))
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _businessIncomes.length,
-            itemBuilder: (ctx, i) {
-              final b = _businessIncomes[i];
-              return Card(
-                child: ListTile(
-                  title: Text(b.name),
-                  subtitle: Text(
-                      '${b.type.toString().split('.').last} • Gross: ₹${b.grossTurnover.toStringAsFixed(0)} • Net: ₹${b.netIncome.toStringAsFixed(0)}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      setState(() {
-                        _businessIncomes.removeAt(i);
-                      });
-                      _updateSummary();
-                    },
-                  ),
-                  onTap: () => _addBusinessDialog(existing: b, index: i),
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final taxService = ref.read(indianTaxServiceProvider);
+    final taxableBusiness =
+        taxService.calculateBusinessIncome(_currentData, rules);
+    final totalTurnover =
+        _businessIncomes.fold(0.0, (sum, b) => sum + b.grossTurnover);
+    final totalNet = _businessIncomes.fold(0.0, (sum, b) => sum + b.netIncome);
+
+    final bizRuleExemptions = rules.customExemptions
+        .where((e) => e.isEnabled && e.incomeHead == 'Business')
+        .fold(
+            0.0,
+            (sum, e) =>
+                sum + (e.isPercentage ? (totalNet * e.limit / 100) : e.limit));
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (_businessIncomes.isNotEmpty) ...[
+          Card(
+            color: Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withValues(alpha: 0.3),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  _buildSummaryRow('Total Turnover', totalTurnover),
+                  _buildSummaryRow('Total Net Income', totalNet),
+                  if (bizRuleExemptions > 0)
+                    _buildSummaryRow(
+                        'Less: Ad-hoc Exemptions', bizRuleExemptions,
+                        isDeduction: true),
+                  const Divider(),
+                  _buildSummaryRow('Taxable Business Income', taxableBusiness,
+                      isBold: true),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (_businessIncomes.isEmpty)
+          const Center(
+              child: Padding(
+            padding: EdgeInsets.only(top: 40.0),
+            child: Text('No Business Income added.'),
+          ))
+        else
+          ..._businessIncomes.asMap().entries.map((entry) {
+            final i = entry.key;
+            final b = entry.value;
+            return Card(
+              child: ListTile(
+                title: Text(b.name),
+                subtitle: Text(
+                    '${b.type.toString().split('.').last} • Gross: ${CurrencyUtils.formatCurrency(b.grossTurnover, ref.watch(currencyProvider))} • Net: ${CurrencyUtils.formatCurrency(b.netIncome, ref.watch(currencyProvider))}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () {
+                    setState(() {
+                      _businessIncomes.removeAt(i);
+                    });
+                    _updateSummary();
+                  },
                 ),
-              );
-            },
-          );
+                onTap: () => _addBusinessDialog(existing: b, index: i),
+              ),
+            );
+          }),
+      ],
+    );
   }
 
   void _addBusinessDialog({BusinessEntity? existing, int? index}) {
@@ -1573,7 +1693,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           return Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              'Warning: Turnover exceeds limit (${NumberFormat.compactCurrency(locale: 'en_IN', symbol: '₹').format(limit)}). Presumptive taxation may not apply.',
+              'Warning: Turnover exceeds limit (${CurrencyUtils.formatCurrency(limit, ref.watch(currencyProvider))}). Presumptive taxation may not apply.',
               style: const TextStyle(
                   color: Colors.orange,
                   fontSize: 12,
@@ -1696,7 +1816,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           children: [
             Text(
                 '${entry.matchAssetType.toHumanReadable()} • ${entry.isLTCG ? 'LTCG' : 'STCG'}'),
-            Text('Gross: ₹${entry.saleAmount.toStringAsFixed(0)}'),
+            Text(
+                'Gross: ${CurrencyUtils.formatCurrency(entry.saleAmount, ref.watch(currencyProvider))}'),
             if (entry.intendToReinvest) _buildReinvestStatus(entry),
           ],
         ),
@@ -1710,7 +1831,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 tooltip: 'Record Reinvestment',
                 onPressed: () => _addCGEntryDialog(existing: entry, index: i),
               ),
-            Text('Gain: ₹${entry.capitalGainAmount.toStringAsFixed(0)}',
+            Text(
+                'Gain: ${CurrencyUtils.formatCurrency(entry.capitalGainAmount, ref.watch(currencyProvider))}',
                 textAlign: TextAlign.right,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             PopupMenuButton<String>(
@@ -1741,7 +1863,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         isPending ? Icons.warning_amber_rounded : Icons.check_circle_outline;
     final text = isPending
         ? 'Reinvestment Pending'
-        : 'Reinvested: ₹${entry.reinvestedAmount.toStringAsFixed(0)} to ${entry.matchReinvestType.toHumanReadable()}';
+        : 'Reinvested: ${CurrencyUtils.formatCurrency(entry.reinvestedAmount, ref.watch(currencyProvider))} to ${entry.matchReinvestType.toHumanReadable()}';
 
     return Row(
       children: [
@@ -2031,37 +2153,87 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildOtherTab() {
-    return _otherIncomes.isEmpty
-        ? const Center(child: Text('No Other Income added.'))
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _otherIncomes.length,
-            itemBuilder: (ctx, i) {
-              final o = _otherIncomes[i];
-              return Card(
-                child: ListTile(
-                  title: Text(o.name),
-                  subtitle: Text('${o.type} • Gross Income: ₹${o.amount}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('₹${o.amount}'),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          setState(() {
-                            _otherIncomes.removeAt(i);
-                          });
-                          _updateSummary();
-                        },
-                      )
-                    ],
-                  ),
-                  onTap: () => _addOtherIncomeDialog(existing: o, index: i),
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final taxService = ref.read(indianTaxServiceProvider);
+
+    // Total other income (Dividend + Other Incomes list + Gifts is handled by service)
+    final totalOtherList = _otherIncomes.fold(0.0, (sum, o) => sum + o.amount);
+    final totalDividend = _currentData.dividendIncome.grossDividend;
+    final taxableOther = taxService.calculateOtherSources(_currentData, rules);
+
+    final otherRuleExemptions = rules.customExemptions
+        .where((e) =>
+            e.isEnabled && (e.incomeHead == 'Other' || e.incomeHead == 'Gift'))
+        .fold(
+            0.0,
+            (sum, e) =>
+                sum +
+                (e.isPercentage
+                    ? ((totalDividend + totalOtherList) * e.limit / 100)
+                    : e.limit));
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                _buildSummaryRow('Dividend Income', totalDividend),
+                _buildSummaryRow('Other Sources', totalOtherList),
+                if (otherRuleExemptions > 0)
+                  _buildSummaryRow(
+                      'Less: Ad-hoc Exemptions', otherRuleExemptions,
+                      isDeduction: true),
+                const Divider(),
+                _buildSummaryRow('Taxable Other Income', taxableOther,
+                    isBold: true),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_otherIncomes.isEmpty && totalDividend == 0)
+          const Center(
+              child: Padding(
+            padding: EdgeInsets.only(top: 40.0),
+            child: Text('No Other Income added.'),
+          ))
+        else
+          ..._otherIncomes.asMap().entries.map((entry) {
+            final i = entry.key;
+            final o = entry.value;
+            return Card(
+              child: ListTile(
+                title: Text(o.name),
+                subtitle: Text(
+                    '${o.type} • Gross Income: ${CurrencyUtils.formatCurrency(o.amount, ref.watch(currencyProvider))}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        setState(() {
+                          _otherIncomes.removeAt(i);
+                        });
+                        _updateSummary();
+                      },
+                    )
+                  ],
                 ),
-              );
-            },
-          );
+                onTap: () => _addOtherIncomeDialog(existing: o, index: i),
+              ),
+            );
+          }),
+      ],
+    );
   }
 
   void _addOtherIncomeDialog({OtherIncome? existing, int? index}) {
@@ -2096,9 +2268,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       const SizedBox(height: 12),
                       TextField(
                         controller: amtCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Gross Amount (₹)',
-                          suffixIcon: Tooltip(
+                        decoration: InputDecoration(
+                          labelText:
+                              'Gross Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})',
+                          suffixIcon: const Tooltip(
                             padding: EdgeInsets.all(12),
                             margin: EdgeInsets.symmetric(horizontal: 20),
                             showDuration: Duration(seconds: 5),
@@ -2258,7 +2431,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('₹${entry.amount.toStringAsFixed(0)}',
+          Text(
+              CurrencyUtils.formatCurrency(
+                  entry.amount, ref.watch(currencyProvider)),
               style: const TextStyle(fontWeight: FontWeight.bold)),
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.grey),
@@ -2302,8 +2477,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               const SizedBox(height: 8),
               TextField(
                 controller: amtCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Gross Amount (₹)'),
+                decoration: InputDecoration(
+                    labelText:
+                        'Gross Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})'),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
@@ -2370,47 +2546,89 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildCashGiftsTab() {
-    return _cashGifts.isEmpty
-        ? const Center(child: Text('No Cash Gifts added.'))
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _cashGifts.length,
-            itemBuilder: (ctx, i) {
-              final g = _cashGifts[i];
-              return Card(
-                child: ListTile(
-                  title: Text(g.name),
-                  subtitle: Text('Type: ${g.subtype}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Gross Amount: ₹${g.amount.toStringAsFixed(0)}'),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          setState(() {
-                            _cashGifts.removeAt(i);
-                          });
-                          _updateSummary();
-                        },
-                      )
-                    ],
-                  ),
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final totalGifts = _cashGifts.fold(0.0, (sum, g) => sum + g.amount);
+
+    double aggregateTaxableGifts = 0;
+    for (var gift in _cashGifts) {
+      if (gift.subtype.toLowerCase() != 'marriage' &&
+          gift.subtype.toLowerCase() != 'relative') {
+        aggregateTaxableGifts += gift.amount;
+      }
+    }
+    final taxableGifts = aggregateTaxableGifts <= rules.cashGiftExemptionLimit
+        ? 0.0
+        : aggregateTaxableGifts;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                _buildSummaryRow('Total Gifts Received', totalGifts),
+                _buildSummaryRow('Taxable Gifts', taxableGifts, isBold: true),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_cashGifts.isEmpty)
+          const Center(
+              child: Padding(
+            padding: EdgeInsets.only(top: 40.0),
+            child: Text('No Cash Gifts added.'),
+          ))
+        else
+          ..._cashGifts.asMap().entries.map((entry) {
+            final i = entry.key;
+            final g = entry.value;
+            return Card(
+              child: ListTile(
+                title: Text(g.name),
+                subtitle: Text('Type: ${g.subtype}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(CurrencyUtils.formatCurrency(
+                        g.amount, ref.watch(currencyProvider))),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        setState(() {
+                          _cashGifts.removeAt(i);
+                        });
+                        _updateSummary();
+                      },
+                    )
+                  ],
                 ),
-              );
-            },
-          );
+                onTap: () => _addCashGiftDialog(existing: g, index: i),
+              ),
+            );
+          }),
+      ],
+    );
   }
 
-  void _addCashGiftDialog() {
-    final nameCtrl = TextEditingController();
-    final amtCtrl = TextEditingController();
+  void _addCashGiftDialog({OtherIncome? existing, int? index}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final amtCtrl =
+        TextEditingController(text: existing?.amount.toString() ?? '');
+    String subtype = existing?.subtype ?? 'Friend';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
         return AlertDialog(
-          title: const Text('Add Cash Gift'),
+          title: Text(existing == null ? 'Add Cash Gift' : 'Edit Cash Gift'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2418,16 +2636,25 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   controller: nameCtrl,
                   decoration: const InputDecoration(
                       labelText: 'Gift Description / Source')),
+              DropdownButtonFormField<String>(
+                initialValue: subtype,
+                items: ['Friend', 'Relative', 'Marriage', 'Other']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setStateBuilder(() => subtype = v!),
+                decoration: const InputDecoration(labelText: 'Gift Type'),
+              ),
               TextField(
                   controller: amtCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount (₹)',
-                    suffixIcon: Tooltip(
+                  decoration: InputDecoration(
+                    labelText:
+                        'Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})',
+                    suffixIcon: const Tooltip(
                       triggerMode: TooltipTriggerMode.tap,
                       showDuration: Duration(seconds: 5),
                       padding: EdgeInsets.all(12),
                       message:
-                          'Gifts from relatives (marriage, inheritance) and up to ₹50k/yr from others are EXEMPT. Do not add them here unless taxable.',
+                          'Gifts from relatives (marriage, inheritance) are Exempt generally.',
                       child: Icon(Icons.info_outline, color: Colors.blue),
                     ),
                   ),
@@ -2443,21 +2670,28 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel')),
             FilledButton(
-                onPressed: () {
-                  final newItem = OtherIncome(
-                    name: nameCtrl.text,
-                    amount: double.tryParse(amtCtrl.text) ?? 0,
-                    type: 'Gift',
-                    subtype:
-                        'Cash/Relative', // Defaulting subtype, name is enough
-                  );
+              onPressed: () {
+                final amount = double.tryParse(amtCtrl.text) ?? 0;
+                if (amount > 0) {
                   setState(() {
-                    _cashGifts.add(newItem);
+                    final newGift = OtherIncome(
+                      name: nameCtrl.text,
+                      amount: amount,
+                      type: 'Gift',
+                      subtype: subtype,
+                    );
+                    if (existing != null && index != null) {
+                      _cashGifts[index] = newGift;
+                    } else {
+                      _cashGifts.add(newGift);
+                    }
                   });
                   _updateSummary();
                   Navigator.pop(context);
-                },
-                child: const Text('Add')),
+                }
+              },
+              child: const Text('Save'),
+            ),
           ],
         );
       }),
@@ -2507,9 +2741,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                   ],
-                  decoration: const InputDecoration(
-                    prefixText: '₹ ',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    prefixText:
+                        '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
+                    border: const OutlineInputBorder(),
                     helperText: 'Enter Net Income (Gross Receipts - Expenses).',
                   ),
                 ),
@@ -3063,7 +3298,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 8),
-                          const Text('Monthly Amounts (₹):',
+                          const Text('Monthly Amounts:',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
                           Wrap(
@@ -3646,11 +3881,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       multiplier = 2;
     }
 
-    final payoutFormatted = a.payoutAmount.toStringAsFixed(0);
-    final totalFormatted = (a.payoutAmount *
-            (a.isPartial ? (a.partialAmounts.values.length) : multiplier))
-        .toStringAsFixed(0);
-    return 'Payout: ₹$payoutFormatted • Total: ₹$totalFormatted';
+    final locale = ref.watch(currencyProvider);
+    final payoutFormatted =
+        CurrencyUtils.formatCurrency(a.payoutAmount, locale);
+    final totalAmount = a.payoutAmount *
+        (a.isPartial ? (a.partialAmounts.values.length) : multiplier);
+    final totalFormatted = CurrencyUtils.formatCurrency(totalAmount, locale);
+    return 'Payout: $payoutFormatted • Total: $totalFormatted';
   }
 
   void _onSaveSalaryStructure({

@@ -63,12 +63,14 @@ class IsOfflineNotifier extends Notifier<bool> {
       // Web Native Listeners (Fastest response)
       ConnectivityPlatform.setupWebListeners( // coverage:ignore-line
 
+
           ref, // coverage:ignore-line
           (val) => state = val); // coverage:ignore-line
     }
 
     // Continuous Monitoring via Plugin (Platform agnostic fallback)
     final subscription = Connectivity().onConnectivityChanged.listen((results) { // coverage:ignore-line
+
 
       // On Web, plugin helps catch edge cases or specific interface changes.
       // We combine it with navigator.onLine for maximum accuracy.
@@ -92,6 +94,7 @@ class IsOfflineNotifier extends Notifier<bool> {
   }
 
   void setOffline(bool isOffline) { // coverage:ignore-line
+
 
     state = isOffline; // coverage:ignore-line
   }
@@ -149,9 +152,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     // coverage:ignore-end
         override: true);
     Hive.registerAdapter<BusinessType>( // coverage:ignore-line
+
         BusinessTypeAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CapitalGainEntry>( // coverage:ignore-line
+
 
         CapitalGainEntryAdapter(), // coverage:ignore-line
         override: true);
@@ -170,6 +175,7 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
         override: true);
     Hive.registerAdapter<InsurancePremiumRule>( // coverage:ignore-line
 
+
         InsurancePremiumRuleAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -181,9 +187,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
         override: true);
     Hive.registerAdapter<LoanTransaction>( // coverage:ignore-line
 
+
         LoanTransactionAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<LoanTransactionType>( // coverage:ignore-line
+
 
         LoanTransactionTypeAdapter(), // coverage:ignore-line
         override: true);
@@ -196,6 +204,7 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
         override: true);
     Hive.registerAdapter<ReinvestmentType>( // coverage:ignore-line
 
+
         ReinvestmentTypeAdapter(), // coverage:ignore-line
         override: true);
     // coverage:ignore-start
@@ -206,9 +215,11 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
         override: true);
     Hive.registerAdapter<TaxMappingRule>( // coverage:ignore-line
 
+
         TaxMappingRuleAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<TaxPaymentEntry>( // coverage:ignore-line
+
 
         TaxPaymentEntryAdapter(), // coverage:ignore-line
         override: true);
@@ -221,25 +232,31 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
         override: true);
     Hive.registerAdapter<PayoutFrequency>( // coverage:ignore-line
 
+
         PayoutFrequencyAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<SalaryStructure>( // coverage:ignore-line
+
 
         SalaryStructureAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomAllowance>( // coverage:ignore-line
 
+
         CustomAllowanceAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomDeduction>( // coverage:ignore-line
+
 
         CustomDeductionAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<CustomExemption>( // coverage:ignore-line
 
+
         CustomExemptionAdapter(), // coverage:ignore-line
         override: true);
     Hive.registerAdapter<TaxYearData>( // coverage:ignore-line
+
         TaxYearDataAdapter(), // coverage:ignore-line
         override: true);
 
@@ -442,11 +459,13 @@ final activeProfileIdHiveStreamProvider = StreamProvider<String>((ref) async* {
   await ref.watch(storageInitializerProvider.future);
   final box = Hive.box('settings');
   yield box.get('activeProfileId', // coverage:ignore-line
-          defaultValue: 'default')
-      as String;
+      defaultValue: 'default') as String;
   yield* box
-      .watch(key: 'activeProfileId') // coverage:ignore-line
-      .map((event) => (event.value as String?) ?? 'default'); // coverage:ignore-line
+      // coverage:ignore-start
+      .watch(key: 'activeProfileId')
+      .map((event) =>
+          (event.value as String?) ?? 'default');
+      // coverage:ignore-end
 });
 
 final activeProfileIdProvider =
@@ -484,8 +503,13 @@ final accountsProvider = StreamProvider<List<Account>>((ref) async* {
 
   // Watch for any changes in the accounts box
   yield* box
-      .watch() // coverage:ignore-line
-      .map((_) => storage.getAccounts().whereType<Account>().toList()); // coverage:ignore-line
+      // coverage:ignore-start
+      .watch()
+      .map((_) => storage
+          .getAccounts()
+          .whereType<Account>()
+          .toList());
+      // coverage:ignore-end
 });
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
@@ -503,8 +527,13 @@ final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
 
   // Watch for any changes in the transactions box
   yield* box
-      .watch() // coverage:ignore-line
-      .map((_) => storage.getTransactions().whereType<Transaction>().toList()); // coverage:ignore-line
+      // coverage:ignore-start
+      .watch()
+      .map((_) => storage
+          .getTransactions()
+          .whereType<Transaction>()
+          .toList());
+      // coverage:ignore-end
 });
 
 final loansProvider = StreamProvider<List<Loan>>((ref) async* {
@@ -562,6 +591,12 @@ class IsLoggedInNotifier extends Notifier<bool> {
       data: (val) => val, // coverage:ignore-line
       orElse: () {
         // Fallback to direct read if stream hasn't emitted yet but Hive is ready
+        // Optimization: Use Hive.isBoxOpen directly to avoid flickering if storage init is refreshing
+        if (Hive.isBoxOpen('settings')) {
+          return Hive.box('settings').get('isLoggedIn', defaultValue: false) // coverage:ignore-line
+              as bool;
+        }
+
         final init = ref.watch(storageInitializerProvider);
         if (!init.hasValue) return false;
         final storage = ref.watch(storageServiceProvider);

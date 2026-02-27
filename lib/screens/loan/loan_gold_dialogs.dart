@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/loan.dart';
 import '../../models/transaction.dart';
 import '../../providers.dart';
+import '../../utils/currency_utils.dart';
 import '../../widgets/pure_icons.dart';
 
 class GoldLoanInterestPaymentDialog extends ConsumerWidget {
@@ -75,7 +76,7 @@ class GoldLoanCloseDialog extends ConsumerWidget {
     return _GoldLoanActionDialog(
       title: 'Close Gold Loan',
       description:
-          'Pay Principal (₹${loan.remainingPrincipal.toStringAsFixed(2)}) + Interest (₹${accruedInterest.toStringAsFixed(2)}) to close this loan.',
+          'Pay Principal (${CurrencyUtils.formatCurrency(loan.remainingPrincipal, ref.watch(currencyProvider))}) + Interest (${CurrencyUtils.formatCurrency(accruedInterest, ref.watch(currencyProvider))}) to close this loan.',
       initialAmount: totalDue,
       confirmButtonText: 'Close Loan',
       confirmButtonColor: Colors.red,
@@ -222,8 +223,10 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
             const SizedBox(height: 16),
             TextField(
               controller: amountController,
-              decoration: const InputDecoration(
-                  labelText: 'Payment Amount', prefixText: '₹ '),
+              decoration: InputDecoration(
+                  labelText: 'Payment Amount',
+                  prefixText:
+                      '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -233,7 +236,9 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
             const SizedBox(height: 16),
             InkWell(
               onTap: () async { // coverage:ignore-line
+
                 final d = await showDatePicker( // coverage:ignore-line
+
                     context: context,
                     // coverage:ignore-start
                     initialDate: selectedDate,

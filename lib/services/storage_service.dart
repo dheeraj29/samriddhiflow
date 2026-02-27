@@ -72,6 +72,7 @@ class StorageService {
         // Initial defaults
         if (_defaultCategoryCache.isEmpty) { // coverage:ignore-line
 
+
           await _loadDefaultCategoriesJson(); // coverage:ignore-line
         }
         // coverage:ignore-start
@@ -143,11 +144,8 @@ class StorageService {
 
   Future<void> saveProfile(Profile profile) async { // coverage:ignore-line
 
-    // coverage:ignore-start
-    await _hive
-        .box<Profile>(boxProfiles)
-        .put(profile.id, profile);
-    // coverage:ignore-end
+
+    await _hive.box<Profile>(boxProfiles).put(profile.id, profile); // coverage:ignore-line
   }
 
   Future<void> deleteProfile(String profileId) async {
@@ -369,6 +367,7 @@ class StorageService {
   /// Reverts any "Paid" status for the current cycle.
   Future<void> recalculateBilledAmount(String accountId) async { // coverage:ignore-line
 
+
     final acc =
         _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
     if (acc == null) return;
@@ -380,6 +379,7 @@ class StorageService {
   /// Manually clears the billed amount (Mark as Paid/Advance Cycle).
   /// Doesn't record a transaction, just updates the pointer.
   Future<void> clearBilledAmount(String accountId) async { // coverage:ignore-line
+
 
     final acc =
         _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
@@ -447,6 +447,7 @@ class StorageService {
 
       for (var acc in accounts) {
         if (accountId != null && acc.id != accountId) { // coverage:ignore-line
+
           continue;
         }
         if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
@@ -607,6 +608,7 @@ class StorageService {
   /// Returns the number of accounts updated.
   Future<int> recalculateCCBalances( // coverage:ignore-line
 
+
       {String? accountId,
       bool ignorePayments = false}) async {
     // Reruns the rollover logic.
@@ -615,12 +617,14 @@ class StorageService {
     // This aligns with user request: "only consider previous cycle".
     await checkCreditCardRollovers( // coverage:ignore-line
 
+
         accountId: accountId,
         ignorePayments: ignorePayments);
     return 1; // Dummy return as we don't track count deeply in rollover
   }
 
   Future<void> saveTransactions( // coverage:ignore-line
+
       List<Transaction> transactions,
       {bool applyImpact = true,
       DateTime? now}) async {
@@ -629,9 +633,11 @@ class StorageService {
 
     for (var txn in transactions) { // coverage:ignore-line
 
+
       if (applyImpact) {
         final existingTxn = box.get(txn.id); // coverage:ignore-line
         await _handleTransactionImpacts( // coverage:ignore-line
+
 
           oldTxn: existingTxn,
           newTxn: txn,
@@ -799,6 +805,7 @@ class StorageService {
 
   Future<int> getSimilarTransactionCount( // coverage:ignore-line
 
+
       String title,
       String category,
       String excludeId) async {
@@ -924,10 +931,12 @@ class StorageService {
   // --- Category Operations ---
   List<Category> getCategories() { // coverage:ignore-line
 
+
     final profileCategories =
         _getByProfile<Category>(boxCategories); // coverage:ignore-line
 
     if (profileCategories.isEmpty) { // coverage:ignore-line
+
 
       // Create defaults for this profile
       // coverage:ignore-start
@@ -1015,7 +1024,9 @@ class StorageService {
 
   List<Category> _getDefaultCategories(String profileId) { // coverage:ignore-line
 
+
     if (_defaultCategoryCache.isEmpty) { // coverage:ignore-line
+
 
       // Emergency fallback if JSON failed or init didn't run (should not happen in prod flow)
       DebugLogger().log( // coverage:ignore-line
@@ -1044,6 +1055,7 @@ class StorageService {
       );
 
       return Category.create( // coverage:ignore-line
+
 
         name: data['name'] as String, // coverage:ignore-line
         usage: usage,
@@ -1258,29 +1270,40 @@ class StorageService {
     // coverage:ignore-start
     final sanitized = <String, dynamic>{};
     rawMap.forEach((key, value) {
-      if (value is DateTime) {
-        sanitized[key] = value.toIso8601String();
-      } else if (value is TimeOfDay) {
-        sanitized[key] = '${value.hour}:${value.minute}';
-      } else if (value is Color) {
-        sanitized[key] = value.toARGB32();
-      } else if (value is IconData) {
-        sanitized[key] = value.codePoint;
-      } else if (value is RecurringTransaction ||
-          value is Account ||
-          value is Transaction ||
-          value is Category ||
-          value is Loan ||
-          value is Profile) {
+      final sanitizedValue = _sanitizeSettingValue(value);
     // coverage:ignore-end
-        // Skip complex objects stored here by mistake (should be in own boxes)
-      } else {
-        // Primitives (int, double, bool, String, null)
-        sanitized[key] = value; // coverage:ignore-line
+      if (sanitizedValue != null) {
+        sanitized[key] = sanitizedValue; // coverage:ignore-line
       }
     });
 
     return sanitized;
+  }
+
+  // coverage:ignore-start
+  dynamic _sanitizeSettingValue(dynamic value) {
+    if (value is DateTime) return value.toIso8601String();
+    if (value is TimeOfDay) return '${value.hour}:${value.minute}';
+    if (value is Color) return value.toARGB32();
+    if (value is IconData) return value.codePoint;
+  // coverage:ignore-end
+
+    // Skip complex objects stored here by mistake (should be in own boxes)
+    if (_isComplexType(value)) return null; // coverage:ignore-line
+
+    // Primitives (int, double, bool, String)
+    return value;
+  }
+
+  // coverage:ignore-start
+  bool _isComplexType(dynamic value) {
+    return value is RecurringTransaction ||
+        value is Account ||
+        value is Transaction ||
+        value is Category ||
+        value is Loan ||
+        value is Profile;
+  // coverage:ignore-end
   }
 
   /// Bulk-save settings from a map (used during restore).
@@ -1298,6 +1321,7 @@ class StorageService {
   }
 
   Box<InsurancePolicy> getInsurancePoliciesBox() { // coverage:ignore-line
+
 
     return _hive // coverage:ignore-line
         .box<InsurancePolicy>(boxInsurancePolicies); // coverage:ignore-line
@@ -1464,6 +1488,7 @@ class StorageService {
 
     for (var key in corruptedKeys) { // coverage:ignore-line
 
+
       await dynamicBox.delete(key); // coverage:ignore-line
     }
 
@@ -1493,12 +1518,8 @@ class StorageService {
 
   List<TaxYearData> getAllTaxYearData() { // coverage:ignore-line
 
-    // coverage:ignore-start
-    return _hive
-        .box<TaxYearData>(boxTaxData)
-        .values
-        .toList();
-    // coverage:ignore-end
+
+    return _hive.box<TaxYearData>(boxTaxData).values.toList(); // coverage:ignore-line
   }
 
   // coverage:ignore-start

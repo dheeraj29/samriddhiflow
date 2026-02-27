@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v2.6.0
+**Current Version:** v3.4.0
 
 ## 2. Architecture
 
@@ -102,12 +102,15 @@ graph TD
 *   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
 ### G. Tax Engine & Precision
-*   **Precision Guard:** Uses `1.0e15` as a finite substitute for `double.infinity` in Tax Slabs to prevent precision loss in Hive (JavaScript `Number.MAX_SAFE_INTEGER` limitation) and backup serialization failures.
+*   **Precision Guard:** Uses `1.0e15` as a finite substitute for `double.infinity` in Tax Slabs to prevent precision loss in Hive (JavaScript `Number.MAX_SAFE_INTEGER` limitation).
+*   **Custom Exemptions (Head-Specific):** Supports dynamic deductions across all income heads (**Salary, House Property, Business, Other, Gift, Agriculture**). Rules can be fixed or percentage-based.
 *   **Salary Breakdown Logic:**
     *   **Scoped Taxing:** The monthly breakdown and TDS estimation use a **Salary-Only tax projection**, excluding non-salary losses/incomes for accurate payroll simulation.
-    *   **Frequency-Aware:** Independent components (Bonuses, LTA, Deductions) respect their defined payout frequencies (Monthly, Quarterly, Annual, Custom).
-    *   **Marginal Tax:** Non-monthly incomes are taxed using marginal tax calculation in the specific month received.
-*   **Sanitization:** `JsonDataService` and `CloudSyncService` sanitize non-finite numbers (`Infinity`, `NaN`) during export/sync to ensure data integrity.
+    *   **Frequency-Aware:** Independent components (Bonuses, LTA, Deductions) respect their defined payout frequencies.
+*   **Special Income Handling:**
+    *   **Agriculture:** Supports partial integration logic with custom exemptions reducing the agri-base used for tax rate determination.
+    *   **Gifts:** Aggregates non-exempt gifts and applies head-specific custom exemptions after the threshold check.
+*   **Tax Slab Fallback:** Exhaustive test suite in `tax_slab_fallback_test.dart` ensures that if special rules (Capital Gains, Business presumptive, Agri) are disabled, the income correctly flows into standard slab calculation without double-counting or leakage.
 
 ### H. Lending & Borrowing
 *   **Tracking:** Manages money lent to or borrowed from individuals.
@@ -115,13 +118,14 @@ graph TD
 *   **Aggregated View:** Provided via `totalLentProvider` and `totalBorrowedProvider` for effective debt management.
 *   **Profile Scoping:** Automatically filtered by the active profile.
 
-## 4. Current Status (v2.6.0)
+## 4. Current Status (v3.4.0)
 *   **Stable:** Core financial logic, cloud sync, tax engine, and security features are fully operational.
-*   **Recent Updates (v2.6.0):**
-    *   **Tax Engine Refinement**: Implemented frequency-based payouts for independent components and salary-only tax scoping for breakdown/TDS estimation.
+*   **Recent Updates (v3.4.0):**
+    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**) with dynamic summary card display in Tax Details.
+    *   **Special Income Logic**: Added Agriculture partial integration offsets and non-exempt Gift deduction logic to the tax service.
+    *   **Robust Verification**: Created an exhaustive slab fallback test suite covering all income heads and threshold-based special rules.
     *   **Hive Precision Fix**: Resolved Hive "precision loss" warnings on Web by replacing `double.infinity` with finite constants.
     *   **Data Sanitization**: Added automatic sanitization for non-finite numbers during JSON serialization and cloud sync.
-    *   **Enhanced Exemption UI**: Added full frequency and custom month controls to the Custom Exemption dialog.
 *   **Recent Updates (v1.22.0):**
     *   **Recurring Payment Skip**: Added a "Skip" option in the Reminders screen to advance cycles without recording transactions.
     *   **First Working Day Logic**: Implemented "First Working Day of Month" schedule type with full holiday/weekend awareness.

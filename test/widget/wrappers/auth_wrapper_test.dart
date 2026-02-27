@@ -526,8 +526,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 3)); // Wait for settling
 
-    // Provider rebuilds because listener triggered invalidate
-    expect(initCalls, 2);
+    // In Low-Impact Recovery, we NO LONGER invalidate the provider to prevent flickering.
+    // Instead, we 'poke' the session in the background. initCalls should remain 1.
+    expect(initCalls, 1);
   });
 }
 

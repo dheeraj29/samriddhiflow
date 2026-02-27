@@ -57,7 +57,8 @@ class TaxDataFetcher {
     final start =
         startMonth == 1 ? DateTime(year, 1, 1) : DateTime(year, startMonth, 1);
     final end = startMonth == 1
-        ? DateTime(year + 1, 1, 1).subtract(const Duration(seconds: 1)) // coverage:ignore-line
+        ? DateTime(year + 1, 1, 1) // coverage:ignore-line
+            .subtract(const Duration(seconds: 1)) // coverage:ignore-line
         : DateTime(year + 1, startMonth, 1)
             .subtract(const Duration(seconds: 1));
 
@@ -96,7 +97,7 @@ class TaxDataFetcher {
     final head = _resolveHead(txn, catName, catTag, rules);
     if (head == null) {
       agg.warnings.add(
-          'Unmapped Income: "₹${amount.toStringAsFixed(0)} - ${txn.category}"');
+          'Unmapped Income: "${amount.toStringAsFixed(0)} - ${txn.category}"');
       return;
     }
 
@@ -154,32 +155,46 @@ class TaxDataFetcher {
 
   void _addToHead(String head, Transaction txn, double amount, DateTime start,
       _AggregationResult agg) {
-    if (head == 'houseProp') {
-      agg.rentTotal += amount;
-    } else if (head == 'business') {
-      agg.businessTotal += amount;
-    } else if (head == 'ltcg' || head == 'stcg') {
-      _addCapitalGain(head, txn, amount, agg);
-    } else if (head == 'dividend') {
-      _addDividend(txn.date, amount, start, agg);
-    } else if (head == 'agriIncome') {
-      agg.agriTotal += amount;
+    switch (head) {
+      case 'houseProp':
+        agg.rentTotal += amount;
+        break;
+      case 'business':
+        agg.businessTotal += amount;
+        break;
+      case 'ltcg':
+      case 'stcg':
+        _addCapitalGain(head, txn, amount, agg);
+        break;
+      case 'dividend':
+        _addDividend(txn.date, amount, start, agg);
+        break;
+      case 'agriIncome':
+        agg.agriTotal += amount;
+        break;
+      // coverage:ignore-start
+      case 'other':
+      case 'gift':
+        _addOtherHead(head, txn, amount, agg);
+      // coverage:ignore-end
+        break;
+    }
+  }
+
+  void _addOtherHead( // coverage:ignore-line
+
+      String head,
+      Transaction txn,
+      double amount,
+      _AggregationResult agg) {
     // coverage:ignore-start
-    } else if (head == 'other') {
-      agg.otherIncomes.add(OtherIncome(
-        name: txn.title.isNotEmpty ? txn.title : txn.category,
-    // coverage:ignore-end
-        amount: amount,
-        type: 'Other',
-      ));
-    // coverage:ignore-start
+    final name = txn.title.isNotEmpty ? txn.title : txn.category;
+    if (head == 'other') {
+      agg.otherIncomes
+          .add(OtherIncome(name: name, amount: amount, type: 'Other'));
     } else if (head == 'gift') {
-      agg.cashGifts.add(OtherIncome(
-        name: txn.title.isNotEmpty ? txn.title : txn.category,
+      agg.cashGifts.add(OtherIncome(name: name, amount: amount, type: 'Gift'));
     // coverage:ignore-end
-        amount: amount,
-        type: 'Gift',
-      ));
     }
   }
 

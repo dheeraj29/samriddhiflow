@@ -29,6 +29,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   bool _bootGracePeriodFinished = false;
   bool _hasVerificationTimedOut = false;
   bool _isSlowConnection = false;
+  bool _isRestoring = false;
   Timer? _verificationSafetyTimer;
   Timer? _slowConnectionTimer;
   Timer? _bootGraceTimer;
@@ -139,7 +140,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     }
   }
 
-  Future<void> _revalidateSession() async {
+  Future<void> _revalidateSession({bool isBackground = false}) async {
     final authService = ref.read(authServiceProvider);
     int attempts = 0;
     const maxAttempts = 3;
@@ -153,8 +154,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
         return; // Success
       } on FirebaseAuthException catch (e) {
-        final shouldRetry =
-            await _handleRevalidationError(e, attempts, maxAttempts);
+        final shouldRetry = await _handleRevalidationError(
+            e, attempts, maxAttempts,
+            isBackground: isBackground);
         if (!shouldRetry) return;
       } catch (e) {
         return; // Revalidation warning suppressed
@@ -163,27 +165,37 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Future<bool> _handleRevalidationError(
-      FirebaseAuthException e, int attempts, int maxAttempts) async {
+      FirebaseAuthException e, int attempts, int maxAttempts,
+      {bool isBackground = false}) async {
     final authService = ref.read(authServiceProvider);
 
-    if (e.code == 'user-not-found' ||
-        e.code == 'user-disabled' || // coverage:ignore-line
-        e.code == 'min-app-version-error') { // coverage:ignore-line
+    // Use .contains() to handle both Native and Web/PWA error code formats (auth/ prefix)
+    if (e.code.contains('user-not-found') ||
+        e.code.contains('user-disabled') || // coverage:ignore-line
+        e.code.contains('min-app-version-error')) { // coverage:ignore-line
 
 
       DebugLogger().log("Critical Session Error (${e.code}): Force Logout.");
-      await authService.signOut(ref);
+      // CRITICAL: Only force logout if NOT in background recovery
+      // This prevents redirects on iOS/Safari during transient recovery glitches
+      if (!isBackground) {
+        await authService.signOut(ref);
+      }
       return false;
     }
 
-    if (e.code == 'network-request-failed' || // coverage:ignore-line
-        e.code == 'unavailable') { // coverage:ignore-line
+    if (e.code.contains('network-request-failed') || // coverage:ignore-line
+        e.code.contains('unavailable')) { // coverage:ignore-line
 
 
       if (attempts >= maxAttempts) { // coverage:ignore-line
 
 
-        ref.read(isOfflineProvider.notifier).setOffline(true); // coverage:ignore-line
+        // coverage:ignore-start
+        ref
+            .read(isOfflineProvider.notifier)
+            .setOffline(true);
+        // coverage:ignore-end
         return false;
       }
       await Future.delayed( // coverage:ignore-line
@@ -223,12 +235,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       if (!_bootGracePeriodFinished) return;
 
       if (previous == true && next == false) {
-        ref.invalidate(firebaseInitializerProvider);
+        // PROACTIVE SILENT RECOVERY
+        // We avoid invalidating firebaseInitializerProvider to prevent UI flickering.
+        // Instead, we 'poke' the session in the background.
         try {
-          await ref
-              .read(firebaseInitializerProvider.future)
-              .timeout(const Duration(seconds: 15));
-          await _revalidateSession();
+          await _revalidateSession(isBackground: true);
 
           if (mounted && _hasVerificationTimedOut) {
             setState(() => _hasVerificationTimedOut = false);
@@ -336,7 +347,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) async {
-    if (next.value == null) return;
+    if (next.value == null || _isRestoring) return;
 
     final storage = ref.read(storageServiceProvider);
     if (storage.getAccounts().isNotEmpty) return;
@@ -346,6 +357,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   Future<void> _performAutoRestoreOperation(BuildContext context,
       [String? passcode]) async {
+    if (_isRestoring && passcode == null) return; // Guard
+
+    setState(() => _isRestoring = true);
     final cloudSync = ref.read(cloudSyncServiceProvider);
     try {
       await cloudSync.restoreFromCloud(passcode: passcode);
@@ -364,6 +378,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     } catch (e) {
       if (!context.mounted) return;
       await _handleRestoreError(context, e);
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
     }
   }
 
@@ -379,6 +395,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       if (context.mounted && p != null && p.isNotEmpty) {
         await _performAutoRestoreOperation(context, p);
       } else if (context.mounted) { // coverage:ignore-line
+
 
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar( // coverage:ignore-line
 
@@ -424,11 +441,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
 
                 "Storage Access Issue",
-                // coverage:ignore-start
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge,
-                // coverage:ignore-end
+                style: Theme.of(context).textTheme.titleLarge, // coverage:ignore-line
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -468,14 +481,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Widget _buildAuthenticatedContent(BuildContext context) {
+    if (_handleImmediateRedirects(context)) return const DashboardScreen();
+
     final isOffline = ref.watch(isOfflineProvider);
     final isPersistentLogin = ref.watch(isLoggedInProvider);
-
-    if (isPersistentLogin && (isOffline || _hasVerificationTimedOut)) {
-      return const DashboardScreen();
-    }
-
-    if (kDebugMode && kIsWeb) return const DashboardScreen();
 
     if (isOffline && !isPersistentLogin) {
       return _buildErrorScreen(
@@ -494,13 +503,27 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
     final firebaseInit = ref.watch(firebaseInitializerProvider);
 
-    if (isPersistentLogin &&
-        (firebaseInit.isLoading || !_bootGracePeriodFinished) &&
-        !_isRedirectingLocal) {
+    if (_shouldShowAuthStream(firebaseInit, isPersistentLogin)) {
       return _buildAuthStream(context, isPersistentLogin);
     }
 
     return _handleFirebaseResult(context, firebaseInit, isPersistentLogin);
+  }
+
+  bool _handleImmediateRedirects(BuildContext context) {
+    if (ref.watch(isLoggedInProvider) &&
+        (ref.watch(isOfflineProvider) || _hasVerificationTimedOut)) {
+      return true;
+    }
+    if (kDebugMode && kIsWeb) return true;
+    return false;
+  }
+
+  bool _shouldShowAuthStream(
+      AsyncValue<void> firebaseInit, bool isPersistentLogin) {
+    return isPersistentLogin &&
+        (firebaseInit.isLoading || !_bootGracePeriodFinished) &&
+        !_isRedirectingLocal;
   }
 
   Widget _handleFirebaseResult(BuildContext context,
@@ -616,6 +639,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             showOfflineBypass: isPersistentLogin);
       },
       error: (e, s) { // coverage:ignore-line
+
 
         // If we have a persistent session, STAY on Dashboard even if Firebase is flapping
         if (isPersistentLogin) return const DashboardScreen();
@@ -746,11 +770,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             style: TextButton.styleFrom( // coverage:ignore-line
 
 
-                // coverage:ignore-start
-                foregroundColor: Theme.of(context)
-                    .colorScheme
-                    .error),
-                // coverage:ignore-end
+                foregroundColor: Theme.of(context).colorScheme.error), // coverage:ignore-line
             child: const Text("Login Again"),
           ),
         ],

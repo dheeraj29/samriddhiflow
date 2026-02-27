@@ -87,6 +87,37 @@ void main() {
       verify(() => mockCloudStorage.syncData('user123', any())).called(1);
     });
 
+    test('encrypts profiles and tax rules when passcode provided', () async {
+      when(() => mockStorageService.getAllAccounts()).thenReturn([]);
+      when(() => mockStorageService.getAllTransactions()).thenReturn([]);
+      when(() => mockStorageService.getAllLoans()).thenReturn([]);
+      when(() => mockStorageService.getAllRecurring()).thenReturn([]);
+      when(() => mockStorageService.getAllCategories()).thenReturn([]);
+      when(() => mockStorageService.getProfiles()).thenReturn([
+        Profile(id: 'p1', name: 'Profile 1'),
+      ]);
+      when(() => mockStorageService.getAllSettings()).thenReturn({});
+      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+
+      when(() => mockCloudStorage.syncData(any(), any()))
+          .thenAnswer((_) async {});
+
+      await cloudSyncService.syncToCloud(passcode: 'secret123');
+
+      final captured =
+          verify(() => mockCloudStorage.syncData('user123', captureAny()))
+              .captured
+              .single as Map<String, dynamic>;
+
+      // Profiles and Tax Rules should be strings (encrypted) instead of lists/maps
+      expect(captured['profiles'], isA<String>());
+      expect(captured['tax_rules'], isA<String>());
+      expect(captured['is_encrypted'], isTrue);
+    });
+
     test('throws error if not logged in', () async {
       when(() => mockAuth.currentUser).thenReturn(null);
       expect(() => cloudSyncService.syncToCloud(), throwsException);

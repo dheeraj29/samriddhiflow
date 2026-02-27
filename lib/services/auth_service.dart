@@ -34,7 +34,7 @@ class AuthService {
   }
 
   Stream<User?> get authStateChanges =>
-      _auth?.authStateChanges() ?? Stream.value(null);
+      _auth?.authStateChanges() ?? const Stream.empty();
   User? get currentUser => _auth?.currentUser;
 
   /// Internal flag to prevent race conditions during logout
@@ -51,6 +51,7 @@ class AuthService {
     final auth = _auth;
     if (auth == null) {
       return AuthResponse( // coverage:ignore-line
+
           status: AuthStatus.error,
           message:
               "Firebase Services are not available. Please check your internet connection.");
@@ -67,9 +68,11 @@ class AuthService {
   Future<AuthResponse?> _lazyInitFirebase() async {
     try {
       await Firebase.initializeApp( // coverage:ignore-line
+
         options: kDebugMode
             ? dev.DefaultFirebaseOptions.currentPlatform
-            : prod.DefaultFirebaseOptions.currentPlatform, // coverage:ignore-line
+            : prod
+                .DefaultFirebaseOptions.currentPlatform, // coverage:ignore-line
       ).timeout(const Duration(seconds: 10)); // coverage:ignore-line
       return null; // Success, continue with sign in
     } catch (e) {
@@ -87,7 +90,9 @@ class AuthService {
       await auth.currentUser!.reload();
       return AuthResponse(status: AuthStatus.success);
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'network-request-failed' || e.code == 'unavailable') {
+      // Use .contains() to handle cross-platform discrepancies (auth/ prefix on Web/PWA)
+      if (e.code.contains('network-request-failed') ||
+          e.code.contains('unavailable')) {
         return AuthResponse(status: AuthStatus.success);
       }
       await signOut(ref);
@@ -105,6 +110,7 @@ class AuthService {
   }
 
   Future<AuthResponse> _performNewSignIn(FirebaseAuth auth, dynamic ref) async { // coverage:ignore-line
+
     try {
       // coverage:ignore-start
       if (isWeb) {
@@ -113,7 +119,9 @@ class AuthService {
       // coverage:ignore-end
         try {
           ConnectivityPlatform.setSessionStorageItem( // coverage:ignore-line
-              'auth_redirect_pending', 'true');
+
+              'auth_redirect_pending',
+              'true');
         } catch (_) {}
         await auth.signInWithRedirect(googleProvider); // coverage:ignore-line
       }
@@ -131,12 +139,15 @@ class AuthService {
 
       // Reset logout flag
       if (ref != null) {
-        ref.read(logoutRequestedProvider.notifier).value = false; // coverage:ignore-line
+        ref.read(logoutRequestedProvider.notifier).value = // coverage:ignore-line
+            false;
       }
 
       return AuthResponse(status: AuthStatus.success); // coverage:ignore-line
     } catch (e) {
-      return AuthResponse(status: AuthStatus.error, message: e.toString()); // coverage:ignore-line
+      return AuthResponse( // coverage:ignore-line
+          status: AuthStatus.error,
+          message: e.toString()); // coverage:ignore-line
     }
   }
 
@@ -152,7 +163,9 @@ class AuthService {
       if (_storageService != null) {
         await _storageService.setAuthFlag(false);
       } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-        await Hive.box('settings').put('isLoggedIn', false); // coverage:ignore-line
+
+        await Hive.box('settings') // coverage:ignore-line
+            .put('isLoggedIn', false); // coverage:ignore-line
       }
 
       // 3. Fully Decoupled Background Cleanup
@@ -167,15 +180,27 @@ class AuthService {
         }
       }));
     } catch (e) {
-      DebugLogger().log("AuthService: SignOut Error: $e"); // coverage:ignore-line
-      isSignOutInProgress = false; // coverage:ignore-line
+      // coverage:ignore-start
+      DebugLogger()
+          .log("AuthService: SignOut Error: $e");
+      isSignOutInProgress = false;
+      // coverage:ignore-end
     }
   }
 
   Future<void> reloadUser(dynamic ref) async {
     if (isSignOutInProgress) return;
     if (ref != null && ref.read(logoutRequestedProvider)) return;
-    await _auth?.currentUser?.reload();
+
+    final user = _auth?.currentUser;
+    if (user != null) {
+      try {
+        await user.reload();
+      } catch (e) {
+        // Quiet failure for background reload - standard for JS SDK during recovery
+        DebugLogger().log("AuthService: Reload failed (likely offline): $e");
+      }
+    }
   }
 
   /// Finalizes the auth state after a web redirect.
@@ -220,7 +245,9 @@ class AuthService {
     if (_storageService != null) {
       await _storageService.setAuthFlag(value);
     } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-      await Hive.box('settings').put('isLoggedIn', value); // coverage:ignore-line
+
+      await Hive.box('settings') // coverage:ignore-line
+          .put('isLoggedIn', value); // coverage:ignore-line
     }
   }
 

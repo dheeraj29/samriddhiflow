@@ -18,6 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
+  bool _isRestoring = false;
   Timer? _safetyTimer;
 
   @override
@@ -114,11 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () { // coverage:ignore-line
 
 
-                      // coverage:ignore-start
-                      ref
-                              .read(localModeProvider.notifier)
-                              .value =
-                      // coverage:ignore-end
+                      ref.read(localModeProvider.notifier).value = // coverage:ignore-line
                           true;
                     },
                     icon: PureIcons.cloudOff(size: 20),
@@ -178,6 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _autoRestore() async {
+    if (_isRestoring) return;
     try {
       if (ref.read(authServiceProvider).currentUser != null) {
         // SAFETY CHECK: Only auto-restore if local data is empty
@@ -205,6 +203,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _performCloudRestoreOperation([String? passcode]) async {
+    if (_isRestoring && passcode == null) return;
+    setState(() => _isRestoring = true);
     final syncService = ref.read(cloudSyncServiceProvider);
     try {
       await syncService
@@ -218,6 +218,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       await _handleAutoRestoreError(e);
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
     }
   }
 
@@ -225,6 +227,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final errorStr = e.toString();
     if (errorStr.contains("Passcode required") ||
         errorStr.contains("Incorrect passcode")) { // coverage:ignore-line
+
 
       setState(() => _isLoading = false);
       final p = await UIUtils.showPasscodePrompt(
@@ -234,6 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await _performCloudRestoreOperation(p);
       }
     } else if (!errorStr.contains("No cloud data")) { // coverage:ignore-line
+
       throw e;
     }
   }

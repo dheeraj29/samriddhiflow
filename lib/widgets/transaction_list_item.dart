@@ -76,30 +76,30 @@ class TransactionListItem extends StatelessWidget {
             _buildCapitalGainsLine(context),
         ],
       ),
-      trailing: trailing ??
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SmartCurrencyText(
-                value: txn.amount,
-                locale: currencyLocale,
-                initialCompact: compactView,
-                prefix: txn.type == TransactionType.income || isIncomingTransfer
-                    ? "+"
-                    : "-",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  decoration:
-                      showLineThrough ? TextDecoration.lineThrough : null,
-                  color:
-                      txn.type == TransactionType.income || isIncomingTransfer
-                          ? Colors.green
-                          : Colors.red,
-                ),
-              ),
-              if (!isSelectionMode) const SizedBox(width: 8),
-            ],
+      trailing: trailing ?? _buildTrailingAmount(isIncomingTransfer),
+    );
+  }
+
+  Widget _buildTrailingAmount(bool isIncomingTransfer) {
+    final bool isPositive =
+        txn.type == TransactionType.income || isIncomingTransfer;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SmartCurrencyText(
+          value: txn.amount,
+          locale: currencyLocale,
+          initialCompact: compactView,
+          prefix: isPositive ? "+" : "-",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            decoration: showLineThrough ? TextDecoration.lineThrough : null,
+            color: isPositive ? Colors.green : Colors.red,
           ),
+        ),
+        if (!isSelectionMode) const SizedBox(width: 8),
+      ],
     );
   }
 
@@ -186,6 +186,7 @@ class TransactionListItem extends StatelessWidget {
             ),
           ] else ...[ // coverage:ignore-line
 
+
             const Text(
               'Profit: ',
               style: TextStyle(
@@ -195,6 +196,7 @@ class TransactionListItem extends StatelessWidget {
               ),
             ),
             SmartCurrencyText( // coverage:ignore-line
+
 
               value: 0,
               locale: currencyLocale, // coverage:ignore-line
