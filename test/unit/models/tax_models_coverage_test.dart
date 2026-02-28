@@ -114,6 +114,22 @@ void main() {
           variablePayFrequency: PayoutFrequency.custom,
           variablePayCustomMonths: [1, 5]);
       expect(sCustom.calculateContribution(1, 4), 16000); // 10000 + 12000/2
+
+      // Custom Allowance
+      final sWithAllowance = base.copyWith(
+        customAllowances: [
+          const CustomAllowance(
+            name: 'Bonus',
+            payoutAmount: 5000,
+            frequency: PayoutFrequency.annually,
+            startMonth: 4,
+          ),
+        ],
+      );
+      // In April (4): 10000 + 5000 = 15000
+      expect(sWithAllowance.calculateContribution(4, 4), 15000);
+      // In May (5): 10000
+      expect(sWithAllowance.calculateContribution(5, 4), 10000);
     });
 
     test('SalaryStructure.toMap/fromMap full sync', () {
@@ -162,11 +178,103 @@ void main() {
       expect(fromMap.name, 'HRA');
     });
 
-    test('TaxYearData serialization', () {
-      const data = TaxYearData(year: 2024);
+    test('TaxYearData totalSalary with various allowance frequencies', () {
+      const baseSalary = SalaryDetails(grossSalary: 0);
+
+      // 1. Monthly: 1000 * 12 = 12000
+      final dataMonthly = TaxYearData(
+        year: 2024,
+        salary: baseSalary.copyWith(independentAllowances: [
+          const CustomAllowance(
+            name: 'M',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.monthly,
+          ),
+        ]),
+      );
+      expect(dataMonthly.totalSalary, 12000);
+
+      // 2. Quarterly: 1000 * 4 = 4000
+      final dataQuarterly = TaxYearData(
+        year: 2024,
+        salary: baseSalary.copyWith(independentAllowances: [
+          const CustomAllowance(
+            name: 'Q',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.quarterly,
+          ),
+        ]),
+      );
+      expect(dataQuarterly.totalSalary, 4000);
+
+      // 3. Annually: 1000 * 1 = 1000
+      final dataAnnually = TaxYearData(
+        year: 2024,
+        salary: baseSalary.copyWith(independentAllowances: [
+          const CustomAllowance(
+            name: 'A',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.annually,
+            startMonth: 4,
+          ),
+        ]),
+      );
+      expect(dataAnnually.totalSalary, 1000);
+
+      // 4. Custom: 1000 * 2 = 2000
+      final dataCustom = TaxYearData(
+        year: 2024,
+        salary: baseSalary.copyWith(independentAllowances: [
+          const CustomAllowance(
+            name: 'C',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.custom,
+            customMonths: [4, 10],
+          ),
+        ]),
+      );
+      expect(dataCustom.totalSalary, 2000);
+
+      // 5. Partial: Sum of partialAmounts
+      final dataPartial = TaxYearData(
+        year: 2024,
+        salary: baseSalary.copyWith(independentAllowances: [
+          const CustomAllowance(
+            name: 'P',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.monthly,
+            isPartial: true,
+            partialAmounts: {4: 5000, 5: 3000},
+          ),
+        ]),
+      );
+      // It should be 5000 + 3000 + (1000 * 10) = 18000
+      // Note: Current model logic in _getAllowanceAmount:
+      // return allowance.partialAmounts[month] ?? allowance.payoutAmount;
+      expect(dataPartial.totalSalary, 18000);
+    });
+
+    test('TaxYearData serialization and totalSalary with allowances', () {
+      const data = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(
+          grossSalary: 120000,
+          independentAllowances: [
+            CustomAllowance(
+              name: 'Freelance',
+              payoutAmount: 1000,
+              frequency: PayoutFrequency.monthly,
+            ),
+          ],
+        ),
+      );
+      // totalSalary = 120000 + (1000 * 12) = 132000
+      expect(data.totalSalary, 132000);
+
       final map = data.toMap();
       final fromMap = TaxYearData.fromMap(map);
       expect(fromMap.year, 2024);
+      expect(fromMap.totalSalary, 132000);
     });
   });
 

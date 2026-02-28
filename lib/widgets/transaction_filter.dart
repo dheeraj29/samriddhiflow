@@ -47,6 +47,7 @@ class TransactionFilter extends StatelessWidget {
               // Time Range Dropdown
               Expanded(
                 child: DropdownButtonFormField<TimeRange>(
+                  isExpanded: true,
                   initialValue: selectedRange,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
@@ -73,6 +74,7 @@ class TransactionFilter extends StatelessWidget {
               // Category Dropdown
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: categories.contains(selectedCategory)
                       ? selectedCategory
                       : null,
@@ -98,6 +100,7 @@ class TransactionFilter extends StatelessWidget {
               // Type Dropdown
               Expanded(
                 child: DropdownButtonFormField<TransactionType?>(
+                  isExpanded: true,
                   initialValue: selectedType,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
@@ -121,6 +124,7 @@ class TransactionFilter extends StatelessWidget {
               // Account Dropdown
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: accountItems
                           .any((item) => item.value == selectedAccountId)
                       ? selectedAccountId
