@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-28T09:50:07.707266**
+> **Generated on: 2026-02-28T17:47:05.544325**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
@@ -18,8 +18,8 @@
 | models/profile.dart | **100.0%** | 16/16 | PASS |
 | models/recurring_transaction.dart | **100.0%** | 60/60 | PASS |
 | models/taxes/insurance_policy.dart | **100.0%** | 37/37 | PASS |
-| models/taxes/tax_data.dart | **100.0%** | 75/75 | PASS |
-| models/taxes/tax_data_models.dart | **100.0%** | 337/337 | PASS |
+| models/taxes/tax_data.dart | **100.0%** | 84/84 | PASS |
+| models/taxes/tax_data_models.dart | **100.0%** | 343/343 | PASS |
 | models/taxes/tax_rules.dart | **100.0%** | 214/214 | PASS |
 | models/transaction.dart | **100.0%** | 53/53 | PASS |
 | **providers.dart** | **100.0%** | 153/153 | PASS |

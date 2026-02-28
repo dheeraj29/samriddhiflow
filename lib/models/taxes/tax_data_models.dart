@@ -64,7 +64,7 @@ class SalaryDetails {
     List<CustomAllowance>? independentDeductions,
   }) {
     return SalaryDetails(
-      grossSalary: grossSalary ?? this.grossSalary, // coverage:ignore-line
+      grossSalary: grossSalary ?? this.grossSalary,
       npsEmployer: npsEmployer ?? this.npsEmployer,
       leaveEncashment: leaveEncashment ?? this.leaveEncashment,
       gratuity: gratuity ?? this.gratuity,
@@ -120,7 +120,7 @@ class SalaryDetails {
             {},
         independentAllowances: (m['independentAllowances'] as List?)
                 ?.map((e) => CustomAllowance.fromMap(
-                    Map<String, dynamic>.from(e))) // coverage:ignore-line
+                    Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
         independentExemptions: (m['independentExemptions'] as List?)
@@ -635,7 +635,7 @@ class SalaryStructure {
     if (allowance.isPartial) {
       return allowance.partialAmounts[month] ?? allowance.payoutAmount;
     }
-    return allowance.payoutAmount; // coverage:ignore-line
+    return allowance.payoutAmount;
   }
 
   double calculateContribution(int month, int fyStartMonth,
@@ -703,11 +703,9 @@ class SalaryStructure {
     // Custom Allowances (Irregular if NOT Monthly)
     for (final allowance in customAllowances) {
       if (allowance.frequency != PayoutFrequency.monthly) {
-        // coverage:ignore-start
         if (SalaryStructure.isPayoutMonth(month, allowance.frequency,
             allowance.startMonth, allowance.customMonths)) {
           irregularGross += _getAllowanceAmount(allowance, month);
-        // coverage:ignore-end
         }
       }
     }

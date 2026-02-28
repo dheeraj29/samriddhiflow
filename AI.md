@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v3.6.0
+**Current Version:** v3.7.0
 
 ## 2. Architecture
 
@@ -13,14 +13,14 @@ Samriddhi Flow follows a **Local-First, Offline-Capable PWA** architecture.
 ```mermaid
 graph TD
     User[User] -->|Interacts| UI[Flutter UI Layer]
-    UI -->|Reads/Writes| Providers[Riverpod State Management]
-    Providers -->|Persists| Storage[StorageService (Hive)]
-    Storage -->|Syncs| IDB[IndexedDB (Web)]
+    UI -->|Reads/Writes| Providers["Riverpod State Management"]
+    Providers -->|Persists| Storage["StorageService (Hive)"]
+    Storage -->|Syncs| IDB["IndexedDB (Web)"]
     
     subgraph "Core Data Models"
         Profile
         Account
-        Transaction[Transaction / LoanTransaction]
+        Transaction["Transaction / LoanTransaction"]
         Loan
         Category
         TaxRules
@@ -30,13 +30,13 @@ graph TD
     end
 
     subgraph "Services"
-        JSON[JsonDataService (Backup/Restore)]
-        File[FileService (File Picker)]
-        Theme[ThemeService]
+        JSON["JsonDataService (Backup/Restore)"]
+        File["FileService (File Picker)"]
+        Theme["ThemeService"]
         Storage
-        CloudSync[CloudSyncService]
-        TaxConfig[TaxConfigService]
-        TaxEngine[TaxStrategy / IndianTaxService]
+        CloudSync["CloudSyncService"]
+        TaxConfig["TaxConfigService"]
+        TaxEngine["TaxStrategy / IndianTaxService"]
     end
 
     Providers --> JSON
@@ -80,17 +80,18 @@ graph TD
     *   **Full Restore:** Restoration involves a full wipe and replace cycle to ensure consistent data state across platforms.
     *   **Sanitization:** Automatically cleans non-finite numbers during the export process.
 
-### D. Cloud Sync & Backup
-*   **Mechanism:** Snapshot Synchronization.
+### D. Cloud Sync & Data Partitioning
+*   **Mechanism:** Encrypted Partitioned Snapshot Synchronization.
 *   **Backend:** Firebase Firestore (NoSQL).
-*   **How it Works:** 
-    *   **Sync:** Serializes the entire local database (Accounts, Loans, Transactions, Categories, Profiles) and **all App Settings** (including rollover timestamps) into a single object in Firestore.
-    *   **Restore:** Fetches the latest snapshot from Firestore, **wipes the local database entirely**, and repopulates it. The inclusion of settings ensures that background processes (like CC Rollovers) don't duplicate or skip periods after a restore.
-    *   **Atomic Restoration:** Restored data handles transaction impacts atomically to maintain balance integrity.
+*   **Partitioning Strategy (v3.6.0+):** 
+    *   **Transactions:** Partitioned into monthly buckets (e.g., `2025-02`) under `transactions_v2` to avoid Firestore document size limits.
+    *   **Tax Data:** Partitioned by year under `tax_data_v2`.
+    *   **Loans:** Each loan is stored as a separate encrypted entry keyed by `loanId` under `loans_v2`.
+    *   **Atomic Sync:** All partitioned data is uploaded in a single logical sync event with a `sync_format_version` tracking.
+*   **Restore:** Fetches all partitions, decrypts, and repopulates the local Hive database.
 
 ### E. App Stability & Privacy
 *   **App Lock:** Supports PIN protection with a 1-minute grace period and "Forgot PIN" recovery via Firebase re-authentication.
-*   **Privacy Screen:** Immediately obscures app content in the app switcher. Uses browser-level `blur` events on iOS PWA for maximum reliability.
 *   **Layout Safety:** UI components are designed with `LayoutBuilder` and `SingleChildScrollView` to prevent overflow errors on various device sizes and orientations.
 
 ### F. Loan Logic & Part Payments
@@ -104,13 +105,13 @@ graph TD
 ### G. Tax Engine & Precision
 *   **Precision Guard:** Uses `1.0e15` as a finite substitute for `double.infinity` in Tax Slabs to prevent precision loss in Hive (JavaScript `Number.MAX_SAFE_INTEGER` limitation).
 *   **Custom Exemptions (Head-Specific):** Supports dynamic deductions across all income heads (**Salary, House Property, Business, Other, Gift, Agriculture**). Rules can be fixed or percentage-based.
-*   **Salary Breakdown Logic:**
-    *   **Scoped Taxing:** The monthly breakdown and TDS estimation use a **Salary-Only tax projection**, excluding non-salary losses/incomes for accurate payroll simulation.
-    *   **Frequency-Aware:** Independent components (Bonuses, LTA, Deductions) respect their defined payout frequencies.
+*   **Salary Structure & Allowances:**
+    *   **Frequency-Aware Components:** Independent components (Bonuses, LTA, Deductions) respect their defined payout frequencies (Monthly, Quarterly, Trimester, Half-Yearly, Annually, Custom).
+    *   **Custom Allowances:** Fully editable within the salary structure. Supports fixed annual amounts or month-specific partial payouts.
+*   **Tax Dashboard Accessibility:** Primary actions (Edit Details, Sync, Tax Config) are positioned prominently below the year selector for better one-hand usability.
 *   **Special Income Handling:**
     *   **Agriculture:** Supports partial integration logic with custom exemptions reducing the agri-base used for tax rate determination.
     *   **Gifts:** Aggregates non-exempt gifts and applies head-specific custom exemptions after the threshold check.
-*   **Tax Slab Fallback:** Exhaustive test suite in `tax_slab_fallback_test.dart` ensures that if special rules (Capital Gains, Business presumptive, Agri) are disabled, the income correctly flows into standard slab calculation without double-counting or leakage.
 
 ### H. Lending & Borrowing
 *   **Tracking:** Manages money lent to or borrowed from individuals.
@@ -118,48 +119,23 @@ graph TD
 *   **Aggregated View:** Provided via `totalLentProvider` and `totalBorrowedProvider` for effective debt management.
 *   **Profile Scoping:** Automatically filtered by the active profile.
 
-## 4. Current Status (v3.4.0)
-*   **Stable:** Core financial logic, cloud sync, tax engine, and security features are fully operational.
-*   **Recent Updates (v3.4.0):**
-    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**) with dynamic summary card display in Tax Details.
+## 4. Current Status (v3.7.0)
+*   **Stable:** Core financial logic, partitioned cloud sync, tax engine, and security features are fully operational.
+*   **Recent Updates (v3.7.0):**
+    *   **Tax UI Overhaul**: Reorganized Tax Dashboard layout; fixed Custom Allowance editing and "Total 0" display bugs.
+    *   **Data Partitioning**: Implemented monthly partitioning for transactions and per-ID partitioning for loans in Cloud Sync for enhanced scalability.
+    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**) with dynamic summary card display.
     *   **Special Income Logic**: Added Agriculture partial integration offsets and non-exempt Gift deduction logic to the tax service.
-    *   **Robust Verification**: Created an exhaustive slab fallback test suite covering all income heads and threshold-based special rules.
     *   **Hive Precision Fix**: Resolved Hive "precision loss" warnings on Web by replacing `double.infinity` with finite constants.
-    *   **Data Sanitization**: Added automatic sanitization for non-finite numbers during JSON serialization and cloud sync.
-*   **Recent Updates (v1.22.0):**
-    *   **Recurring Payment Skip**: Added a "Skip" option in the Reminders screen to advance cycles without recording transactions.
-    *   **First Working Day Logic**: Implemented "First Working Day of Month" schedule type with full holiday/weekend awareness.
-    *   **Month Jump Fix**: Resolved a critical bug where Jan 30 payments would skip February and jump to March.
-    *   **Test Environment**: Fixed `dart:js_interop` crashes during local testing via conditional imports.
-    *   **UI Stability**: Fixed `AppLockScreen` overflow and improved iOS PWA Privacy Screen reliability.
-    *   **Unified UI Components**: Created shared `TransactionListItem` widget and refactored Dashboard, Transactions, Loans, and Recycle Bin screens for consistent UI/UX.
-    *   **Logic Centralization**:
-        *   Moved Credit Card unbilled calculation to `BillingHelper.calculateUnbilledAmount`.
-        *   Moved Loan remaining tenure logic to `LoanService.calculateRemainingTenure`.
-    *   **Credit Card Fix**: Standardized the **Billing Day** as a Billed day (inclusive); centralized rollover logic in `accountsProvider` to ensure zero-gap processing across all profiles.
-    *   **Backup Persistence**: Updated Cloud Sync to preserve all app settings (rollover timestamps, budget, etc.).
-    *   **Refactoring Services**: Deduplicated logic in `StorageService` and `JsonDataService` (Generic getters, Impact logic).
-    *   **Test Coverage Push**: Achieved high coverage for critical screens:
-        *   `RepairService` (Job Logic)
-        *   `AddTransactionScreen` (Transfer/Recurring flows)
-        *   `TransactionsScreen` (Filtering)
-        *   `RemindersScreen` (Recurring Interactions)
-        *   `DashboardScreen` (Net Worth, Recent Txns)
-        *   `Loan Actions` (Top-up, Part Payment, Recalculate)
-    *   **UI Restoration**: Restored "Compact/Extended" number toggle in `AccountsScreen`.
-    *   **Code Quality**: Applied project-wide `dart fix` and synchronized `AI.md` with active project state.
 
 ## 5. Build Instructions
 Run: `build_pwa.bat`
 *   **Note:** This command ensures that web resources are bundled locally for full offline capability.
 
 ## 6. Testing
-Execute: `flutter test`
-Target: **100% coverage** for core business logic and critical UI screens.
+Execute: `test_pwa.bat`
+*   **Baseline Coverage:** **77.1%** (Filtered). Core logic and critical UI screens must maintain or improve coverage.
+*   **Consolidated Tests**: Unit tests are consolidated to avoid fragmentation. Use `test_mocks.dart` for shared service mocks.
 
-### Coverage Rules
-1.  **Maintenance**: Every modification MUST maintain or increase the coverage percentage of the modified files.
-2. **Baselines**: The current project coverage baseline is **77.1%** (Filtered). Every modification MUST maintain or increase the coverage percentage of the modified files.
-3.  **Sanity**: Unit tests MUST be consolidated (avoid `_unit_test.dart` fragmentation). Merge redundant test files immediately.
-4.  **Mocks**: Use `test_mocks.dart` for shared service and provider mocks. Use `setupStorageDefaults(mockStorage)` to apply standard stubs and fallbacks.
-5.  **Aesthetics**: Tests involving charts (PieChart) should use explicit `tester.pump(Duration)` instead of `pumpAndSettle` to avoid animation timeouts.
+---
+*Documentation synchronized with project state on 2026-02-28.*

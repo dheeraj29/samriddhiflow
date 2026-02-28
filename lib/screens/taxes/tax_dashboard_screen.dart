@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/taxes/tax_data_fetcher.dart';
 import '../../services/taxes/tax_config_service.dart';
 import '../../services/taxes/indian_tax_service.dart';
-import '../../widgets/pure_icons.dart';
 import '../../widgets/smart_currency_text.dart';
 import '../../models/taxes/tax_data.dart';
 import '../../models/taxes/tax_data_models.dart';
@@ -79,37 +78,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tax Dashboard'),
+        title: const Text('Tax Dashboard', overflow: TextOverflow.ellipsis),
+        centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_document),
-            tooltip: 'Edit Details',
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => TaxDetailsScreen(
-                            data: _taxData ?? TaxYearData(year: _selectedYear),
-                            onSave: (newData) async {
-                              await ref
-                                  .read(storageServiceProvider)
-                                  .saveTaxYearData(newData);
-                              _loadData();
-                            },
-                            onDelete: () async {
-                              await ref
-                                  .read(storageServiceProvider)
-                                  .deleteTaxYearData(_selectedYear);
-                              _loadData();
-                            },
-                          )));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.sync),
-            tooltip: 'Sync from Transactions',
-            onPressed: _syncData,
-          ),
           IconButton(
             icon: const Icon(Icons.health_and_safety),
             tooltip: 'Insurance Portfolio',
@@ -118,11 +89,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 MaterialPageRoute(
                     builder: (_) => const InsurancePortfolioScreen())),
           ),
-          IconButton(
-            icon: PureIcons.settings(),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const TaxRulesScreen())),
-          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -130,6 +96,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         child: Column(
           children: [
             _buildYearSelector(),
+            const SizedBox(height: 12),
+            _buildActionButtons(),
             const SizedBox(height: 16),
             if (_taxData != null) ...[
               _buildSummaryCard(_taxData!),
@@ -698,6 +666,80 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildActionButton(
+            label: 'Edit Details',
+            icon: Icons.edit_document,
+            color: Colors.blue,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TaxDetailsScreen(
+                    data: _taxData ?? TaxYearData(year: _selectedYear),
+                    onSave: (newData) async {
+                      await ref
+                          .read(storageServiceProvider)
+                          .saveTaxYearData(newData);
+                      _loadData();
+                    },
+                    onDelete: () async {
+                      await ref
+                          .read(storageServiceProvider)
+                          .deleteTaxYearData(_selectedYear);
+                      _loadData();
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildActionButton(
+            label: 'Sync Data',
+            icon: Icons.sync,
+            color: Colors.green,
+            onPressed: _syncData,
+          ),
+          const SizedBox(width: 8),
+          _buildActionButton(
+            label: 'Tax Config',
+            icon: Icons.settings,
+            color: Colors.orange,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TaxRulesScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

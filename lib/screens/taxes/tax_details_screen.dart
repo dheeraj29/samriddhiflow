@@ -676,8 +676,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(a.name),
-                subtitle: Text(
-                    '${CurrencyUtils.formatCurrency(a.payoutAmount, ref.watch(currencyProvider))} (${a.frequency.name})'),
+                subtitle: Text(_formatAllowanceSubtitle(a)),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, size: 20),
                   onPressed: () {
@@ -3854,6 +3853,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   contentPadding: EdgeInsets.zero,
                   title: Text(a.name),
                   subtitle: Text(_formatAllowanceSubtitle(a)),
+                  onTap: () {
+                    _addCustomAllowanceDialog(context, (updatedAllowance) {
+                      final newList = List<CustomAllowance>.from(list);
+                      int idx = newList.indexOf(a);
+                      if (idx != -1) {
+                        newList[idx] = updatedAllowance;
+                        customAllowancesNotifier.value = newList;
+                      }
+                    }, existing: a);
+                  },
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, size: 18),
                     onPressed: () {
@@ -3871,22 +3880,33 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   String _formatAllowanceSubtitle(CustomAllowance a) {
-    int multiplier = 1;
-    if (a.frequency == PayoutFrequency.monthly) {
-      multiplier = 12;
-    } else if (a.frequency == PayoutFrequency.quarterly) {
-      multiplier = 4;
-    } else if (a.frequency == PayoutFrequency.halfYearly) {
-      multiplier = 2;
-    }
-
     final locale = ref.watch(currencyProvider);
     final payoutFormatted =
         CurrencyUtils.formatCurrency(a.payoutAmount, locale);
-    final totalAmount = a.payoutAmount *
-        (a.isPartial ? (a.partialAmounts.values.length) : multiplier);
+
+    final totalAmount = _calculateAllowanceAnnualTotal(a);
     final totalFormatted = CurrencyUtils.formatCurrency(totalAmount, locale);
-    return 'Payout: $payoutFormatted • Total: $totalFormatted';
+
+    if (a.frequency == PayoutFrequency.annually && !a.isPartial) {
+      return 'Annual Payout: $payoutFormatted';
+    }
+
+    return 'Per Payout: $payoutFormatted • Annual Total: $totalFormatted';
+  }
+
+  double _calculateAllowanceAnnualTotal(CustomAllowance a) {
+    double total = 0;
+    for (int m = 1; m <= 12; m++) {
+      if (SalaryStructure.isPayoutMonth(
+          m, a.frequency, a.startMonth, a.customMonths)) {
+        if (a.isPartial) {
+          total += a.partialAmounts[m] ?? a.payoutAmount;
+        } else {
+          total += a.payoutAmount;
+        }
+      }
+    }
+    return total;
   }
 
   void _onSaveSalaryStructure({

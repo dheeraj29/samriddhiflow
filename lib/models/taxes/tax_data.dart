@@ -57,7 +57,6 @@ class TaxYearData {
   });
 
   // Getters for Summaries (Used by Dashboard)
-  // coverage:ignore-start
   double get totalSalary {
     double total = salary.grossSalary;
     for (final a in salary.independentAllowances) {
@@ -67,7 +66,6 @@ class TaxYearData {
           total += a.isPartial
               ? (a.partialAmounts[m] ?? a.payoutAmount)
               : a.payoutAmount;
-  // coverage:ignore-end
         }
       }
     }
