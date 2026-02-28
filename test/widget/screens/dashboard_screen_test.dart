@@ -10,6 +10,7 @@ import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
+import 'package:samriddhi_flow/models/profile.dart';
 
 class MockNotificationService extends Mock implements NotificationService {}
 
@@ -307,5 +308,45 @@ void main() {
 
     await tester.tap(reportsIcon);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('DashboardScreen displays active profile name', (tester) async {
+    final profile = Profile(id: 'p1', name: 'Work Profile');
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        notificationServiceProvider.overrideWithValue(mockNotificationService),
+        accountsProvider.overrideWith((ref) => Stream.value([])),
+        transactionsProvider.overrideWith((ref) => Stream.value([])),
+        loansProvider.overrideWith((ref) => Stream.value([])),
+        txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
+        backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
+        currencyProvider.overrideWith(MockCurrencyNotifier.new),
+        categoriesProvider.overrideWith(MockCategoriesNotifier.new),
+        // Override with specific profile
+        activeProfileIdProvider.overrideWith(MockProfileIdNotifier.new),
+        profilesProvider.overrideWith((ref) async => [profile]),
+        activeProfileProvider.overrideWithValue(profile),
+        smartCalculatorEnabledProvider.overrideWith(MockSmartCalcNotifier.new),
+        isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
+        isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
+        authStreamProvider.overrideWith((ref) => Stream.value(null)),
+        appLockStatusProvider.overrideWith((ref) => false),
+        appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+        calculatorVisibleProvider
+            .overrideWith(MockCalculatorVisibleNotifier.new),
+        storageInitializerProvider.overrideWith((ref) async {}),
+        monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
+        recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+        holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+        dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+      ],
+      child: const MaterialApp(
+        home: DashboardScreen(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profile: Work Profile'), findsOneWidget);
   });
 }

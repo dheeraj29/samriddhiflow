@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-28T01:09:25.994606**
+> **Generated on: 2026-02-28T08:43:37.991956**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
@@ -29,7 +29,7 @@
 | **screens/add_transaction_screen.dart** | **100.0%** | 369/369 | PASS |
 | **screens/app_lock_screen.dart** | **100.0%** | 70/70 | PASS |
 | **screens/cc_payment_dialog.dart** | **100.0%** | 100/100 | PASS |
-| **screens/dashboard_screen.dart** | **100.0%** | 316/316 | PASS |
+| **screens/dashboard_screen.dart** | **100.0%** | 322/322 | PASS |
 | **screens/holiday_manager_screen.dart** | **100.0%** | 37/37 | PASS |
 | **screens/lending/add_lending_screen.dart** | **100.0%** | 75/75 | PASS |
 | **screens/lending/lending_dashboard_screen.dart** | **100.0%** | 106/106 | PASS |
@@ -54,7 +54,7 @@
 | services/auth_service.dart | **100.0%** | 65/65 | PASS |
 | services/calendar_service.dart | **100.0%** | 25/25 | PASS |
 | services/cloud_sync_service.dart | **100.0%** | 137/137 | PASS |
-| services/encryption_service.dart | **100.0%** | 20/20 | PASS |
+| services/encryption_service.dart | **100.0%** | 23/23 | PASS |
 | services/file_service.dart | **100.0%** | 15/15 | PASS |
 | services/json_data_service.dart | **100.0%** | 104/104 | PASS |
 | services/lending/lending_provider.dart | **100.0%** | 28/28 | PASS |

@@ -60,6 +60,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             duration: const Duration(seconds: 5),
             action: SnackBarAction( // coverage:ignore-line
 
+
                 label: 'Dismiss',
                 onPressed: () {}), // coverage:ignore-line
             behavior: SnackBarBehavior.floating,
@@ -106,9 +107,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
 
     final title = (activeProfile == null ||
-            activeProfile.id == 'default') // coverage:ignore-line
+            activeProfile.id == 'default')
         ? 'My Samriddh'
-        : '${activeProfile.name} Budget'; // coverage:ignore-line
+        : '${activeProfile.name} Budget';
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -119,6 +120,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(title,
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Profile: ${activeProfile?.name ?? 'Default'}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.black54
+                    : Colors.white60,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -128,8 +137,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: IconButton(
               onPressed: () => Navigator.push( // coverage:ignore-line
 
+
                   context,
                   MaterialPageRoute( // coverage:ignore-line
+
 
                       builder: (_) => // coverage:ignore-line
                           const RemindersScreen())),
@@ -142,7 +153,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             IconButton( // coverage:ignore-line
 
 
-              onPressed: () => ref.read(appLockIntentProvider.notifier).lock(), // coverage:ignore-line
+              // coverage:ignore-start
+              onPressed: () => ref
+                  .read(appLockIntentProvider.notifier)
+                  .lock(),
+              // coverage:ignore-end
               icon: const Icon(Icons.lock_outline),
               tooltip: 'Lock App',
             ),
@@ -239,8 +254,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               tooltip: 'Settings',
               onPressed: () => Navigator.push( // coverage:ignore-line
 
+
                   context,
                   MaterialPageRoute( // coverage:ignore-line
+
 
                       builder: (_) => // coverage:ignore-line
                           const SettingsScreen())),
@@ -477,6 +494,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           loans);
 
                   if (tenure.days <= 0) { // coverage:ignore-line
+
 
                     return const SizedBox();
                   }
@@ -824,8 +842,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           InkWell(
             onTap: () => Navigator.push( // coverage:ignore-line
 
+
                 context,
                 MaterialPageRoute( // coverage:ignore-line
+
 
                     builder: (_) => // coverage:ignore-line
                         const LoansScreen())),
@@ -846,6 +866,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               context,
               MaterialPageRoute( // coverage:ignore-line
+
 
                   builder: (_) => // coverage:ignore-line
                       const LendingDashboardScreen()),
@@ -971,6 +992,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               TextButton(
                 onPressed: () => Navigator.pushNamed( // coverage:ignore-line
 
+
                     context,
                     '/settings'),
                 child: const Text('Go to Backup'),
@@ -979,11 +1001,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               TextButton(
                 onPressed: () => // coverage:ignore-line
                     ref
-                        // coverage:ignore-start
-                        .read(txnsSinceBackupProvider
-                            .notifier)
-                        .reset(),
-                        // coverage:ignore-end
+                        .read(txnsSinceBackupProvider.notifier) // coverage:ignore-line
+                        .reset(), // coverage:ignore-line
                 child:
                     const Text('Dismiss', style: TextStyle(color: Colors.grey)),
               ),

@@ -4,6 +4,8 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:crypto/crypto.dart';
 
 class EncryptionService {
+  static const _magicPrefix = 'SF_ENC:';
+
   /// Encrypts a string of data using AES-CBC.
   /// The [passcode] is hashed using SHA-256 to create a 32-byte key.
   /// Returns a string formatted as "base64(iv):base64(encrypted)".
@@ -15,7 +17,7 @@ class EncryptionService {
     final encrypter =
         encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
 
-    final encrypted = encrypter.encrypt(data, iv: iv);
+    final encrypted = encrypter.encrypt('$_magicPrefix$data', iv: iv);
 
     return '${iv.base64}:${encrypted.base64}';
   }
@@ -38,8 +40,18 @@ class EncryptionService {
     final encrypter =
         encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
 
-    final decrypted = encrypter.decrypt(encryptedBytes, iv: iv);
-    return decrypted;
+    try {
+      final decrypted = encrypter.decrypt(encryptedBytes, iv: iv);
+
+      if (!decrypted.startsWith(_magicPrefix)) {
+        throw const FormatException("Incorrect passcode or corrupted data");
+      }
+
+      return decrypted.substring(_magicPrefix.length);
+    } catch (e) {
+      if (e is FormatException) rethrow;
+      throw const FormatException("Incorrect passcode or corrupted data");
+    }
   }
 
   /// Derives a 32-byte Key from a user-supplied passcode using SHA-256.
