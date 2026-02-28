@@ -609,7 +609,7 @@ class TaxRules {
               ?.map(
                   (e) => TaxExemptionRule.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
-          [], // coverage:ignore-line
+          [],
       jurisdiction: m['jurisdiction'] ?? 'India',
       cashGiftExemptionLimit:
           (m['cashGiftExemptionLimit'] as num?)?.toDouble() ?? 50000,
