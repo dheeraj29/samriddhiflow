@@ -167,39 +167,39 @@ class TaxYearData {
                 ?.map(
                     (e) => HouseProperty.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         businessIncomes: (m['businessIncomes'] as List?)
                 ?.map(
                     (e) => BusinessEntity.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         capitalGains: (m['capitalGains'] as List?)
                 ?.map((e) =>
                     CapitalGainEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         otherIncomes: (m['otherIncomes'] as List?)
                 ?.map((e) => OtherIncome.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         dividendIncome: DividendIncome.fromMap(
             Map<String, dynamic>.from(m['dividendIncome'] ?? {})),
         cashGifts: (m['cashGifts'] as List?)
                 ?.map((e) => OtherIncome.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         agricultureIncome: (m['agricultureIncome'] as num?)?.toDouble() ?? 0,
         advanceTax: (m['advanceTax'] as num?)?.toDouble() ?? 0,
         tdsEntries: (m['tdsEntries'] as List?)
                 ?.map((e) =>
                     TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         tcsEntries: (m['tcsEntries'] as List?)
                 ?.map((e) =>
                     TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         lastSyncDate: m['lastSyncDate'] != null
             ? DateTime.parse(m['lastSyncDate']) // coverage:ignore-line
             : null,

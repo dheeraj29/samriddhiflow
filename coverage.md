@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-28T09:04:50.354374**
+> **Generated on: 2026-02-28T09:50:07.707266**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
@@ -14,13 +14,13 @@
 | models/category.dart | **100.0%** | 20/20 | PASS |
 | models/dashboard_config.dart | **100.0%** | 12/12 | PASS |
 | models/lending_record.dart | **100.0%** | 63/63 | PASS |
-| models/loan.dart | **100.0%** | 68/68 | PASS |
+| models/loan.dart | **100.0%** | 69/69 | PASS |
 | models/profile.dart | **100.0%** | 16/16 | PASS |
 | models/recurring_transaction.dart | **100.0%** | 60/60 | PASS |
 | models/taxes/insurance_policy.dart | **100.0%** | 37/37 | PASS |
-| models/taxes/tax_data.dart | **100.0%** | 68/68 | PASS |
-| models/taxes/tax_data_models.dart | **100.0%** | 331/331 | PASS |
-| models/taxes/tax_rules.dart | **100.0%** | 213/213 | PASS |
+| models/taxes/tax_data.dart | **100.0%** | 75/75 | PASS |
+| models/taxes/tax_data_models.dart | **100.0%** | 337/337 | PASS |
+| models/taxes/tax_rules.dart | **100.0%** | 214/214 | PASS |
 | models/transaction.dart | **100.0%** | 53/53 | PASS |
 | **providers.dart** | **100.0%** | 153/153 | PASS |
 | **providers/sum_tracker_provider.dart** | **100.0%** | 88/88 | PASS |
@@ -53,7 +53,7 @@
 | **screens/transactions_screen.dart** | **100.0%** | 156/156 | PASS |
 | services/auth_service.dart | **100.0%** | 65/65 | PASS |
 | services/calendar_service.dart | **100.0%** | 25/25 | PASS |
-| services/cloud_sync_service.dart | **100.0%** | 137/137 | PASS |
+| services/cloud_sync_service.dart | **100.0%** | 160/160 | PASS |
 | services/encryption_service.dart | **100.0%** | 23/23 | PASS |
 | services/file_service.dart | **100.0%** | 15/15 | PASS |
 | services/json_data_service.dart | **100.0%** | 104/104 | PASS |

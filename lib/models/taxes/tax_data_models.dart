@@ -105,38 +105,34 @@ class SalaryDetails {
         leaveEncashment: (m['leaveEncashment'] as num?)?.toDouble() ?? 0,
         gratuity: (m['gratuity'] as num?)?.toDouble() ?? 0,
         monthlyGross: (m['monthlyGross'] as Map?)?.map((k, v) => MapEntry(
-                // coverage:ignore-start
-                int.parse(k.toString()),
-                (v as num).toDouble())) ??
+                int.parse(k.toString()), // coverage:ignore-line
+                (v as num).toDouble())) ?? // coverage:ignore-line
             {},
-                // coverage:ignore-end
         giftsFromEmployer: (m['giftsFromEmployer'] as num?)?.toDouble() ?? 0,
         history: (m['history'] as List?)
                 ?.map((e) => SalaryStructure.fromMap(
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
-                // coverage:ignore-start
-                MapEntry(int.parse(k.toString()),
-                    (v as num).toDouble())) ??
+                MapEntry(int.parse(k.toString()), // coverage:ignore-line
+                    (v as num).toDouble())) ?? // coverage:ignore-line
             {},
-                // coverage:ignore-end
         independentAllowances: (m['independentAllowances'] as List?)
                 ?.map((e) => CustomAllowance.fromMap(
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         independentExemptions: (m['independentExemptions'] as List?)
                 ?.map((e) => CustomExemption.fromMap(
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         independentDeductions: (m['independentDeductions'] as List?)
                 ?.map((e) => CustomAllowance.fromMap(
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
       );
 }
 
