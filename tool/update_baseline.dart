@@ -3,7 +3,7 @@ import 'dart:io';
 void main() async {
   final lcovFile = File('coverage/lcov.info');
   if (!await lcovFile.exists()) {
-    print('coverage/lcov.info not found!');
+    stdout.writeln('coverage/lcov.info not found!');
     return;
   }
 
@@ -70,7 +70,7 @@ void main() async {
   final coverage = totalLines == 0 ? 0.0 : (coveredLines / totalLines * 100);
   final coverageStr = coverage.toStringAsFixed(1);
 
-  print('Calculated Baseline Coverage: $coverageStr%');
+  stdout.writeln('Calculated Baseline Coverage: $coverageStr%');
 
   final aiFile = File('AI.md');
   if (await aiFile.exists()) {
@@ -89,7 +89,7 @@ void main() async {
     }).toList();
 
     await aiFile.writeAsString('${newLines.join('\n')}\n');
-    print('Updated AI.md coverage baseline to $coverageStr%');
+    stdout.writeln('Updated AI.md coverage baseline to $coverageStr%');
   }
 }
 

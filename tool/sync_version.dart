@@ -3,7 +3,7 @@ import 'dart:io';
 void main() async {
   final pubspecFile = File('pubspec.yaml');
   if (!await pubspecFile.exists()) {
-    print('pubspec.yaml not found!');
+    stdout.writeln('pubspec.yaml not found!');
     return;
   }
 
@@ -17,11 +17,11 @@ void main() async {
   }
 
   if (version == null) {
-    print('Version not found in pubspec.yaml');
+    stdout.writeln('Version not found in pubspec.yaml');
     return;
   }
 
-  print('Syncing version: $version');
+  stdout.writeln('Syncing version: $version');
 
   // 1. Update lib/core/app_constants.dart
   final constantsFile = File('lib/core/app_constants.dart');
@@ -34,7 +34,7 @@ void main() async {
       return line;
     }).toList();
     await constantsFile.writeAsString('${newLines.join('\n')}\n');
-    print('Updated lib/core/app_constants.dart');
+    stdout.writeln('Updated lib/core/app_constants.dart');
   }
 
   // 2. Update sonar-project.properties
@@ -48,7 +48,7 @@ void main() async {
       return line;
     }).toList();
     await sonarFile.writeAsString('${newLines.join('\n')}\n');
-    print('Updated sonar-project.properties');
+    stdout.writeln('Updated sonar-project.properties');
   }
 
   // 3. Update AI.md
@@ -62,8 +62,8 @@ void main() async {
       return line;
     }).toList();
     await aiFile.writeAsString('${newLines.join('\n')}\n');
-    print('Updated AI.md');
+    stdout.writeln('Updated AI.md');
   }
 
-  print('Version sync complete!');
+  stdout.writeln('Version sync complete!');
 }
