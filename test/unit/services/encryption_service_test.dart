@@ -34,10 +34,9 @@ void main() {
 
       final encrypted = service.encryptData(data, passcode);
 
-      // Decrypting AES with the wrong key usually throws an ArgumentError regarding padding or just returns garbage.
-      // We wrap decrypting in try-catch in the cloud sync service to handle it cleanly.
+      // Decrypting AES with the wrong key now throws a FormatException due to magic prefix check.
       expect(() => service.decryptData(encrypted, wrongPasscode),
-          throwsA(anything));
+          throwsA(isA<FormatException>()));
     });
 
     test('Encrypting empty string returns empty string safely', () {

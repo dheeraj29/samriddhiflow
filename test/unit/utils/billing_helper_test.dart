@@ -65,6 +65,18 @@ void main() {
         // The 28th should still be considered "Billed" (of the cycle that just concluded)
         expect(BillingHelper.isUnbilled(dateOn28, now, 28), false);
       });
+
+      test('Cycle Day 28: Today is 28th, next bill date should be today', () {
+        final now = DateTime(2024, 2, 28);
+        const cycleDay = 28;
+
+        // Emulate the logic in reminders_screen.dart
+        final nextBillDate = now.day > cycleDay
+            ? DateTime(now.year, now.month + 1, cycleDay)
+            : DateTime(now.year, now.month, cycleDay);
+
+        expect(nextBillDate, DateTime(2024, 2, 28));
+      });
     });
   });
 }

@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v3.4.0
+**Current Version:** v3.5.0
 
 ## 2. Architecture
 
@@ -159,7 +159,7 @@ Target: **100% coverage** for core business logic and critical UI screens.
 
 ### Coverage Rules
 1.  **Maintenance**: Every modification MUST maintain or increase the coverage percentage of the modified files.
-2. **Baselines**: The current project coverage baseline is **72.87%** (Filtered). Every modification MUST maintain or increase the coverage percentage of the modified files.
+2. **Baselines**: The current project coverage baseline is **76.8%** (Filtered). Every modification MUST maintain or increase the coverage percentage of the modified files.
 3.  **Sanity**: Unit tests MUST be consolidated (avoid `_unit_test.dart` fragmentation). Merge redundant test files immediately.
 4.  **Mocks**: Use `test_mocks.dart` for shared service and provider mocks. Use `setupStorageDefaults(mockStorage)` to apply standard stubs and fallbacks.
 5.  **Aesthetics**: Tests involving charts (PieChart) should use explicit `tester.pump(Duration)` instead of `pumpAndSettle` to avoid animation timeouts.

@@ -161,6 +161,7 @@ class RemindersScreen extends ConsumerWidget {
         totalPaid == 0 && // coverage:ignore-line
         today.isBefore(loan.firstEmiDate)) { // coverage:ignore-line
 
+
       return _buildWaitStartCard(loan); // coverage:ignore-line
     }
 
@@ -168,7 +169,8 @@ class RemindersScreen extends ConsumerWidget {
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDateObj));
 
     final displayDueDate = isFullyPaid
-        ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay) // coverage:ignore-line
+        ? DateTime(dueDateObj.year, dueDateObj.month + 1, // coverage:ignore-line
+            loan.emiDay) // coverage:ignore-line
         : dueDateObj;
 
     return _buildLoanCardUI(
@@ -369,7 +371,8 @@ class RemindersScreen extends ConsumerWidget {
 
     final lastBillDate = today.day > acc.billingCycleDay!
         ? DateTime(today.year, today.month, acc.billingCycleDay!)
-        : DateTime(today.year, today.month - 1, acc.billingCycleDay!); // coverage:ignore-line
+        : DateTime(today.year, today.month - 1, // coverage:ignore-line
+            acc.billingCycleDay!); // coverage:ignore-line
 
     final dueDate =
         lastBillDate.add(Duration(days: acc.paymentDueDateDay ?? 20));
@@ -397,9 +400,10 @@ class RemindersScreen extends ConsumerWidget {
     final (statusColor, statusText, statusIcon) = _getCCPaymentStatus(
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDate));
 
-    final nextBillDate = today.day >= acc.billingCycleDay!
+    final nextBillDate = today.day > acc.billingCycleDay!
         ? DateTime(today.year, today.month + 1, acc.billingCycleDay!)
-        : DateTime(today.year, today.month, acc.billingCycleDay!); // coverage:ignore-line
+        : DateTime(today.year, today.month, // coverage:ignore-line
+            acc.billingCycleDay!); // coverage:ignore-line
 
     return _buildCCCardUI(
       context: context,
