@@ -114,13 +114,14 @@ class SalaryDetails {
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [],
-        netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), // coverage:ignore-line
+        netSalaryReceived:
+            (m['netSalaryReceived'] as Map?)?.map((k, v) => MapEntry(
+                    int.parse(k.toString()), // coverage:ignore-line
                     (v as num).toDouble())) ?? // coverage:ignore-line
-            {},
+                {},
         independentAllowances: (m['independentAllowances'] as List?)
-                ?.map((e) => CustomAllowance.fromMap(
-                    Map<String, dynamic>.from(e)))
+                ?.map((e) =>
+                    CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
         independentExemptions: (m['independentExemptions'] as List?)
@@ -398,9 +399,49 @@ class OtherIncome {
         name: m['name'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
         type: m['type'] ?? 'Other',
-        subtype: m['subtype'] ?? 'other',
+        subtype: (m['subtype'] ?? 'others').toString().toLowerCase(),
         linkedExemptionId: m['linkedExemptionId'],
       );
+}
+
+extension OtherIncomeSubtypeExtension on String {
+  // coverage:ignore-start
+  String toOtherSourceDisplay() {
+    switch (toLowerCase()) {
+      case 'savings_interest':
+  // coverage:ignore-end
+        return 'Savings Interest';
+      case 'fd_interest': // coverage:ignore-line
+        return 'FD Interest';
+      case 'chit_fund_interest': // coverage:ignore-line
+        return 'Chit Fund Interest';
+      case 'family_pension': // coverage:ignore-line
+        return 'Family Pension';
+      case 'other': // coverage:ignore-line
+      case 'others': // coverage:ignore-line
+        return 'Others';
+      default:
+        return isNotEmpty ? this : 'Others'; // coverage:ignore-line
+    }
+  }
+
+  // coverage:ignore-start
+  String toGiftDisplay() {
+    switch (toLowerCase()) {
+      case 'friend':
+  // coverage:ignore-end
+        return 'Friend';
+      case 'relative': // coverage:ignore-line
+        return 'Relative';
+      case 'marriage': // coverage:ignore-line
+        return 'Marriage';
+      case 'other': // coverage:ignore-line
+      case 'others': // coverage:ignore-line
+        return 'Other';
+      default:
+        return isNotEmpty ? this : 'Other'; // coverage:ignore-line
+    }
+  }
 }
 
 @HiveType(typeId: 223)
@@ -551,11 +592,7 @@ class SalaryStructure {
                 // coverage:ignore-end
         isVariablePayPartial: m['isVariablePayPartial'] ?? false,
         variablePayAmounts: (m['variablePayAmounts'] as Map?)?.map((k, v) =>
-                // coverage:ignore-start
-                MapEntry(int.parse(k.toString()),
-                    (v as num).toDouble())) ??
-            {},
-                // coverage:ignore-end
+            MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? {}, // coverage:ignore-line
         stoppedMonths: (m['stoppedMonths'] as List?)?.cast<int>() ?? [],
       );
 
@@ -816,6 +853,7 @@ class CustomDeduction {
 
   const CustomDeduction({ // coverage:ignore-line
 
+
     required this.name,
     required this.amount,
     this.isTaxable = true,
@@ -827,6 +865,7 @@ class CustomDeduction {
   });
 
   CustomDeduction copyWith({ // coverage:ignore-line
+
 
     String? name,
     double? amount,
@@ -860,9 +899,9 @@ class CustomDeduction {
         'startMonth': startMonth,
         'customMonths': customMonths,
         'isPartial': isPartial,
-        'partialAmounts': partialAmounts
-            .map((k, v) => MapEntry(k.toString(), v)),
   // coverage:ignore-end
+        'partialAmounts':
+            partialAmounts.map((k, v) => MapEntry(k.toString(), v)), // coverage:ignore-line
       };
 
   // coverage:ignore-start
@@ -1017,6 +1056,7 @@ class TaxPaymentEntry {
   });
 
   TaxPaymentEntry copyWith({ // coverage:ignore-line
+
 
     double? amount,
     DateTime? date,

@@ -78,6 +78,17 @@ class _ComplexityVisitor extends RecursiveAstVisitor<void> {
     super.visitFunctionDeclaration(node);
   }
 
+  @override
+  void visitFunctionExpression(FunctionExpression node) {
+    // We only want to analyze anonymous functions (closures), not ones attached to declarations
+    // that we already visited in visitMethodDeclaration or visitFunctionDeclaration.
+    if (node.parent is! FunctionDeclaration &&
+        node.parent is! MethodDeclaration) {
+      _analyzeNode(node, '<anonymous closure>');
+    }
+    super.visitFunctionExpression(node);
+  }
+
   void _analyzeNode(AstNode node, String name) {
     final visitor = _AstNodeComplexityVisitor();
     node.accept(visitor);

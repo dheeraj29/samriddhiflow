@@ -565,9 +565,12 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style:
-                  isBold ? const TextStyle(fontWeight: FontWeight.bold) : null),
+          Expanded(
+            child: Text(label,
+                style: isBold
+                    ? const TextStyle(fontWeight: FontWeight.bold)
+                    : null),
+          ),
           SmartCurrencyText(
             value: amount,
             locale: ref.watch(currencyProvider),
@@ -599,10 +602,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Year Selector
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('Tax Year: ',
                     style: TextStyle(fontWeight: FontWeight.bold)),
@@ -629,12 +633,15 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 ),
               ],
             ),
+            const SizedBox(width: 16),
             Container(
                 width: 1,
                 height: 24,
                 color: Colors.grey.withValues(alpha: 0.3)),
+            const SizedBox(width: 16),
             // Jurisdiction Selector
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.public, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),

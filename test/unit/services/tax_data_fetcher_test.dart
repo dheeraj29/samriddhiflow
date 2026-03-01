@@ -314,7 +314,7 @@ void main() {
       final result = await fetcher.fetchAndAggregate(year);
 
       expect(result.data.cashGifts.length, 1);
-      expect(result.data.cashGifts.first.subtype, 'Other');
+      expect(result.data.cashGifts.first.subtype, 'other');
       expect(result.data.cashGifts.first.type, 'Gift');
     });
   });
