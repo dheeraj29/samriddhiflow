@@ -57,6 +57,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   List<CustomAllowance> _independentAllowances = [];
   List<CustomExemption> _independentExemptions = [];
   List<CustomAllowance> _independentDeductions = [];
+  List<SalaryStructure> _salaryHistory = [];
 
   // Controllers for Other Income / Agri / Tax
   late TextEditingController _otherIncomeNameCtrl;
@@ -127,6 +128,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         List.from(_currentData.salary.independentExemptions);
     _independentDeductions =
         List.from(_currentData.salary.independentDeductions);
+    _salaryHistory = List.from(_currentData.salary.history);
   }
 
   void _updateSummary() {
@@ -135,7 +137,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       _hasUnsavedChanges = true;
 
       // 1. Calculate Gross Salary from history
-      double finalGross = _calculateAnnualGross(_currentData.salary.history);
+      double finalGross = _calculateAnnualGross(_salaryHistory);
 
       // 2. Update SalaryDetails in _currentData (local copy for summary)
       final newSalary = _currentData.salary.copyWith(
@@ -147,6 +149,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         independentAllowances: _independentAllowances,
         independentExemptions: _independentExemptions,
         independentDeductions: _independentDeductions,
+        history: _salaryHistory,
       );
 
       _currentData = _currentData.copyWith(
@@ -204,7 +207,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   void _save() {
     // 1. Calculate Gross from history
-    double finalGross = _calculateAnnualGross(_currentData.salary.history);
+    double finalGross = _calculateAnnualGross(_salaryHistory);
 
     // Other deductions are typically annual figures
     final newSalary = _currentData.salary.copyWith(
@@ -217,6 +220,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       independentAllowances: _independentAllowances,
       independentExemptions: _independentExemptions,
       independentDeductions: _independentDeductions,
+      history: _salaryHistory,
     );
 
     final updatedData = _currentData.copyWith(
@@ -360,7 +364,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   List<Widget> _buildAppBarActions(BuildContext context) {
     return [
-      ..._buildAddAction(),
       ..._buildCopyAction(),
       if (widget.onDelete != null)
         IconButton(
@@ -371,63 +374,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       IconButton(
           icon: PureIcons.save(), onPressed: _save, tooltip: 'Save Changes'),
     ];
-  }
-
-  List<Widget> _buildAddAction() {
-    switch (_selectedIndex) {
-      case 0:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Salary Structure',
-              onPressed: () => _editSalaryStructure(null))
-        ];
-      case 1:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Property',
-              onPressed: () => _addHousePropertyDialog())
-        ];
-      case 2:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Business',
-              onPressed: () => _addBusinessDialog())
-        ];
-      case 3:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Capital Gain',
-              onPressed: () => _addCGEntryDialog())
-        ];
-      case 5:
-        return [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Add Tax Entry',
-            onPressed: () => _showTaxEntryBottomSheet(context),
-          )
-        ];
-      case 6:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Cash Gift',
-              onPressed: () => _addCashGiftDialog())
-        ];
-      case 8:
-        return [
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Add Other Income',
-              onPressed: () => _addOtherIncomeDialog())
-        ];
-      default:
-        return [];
-    }
   }
 
   List<Widget> _buildCopyAction() {
@@ -610,8 +556,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionTitle('Salary Structures'),
-        if (_currentData.salary.history.isEmpty)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle('Salary Structures'),
+            TextButton.icon(
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Add Structure'),
+              onPressed: () => _editSalaryStructure(null),
+            ),
+          ],
+        ),
+        if (_salaryHistory.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Text(
@@ -619,7 +575,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 style: TextStyle(color: Colors.grey)),
           )
         else
-          ..._currentData.salary.history.map((s) {
+          ..._salaryHistory.map((s) {
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
@@ -983,7 +939,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ),
         TextButton.icon(
           onPressed: () {
-            setState(() {});
+            _updateSummary();
           },
           icon: const Icon(Icons.refresh, size: 16),
           label: const Text('Refresh Breakdown'),
@@ -1074,6 +1030,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: _buildSectionTitle('House Properties')),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Add Property'),
+                      onPressed: () => _addHousePropertyDialog(),
+                    ),
+                  ],
+                ),
+                const Divider(),
                 _buildSummaryRow('Total Rent Received', totalRent),
                 _buildSummaryRow('Total Interest on Loan', totalInterest,
                     isDeduction: true),
@@ -1183,12 +1151,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Projected Annual Income',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary),
+                  Expanded(
+                    child: Text(
+                      'Projected Annual Income',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary),
+                    ),
                   ),
                   Icon(
                     _useCompactNumberFormat ? Icons.compress : Icons.expand,
@@ -1516,6 +1486,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: _buildSectionTitle('Business & Profession')),
+            TextButton.icon(
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Add Business'),
+              onPressed: () => _addBusinessDialog(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         if (_businessIncomes.isNotEmpty) ...[
           Card(
             color: Theme.of(context)
@@ -1766,6 +1748,20 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: _buildSectionTitle('Capital Gains')),
+              TextButton.icon(
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Add Entry'),
+                onPressed: () => _addCGEntryDialog(),
+              ),
+            ],
+          ),
+        ),
         if (_capitalGains.isNotEmpty)
           Card(
             margin: const EdgeInsets.all(16),
@@ -2172,6 +2168,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     ? ((totalDividend + totalOtherList) * e.limit / 100)
                     : e.limit));
 
+    // Breakdown calculation for Other Sources
+    final Map<String, double> otherBreakdown = {};
+    for (var o in _otherIncomes) {
+      final key = o.subtype.trim().isEmpty ? 'Others' : o.subtype;
+      otherBreakdown[key] = (otherBreakdown[key] ?? 0) + o.amount;
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -2184,8 +2187,35 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: _buildSectionTitle('Other Source Income')),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Add Other'),
+                      onPressed: () => _addOtherIncomeDialog(),
+                    ),
+                  ],
+                ),
+                const Divider(),
                 _buildSummaryRow('Dividend Income', totalDividend),
                 _buildSummaryRow('Other Sources', totalOtherList),
+                if (otherBreakdown.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Breakup of Other Sources:',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  ...otherBreakdown.entries.map((e) => Padding(
+                        padding: const EdgeInsets.only(left: 24.0),
+                        child: _buildSummaryRow(e.key, e.value, fontSize: 11),
+                      )),
+                ],
                 if (otherRuleExemptions > 0)
                   _buildSummaryRow(_adhocExemptionsLabel, otherRuleExemptions,
                       isDeduction: true),
@@ -2238,7 +2268,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final amtCtrl =
         TextEditingController(text: existing?.amount.toString() ?? '');
-    final typeCtrl = TextEditingController(text: existing?.type ?? 'Interest');
+    String subtype = existing?.subtype ?? 'Others';
+    // Align with dropdown labels if current is lowercase/different
+    const validSubtypes = [
+      'Savings Interest',
+      'FD Interest',
+      'Chit Fund Interest',
+      'Family Pension',
+      'Others'
+    ];
+    if (!validSubtypes.contains(subtype)) {
+      subtype = 'Others';
+    }
 
     // Fetch applicable exemptions
     final rules =
@@ -2263,6 +2304,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                           controller: nameCtrl,
                           decoration: const InputDecoration(labelText: 'Name'),
                           textCapitalization: TextCapitalization.words),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(subtype),
+                        initialValue: subtype,
+                        items: validSubtypes
+                            .map((s) =>
+                                DropdownMenuItem(value: s, child: Text(s)))
+                            .toList(),
+                        onChanged: (v) => setStateBuilder(() => subtype = v!),
+                        decoration:
+                            const InputDecoration(labelText: 'Income Type'),
+                      ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: amtCtrl,
@@ -2333,8 +2386,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       final newItem = OtherIncome(
                         name: nameCtrl.text,
                         amount: double.tryParse(amtCtrl.text) ?? 0,
-                        type: typeCtrl.text,
-                        subtype: typeCtrl.text.toLowerCase(),
+                        type: 'Other',
+                        subtype: subtype,
                         linkedExemptionId: selectedExemptionId,
                       );
                       setState(() {
@@ -2377,7 +2430,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionTitle('Taxes Already Paid'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: _buildSectionTitle('Taxes Already Paid')),
+            TextButton.icon(
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Add Tax Entry'),
+              onPressed: () => _showTaxEntryBottomSheet(context),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         _buildNumberField('Advance Tax Paid (Total)', _advanceTaxCtrl),
         const Divider(height: 32),
@@ -2559,6 +2622,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ? 0.0
         : aggregateTaxableGifts;
 
+    // Breakdown calculation for Gifts
+    final Map<String, double> giftBreakdown = {};
+    for (var g in _cashGifts) {
+      final key = g.subtype.trim().isEmpty ? 'Other' : g.subtype;
+      giftBreakdown[key] = (giftBreakdown[key] ?? 0) + g.amount;
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -2571,7 +2641,35 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: _buildSectionTitle('Cash Gifts')),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Add Gift'),
+                      onPressed: () => _addCashGiftDialog(),
+                    ),
+                  ],
+                ),
+                const Divider(),
                 _buildSummaryRow('Total Gifts Received', totalGifts),
+                if (giftBreakdown.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Breakup of Gifts:',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  ...giftBreakdown.entries.map((e) => Padding(
+                        padding: const EdgeInsets.only(left: 24.0),
+                        child: _buildSummaryRow(e.key, e.value, fontSize: 11),
+                      )),
+                ],
+                const Divider(),
                 _buildSummaryRow('Taxable Gifts', taxableGifts, isBold: true),
               ],
             ),
@@ -2620,7 +2718,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final amtCtrl =
         TextEditingController(text: existing?.amount.toString() ?? '');
-    String subtype = existing?.subtype ?? 'Friend';
+    String subtype =
+        (existing?.subtype ?? '').isEmpty ? 'Other' : existing!.subtype;
 
     showDialog(
       context: context,
@@ -2635,6 +2734,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   decoration: const InputDecoration(
                       labelText: 'Gift Description / Source')),
               DropdownButtonFormField<String>(
+                key: ValueKey(subtype),
                 initialValue: subtype,
                 items: ['Friend', 'Relative', 'Marriage', 'Other']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -2967,12 +3067,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 onPressed: () {
                   // Delete Logic
                   setState(() {
-                    final newHistory =
-                        List<SalaryStructure>.from(_currentData.salary.history);
-                    newHistory.removeWhere((s) => s.id == existing.id);
-                    _currentData = _currentData.copyWith(
-                        salary:
-                            _currentData.salary.copyWith(history: newHistory));
+                    _salaryHistory.removeWhere((s) => s.id == existing.id);
                     _hasUnsavedChanges = true;
                     _updateSummary();
                   });
@@ -3964,10 +4059,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     setState(() {
       if (existing != null) {
-        final idx = _currentData.salary.history.indexOf(existing);
-        if (idx != -1) _currentData.salary.history[idx] = newStructure;
+        final idx = _salaryHistory.indexOf(existing);
+        if (idx != -1) _salaryHistory[idx] = newStructure;
       } else {
-        _currentData.salary.history.add(newStructure);
+        _salaryHistory.add(newStructure);
       }
     });
 

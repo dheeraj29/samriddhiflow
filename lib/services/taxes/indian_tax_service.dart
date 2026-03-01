@@ -40,6 +40,7 @@ class IndianTaxService implements TaxStrategy {
     );
     final details = calculateDetailedLiability( // coverage:ignore-line
 
+
         salaryOnlyData,
         rules);
     return details['totalTax'] ?? 0; // coverage:ignore-line
@@ -310,21 +311,23 @@ class IndianTaxService implements TaxStrategy {
   double calculateHousePropertyIncome(TaxYearData data, TaxRules rules) {
     double totalNet = 0;
     for (var hp in data.houseProperties) {
+      double propertyNet = 0;
       if (hp.isSelfOccupied) {
         double interest = hp.interestOnLoan;
         if (rules.isHPMaxInterestEnabled) {
           interest = min(interest, rules.maxHPDeductionLimit);
         }
-        totalNet += -interest;
-        continue;
+        propertyNet = -interest;
+      } else {
+        double nav = hp.rentReceived - hp.municipalTaxes;
+        double stdDed = rules.isStdDeductionHPEnabled
+            ? (nav * rules.standardDeductionRateHP / 100)
+            : 0;
+        propertyNet = nav - stdDed - hp.interestOnLoan;
       }
 
-      double nav = hp.rentReceived - hp.municipalTaxes;
-      double stdDed = rules.isStdDeductionHPEnabled
-          ? (nav * rules.standardDeductionRateHP / 100)
-          : 0;
-      double income = nav - stdDed - hp.interestOnLoan;
-      totalNet += income;
+      // Each property's taxable income cannot be negative in this view
+      totalNet += max(0.0, propertyNet);
     }
     return totalNet;
   }
@@ -336,6 +339,7 @@ class IndianTaxService implements TaxStrategy {
         total += biz.presumptiveIncome; // coverage:ignore-line
       } else if (biz.type == BusinessType.section44ADA &&
           rules.is44ADAEnabled) { // coverage:ignore-line
+
         total += biz.presumptiveIncome; // coverage:ignore-line
       } else {
         total += biz.netIncome;

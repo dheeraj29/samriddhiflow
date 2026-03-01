@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:clock/clock.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import 'cc_payment_dialog.dart';
@@ -140,7 +141,7 @@ class RemindersScreen extends ConsumerWidget {
 
   Widget _buildLoanCard(
       BuildContext context, WidgetRef ref, Loan loan, NumberFormat currency) {
-    final now = DateTime.now();
+    final now = clock.now();
     final today = DateTime(now.year, now.month, now.day);
     final dueDateObj = _getLoanDueDate(loan, today);
 
@@ -169,8 +170,7 @@ class RemindersScreen extends ConsumerWidget {
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDateObj));
 
     final displayDueDate = isFullyPaid
-        ? DateTime(dueDateObj.year, dueDateObj.month + 1, // coverage:ignore-line
-            loan.emiDay) // coverage:ignore-line
+        ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay) // coverage:ignore-line
         : dueDateObj;
 
     return _buildLoanCardUI(
@@ -367,12 +367,12 @@ class RemindersScreen extends ConsumerWidget {
       List<Transaction> allTransactions,
       dynamic storage) {
     if (acc.billingCycleDay == null) return const SizedBox();
-    final today = DateTime.now();
+    final today = clock.now();
 
     final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month, acc.billingCycleDay!)
-        : DateTime(today.year, today.month - 1, // coverage:ignore-line
-            acc.billingCycleDay!); // coverage:ignore-line
+        ? DateTime(today.year, today.month, // coverage:ignore-line
+            acc.billingCycleDay!) // coverage:ignore-line
+        : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 
     final dueDate =
         lastBillDate.add(Duration(days: acc.paymentDueDateDay ?? 20));
@@ -393,17 +393,16 @@ class RemindersScreen extends ConsumerWidget {
 
     final totalDue = acc.balance + billedAmount;
 
-    final isFullyPaid =
-        totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue);
+    final isFullyPaid = totalDue <= 0.01;
     final isPartiallyPaid = !isFullyPaid && totalPaid > 0;
 
     final (statusColor, statusText, statusIcon) = _getCCPaymentStatus(
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDate));
 
     final nextBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month + 1, acc.billingCycleDay!)
-        : DateTime(today.year, today.month, // coverage:ignore-line
-            acc.billingCycleDay!); // coverage:ignore-line
+        ? DateTime(today.year, today.month + 1, // coverage:ignore-line
+            acc.billingCycleDay!) // coverage:ignore-line
+        : DateTime(today.year, today.month, acc.billingCycleDay!);
 
     return _buildCCCardUI(
       context: context,
@@ -506,7 +505,7 @@ class RemindersScreen extends ConsumerWidget {
                   child: Text( // coverage:ignore-line
 
 
-                    'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue)}', // coverage:ignore-line
+                    'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue + totalPaid)}', // coverage:ignore-line
                     style: AppTheme.offlineSafeTextStyle.copyWith( // coverage:ignore-line
 
 
@@ -538,7 +537,7 @@ class RemindersScreen extends ConsumerWidget {
   }
 
   (Color, String, IconData) _getRecurringStatus(DateTime dueDate) {
-    final today = DateTime.now();
+    final today = clock.now();
     final todayDate = DateTime(today.year, today.month, today.day);
     final dueDateDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
     if (dueDateDate.isBefore(todayDate)) {
@@ -709,7 +708,7 @@ class RemindersScreen extends ConsumerWidget {
                       final txn = Transaction.create(
                         title: r.title,
                         amount: r.amount,
-                        date: DateTime.now(),
+                        date: clock.now(),
                         type: r.type,
                         category: r.category,
                         accountId: r.accountId,

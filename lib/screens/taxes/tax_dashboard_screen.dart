@@ -596,76 +596,78 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Year Selector
-          Row(
-            children: [
-              const Text('Tax Year: ',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              DropdownButton<int>(
-                value:
-                    years.contains(_selectedYear) ? _selectedYear : years.first,
-                underline: Container(),
-                isDense: true,
-                items: years
-                    .map((y) => DropdownMenuItem(
-                          value: y,
-                          child: Text('FY $y-${y + 1}'),
-                        ))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _selectedYear = val;
-                      _loadData();
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-          Container(
-              width: 1, height: 24, color: Colors.grey.withValues(alpha: 0.3)),
-          // Jurisdiction Selector
-          Row(
-            children: [
-              const Icon(Icons.public, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Consumer(builder: (context, ref, _) {
-                final config = ref.watch(taxConfigServiceProvider);
-                final rules = config.getRulesForYear(_selectedYear);
-                return DropdownButton<String>(
-                  value: rules.jurisdiction,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Year Selector
+            Row(
+              children: [
+                const Text('Tax Year: ',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                DropdownButton<int>(
+                  value: years.contains(_selectedYear)
+                      ? _selectedYear
+                      : years.first,
                   underline: Container(),
                   isDense: true,
-                  items: [
-                    'India',
-                    if (rules.customJurisdictionName.isNotEmpty)
-                      rules.customJurisdictionName
-                  ]
-                      .map((j) => DropdownMenuItem(
-                            value: j,
-                            child:
-                                Text(j, style: const TextStyle(fontSize: 14)),
+                  items: years
+                      .map((y) => DropdownMenuItem(
+                            value: y,
+                            child: Text('FY $y-${y + 1}'),
                           ))
                       .toList(),
-                  onChanged: (val) async {
+                  onChanged: (val) {
                     if (val != null) {
-                      // Update Rules
-                      final newRules = rules.copyWith(jurisdiction: val);
-                      await config.saveRulesForYear(_selectedYear, newRules);
-                      if (context.mounted) {
-                        setState(() {}); // Refresh UI
-                      }
+                      setState(() {
+                        _selectedYear = val;
+                        _loadData();
+                      });
                     }
                   },
-                );
-              }),
-            ],
-          ),
-        ],
+                ),
+              ],
+            ),
+            Container(
+                width: 1,
+                height: 24,
+                color: Colors.grey.withValues(alpha: 0.3)),
+            // Jurisdiction Selector
+            Row(
+              children: [
+                const Icon(Icons.public, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Consumer(builder: (context, ref, _) {
+                  final config = ref.watch(taxConfigServiceProvider);
+                  final rules = config.getRulesForYear(_selectedYear);
+                  return DropdownButton<String>(
+                    value: rules.jurisdiction,
+                    underline: Container(),
+                    isDense: true,
+                    items: [
+                      'India',
+                      if (rules.customJurisdictionName.isNotEmpty)
+                        rules.customJurisdictionName
+                    ]
+                        .map((j) => DropdownMenuItem(
+                              value: j,
+                              child: Text(j),
+                            ))
+                        .toList(),
+                    onChanged: (val) async {
+                      if (val != null) {
+                        final newRules = rules.copyWith(jurisdiction: val);
+                        await config.saveRulesForYear(_selectedYear, newRules);
+                        _loadData();
+                      }
+                    },
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

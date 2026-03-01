@@ -411,8 +411,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     if (acc.billingCycleDay == null) return false;
     final today = DateTime.now();
     final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month, acc.billingCycleDay!)
-        : DateTime(today.year, today.month - 1, acc.billingCycleDay!); // coverage:ignore-line
+        ? DateTime(today.year, today.month, acc.billingCycleDay!) // coverage:ignore-line
+        : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 
     final allTxns = ref.read(transactionsProvider).value ?? [];
     final totalPaid = allTxns

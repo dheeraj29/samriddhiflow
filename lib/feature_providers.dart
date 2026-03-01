@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clock/clock.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'providers.dart';
 import 'services/firestore_storage_service.dart';
@@ -46,7 +47,7 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 final pendingRemindersProvider = Provider<int>((ref) {
-  final now = DateTime.now();
+  final now = clock.now();
   final today = DateTime(now.year, now.month, now.day);
 
   final loans = ref.watch(loansProvider).value ?? [];
@@ -85,6 +86,8 @@ int _countPendingLoans(List<Loan> loans, DateTime today) {
     // coverage:ignore-end
 
     if (!isFullyPaid && dueDateObj.difference(today).inDays <= 7) { // coverage:ignore-line
+
+
       count++; // coverage:ignore-line
     }
   }
@@ -97,33 +100,15 @@ int _countPendingCreditCards(List<Account> accounts, List<Transaction> txns,
   for (final acc in accounts.where((a) => a.type == AccountType.creditCard)) {
     if (acc.billingCycleDay == null) continue;
 
-    // coverage:ignore-start
-    final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month, acc.billingCycleDay!)
-        : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
-    // coverage:ignore-end
-
-    // coverage:ignore-start
     final billed = BillingHelper.calculateBilledAmount(
         acc, txns, now, storage.getLastRollover(acc.id));
     final totalDue = acc.balance + billed;
-    // coverage:ignore-end
 
-    final payments = txns
-        // coverage:ignore-start
-        .where((t) =>
-            !t.isDeleted &&
-            t.toAccountId == acc.id &&
-            t.type == TransactionType.transfer &&
-            t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
-        .toList();
-    final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
-        // coverage:ignore-end
+    final isFullyPaid = totalDue <= 0.01;
 
-    final isFullyPaid =
-        totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue); // coverage:ignore-line
-
-    if (!isFullyPaid) count++; // coverage:ignore-line
+    if (!isFullyPaid) {
+      count++;
+    }
   }
   return count;
 }
@@ -132,7 +117,10 @@ int _countPendingRecurring(
     List<RecurringTransaction> recurring, DateTime today) {
   int count = 0;
   for (final r in recurring) {
-    if (r.isActive && !r.nextExecutionDate.isAfter(today)) count++; // coverage:ignore-line
+    if (r.isActive && !r.nextExecutionDate.isAfter(today)) { // coverage:ignore-line
+
+      count++; // coverage:ignore-line
+    }
   }
   return count;
 }

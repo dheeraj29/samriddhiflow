@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v3.7.0
+**Current Version:** v3.8.0
 
 ## 2. Architecture
 
@@ -100,6 +100,7 @@ graph TD
     *   **Logic:** When a part payment is made, it is immediately deducted from the `Remaining Principal`.
     *   **Option 1: Reduce Tenure:** EMI remains the same; loan pays off faster.
     *   **Option 2: Reduce EMI:** Tenure remains the same; EMI is recalculated.
+*   **Reminders & Determinism:** Uses the `clock` package for time-sensing across `RemindersScreen` and `pendingRemindersProvider` to ensure deterministic behavior and testability (avoiding 1st-of-month edge cases).
 *   **Impact:** EMI/Prepayment transactions are linked to user accounts to maintain synchronized balances.
 
 ### G. Tax Engine & Precision
@@ -119,14 +120,19 @@ graph TD
 *   **Aggregated View:** Provided via `totalLentProvider` and `totalBorrowedProvider` for effective debt management.
 *   **Profile Scoping:** Automatically filtered by the active profile.
 
-## 4. Current Status (v3.7.0)
+## 4. Current Status (v3.8.0)
 *   **Stable:** Core financial logic, partitioned cloud sync, tax engine, and security features are fully operational.
-*   **Recent Updates (v3.7.0):**
-    *   **Tax UI Overhaul**: Reorganized Tax Dashboard layout; fixed Custom Allowance editing and "Total 0" display bugs.
-    *   **Data Partitioning**: Implemented monthly partitioning for transactions and per-ID partitioning for loans in Cloud Sync for enhanced scalability.
-    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**) with dynamic summary card display.
-    *   **Special Income Logic**: Added Agriculture partial integration offsets and non-exempt Gift deduction logic to the tax service.
-    *   **Hive Precision Fix**: Resolved Hive "precision loss" warnings on Web by replacing `double.infinity` with finite constants.
+*   **Recent Updates (v3.8.0):**
+    *   **Loan Reminders Fix**: Refactored reminders logic and widget tests using the `clock` package to resolve flaky failures caused by specific dates (e.g., the 1st of the month).
+    *   **Tax UI Overflow Fixes**: Resolved horizontal layout overflows on small screens in both `TaxDetailsScreen` (using `Expanded` headers) and `TaxDashboardScreen` (using `FittedBox` for the year/jurisdiction selector).
+    *   **Other Income & Gift Enhancements**: Implemented multi-category dropdowns ("Savings Interest", "FD Interest", etc.) and added detailed breakup summaries in Tax Details.
+    *   **HP Income Flooring**: Updated tax engine to floor taxable income at 0 for *each individual* house property.
+    *   **Salary Structure Fixes**: Resolved critical mutation crashes when adding salary history and fixed custom allowance editing/refresh logic.
+    *   **SDK Compatibility**: Replaced deprecated `value` with `initialValue` in `DropdownButtonFormField` across tax dialogs.
+*   **Previous Updates (v3.7.0):**
+    *   **Tax UI Overhaul**: Reorganized Tax Dashboard layout; fixed "Total 0" display bugs.
+    *   **Data Partitioning**: Implemented monthly partitioning for transactions and per-ID partitioning for loans in Cloud Sync.
+    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**).
 
 ## 5. Build Instructions
 Run: `build_pwa.bat`
@@ -138,4 +144,4 @@ Execute: `test_pwa.bat`
 *   **Consolidated Tests**: Unit tests are consolidated to avoid fragmentation. Use `test_mocks.dart` for shared service mocks.
 
 ---
-*Documentation synchronized with project state on 2026-02-28.*
+*Documentation synchronized with project state on 2026-03-01.*
