@@ -2,14 +2,14 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-02-28T17:47:05.544325**
+> **Generated on: 2026-03-01T14:08:14.647231**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 100.0%**
 
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
-| feature_providers.dart | **100.0%** | 56/56 | PASS |
+| feature_providers.dart | **100.0%** | 61/61 | PASS |
 | models/account.dart | **100.0%** | 33/33 | PASS |
 | models/category.dart | **100.0%** | 20/20 | PASS |
 | models/dashboard_config.dart | **100.0%** | 12/12 | PASS |
@@ -64,7 +64,7 @@
 | services/storage_service.dart | **100.0%** | 498/498 | PASS |
 | services/taxes/indian_tax_service.dart | **100.0%** | 300/300 | PASS |
 | services/taxes/tax_config_service.dart | **100.0%** | 29/29 | PASS |
-| services/taxes/tax_data_fetcher.dart | **100.0%** | 142/142 | PASS |
+| services/taxes/tax_data_fetcher.dart | **100.0%** | 150/150 | PASS |
 | utils/billing_helper.dart | **100.0%** | 35/35 | PASS |
 | utils/currency_utils.dart | **100.0%** | 38/38 | PASS |
 | utils/file_picker_wrapper.dart | **100.0%** | 2/2 | PASS |

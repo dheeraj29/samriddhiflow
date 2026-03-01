@@ -159,7 +159,7 @@ void main() {
       );
 
       final hpIncome = taxService.calculateHousePropertyIncome(data, rules);
-      expect(hpIncome, -200000);
+      expect(hpIncome, 0);
     });
 
     test('Let-out property with rent and municipal taxes', () {
@@ -181,10 +181,38 @@ void main() {
       );
 
       final hpIncome = taxService.calculateHousePropertyIncome(data, rules);
-      // NAV = 300k - 20k = 280k
-      // Std Ded = 280k * 30% = 84k
-      // Income = 280k - 84k - 50k = 146k
       expect(hpIncome, 146000);
+    });
+
+    test('Multiple properties: Loss on one does not reduce income on another',
+        () {
+      const data = TaxYearData(
+        year: 2025,
+        houseProperties: [
+          HouseProperty(
+            name: 'Gain Prop',
+            isSelfOccupied: false,
+            rentReceived: 200000,
+            municipalTaxes: 0,
+            interestOnLoan: 0,
+          ),
+          HouseProperty(
+            name: 'Loss Prop',
+            isSelfOccupied: true,
+            interestOnLoan: 50000,
+          ),
+        ],
+      );
+      final rules = defaultRules.copyWith(
+        isStdDeductionHPEnabled: true,
+        standardDeductionRateHP: 30.0,
+      );
+
+      final hpIncome = taxService.calculateHousePropertyIncome(data, rules);
+      // Gain Prop: 200k - (30% of 200k = 60k) = 140k
+      // Loss Prop: -50k capped at 0
+      // Total should be 140k
+      expect(hpIncome, 140000);
     });
   });
 

@@ -290,5 +290,32 @@ void main() {
           fetcher.fetchTagSum('LoanTag', TransactionType.income, start, end);
       expect(sum, 250);
     });
+    test('Correctly categorizes Gifts with default subtype Other', () async {
+      const year = 2024;
+      final rules = TaxRules(financialYearStartMonth: 4, tagMappings: {
+        'GiftCategory': 'gift',
+      });
+
+      when(() => mockConfig.getRulesForYear(year)).thenReturn(rules);
+      when(() => mockStorage.getCategories()).thenReturn([]);
+      when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
+
+      final txns = [
+        Transaction(
+            id: 'g1',
+            title: 'Gift from Friend',
+            amount: 5000,
+            date: DateTime(2024, 5, 1),
+            type: TransactionType.income,
+            category: 'GiftCategory'),
+      ];
+      when(() => mockStorage.getAllTransactions()).thenReturn(txns);
+
+      final result = await fetcher.fetchAndAggregate(year);
+
+      expect(result.data.cashGifts.length, 1);
+      expect(result.data.cashGifts.first.subtype, 'Other');
+      expect(result.data.cashGifts.first.type, 'Gift');
+    });
   });
 }
