@@ -143,20 +143,14 @@ class TaxDataFetcher {
 
   bool _matchesDescriptions(TaxMappingRule rule, Transaction txn) {
     if (rule.matchDescriptions.isEmpty) return true;
-    // coverage:ignore-start
-    final title = txn.title;
-    return rule.matchDescriptions
-        .any((pattern) => title.contains(pattern));
-    // coverage:ignore-end
+    final title = txn.title; // coverage:ignore-line
+    return rule.matchDescriptions.any((pattern) => title.contains(pattern)); // coverage:ignore-line
   }
 
   bool _isExcludedByDescription(TaxMappingRule rule, Transaction txn) {
     if (rule.excludeDescriptions.isEmpty) return false;
-    // coverage:ignore-start
-    final title = txn.title;
-    return rule.excludeDescriptions
-        .any((pattern) => title.contains(pattern));
-    // coverage:ignore-end
+    final title = txn.title; // coverage:ignore-line
+    return rule.excludeDescriptions.any((pattern) => title.contains(pattern)); // coverage:ignore-line
   }
 
   void _addToHead(String head, Transaction txn, double amount, DateTime start,
@@ -186,22 +180,21 @@ class TaxDataFetcher {
   }
 
   void _addOtherHead(
-
-
-      String head,
-      Transaction txn,
-      double amount,
-      _AggregationResult agg) {
+      String head, Transaction txn, double amount, _AggregationResult agg) {
     final name = txn.title.isNotEmpty ? txn.title : txn.category;
     if (head == 'other') {
-      agg.otherIncomes // coverage:ignore-line
-          .add(OtherIncome(name: name, amount: amount, type: 'Other')); // coverage:ignore-line
+      agg.otherIncomes.add(OtherIncome( // coverage:ignore-line
+        name: name,
+        amount: amount,
+        type: 'Other',
+        subtype: 'others', // Technical key
+      ));
     } else if (head == 'gift') {
       agg.cashGifts.add(OtherIncome(
         name: name,
         amount: amount,
         type: 'Gift',
-        subtype: 'Other',
+        subtype: 'other', // Technical key
       ));
     }
   }

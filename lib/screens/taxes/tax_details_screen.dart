@@ -1021,38 +1021,20 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          color: Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.3),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: _buildSectionTitle('House Properties')),
-                    TextButton.icon(
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Add Property'),
-                      onPressed: () => _addHousePropertyDialog(),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                _buildSummaryRow('Total Rent Received', totalRent),
-                _buildSummaryRow('Total Interest on Loan', totalInterest,
-                    isDeduction: true),
-                if (hpRuleExemptions > 0)
-                  _buildSummaryRow(_adhocExemptionsLabel, hpRuleExemptions,
-                      isDeduction: true),
-                const Divider(),
-                _buildSummaryRow('Taxable HP Income', taxableHP, isBold: true),
-              ],
-            ),
-          ),
+        _buildSummaryHeaderCard(
+          title: 'House Properties',
+          buttonLabel: 'Add Property',
+          onAdd: () => _addHousePropertyDialog(),
+          children: [
+            _buildSummaryRow('Total Rent Received', totalRent),
+            _buildSummaryRow('Total Interest on Loan', totalInterest,
+                isDeduction: true),
+            if (hpRuleExemptions > 0)
+              _buildSummaryRow(_adhocExemptionsLabel, hpRuleExemptions,
+                  isDeduction: true),
+            const Divider(),
+            _buildSummaryRow('Taxable HP Income', taxableHP, isBold: true),
+          ],
         ),
         const SizedBox(height: 16),
         if (_houseProperties.isEmpty)
@@ -1486,42 +1468,23 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        _buildSummaryHeaderCard(
+          title: 'Business & Profession',
+          buttonLabel: 'Add Business',
+          onAdd: () => _addBusinessDialog(),
           children: [
-            Expanded(child: _buildSectionTitle('Business & Profession')),
-            TextButton.icon(
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Add Business'),
-              onPressed: () => _addBusinessDialog(),
-            ),
+            _buildSummaryRow('Total Turnover', totalTurnover),
+            _buildSummaryRow('Total Net Income', totalNet),
+            if (bizRuleExemptions > 0)
+              _buildSummaryRow(_adhocExemptionsLabel, bizRuleExemptions,
+                  isDeduction: true),
+            const Divider(),
+            _buildSummaryRow('Taxable Business Income', taxableBusiness,
+                isBold: true),
           ],
+          showChildren: _businessIncomes.isNotEmpty,
         ),
-        const SizedBox(height: 8),
-        if (_businessIncomes.isNotEmpty) ...[
-          Card(
-            color: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.3),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  _buildSummaryRow('Total Turnover', totalTurnover),
-                  _buildSummaryRow('Total Net Income', totalNet),
-                  if (bizRuleExemptions > 0)
-                    _buildSummaryRow(_adhocExemptionsLabel, bizRuleExemptions,
-                        isDeduction: true),
-                  const Divider(),
-                  _buildSummaryRow('Taxable Business Income', taxableBusiness,
-                      isBold: true),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
+        if (_businessIncomes.isNotEmpty) const SizedBox(height: 16),
         if (_businessIncomes.isEmpty)
           const Center(
               child: Padding(
@@ -1750,40 +1713,21 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: _buildSummaryHeaderCard(
+            title: 'Capital Gains',
+            buttonLabel: 'Add Entry',
+            onAdd: () => _addCGEntryDialog(),
             children: [
-              Expanded(child: _buildSectionTitle('Capital Gains')),
-              TextButton.icon(
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Add Entry'),
-                onPressed: () => _addCGEntryDialog(),
-              ),
+              const Text('Net Capital Gains Summary',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              _buildSummaryRow('Short Term (STCG)', stcg, isBold: true),
+              _buildSummaryRow('Long Term (Equity)', ltcgEquity, isBold: true),
+              _buildSummaryRow('Long Term (Other)', ltcgOther, isBold: true),
             ],
+            showChildren: _capitalGains.isNotEmpty,
           ),
         ),
-        if (_capitalGains.isNotEmpty)
-          Card(
-            margin: const EdgeInsets.all(16),
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Net Capital Gains Summary',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  _buildSummaryRow('Short Term (STCG)', stcg, isBold: true),
-                  _buildSummaryRow('Long Term (Equity)', ltcgEquity,
-                      isBold: true),
-                  _buildSummaryRow('Long Term (Other)', ltcgOther,
-                      isBold: true),
-                ],
-              ),
-            ),
-          ),
         Expanded(
           child: _capitalGains.isEmpty
               ? const Center(child: Text('No Capital Gains entries added.'))
@@ -2171,60 +2115,42 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     // Breakdown calculation for Other Sources
     final Map<String, double> otherBreakdown = {};
     for (var o in _otherIncomes) {
-      final key = o.subtype.trim().isEmpty ? 'Others' : o.subtype;
-      otherBreakdown[key] = (otherBreakdown[key] ?? 0) + o.amount;
+      final label = o.subtype.toOtherSourceDisplay();
+      otherBreakdown[label] = (otherBreakdown[label] ?? 0) + o.amount;
     }
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          color: Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.3),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: _buildSectionTitle('Other Source Income')),
-                    TextButton.icon(
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Add Other'),
-                      onPressed: () => _addOtherIncomeDialog(),
-                    ),
-                  ],
+        _buildSummaryHeaderCard(
+          title: 'Other Source Income',
+          buttonLabel: 'Add Other',
+          onAdd: () => _addOtherIncomeDialog(),
+          children: [
+            _buildSummaryRow('Dividend Income', totalDividend),
+            _buildSummaryRow('Other Sources', totalOtherList),
+            if (otherBreakdown.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Breakup of Other Sources:',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
-                const Divider(),
-                _buildSummaryRow('Dividend Income', totalDividend),
-                _buildSummaryRow('Other Sources', totalOtherList),
-                if (otherBreakdown.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('Breakup of Other Sources:',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  ...otherBreakdown.entries.map((e) => Padding(
-                        padding: const EdgeInsets.only(left: 24.0),
-                        child: _buildSummaryRow(e.key, e.value, fontSize: 11),
-                      )),
-                ],
-                if (otherRuleExemptions > 0)
-                  _buildSummaryRow(_adhocExemptionsLabel, otherRuleExemptions,
-                      isDeduction: true),
-                const Divider(),
-                _buildSummaryRow('Taxable Other Income', taxableOther,
-                    isBold: true),
-              ],
-            ),
-          ),
+              ),
+              ...otherBreakdown.entries.map((e) => Padding(
+                    padding: const EdgeInsets.only(left: 24.0),
+                    child: _buildSummaryRow(e.key, e.value, fontSize: 11),
+                  )),
+            ],
+            if (otherRuleExemptions > 0)
+              _buildSummaryRow(_adhocExemptionsLabel, otherRuleExemptions,
+                  isDeduction: true),
+            const Divider(),
+            _buildSummaryRow('Taxable Other Income', taxableOther,
+                isBold: true),
+          ],
         ),
         const SizedBox(height: 16),
         if (_otherIncomes.isEmpty && totalDividend == 0)
@@ -2241,20 +2167,15 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               child: ListTile(
                 title: Text(o.name),
                 subtitle: Text(
-                    '${o.type} • Gross Income: ${CurrencyUtils.formatCurrency(o.amount, ref.watch(currencyProvider))}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        setState(() {
-                          _otherIncomes.removeAt(i);
-                        });
-                        _updateSummary();
-                      },
-                    )
-                  ],
+                    '${o.subtype.toOtherSourceDisplay()} • Gross: ${CurrencyUtils.formatCurrency(o.amount, ref.watch(currencyProvider))}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () {
+                    setState(() {
+                      _otherIncomes.removeAt(i);
+                    });
+                    _updateSummary();
+                  },
                 ),
                 onTap: () => _addOtherIncomeDialog(existing: o, index: i),
               ),
@@ -2268,17 +2189,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final amtCtrl =
         TextEditingController(text: existing?.amount.toString() ?? '');
-    String subtype = existing?.subtype ?? 'Others';
-    // Align with dropdown labels if current is lowercase/different
-    const validSubtypes = [
-      'Savings Interest',
-      'FD Interest',
-      'Chit Fund Interest',
-      'Family Pension',
-      'Others'
+    String subtype = existing?.subtype ?? 'others';
+
+    const validKeys = [
+      'savings_interest',
+      'fd_interest',
+      'chit_fund_interest',
+      'family_pension',
+      'others'
     ];
-    if (!validSubtypes.contains(subtype)) {
-      subtype = 'Others';
+    if (!validKeys.contains(subtype.toLowerCase())) {
+      subtype = 'others';
     }
 
     // Fetch applicable exemptions
@@ -2308,9 +2229,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       DropdownButtonFormField<String>(
                         key: ValueKey(subtype),
                         initialValue: subtype,
-                        items: validSubtypes
-                            .map((s) =>
-                                DropdownMenuItem(value: s, child: Text(s)))
+                        items: validKeys
+                            .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s.toOtherSourceDisplay())))
                             .toList(),
                         onChanged: (v) => setStateBuilder(() => subtype = v!),
                         decoration:
@@ -2387,7 +2309,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         name: nameCtrl.text,
                         amount: double.tryParse(amtCtrl.text) ?? 0,
                         type: 'Other',
-                        subtype: subtype,
+                        subtype: subtype.toLowerCase(),
                         linkedExemptionId: selectedExemptionId,
                       );
                       setState(() {
@@ -2412,6 +2334,42 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         style: TextStyle(
             color: Theme.of(context).colorScheme.primary,
             fontWeight: FontWeight.bold));
+  }
+
+  Widget _buildSummaryHeaderCard({
+    required String title,
+    required String buttonLabel,
+    required VoidCallback onAdd,
+    required List<Widget> children,
+    bool showChildren = true,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      color:
+          Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: _buildSectionTitle(title)),
+                TextButton.icon(
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: Text(buttonLabel),
+                  onPressed: onAdd,
+                ),
+              ],
+            ),
+            if (showChildren && children.isNotEmpty) ...[
+              const Divider(),
+              ...children,
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildNumberField(String label, TextEditingController controller,
@@ -2625,55 +2583,37 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     // Breakdown calculation for Gifts
     final Map<String, double> giftBreakdown = {};
     for (var g in _cashGifts) {
-      final key = g.subtype.trim().isEmpty ? 'Other' : g.subtype;
-      giftBreakdown[key] = (giftBreakdown[key] ?? 0) + g.amount;
+      final label = g.subtype.toGiftDisplay();
+      giftBreakdown[label] = (giftBreakdown[label] ?? 0) + g.amount;
     }
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          color: Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.3),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: _buildSectionTitle('Cash Gifts')),
-                    TextButton.icon(
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Add Gift'),
-                      onPressed: () => _addCashGiftDialog(),
-                    ),
-                  ],
+        _buildSummaryHeaderCard(
+          title: 'Cash Gifts',
+          buttonLabel: 'Add Gift',
+          onAdd: () => _addCashGiftDialog(),
+          children: [
+            _buildSummaryRow('Total Gifts Received', totalGifts),
+            if (giftBreakdown.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Breakup of Gifts:',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
-                const Divider(),
-                _buildSummaryRow('Total Gifts Received', totalGifts),
-                if (giftBreakdown.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('Breakup of Gifts:',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  ...giftBreakdown.entries.map((e) => Padding(
-                        padding: const EdgeInsets.only(left: 24.0),
-                        child: _buildSummaryRow(e.key, e.value, fontSize: 11),
-                      )),
-                ],
-                const Divider(),
-                _buildSummaryRow('Taxable Gifts', taxableGifts, isBold: true),
-              ],
-            ),
-          ),
+              ),
+              ...giftBreakdown.entries.map((e) => Padding(
+                    padding: const EdgeInsets.only(left: 24.0),
+                    child: _buildSummaryRow(e.key, e.value, fontSize: 11),
+                  )),
+            ],
+            const Divider(),
+            _buildSummaryRow('Taxable Gifts', taxableGifts, isBold: true),
+          ],
         ),
         const SizedBox(height: 16),
         if (_cashGifts.isEmpty)
@@ -2689,7 +2629,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             return Card(
               child: ListTile(
                 title: Text(g.name),
-                subtitle: Text('Type: ${g.subtype}'),
+                subtitle: Text(g.subtype.toGiftDisplay()),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -2718,8 +2658,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final amtCtrl =
         TextEditingController(text: existing?.amount.toString() ?? '');
-    String subtype =
-        (existing?.subtype ?? '').isEmpty ? 'Other' : existing!.subtype;
+    String subtype = (existing?.subtype ?? '').isEmpty
+        ? 'other'
+        : existing!.subtype.toLowerCase();
+
+    const giftKeys = ['friend', 'relative', 'marriage', 'other'];
+    if (!giftKeys.contains(subtype)) {
+      subtype = 'other';
+    }
 
     showDialog(
       context: context,
@@ -2736,8 +2682,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               DropdownButtonFormField<String>(
                 key: ValueKey(subtype),
                 initialValue: subtype,
-                items: ['Friend', 'Relative', 'Marriage', 'Other']
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                items: giftKeys
+                    .map((s) => DropdownMenuItem(
+                        value: s, child: Text(s.toGiftDisplay())))
                     .toList(),
                 onChanged: (v) => setStateBuilder(() => subtype = v!),
                 decoration: const InputDecoration(labelText: 'Gift Type'),
@@ -2768,32 +2715,47 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel')),
             FilledButton(
-              onPressed: () {
-                final amount = double.tryParse(amtCtrl.text) ?? 0;
-                if (amount > 0) {
-                  setState(() {
-                    final newGift = OtherIncome(
-                      name: nameCtrl.text,
-                      amount: amount,
-                      type: 'Gift',
-                      subtype: subtype,
-                    );
-                    if (existing != null && index != null) {
-                      _cashGifts[index] = newGift;
-                    } else {
-                      _cashGifts.add(newGift);
-                    }
-                  });
-                  _updateSummary();
-                  Navigator.pop(context);
-                }
-              },
+              onPressed: () => _handleCashGiftSave(
+                nameCtrl: nameCtrl,
+                amtCtrl: amtCtrl,
+                subtype: subtype,
+                existing: existing,
+                index: index,
+              ),
               child: const Text('Save'),
             ),
           ],
         );
       }),
     );
+  }
+
+  void _handleCashGiftSave({
+    required TextEditingController nameCtrl,
+    required TextEditingController amtCtrl,
+    required String subtype,
+    OtherIncome? existing,
+    int? index,
+  }) {
+    final amount = double.tryParse(amtCtrl.text) ?? 0;
+    if (amount <= 0) return;
+
+    setState(() {
+      final newGift = OtherIncome(
+        name: nameCtrl.text,
+        amount: amount,
+        type: 'Gift',
+        subtype: subtype.toLowerCase(),
+      );
+      if (existing != null && index != null) {
+        _cashGifts[index] = newGift;
+      } else {
+        _cashGifts.add(newGift);
+      }
+    });
+
+    _updateSummary();
+    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildAgriIncomeTab() {
