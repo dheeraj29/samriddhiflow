@@ -14,6 +14,8 @@ class FileService {
   bool forceWebForTest = false;
   @visibleForTesting
   bool forceAndroidForTest = false;
+  @visibleForTesting
+  bool forceWindowsForTest = false;
 
   final FilePickerWrapper _picker;
 
@@ -27,7 +29,8 @@ class FileService {
   Future<String?> saveFile(String fileName, List<int> bytes) async {
     if (kIsWeb || forceWebForTest) {
       return _saveFileWeb(fileName, bytes);
-    } else if (Platform.isWindows && !forceAndroidForTest) {
+    } else if ((Platform.isWindows || forceWindowsForTest) &&
+        !forceAndroidForTest) {
       return _saveFileWindows(fileName, bytes);
     } else if (Platform.isAndroid || forceAndroidForTest) {
       return _saveFileAndroid(fileName, bytes);

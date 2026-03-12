@@ -50,12 +50,14 @@ void main() {
       const fileName = 'test_save.txt';
       final bytes = [72, 101, 108, 108, 111];
 
+      fileService.forceWindowsForTest = true;
       final result = await fileService.saveFile(fileName, bytes);
 
       expect(result, contains(fileName));
       final file = File('${tempDir.path}\\$fileName');
       expect(file.existsSync(), true);
       expect(await file.readAsBytes(), bytes);
+      fileService.forceWindowsForTest = false;
     });
 
     test('pickFile returns bytes when successful', () async {
@@ -95,8 +97,10 @@ void main() {
       const fileName = 'test_success_again.txt';
       final bytes = [1, 2, 3];
 
+      fileService.forceWindowsForTest = true;
       final result = await fileService.saveFile(fileName, bytes);
       expect(result, isA<String>());
+      fileService.forceWindowsForTest = false;
 
       // Reset channel for teardown
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

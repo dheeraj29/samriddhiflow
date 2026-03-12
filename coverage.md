@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-03-12T23:53:21.917011**
+> **Generated on: 2026-03-13T00:39:19.827705**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 92.9%**
@@ -48,9 +48,9 @@
 | screens/reminders_screen.dart | 95.5% | 321/336 | PASS |
 | screens/loan/loan_ledger_view.dart | 96.0% | 120/125 | PASS |
 | screens/loan/loan_part_payment_dialog.dart | 96.4% | 54/56 | PASS |
-| services/file_service.dart | 96.4% | 27/28 | PASS |
 | utils/recurrence_utils.dart | 96.5% | 109/113 | PASS |
 | utils/transaction_filter_utils.dart | 96.5% | 55/57 | PASS |
+| services/file_service.dart | 96.6% | 28/29 | PASS |
 | widgets/bell_animation.dart | 96.6% | 28/29 | PASS |
 | services/cloud_sync_service.dart | 96.6% | 197/204 | PASS |
 | providers/sum_tracker_provider.dart | 96.7% | 88/91 | PASS |
