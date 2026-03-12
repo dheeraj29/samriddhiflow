@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/taxes/tax_data.dart';
 import '../../models/taxes/tax_data_models.dart';
 import '../../models/taxes/tax_rules.dart';
+import 'package:clock/clock.dart';
 import 'tax_config_service.dart';
 import 'tax_strategy.dart';
 import 'dart:math';
@@ -34,20 +35,108 @@ class IndianTaxService implements TaxStrategy {
       capitalGains: [],
       otherIncomes: [],
       cashGifts: [],
-  // coverage:ignore-end
-      agricultureIncome: 0,
+      // coverage:ignore-end
       dividendIncome: const DividendIncome(),
     );
-    final details = calculateDetailedLiability( // coverage:ignore-line
-
-
-        salaryOnlyData,
-        rules);
+    final details = calculateDetailedLiability(
+        salaryOnlyData, rules); // coverage:ignore-line
     return details['totalTax'] ?? 0; // coverage:ignore-line
   }
 
-  Map<String, double> calculateDetailedLiability(
+  Map<String, double> _calculateAdvanceTaxDetails(TaxYearData data,
+      TaxRules rules, double totalTax, double specialTax, double totalTds) {
+    double specialTaxWithCess = specialTax +
+        (rules.isCessEnabled ? specialTax * (rules.cessRate / 100) : 0);
+
+    // CG Tax attract advance tax interest but with special accrual rules (honoring gain date).
+    double baseForAdvanceTaxFull = totalTax - totalTds - data.tcs;
+
+    // For UI/Projected installments, we might want to exclude CG if not opted-in.
+    double baseForAdvanceTaxProjected = baseForAdvanceTaxFull;
+    if (!rules.isCgIncludedInAdvanceTax) {
+      baseForAdvanceTaxProjected -= specialTaxWithCess;
+    }
+
+    // Safety: Clamp tiny values to 0 to avoid interest on floating point noise
+    if (baseForAdvanceTaxProjected > 0 && baseForAdvanceTaxProjected < 1.0) {
+      baseForAdvanceTaxProjected = 0.0;
+    }
+
+    double advanceTaxInterest =
+        calculateAdvanceTaxInterest(data, rules, baseForAdvanceTaxProjected);
+
+    double netTaxPayable = totalTax +
+        advanceTaxInterest -
+        (data.totalAdvanceTax + totalTds + data.tcs);
+
+    return {
+      'baseForAdvanceTaxProjected': baseForAdvanceTaxProjected,
+      'advanceTaxInterest': advanceTaxInterest,
+      'netTaxPayable': netTaxPayable,
+    };
+  }
+
+  Map<String, dynamic> calculateDetailedLiability(
       TaxYearData data, TaxRules rules,
+      {double? salaryIncomeOverride,
+      bool includeGeneratedTds = true,
+      double? totalTaxOverride}) {
+    final core = _calculateCoreLiability(data, rules,
+        salaryIncomeOverride: salaryIncomeOverride);
+
+    double totalTax = totalTaxOverride ?? core['totalTax']!;
+    double specialTax = core['specialTax']!;
+
+    final totalTds = _calculateTotalTds(data, rules, includeGeneratedTds);
+
+    final advanceTaxDetails = _calculateAdvanceTaxDetails(
+        data, rules, totalTax, specialTax, totalTds);
+
+    return _buildDetailedLiabilityResult(
+        data, rules, core, advanceTaxDetails, totalTax, specialTax, totalTds);
+  }
+
+  double _calculateTotalTds(
+      TaxYearData data, TaxRules rules, bool includeGeneratedTds) {
+    if (!includeGeneratedTds) return data.tds;
+    final generatedSalaryTds = getGeneratedSalaryTds(data, rules);
+    return data.tds + generatedSalaryTds.fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  Map<String, dynamic> _buildDetailedLiabilityResult(
+    TaxYearData data,
+    TaxRules rules,
+    Map<String, double> core,
+    Map<String, double> advanceTaxDetails,
+    double totalTax,
+    double specialTax,
+    double totalTds,
+  ) {
+    return {
+      'slabTax': core['slabTax']!,
+      'specialTax': specialTax,
+      'cess': core['cess']!,
+      'totalTax': totalTax,
+      'grossIncome': core['grossIncome']!,
+      'taxableIncome': core['totalTaxableIncome']!,
+      'exemptions': core['exemptions']!,
+      'netTaxPayable': advanceTaxDetails['netTaxPayable']!,
+      'advanceTax': data.totalAdvanceTax,
+      'advanceTaxInterest': advanceTaxDetails['advanceTaxInterest']!,
+      'tds': totalTds,
+      'tcs': data.tcs,
+      'totalDeductions': core['totalDeductions']!,
+      'capitalGainsTotal': core['capitalGainsTotal']!,
+      'LTCG_Equity': core['LTCG_Equity']!,
+      'LTCG_Other': core['LTCG_Other']!,
+      'STCG': core['STCG']!,
+      'baseForAdvanceTax': advanceTaxDetails['baseForAdvanceTaxProjected']!,
+      ..._calculateNextInstallment(
+          data, rules, advanceTaxDetails['baseForAdvanceTaxProjected']!),
+    };
+  }
+
+  Map<String, double> _calculateCoreLiability(TaxYearData data, TaxRules rules,
       {double? salaryIncomeOverride}) {
     // 1. Heads calculation
     double salaryGross = calculateSalaryGross(data, rules);
@@ -98,8 +187,6 @@ class IndianTaxService implements TaxStrategy {
     if (rules.isStdDeductionSalaryEnabled) {
       deductions += rules.stdDeductionSalary;
     }
-    double totalDisplayDeductions = deductions;
-    if (salaryIncomeOverride == null) {}
 
     // 3. Tax Calculation
     final specialRateIncome = rules.isCGRatesEnabled
@@ -113,9 +200,10 @@ class IndianTaxService implements TaxStrategy {
     double netTaxableNormalIncome =
         (taxableHeadsSum - deductions).clamp(0.0, double.infinity);
 
-    double netAgri = (data.agricultureIncome -
-            _getCustomExemptionForHead(
-                'Agriculture', data.agricultureIncome, rules))
+    double totalAgri =
+        data.agriIncomeHistory.fold(0.0, (sum, a) => sum + a.amount);
+    double netAgri = (totalAgri -
+            _getCustomExemptionForHead('Agriculture', totalAgri, rules))
         .clamp(0.0, double.infinity);
 
     double slabTax =
@@ -136,26 +224,308 @@ class IndianTaxService implements TaxStrategy {
 
     double cess =
         rules.isCessEnabled ? taxBeforeCess * (rules.cessRate / 100) : 0;
-    double totalTax = taxBeforeCess + cess;
 
     return {
+      'totalTax': taxBeforeCess + cess,
       'slabTax': slabTax,
       'specialTax': specialTax,
       'cess': cess,
-      'totalTax': totalTax,
-      'grossIncome': grossTotalIncome,
-      'taxableIncome': totalTaxableIncome,
-      'exemptions': salaryExemptions,
-      'netTaxPayable': totalTax - (data.advanceTax + data.tds + data.tcs),
-      'advanceTax': data.advanceTax,
-      'tds': data.tds,
-      'tcs': data.tcs,
-      'totalDeductions': totalDisplayDeductions,
-      'capitalGainsTotal': specialRateIncome,
       'LTCG_Equity': incomeLTCGEquity,
       'LTCG_Other': incomeLTCGOther,
       'STCG': incomeSTCG,
+      'netTaxableNormalIncome': netTaxableNormalIncome,
+      'totalTaxableIncome': totalTaxableIncome,
+      'grossIncome': grossTotalIncome,
+      'exemptions': salaryExemptions,
+      'totalDeductions': deductions,
+      'capitalGainsTotal': specialRateIncome,
     };
+  }
+
+  Map<String, dynamic> _calculateNextInstallment(
+      TaxYearData data, TaxRules rules, double baseForAdvanceTax) {
+    if (rules.advanceTaxRules.isEmpty) {
+      return {}; // coverage:ignore-line
+    }
+
+    // Requirement check
+    if (baseForAdvanceTax < rules.advanceTaxInterestThreshold) {
+      return {};
+    }
+
+    final now = clock.now();
+    final currentYear = data.year;
+
+    // Accumulated interest up to now (including shortfalls from previous quarters)
+    double accumulatedInterest =
+        calculateAdvanceTaxInterest(data, rules, baseForAdvanceTax);
+
+    Map<String, dynamic>? lastFutureInstallment;
+
+    for (var rule in rules.advanceTaxRules) {
+      int ruleYear = rule.endMonth < rules.financialYearStartMonth
+          ? currentYear + 1
+          : currentYear;
+      DateTime dueDate =
+          DateTime(ruleYear, rule.endMonth, rule.endDay, 23, 59, 59);
+
+      if (dueDate.isAfter(now)) {
+        double requiredTotalTillNow =
+            baseForAdvanceTax * (rule.requiredPercentage / 100);
+        double alreadyPaid = data.totalAdvanceTax;
+        double remainingForNext =
+            requiredTotalTillNow - alreadyPaid + accumulatedInterest;
+
+        final result = {
+          'nextAdvanceTaxDueDate': dueDate,
+          'nextAdvanceTaxAmount': remainingForNext > 0 ? remainingForNext : 0.0,
+          'daysUntilAdvanceTax': dueDate.difference(now).inDays,
+          'isRequirementMet': alreadyPaid >= requiredTotalTillNow,
+        };
+
+        if (alreadyPaid < requiredTotalTillNow) {
+          return result;
+        }
+        lastFutureInstallment = result;
+      }
+    }
+
+    return lastFutureInstallment ?? {};
+  }
+
+  /// Calculates tax liability accrued up to a specific date for advance tax purposes.
+  /// It creates a synthetic TaxYearData excluding point-of-receipt incomes
+  /// that have not yet occurred, then calculates the exact core liability.
+  double calculateAccruedLiability(
+      TaxYearData data, TaxRules rules, DateTime upToDate,
+      {double? fullYearNormalTax}) {
+    final syntheticData = _createSyntheticData(data, rules, upToDate);
+
+    final liability = _calculateCoreLiability(syntheticData, rules);
+    return liability['totalTax']!;
+  }
+
+  /// Helper to create a time-bound snapshot of TaxYearData for a specific date.
+  TaxYearData _createSyntheticData(
+      TaxYearData data, TaxRules rules, DateTime upToDate) {
+    return data.copyWith(
+      capitalGains: rules.isCgIncludedInAdvanceTax
+          ? data.capitalGains
+              .where((g) => !g.gainDate.isAfter(upToDate))
+              .toList()
+          : [],
+      otherIncomes: data.otherIncomes
+          .where((o) =>
+              o.transactionDate == null ||
+              !o.transactionDate!.isAfter(upToDate))
+          .toList(),
+      cashGifts: data.cashGifts
+          .where((g) =>
+              g.transactionDate == null || // coverage:ignore-line
+              !g.transactionDate!.isAfter(upToDate)) // coverage:ignore-line
+          .toList(),
+      houseProperties: data.houseProperties
+          .where((h) =>
+              h.transactionDate == null ||
+              !h.transactionDate!.isAfter(upToDate))
+          .toList(),
+      businessIncomes: data.businessIncomes
+          .where((b) =>
+              b.transactionDate == null ||
+              !b.transactionDate!.isAfter(upToDate)) // coverage:ignore-line
+          .toList(),
+      agriIncomeHistory: data.agriIncomeHistory
+          .where((a) => !a.date.isAfter(upToDate))
+          .toList(),
+      dividendIncome:
+          _accrueDividendIncome(data.dividendIncome, data.year, upToDate),
+      tdsEntries:
+          data.tdsEntries.where((e) => !e.date.isAfter(upToDate)).toList(),
+      tcsEntries:
+          data.tcsEntries.where((e) => !e.date.isAfter(upToDate)).toList(),
+    );
+  }
+
+  DividendIncome _accrueDividendIncome(
+      DividendIncome div, int currentYear, DateTime upToDate) {
+    return DividendIncome(
+      amountQ1:
+          upToDate.isAfter(DateTime(currentYear, 6, 14)) ? div.amountQ1 : 0,
+      amountQ2:
+          upToDate.isAfter(DateTime(currentYear, 9, 14)) ? div.amountQ2 : 0,
+      amountQ3:
+          upToDate.isAfter(DateTime(currentYear, 12, 14)) ? div.amountQ3 : 0,
+      amountQ4:
+          upToDate.isAfter(DateTime(currentYear + 1, 3, 14)) ? div.amountQ4 : 0,
+      amountQ5:
+          upToDate.isAfter(DateTime(currentYear + 1, 3, 30)) ? div.amountQ5 : 0,
+    );
+  }
+
+  double calculateAdvanceTaxInterest(
+      TaxYearData data, TaxRules rules, double fullYearLiabilityAfterTds) {
+    if (!rules.enableAdvanceTaxInterest ||
+        fullYearLiabilityAfterTds < rules.advanceTaxInterestThreshold) {
+      return 0.0;
+    }
+
+    double totalInterest = 0.0;
+    final now = clock.now();
+
+    for (int i = 0; i < rules.advanceTaxRules.length; i++) {
+      final rule = rules.advanceTaxRules[i];
+      final dueDate = _getInstallmentDueDate(
+          rule, data.year, rules.financialYearStartMonth);
+
+      if (now.isBefore(dueDate)) continue;
+
+      // Create a synthetic time-bound snapshot of the data for this specific installment.
+      // This ensures that TDS and TCS projections are localized and not polluted by future income.
+      final syntheticData = _createSyntheticData(data, rules, dueDate);
+
+      // Determine total TDS and TCS that can be deducted for this specific installment projection.
+      // We use the synthetic data so that projected salary TDS only reflects base income known up to this date.
+      final double currentTds = _calculateTotalTds(syntheticData, rules, true);
+      final double currentTcs = syntheticData.tcs;
+      final double totalDeductedTaxes = currentTds + currentTcs;
+
+      // calculateAccruedLiability returns the gross tax (including cess)
+      // after applying the relevant rebate for the synthetic income up to this date.
+      final double accruedNetTax =
+          calculateAccruedLiability(data, rules, dueDate);
+
+      double liabilityToCover =
+          (accruedNetTax - totalDeductedTaxes).clamp(0.0, double.infinity);
+
+      if (liabilityToCover > fullYearLiabilityAfterTds) {
+        liabilityToCover = fullYearLiabilityAfterTds;
+      }
+
+      final requiredAmount = liabilityToCover * (rule.requiredPercentage / 100);
+      final paidBeforeDue = _calculatePaidBeforeDue(data, dueDate);
+      final shortfall = requiredAmount - paidBeforeDue;
+
+      if (shortfall > 0) {
+        if (rules.interestTillPaymentDate) {
+          totalInterest += _calculateInterestTillPaymentDate(
+              data, rule, i, rules, shortfall, dueDate, now);
+        } else {
+          totalInterest +=
+              _calculateStandardInterest(rule, i, rules, shortfall);
+        }
+      }
+    }
+
+    return totalInterest;
+  }
+
+  DateTime _getInstallmentDueDate(
+      AdvanceTaxInstallmentRule rule, int currentYear, int fyStartMonth) {
+    int ruleYear = rule.endMonth < fyStartMonth ? currentYear + 1 : currentYear;
+    return DateTime(ruleYear, rule.endMonth, rule.endDay, 23, 59, 59);
+  }
+
+  double _calculatePaidBeforeDue(TaxYearData data, DateTime dueDate) {
+    return data.advanceTaxEntries
+        .where(
+            (e) => e.date.isBefore(dueDate) || e.date.isAtSameMomentAs(dueDate))
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  double _calculateInterestTillPaymentDate(
+      TaxYearData data,
+      AdvanceTaxInstallmentRule rule,
+      int index,
+      TaxRules rules,
+      double shortfall,
+      DateTime dueDate,
+      DateTime now) {
+    final paymentsAfter =
+        data.advanceTaxEntries.where((e) => e.date.isAfter(dueDate)).toList();
+    paymentsAfter.sort((a, b) => a.date.compareTo(b.date));
+
+    final boundaryDate =
+        _getInterestBoundaryDate(rule, index, rules, now, data.year);
+    final nextDueBoundary = boundaryDate.millisecondsSinceEpoch.toDouble();
+
+    double totalInterest = 0.0;
+    double remainingShortfall = shortfall;
+    DateTime lastCalculationDate = dueDate;
+
+    for (var p in paymentsAfter) {
+      if (remainingShortfall <= 0 ||
+          p.date.millisecondsSinceEpoch >= nextDueBoundary) {
+        break;
+      }
+
+      int months = _calculateInterestMonths(lastCalculationDate, p.date);
+      if (months > 0) {
+        totalInterest +=
+            remainingShortfall * (rule.interestRate / 100) * months;
+      }
+
+      remainingShortfall -= p.amount;
+      lastCalculationDate = p.date;
+    }
+
+    if (remainingShortfall > 0) {
+      int months = _calculateInterestMonths(lastCalculationDate, boundaryDate);
+      if (months > 0) {
+        totalInterest +=
+            remainingShortfall * (rule.interestRate / 100) * months;
+      }
+    }
+
+    return totalInterest;
+  }
+
+  DateTime _getInterestBoundaryDate(AdvanceTaxInstallmentRule rule, int index,
+      TaxRules rules, DateTime now, int currentYear) {
+    if (index < rules.advanceTaxRules.length - 1) {
+      final nextRule = rules.advanceTaxRules[index + 1];
+      final nextDueDate = _getInstallmentDueDate(
+          nextRule, currentYear, rules.financialYearStartMonth);
+      return now.isBefore(nextDueDate) ? now : nextDueDate;
+    } else {
+      final fyEndDate = DateTime(
+          _getInstallmentDueDate(
+                  rule, currentYear, rules.financialYearStartMonth)
+              .year,
+          rule.endMonth + 1,
+          0,
+          23,
+          59,
+          59);
+      return now.isBefore(fyEndDate) ? now : fyEndDate;
+    }
+  }
+
+  double _calculateStandardInterest(AdvanceTaxInstallmentRule rule, int index,
+      TaxRules rules, double shortfall) {
+    int monthsPenalty = 0;
+    if (index < rules.advanceTaxRules.length - 1) {
+      final nextRule = rules.advanceTaxRules[index + 1];
+      monthsPenalty =
+          (nextRule.endMonth < rules.financialYearStartMonth ? 1 : 0) * 12 +
+              nextRule.endMonth -
+              rule.endMonth;
+      // Note: This logic for standard penalty is slightly simplified but matches the previous intent
+      // which was roughly months between installments.
+    } else {
+      monthsPenalty = 1;
+    }
+    return shortfall * (rule.interestRate / 100) * monthsPenalty;
+  }
+
+  int _calculateInterestMonths(DateTime start, DateTime end) {
+    if (end.isBefore(start)) return 0;
+    // Difference in whole months
+    int months = (end.year - start.year) * 12 + end.month - start.month;
+    // Any fraction of a month is considered a full month
+    if (end.day > start.day) {
+      months++;
+    }
+    return months;
   }
 
   double _computeSlabTaxWithAgri(
@@ -225,15 +595,14 @@ class IndianTaxService implements TaxStrategy {
               taxableOnly: false);
         }
       }
-    } else {
-      totalGross = data.salary.grossSalary;
     }
 
-    if (rules.isGiftFromEmployerEnabled) {
-      totalGross += data.salary.giftsFromEmployer;
-    }
+    // Gifts from employer are now expected to be part of the monthly history or independent allowances if applicable
+    // If they were handled specifically before, they should be migrated to a structured format.
 
     totalGross += _computeIndependentAllowanceGross(data);
+    totalGross += data.salary.leaveEncashment;
+    totalGross += data.salary.gratuity;
     return totalGross;
   }
 
@@ -243,9 +612,7 @@ class IndianTaxService implements TaxStrategy {
       for (int m = 1; m <= 12; m++) {
         if (SalaryStructure.isPayoutMonth(
             m, a.frequency, a.startMonth, a.customMonths)) {
-          total += a.isPartial
-              ? (a.partialAmounts[m] ?? a.payoutAmount)
-              : a.payoutAmount;
+          total += _getAllowancePayoutAmount(a, m);
         }
       }
     }
@@ -254,43 +621,102 @@ class IndianTaxService implements TaxStrategy {
 
   double calculateSalaryExemptions(TaxYearData data, TaxRules rules) {
     double totalExemptions = 0;
-    double gifts = data.salary.giftsFromEmployer;
 
-    // 1. Retirement Exemptions
-    if (rules.isRetirementExemptionEnabled) {
-      totalExemptions +=
-          min(data.salary.leaveEncashment, rules.limitLeaveEncashment);
-      totalExemptions += min(data.salary.gratuity, rules.limitGratuity);
-    }
-
-    // 2. Gift Exemption
-    if (rules.isGiftFromEmployerEnabled && gifts > 0) {
-      totalExemptions += min(gifts, rules.giftFromEmployerExemptionLimit);
-    }
-
-    // 3. Structure-level Non-Taxable components
-    if (data.salary.history.isNotEmpty) {
-      for (int i = 0; i < 12; i++) {
-        int month = (rules.financialYearStartMonth + i - 1) % 12 + 1;
-        final s = _getStructureForMonth(data, month);
-        if (s != null) {
-          double gross = s.calculateContribution(
-              month, rules.financialYearStartMonth,
-              taxableOnly: false);
-          double taxable = s.calculateContribution(
-              month, rules.financialYearStartMonth,
-              taxableOnly: true);
-          totalExemptions += max(0, gross - taxable);
-        }
-      }
-    }
-
-    // 4. Independent Exemptions
-    for (var ex in data.salary.independentExemptions) {
-      totalExemptions += ex.amount;
-    }
+    totalExemptions += _calculateStructureExemptions(data, rules);
+    totalExemptions +=
+        _calculateIndependentExemptions(data.salary.independentExemptions);
+    totalExemptions += _calculateIndependentAllowanceExemptions(data);
+    totalExemptions += _calculateRetirementExemptions(data, rules);
 
     return totalExemptions;
+  }
+
+  double _calculateRetirementExemptions(TaxYearData data, TaxRules rules) {
+    if (!rules.isRetirementExemptionEnabled) return 0;
+    double exemption = 0;
+
+    // Leave Encashment Exemption
+    if (data.salary.leaveEncashment > 0) {
+      exemption += min(data.salary.leaveEncashment, rules.limitLeaveEncashment);
+    }
+
+    // Gratuity Exemption
+    if (data.salary.gratuity > 0) {
+      exemption += min(data.salary.gratuity, rules.limitGratuity);
+    }
+
+    return exemption;
+  }
+
+  double _calculateStructureExemptions(TaxYearData data, TaxRules rules) {
+    if (data.salary.history.isEmpty) return 0;
+    double structureExemptions = 0;
+    for (int i = 0; i < 12; i++) {
+      int month = (rules.financialYearStartMonth + i - 1) % 12 + 1;
+      final s = _getStructureForMonth(data, month);
+      if (s != null) {
+        double gross = s.calculateContribution(
+            month, rules.financialYearStartMonth,
+            taxableOnly: false);
+        double taxable = s.calculateContribution(
+            month, rules.financialYearStartMonth,
+            taxableOnly: true);
+        structureExemptions += max(0, gross - taxable);
+      }
+    }
+    return structureExemptions;
+  }
+
+  double _calculateIndependentExemptions(List<CustomExemption> exemptions) {
+    double total = 0;
+    for (var ex in exemptions) {
+      if (ex.exemptionLimit <= 0) {
+        total += ex.amount;
+        // coverage:ignore-start
+      } else if (ex.isCliffExemption) {
+        if (ex.amount <= ex.exemptionLimit) {
+          total += ex.amount;
+          // coverage:ignore-end
+        }
+      } else {
+        total += min(ex.amount, ex.exemptionLimit); // coverage:ignore-line
+      }
+    }
+    return total;
+  }
+
+  double _calculateIndependentAllowanceExemptions(TaxYearData data) {
+    double totalExemption = 0;
+    for (final a in data.salary.independentAllowances) {
+      if (a.exemptionLimit <= 0) continue;
+      totalExemption += _calculateAllowanceExemption(a);
+    }
+    return totalExemption;
+  }
+
+  double _calculateAllowanceExemption(CustomAllowance a) {
+    double exemption = 0;
+    for (int m = 1; m <= 12; m++) {
+      if (!SalaryStructure.isPayoutMonth(
+          m, a.frequency, a.startMonth, a.customMonths)) {
+        continue;
+      }
+      final qty = _getAllowancePayoutAmount(a, m);
+      exemption +=
+          _applyExemptionCap(qty, a.exemptionLimit, a.isCliffExemption);
+    }
+    return exemption;
+  }
+
+  double _getAllowancePayoutAmount(CustomAllowance a, int month) {
+    return a.isPartial
+        ? (a.partialAmounts[month] ?? a.payoutAmount)
+        : a.payoutAmount;
+  }
+
+  double _applyExemptionCap(double amount, double limit, bool isCliff) {
+    if (isCliff) return amount <= limit ? amount : 0; // coverage:ignore-line
+    return min(amount, limit);
   }
 
   double _getCustomExemptionForHead(String head, double gross, TaxRules rules) {
@@ -338,8 +764,8 @@ class IndianTaxService implements TaxStrategy {
       if (biz.type == BusinessType.section44AD && rules.is44ADEnabled) {
         total += biz.presumptiveIncome; // coverage:ignore-line
       } else if (biz.type == BusinessType.section44ADA &&
-          rules.is44ADAEnabled) { // coverage:ignore-line
-
+          rules.is44ADAEnabled) {
+        // coverage:ignore-line
         total += biz.presumptiveIncome; // coverage:ignore-line
       } else {
         total += biz.netIncome;
@@ -386,11 +812,11 @@ class IndianTaxService implements TaxStrategy {
 
     double aggregateGifts = 0;
     for (var gift in data.cashGifts) {
-      if (gift.subtype.toLowerCase() == 'marriage' ||
-          gift.subtype.toLowerCase() == 'relative') {
-        continue;
+      if (rules.taxableGiftKeys
+          .map((k) => k.toLowerCase())
+          .contains(gift.subtype.toLowerCase())) {
+        aggregateGifts += gift.amount;
       }
-      aggregateGifts += gift.amount;
     }
 
     double taxableGifts =
@@ -444,25 +870,21 @@ class IndianTaxService implements TaxStrategy {
   Map<String, double> getDeductionSuggestions(TaxYearData data) =>
       {}; // coverage:ignore-line
 
-  @override // coverage:ignore-line
+  @override
   String suggestITR(TaxYearData data) {
-    // coverage:ignore-start
     if (data.businessIncomes.isNotEmpty) return 'ITR-3 or ITR-4';
     if (data.capitalGains.any((e) => e.capitalGainAmount > 0)) return 'ITR-2';
     if (data.houseProperties.length > 1) return 'ITR-2';
-    // coverage:ignore-end
     return 'ITR-1 (Sahaj)';
   }
 
-  @override // coverage:ignore-line
+  @override
   bool isInsuranceMaturityTaxable(
       double annualPremium, double sumAssured, DateTime issueDate) {
-    if (issueDate.isBefore(DateTime(2012, 4, 1))) { // coverage:ignore-line
-
-
-      return annualPremium > (0.20 * sumAssured); // coverage:ignore-line
+    if (issueDate.isBefore(DateTime(2012, 4, 1))) {
+      return annualPremium > (0.20 * sumAssured);
     } else {
-      return annualPremium > (0.10 * sumAssured); // coverage:ignore-line
+      return annualPremium > (0.10 * sumAssured);
     }
   }
 
@@ -470,6 +892,7 @@ class IndianTaxService implements TaxStrategy {
       TaxYearData data, TaxRules rules) {
     final Map<int, Map<String, double>> breakdown = {};
     double accumulatedTaxableTotal = 0;
+    double accumulatedTaxPaid = 0;
     final fyMonths = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
 
     final salaryOnlyData = data.copyWith(
@@ -479,7 +902,6 @@ class IndianTaxService implements TaxStrategy {
       otherIncomes: [],
       dividendIncome: const DividendIncome(),
       cashGifts: [],
-      agricultureIncome: 0,
     );
 
     final exemptionPools = _computeExemptionPools(salaryOnlyData, rules);
@@ -500,41 +922,36 @@ class IndianTaxService implements TaxStrategy {
         fyMonths,
         i,
         accumulatedTaxableTotal,
-        currentIrregular,
+        currentIrregular, // This is still needed for one-step subtraction inside helper
         rules,
       );
 
       double annualTaxableFull =
           max(0, projected.full - exemptionPools.retirementExemptions);
-      double annualTaxableWithoutCurrentBonus = max(
-          0,
-          projected.full -
-              currentIrregular -
-              exemptionPools.retirementExemptions);
       double annualTaxableStable =
           max(0, projected.stable - exemptionPools.retirementExemptions);
       double annualTaxableWithPlanning =
           max(0, annualTaxableFull - exemptionPools.plannedExemptions);
 
-      final resultsFull = calculateDetailedLiability(salaryOnlyData, rules,
-          salaryIncomeOverride: annualTaxableFull);
-      final resultsWithoutCurrentBonus = calculateDetailedLiability(
+      double totalTaxFull = _calculateCoreLiability(salaryOnlyData, rules,
+          salaryIncomeOverride: annualTaxableFull)['totalTax']!;
+      double totalTaxStable = _calculateCoreLiability(salaryOnlyData, rules,
+          salaryIncomeOverride: annualTaxableStable)['totalTax']!;
+      double totalTaxWithPlanning = _calculateCoreLiability(
           salaryOnlyData, rules,
-          salaryIncomeOverride: annualTaxableWithoutCurrentBonus);
-      final resultsStable = calculateDetailedLiability(salaryOnlyData, rules,
-          salaryIncomeOverride: annualTaxableStable);
-      final resultsWithPlanning = calculateDetailedLiability(
-          salaryOnlyData, rules,
-          salaryIncomeOverride: annualTaxableWithPlanning);
+          salaryIncomeOverride: annualTaxableWithPlanning)['totalTax']!;
 
-      double totalTaxFull = resultsFull['totalTax'] ?? 0;
-      double totalTaxWithoutBonus = resultsWithoutCurrentBonus['totalTax'] ?? 0;
-      double totalTaxStable = resultsStable['totalTax'] ?? 0;
-      double totalTaxWithPlanning = resultsWithPlanning['totalTax'] ?? 0;
+      // HYBRID Spike + Catch-up logic
+      int monthsRemaining = 12 - i;
+      double marginalBonusTax =
+          currentIrregular > 0 ? max(0, totalTaxFull - totalTaxStable) : 0;
+      double regularMonthlyTax =
+          max(0, (totalTaxStable - accumulatedTaxPaid) / monthsRemaining);
 
-      double marginalBonusTax = max(0, totalTaxFull - totalTaxWithoutBonus);
-      double regularMonthlyTax = totalTaxStable / 12;
       double monthlyTax = regularMonthlyTax + marginalBonusTax;
+
+      accumulatedTaxPaid += monthlyTax;
+
       double annualSavingsForecast =
           max(0, totalTaxFull - totalTaxWithPlanning);
 
@@ -562,6 +979,33 @@ class IndianTaxService implements TaxStrategy {
     return breakdown;
   }
 
+  double _computeCurrentIrregular(
+      TaxYearData data, SalaryStructure? s, int m, TaxRules rules) {
+    double total = 0;
+    if (s != null) {
+      total += s.calculateIrregularContribution(
+          m, rules.financialYearStartMonth,
+          taxableOnly: true);
+    }
+
+    for (final a in data.salary.independentAllowances) {
+      if (SalaryStructure.isPayoutMonth(
+          m, a.frequency, a.startMonth, a.customMonths)) {
+        // We consider 'custom' frequency or infrequent ones as irregular
+        if (a.frequency != PayoutFrequency.monthly) {
+          total += _getAllowancePayoutAmount(a, m);
+        }
+      }
+    }
+
+    // Gifts from Employer in March logic removed
+    if (m == 3) {
+      // total += data.salary.giftsFromEmployer; // Deprecated
+    }
+
+    return total;
+  }
+
   ({double gross, double taxable}) _computeMonthGross(
       TaxYearData data, SalaryStructure? s, int m, TaxRules rules) {
     double gross = 0;
@@ -576,40 +1020,15 @@ class IndianTaxService implements TaxStrategy {
     for (final a in data.salary.independentAllowances) {
       if (SalaryStructure.isPayoutMonth(
           m, a.frequency, a.startMonth, a.customMonths)) {
-        double amt = a.isPartial
-            ? (a.partialAmounts[m] ?? a.payoutAmount)
-            : a.payoutAmount;
+        final amt = _getAllowancePayoutAmount(a, m);
         gross += amt;
         taxable += amt;
       }
     }
 
-    // Add Gifts from Employer in March
-    if (m == 3) {
-      gross += data.salary.giftsFromEmployer;
-    }
+    // Gifts from Employer logic removed from here as it should be part of history
 
     return (gross: gross, taxable: taxable);
-  }
-
-  double _computeCurrentIrregular(
-      TaxYearData data, SalaryStructure? s, int m, TaxRules rules) {
-    double irregular = 0;
-    if (s != null) {
-      irregular += s.calculateIrregularContribution(
-          m, rules.financialYearStartMonth,
-          taxableOnly: true);
-    }
-    for (final a in data.salary.independentAllowances) {
-      if (a.frequency != PayoutFrequency.monthly &&
-          SalaryStructure.isPayoutMonth(
-              m, a.frequency, a.startMonth, a.customMonths)) {
-        irregular += a.isPartial
-            ? (a.partialAmounts[m] ?? a.payoutAmount) // coverage:ignore-line
-            : a.payoutAmount;
-      }
-    }
-    return irregular;
   }
 
   ({double full, double stable}) _projectFutureTaxable(
@@ -629,12 +1048,13 @@ class IndianTaxService implements TaxStrategy {
       _addFutureMonthProjection(
           data, currentStructure, futureMonth, rules, projFull, projStable);
       if (currentStructure != null) {
+        double reg = currentStructure.calculateRegularContribution(
+            futureMonth, rules.financialYearStartMonth,
+            taxableOnly: true);
         projFull += currentStructure.calculateContribution(
             futureMonth, rules.financialYearStartMonth,
             taxableOnly: true);
-        projStable += currentStructure.calculateRegularContribution(
-            futureMonth, rules.financialYearStartMonth,
-            taxableOnly: true);
+        projStable += reg;
       }
 
       for (final a in data.salary.independentAllowances) {
@@ -642,11 +1062,11 @@ class IndianTaxService implements TaxStrategy {
             futureMonth, a.frequency, a.startMonth, a.customMonths)) {
           continue;
         }
-        double amt = a.isPartial
-            ? (a.partialAmounts[futureMonth] ?? a.payoutAmount)
-            : a.payoutAmount;
+        final amt = _getAllowancePayoutAmount(a, futureMonth);
         projFull += amt;
-        if (a.frequency == PayoutFrequency.monthly) projStable += amt;
+        if (a.frequency == PayoutFrequency.monthly) {
+          projStable += amt;
+        }
       }
     }
     return (full: projFull, stable: projStable);
@@ -683,9 +1103,7 @@ class IndianTaxService implements TaxStrategy {
     for (final a in data.salary.independentDeductions) {
       if (SalaryStructure.isPayoutMonth(
           m, a.frequency, a.startMonth, a.customMonths)) {
-        total += a.isPartial
-            ? (a.partialAmounts[m] ?? a.payoutAmount)
-            : a.payoutAmount;
+        total += a.isPartial ? (a.partialAmounts[m] ?? a.amount) : a.amount;
       }
     }
     return total;
@@ -719,11 +1137,39 @@ class IndianTaxService implements TaxStrategy {
     }
     return sorted.last; // coverage:ignore-line
   }
+
+  List<TaxPaymentEntry> getGeneratedSalaryTds(
+      TaxYearData data, TaxRules rules) {
+    if (data.salary.history.isEmpty) {
+      return [];
+    }
+    return _generateDetailedSalaryTds(data, rules);
+  }
+
+  List<TaxPaymentEntry> _generateDetailedSalaryTds(
+      TaxYearData data, TaxRules rules) {
+    final breakdown = calculateMonthlySalaryBreakdown(data, rules);
+    final List<TaxPaymentEntry> entries = [];
+
+    final fyMonths = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+    for (int m in fyMonths) {
+      final mData = breakdown[m];
+      if (mData != null && (mData['tax'] ?? 0) > 0) {
+        int yr = (m >= 4) ? data.year : data.year + 1;
+        entries.add(TaxPaymentEntry(
+          id: 'salary_tds_\${data.year}_\$m',
+          amount: mData['tax']!,
+          date: DateTime(yr, m, 28),
+          source: 'Employer (Salary TDS)',
+          isManualEntry: false,
+        ));
+      }
+    }
+    return entries;
+  }
 }
 
-// coverage:ignore-start
 final indianTaxServiceProvider = Provider<IndianTaxService>((ref) {
-  final config = ref.watch(taxConfigServiceProvider);
-  return IndianTaxService(config);
-// coverage:ignore-end
+  final config = ref.watch(taxConfigServiceProvider); // coverage:ignore-line
+  return IndianTaxService(config); // coverage:ignore-line
 });

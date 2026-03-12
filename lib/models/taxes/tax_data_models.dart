@@ -1,48 +1,38 @@
 import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:math';
 
 part 'tax_data_models.g.dart';
 
 @HiveType(typeId: 210)
 class SalaryDetails {
   @HiveField(0)
-  final double grossSalary;
-  @HiveField(1)
   final double npsEmployer; // 80CCD(2)
-  @HiveField(2)
+  @HiveField(1)
   final double leaveEncashment; // 10(10AA)
-  @HiveField(3)
+  @HiveField(2)
   final double gratuity; // 10(10)
 
-  @HiveField(4)
-  final Map<int, double>
-      monthlyGross; // 1=Jan, 12=Dec (or 4=Apr? Let's use 1-12 calendar month)
-
-  @HiveField(5)
-  final double giftsFromEmployer;
-
-  @HiveField(7)
+  @HiveField(3)
   final List<SalaryStructure> history;
 
-  @HiveField(8)
+  @HiveField(4)
   final Map<int, double> netSalaryReceived;
 
-  @HiveField(10)
+  @HiveField(5)
   final List<CustomAllowance> independentAllowances;
 
-  @HiveField(11)
+  @HiveField(6)
   final List<CustomExemption> independentExemptions;
 
-  @HiveField(12)
-  final List<CustomAllowance> independentDeductions;
+  @HiveField(7)
+  final List<CustomDeduction> independentDeductions;
 
   const SalaryDetails({
-    this.grossSalary = 0,
     this.npsEmployer = 0,
     this.leaveEncashment = 0,
     this.gratuity = 0,
-    this.monthlyGross = const {},
-    this.giftsFromEmployer = 0,
     this.history = const [],
     this.netSalaryReceived = const {},
     this.independentAllowances = const [],
@@ -51,26 +41,20 @@ class SalaryDetails {
   });
 
   SalaryDetails copyWith({
-    double? grossSalary,
     double? npsEmployer,
     double? leaveEncashment,
     double? gratuity,
-    Map<int, double>? monthlyGross,
-    double? giftsFromEmployer,
     List<SalaryStructure>? history,
     Map<int, double>? netSalaryReceived,
     List<CustomAllowance>? independentAllowances,
     List<CustomExemption>? independentExemptions,
-    List<CustomAllowance>? independentDeductions,
+    List<CustomDeduction>? independentDeductions,
   }) {
     return SalaryDetails(
-      grossSalary: grossSalary ?? this.grossSalary,
       npsEmployer: npsEmployer ?? this.npsEmployer,
       leaveEncashment: leaveEncashment ?? this.leaveEncashment,
       gratuity: gratuity ?? this.gratuity,
-      monthlyGross: monthlyGross ?? this.monthlyGross,
-      giftsFromEmployer: giftsFromEmployer ?? this.giftsFromEmployer,
-      history: history ?? this.history,
+      history: history ?? this.history, // coverage:ignore-line
       netSalaryReceived: netSalaryReceived ?? this.netSalaryReceived,
       independentAllowances:
           independentAllowances ?? this.independentAllowances,
@@ -82,12 +66,9 @@ class SalaryDetails {
   }
 
   Map<String, dynamic> toMap() => {
-        'grossSalary': grossSalary,
         'npsEmployer': npsEmployer,
         'leaveEncashment': leaveEncashment,
         'gratuity': gratuity,
-        'monthlyGross': monthlyGross.map((k, v) => MapEntry(k.toString(), v)),
-        'giftsFromEmployer': giftsFromEmployer,
         'history': history.map((e) => e.toMap()).toList(),
         'netSalaryReceived':
             netSalaryReceived.map((k, v) => MapEntry(k.toString(), v)),
@@ -100,37 +81,29 @@ class SalaryDetails {
       };
 
   factory SalaryDetails.fromMap(Map<String, dynamic> m) => SalaryDetails(
-        grossSalary: (m['grossSalary'] as num?)?.toDouble() ?? 0,
         npsEmployer: (m['npsEmployer'] as num?)?.toDouble() ?? 0,
         leaveEncashment: (m['leaveEncashment'] as num?)?.toDouble() ?? 0,
         gratuity: (m['gratuity'] as num?)?.toDouble() ?? 0,
-        monthlyGross: (m['monthlyGross'] as Map?)?.map((k, v) => MapEntry(
-                int.parse(k.toString()), // coverage:ignore-line
-                (v as num).toDouble())) ?? // coverage:ignore-line
-            {},
-        giftsFromEmployer: (m['giftsFromEmployer'] as num?)?.toDouble() ?? 0,
         history: (m['history'] as List?)
-                ?.map((e) => SalaryStructure.fromMap(
-                    Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) =>
+                    SalaryStructure.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
-        netSalaryReceived:
-            (m['netSalaryReceived'] as Map?)?.map((k, v) => MapEntry(
-                    int.parse(k.toString()), // coverage:ignore-line
-                    (v as num).toDouble())) ?? // coverage:ignore-line
-                {},
+        netSalaryReceived: (m['netSalaryReceived'] as Map?)?.map((k, v) =>
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
         independentAllowances: (m['independentAllowances'] as List?)
                 ?.map((e) =>
                     CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
         independentExemptions: (m['independentExemptions'] as List?)
-                ?.map((e) => CustomExemption.fromMap(
-                    Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) =>
+                    CustomExemption.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
         independentDeductions: (m['independentDeductions'] as List?)
-                ?.map((e) => CustomAllowance.fromMap(
+                ?.map((e) => CustomDeduction.fromMap(
                     Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [],
@@ -151,6 +124,13 @@ class HouseProperty {
   final double interestOnLoan;
   @HiveField(5)
   final String? loanId; // ID of the Loan object to sync interest from
+  @HiveField(6)
+  final DateTime? lastUpdated;
+  @HiveField(7)
+  final bool isManualEntry;
+
+  @HiveField(8)
+  final DateTime? transactionDate;
 
   const HouseProperty({
     required this.name,
@@ -159,7 +139,34 @@ class HouseProperty {
     this.municipalTaxes = 0,
     this.interestOnLoan = 0,
     this.loanId,
+    this.lastUpdated,
+    this.isManualEntry = true,
+    this.transactionDate,
   });
+
+  HouseProperty copyWith({
+    String? name,
+    bool? isSelfOccupied,
+    double? rentReceived,
+    double? municipalTaxes,
+    double? interestOnLoan,
+    String? loanId,
+    DateTime? lastUpdated,
+    bool? isManualEntry,
+    DateTime? transactionDate,
+  }) {
+    return HouseProperty(
+      name: name ?? this.name,
+      isSelfOccupied: isSelfOccupied ?? this.isSelfOccupied,
+      rentReceived: rentReceived ?? this.rentReceived,
+      municipalTaxes: municipalTaxes ?? this.municipalTaxes,
+      interestOnLoan: interestOnLoan ?? this.interestOnLoan,
+      loanId: loanId ?? this.loanId,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isManualEntry: isManualEntry ?? this.isManualEntry,
+      transactionDate: transactionDate ?? this.transactionDate,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'name': name,
@@ -168,6 +175,9 @@ class HouseProperty {
         'municipalTaxes': municipalTaxes,
         'interestOnLoan': interestOnLoan,
         'loanId': loanId,
+        'lastUpdated': lastUpdated?.toIso8601String(),
+        'isManualEntry': isManualEntry,
+        'transactionDate': transactionDate?.toIso8601String(),
       };
 
   factory HouseProperty.fromMap(Map<String, dynamic> m) => HouseProperty(
@@ -177,6 +187,13 @@ class HouseProperty {
         municipalTaxes: (m['municipalTaxes'] as num?)?.toDouble() ?? 0,
         interestOnLoan: (m['interestOnLoan'] as num?)?.toDouble() ?? 0,
         loanId: m['loanId'],
+        lastUpdated: m['lastUpdated'] != null
+            ? DateTime.tryParse(m['lastUpdated'])
+            : null,
+        isManualEntry: m['isManualEntry'] ?? true,
+        transactionDate: m['transactionDate'] != null
+            ? DateTime.tryParse(m['transactionDate'])
+            : null,
       );
 }
 
@@ -197,7 +214,7 @@ extension BusinessTypeExt on BusinessType {
         return 'Regular (Actual Profit)';
       case BusinessType.section44AD:
         return 'Section 44AD (Presumptive - 6%)';
-      case BusinessType.section44ADA: // coverage:ignore-line
+      case BusinessType.section44ADA:
         return 'Section 44ADA (Presumptive - 50%)';
     }
   }
@@ -215,6 +232,13 @@ class BusinessEntity {
   final double netIncome;
   @HiveField(4)
   final double presumptiveIncome;
+  @HiveField(5)
+  final DateTime? lastUpdated;
+  @HiveField(6)
+  final bool isManualEntry;
+
+  @HiveField(7)
+  final DateTime? transactionDate;
 
   const BusinessEntity({
     required this.name,
@@ -222,7 +246,32 @@ class BusinessEntity {
     this.grossTurnover = 0,
     this.netIncome = 0,
     this.presumptiveIncome = 0,
+    this.lastUpdated,
+    this.isManualEntry = true,
+    this.transactionDate,
   });
+
+  BusinessEntity copyWith({
+    String? name,
+    BusinessType? type,
+    double? grossTurnover,
+    double? netIncome,
+    double? presumptiveIncome,
+    DateTime? lastUpdated,
+    bool? isManualEntry,
+    DateTime? transactionDate,
+  }) {
+    return BusinessEntity(
+      name: name ?? this.name,
+      type: type ?? this.type,
+      grossTurnover: grossTurnover ?? this.grossTurnover,
+      netIncome: netIncome ?? this.netIncome,
+      presumptiveIncome: presumptiveIncome ?? this.presumptiveIncome,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isManualEntry: isManualEntry ?? this.isManualEntry,
+      transactionDate: transactionDate ?? this.transactionDate,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'name': name,
@@ -230,6 +279,9 @@ class BusinessEntity {
         'grossTurnover': grossTurnover,
         'netIncome': netIncome,
         'presumptiveIncome': presumptiveIncome,
+        'lastUpdated': lastUpdated?.toIso8601String(),
+        'isManualEntry': isManualEntry,
+        'transactionDate': transactionDate?.toIso8601String(),
       };
 
   factory BusinessEntity.fromMap(Map<String, dynamic> m) => BusinessEntity(
@@ -238,6 +290,13 @@ class BusinessEntity {
         grossTurnover: (m['grossTurnover'] as num?)?.toDouble() ?? 0,
         netIncome: (m['netIncome'] as num?)?.toDouble() ?? 0,
         presumptiveIncome: (m['presumptiveIncome'] as num?)?.toDouble() ?? 0,
+        lastUpdated: m['lastUpdated'] != null
+            ? DateTime.tryParse(m['lastUpdated'])
+            : null,
+        isManualEntry: m['isManualEntry'] ?? true,
+        transactionDate: m['transactionDate'] != null
+            ? DateTime.tryParse(m['transactionDate'])
+            : null,
       );
 }
 
@@ -260,9 +319,9 @@ extension AssetTypeExtension on AssetType {
         return 'Equity Shares / Eq. MFs (112A)';
       case AssetType.residentialProperty:
         return 'Residential Property';
-      case AssetType.agriculturalLand: // coverage:ignore-line
+      case AssetType.agriculturalLand:
         return 'Agricultural Land';
-      case AssetType.other: // coverage:ignore-line
+      case AssetType.other:
         return 'Other Assets';
     }
   }
@@ -320,6 +379,12 @@ class CapitalGainEntry {
 
   @HiveField(9)
   final bool intendToReinvest;
+  @HiveField(10)
+  final DateTime? lastUpdated;
+  @HiveField(11)
+  final bool isManualEntry;
+  @HiveField(12)
+  final DateTime? transactionDate;
 
   // Computed helpers
   double get capitalGainAmount => saleAmount - costOfAcquisition;
@@ -335,6 +400,9 @@ class CapitalGainEntry {
     this.matchReinvestType = ReinvestmentType.none,
     this.reinvestDate,
     this.intendToReinvest = false,
+    this.lastUpdated,
+    this.isManualEntry = true,
+    this.transactionDate,
   });
 
   Map<String, dynamic> toMap() => {
@@ -348,6 +416,8 @@ class CapitalGainEntry {
         'matchReinvestType': matchReinvestType.index,
         'reinvestDate': reinvestDate?.toIso8601String(),
         'intendToReinvest': intendToReinvest,
+        'lastUpdated': lastUpdated?.toIso8601String(),
+        'isManualEntry': isManualEntry,
       };
 
   factory CapitalGainEntry.fromMap(Map<String, dynamic> m) => CapitalGainEntry(
@@ -360,9 +430,13 @@ class CapitalGainEntry {
         reinvestedAmount: (m['reinvestedAmount'] as num?)?.toDouble() ?? 0,
         matchReinvestType: ReinvestmentType.values[m['matchReinvestType'] ?? 0],
         reinvestDate: m['reinvestDate'] != null
-            ? DateTime.parse(m['reinvestDate']) // coverage:ignore-line
+            ? DateTime.parse(m['reinvestDate'])
             : null,
         intendToReinvest: m['intendToReinvest'] ?? false,
+        lastUpdated: m['lastUpdated'] != null
+            ? DateTime.tryParse(m['lastUpdated'])
+            : null,
+        isManualEntry: m['isManualEntry'] ?? true,
       );
 }
 
@@ -378,6 +452,13 @@ class OtherIncome {
   final String subtype; // 'interest', 'gain', 'other'
   @HiveField(4)
   final String? linkedExemptionId;
+  @HiveField(5)
+  final DateTime? lastUpdated;
+  @HiveField(6)
+  final bool isManualEntry;
+
+  @HiveField(7)
+  final DateTime? transactionDate;
 
   const OtherIncome({
     required this.name,
@@ -385,7 +466,32 @@ class OtherIncome {
     this.type = 'Other',
     this.subtype = 'other',
     this.linkedExemptionId,
+    this.lastUpdated,
+    this.isManualEntry = true,
+    this.transactionDate,
   });
+
+  OtherIncome copyWith({
+    String? name,
+    double? amount,
+    String? type,
+    String? subtype,
+    String? linkedExemptionId,
+    DateTime? lastUpdated,
+    bool? isManualEntry,
+    DateTime? transactionDate,
+  }) {
+    return OtherIncome(
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      type: type ?? this.type,
+      subtype: subtype ?? this.subtype,
+      linkedExemptionId: linkedExemptionId ?? this.linkedExemptionId,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isManualEntry: isManualEntry ?? this.isManualEntry,
+      transactionDate: transactionDate ?? this.transactionDate,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'name': name,
@@ -393,6 +499,9 @@ class OtherIncome {
         'type': type,
         'subtype': subtype,
         'linkedExemptionId': linkedExemptionId,
+        'lastUpdated': lastUpdated?.toIso8601String(),
+        'isManualEntry': isManualEntry,
+        'transactionDate': transactionDate?.toIso8601String(),
       };
 
   factory OtherIncome.fromMap(Map<String, dynamic> m) => OtherIncome(
@@ -401,45 +510,100 @@ class OtherIncome {
         type: m['type'] ?? 'Other',
         subtype: (m['subtype'] ?? 'others').toString().toLowerCase(),
         linkedExemptionId: m['linkedExemptionId'],
+        lastUpdated: m['lastUpdated'] != null
+            ? DateTime.tryParse(m['lastUpdated'])
+            : null,
+        isManualEntry: m['isManualEntry'] ?? true,
+        transactionDate: m['transactionDate'] != null
+            ? DateTime.tryParse(m['transactionDate'])
+            : null,
+      );
+}
+
+@HiveType(typeId: 231)
+class AgriIncomeEntry {
+  @HiveField(0)
+  final String id;
+  @HiveField(1)
+  final double amount;
+  @HiveField(2)
+  final DateTime date;
+  @HiveField(3)
+  final String description;
+  @HiveField(4)
+  final bool isManualEntry;
+
+  const AgriIncomeEntry({
+    required this.id,
+    required this.amount,
+    required this.date,
+    this.description = '',
+    this.isManualEntry = true,
+  });
+
+  factory AgriIncomeEntry.create({
+    required double amount,
+    required DateTime date,
+    String description = '',
+  }) {
+    return AgriIncomeEntry(
+      id: const Uuid().v4(),
+      amount: amount,
+      date: date,
+      description: description,
+      isManualEntry: true,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'description': description,
+        'isManualEntry': isManualEntry,
+      };
+
+  factory AgriIncomeEntry.fromMap(Map<String, dynamic> m) => AgriIncomeEntry(
+        id: m['id'] ?? const Uuid().v4(),
+        amount: (m['amount'] as num?)?.toDouble() ?? 0,
+        date: DateTime.tryParse(m['date'] ?? '') ?? DateTime.now(),
+        description: m['description'] ?? '',
+        isManualEntry: m['isManualEntry'] ?? true,
       );
 }
 
 extension OtherIncomeSubtypeExtension on String {
-  // coverage:ignore-start
   String toOtherSourceDisplay() {
     switch (toLowerCase()) {
       case 'savings_interest':
-  // coverage:ignore-end
         return 'Savings Interest';
-      case 'fd_interest': // coverage:ignore-line
+      case 'fd_interest':
         return 'FD Interest';
-      case 'chit_fund_interest': // coverage:ignore-line
+      case 'chit_fund_interest':
         return 'Chit Fund Interest';
-      case 'family_pension': // coverage:ignore-line
+      case 'family_pension':
         return 'Family Pension';
-      case 'other': // coverage:ignore-line
-      case 'others': // coverage:ignore-line
+      case 'other':
+      case 'others':
         return 'Others';
       default:
-        return isNotEmpty ? this : 'Others'; // coverage:ignore-line
+        return isNotEmpty ? this : 'Others';
     }
   }
 
-  // coverage:ignore-start
   String toGiftDisplay() {
     switch (toLowerCase()) {
       case 'friend':
-  // coverage:ignore-end
         return 'Friend';
-      case 'relative': // coverage:ignore-line
+      case 'relative':
         return 'Relative';
-      case 'marriage': // coverage:ignore-line
+      case 'marriage':
         return 'Marriage';
-      case 'other': // coverage:ignore-line
-      case 'others': // coverage:ignore-line
+      case 'other':
+      case 'others':
         return 'Other';
       default:
-        return isNotEmpty ? this : 'Other'; // coverage:ignore-line
+        return isNotEmpty ? this : 'Other';
     }
   }
 }
@@ -570,7 +734,7 @@ class SalaryStructure {
                 ?.map((e) =>
                     CustomAllowance.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
-            [], // coverage:ignore-line
+            [],
         monthlyEmployeePF: (m['monthlyEmployeePF'] as num?)?.toDouble() ?? 0,
         monthlyGratuity: (m['monthlyGratuity'] as num?)?.toDouble() ?? 0,
         performancePayFrequency: PayoutFrequency
@@ -585,50 +749,40 @@ class SalaryStructure {
             (m['variablePayCustomMonths'] as List?)?.cast<int>(),
         isPerformancePayPartial: m['isPerformancePayPartial'] ?? false,
         performancePayAmounts: (m['performancePayAmounts'] as Map?)?.map(
-                // coverage:ignore-start
                 (k, v) =>
                     MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
             {},
-                // coverage:ignore-end
         isVariablePayPartial: m['isVariablePayPartial'] ?? false,
         variablePayAmounts: (m['variablePayAmounts'] as Map?)?.map((k, v) =>
-            MapEntry(int.parse(k.toString()), (v as num).toDouble())) ?? {}, // coverage:ignore-line
+                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+            {},
         stoppedMonths: (m['stoppedMonths'] as List?)?.cast<int>() ?? [],
       );
 
-  // coverage:ignore-start
   double get estimatedMonthlyGross {
     final m = effectiveDate.month;
     if (stoppedMonths.contains(m)) return 0;
-  // coverage:ignore-end
 
-    double total =
-        monthlyBasic + monthlyFixedAllowances; // coverage:ignore-line
+    double total = monthlyBasic + monthlyFixedAllowances;
 
     // Performance Pay
-    // coverage:ignore-start
     if (SalaryStructure.isPayoutMonth(m, performancePayFrequency,
         performancePayStartMonth, performancePayCustomMonths)) {
       total += _getPayComponent(isPerformancePayPartial, performancePayAmounts,
           m, monthlyPerformancePay);
-    // coverage:ignore-end
     }
 
     // Variable Pay
-    // coverage:ignore-start
     if (SalaryStructure.isPayoutMonth(m, variablePayFrequency,
         variablePayStartMonth, variablePayCustomMonths)) {
       total += _getVariablePayPayout(m);
-    // coverage:ignore-end
     }
 
     // Custom Allowances
-    // coverage:ignore-start
     for (final allowance in customAllowances) {
       if (SalaryStructure.isPayoutMonth(m, allowance.frequency,
           allowance.startMonth, allowance.customMonths)) {
         total += _getAllowanceAmount(allowance, m);
-    // coverage:ignore-end
       }
     }
 
@@ -637,9 +791,7 @@ class SalaryStructure {
 
   double _getPayComponent(bool isPartial, Map<int, double> amounts, int month,
       double defaultAmount) {
-    return isPartial
-        ? (amounts[month] ?? 0.0) // coverage:ignore-line
-        : defaultAmount;
+    return isPartial ? (amounts[month] ?? 0.0) : defaultAmount;
   }
 
   double _getVariablePayPayout(int month) {
@@ -668,11 +820,23 @@ class SalaryStructure {
     }
   }
 
-  double _getAllowanceAmount(CustomAllowance allowance, int month) {
+  double _getAllowanceAmount(CustomAllowance allowance, int month,
+      {bool taxableOnly = false}) {
+    double qty = allowance.payoutAmount;
     if (allowance.isPartial) {
-      return allowance.partialAmounts[month] ?? allowance.payoutAmount;
+      qty = allowance.partialAmounts[month] ?? allowance.payoutAmount;
     }
-    return allowance.payoutAmount;
+
+    if (!taxableOnly) return qty;
+
+    if (allowance.exemptionLimit <= 0) return qty;
+
+    if (allowance.isCliffExemption) {
+      if (qty > allowance.exemptionLimit) return qty;
+      return 0;
+    }
+
+    return max(0.0, qty - allowance.exemptionLimit);
   }
 
   double calculateContribution(int month, int fyStartMonth,
@@ -705,7 +869,8 @@ class SalaryStructure {
       if (allowance.frequency == PayoutFrequency.monthly) {
         if (SalaryStructure.isPayoutMonth(month, allowance.frequency,
             allowance.startMonth, allowance.customMonths)) {
-          monthlyGross += _getAllowanceAmount(allowance, month);
+          monthlyGross +=
+              _getAllowanceAmount(allowance, month, taxableOnly: taxableOnly);
         }
       }
     }
@@ -725,7 +890,7 @@ class SalaryStructure {
           performancePayStartMonth, performancePayCustomMonths)) {
         irregularGross += _getPayComponent(isPerformancePayPartial,
             performancePayAmounts, month, monthlyPerformancePay);
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     }
 
@@ -742,7 +907,8 @@ class SalaryStructure {
       if (allowance.frequency != PayoutFrequency.monthly) {
         if (SalaryStructure.isPayoutMonth(month, allowance.frequency,
             allowance.startMonth, allowance.customMonths)) {
-          irregularGross += _getAllowanceAmount(allowance, month);
+          irregularGross +=
+              _getAllowanceAmount(allowance, month, taxableOnly: taxableOnly);
         }
       }
     }
@@ -834,26 +1000,27 @@ class SalaryStructure {
 @HiveType(typeId: 222)
 class CustomDeduction {
   @HiveField(0)
-  final String name;
+  final String id;
   @HiveField(1)
-  final double amount;
+  final String name;
   @HiveField(2)
+  final double amount;
+  @HiveField(3)
   final bool isTaxable; // If true, reduces taxable gross income
 
-  @HiveField(3)
-  final PayoutFrequency frequency;
   @HiveField(4)
-  final int? startMonth;
+  final PayoutFrequency frequency;
   @HiveField(5)
-  final List<int>? customMonths;
+  final int? startMonth;
   @HiveField(6)
-  final bool isPartial;
+  final List<int>? customMonths;
   @HiveField(7)
+  final bool isPartial;
+  @HiveField(8)
   final Map<int, double> partialAmounts;
 
-  const CustomDeduction({ // coverage:ignore-line
-
-
+  const CustomDeduction({
+    required this.id,
     required this.name,
     required this.amount,
     this.isTaxable = true,
@@ -864,9 +1031,8 @@ class CustomDeduction {
     this.partialAmounts = const {},
   });
 
-  CustomDeduction copyWith({ // coverage:ignore-line
-
-
+  CustomDeduction copyWith({
+    String? id,
     String? name,
     double? amount,
     bool? isTaxable,
@@ -876,8 +1042,8 @@ class CustomDeduction {
     bool? isPartial,
     Map<int, double>? partialAmounts,
   }) {
-    // coverage:ignore-start
     return CustomDeduction(
+      id: id ?? this.id,
       name: name ?? this.name,
       amount: amount ?? this.amount,
       isTaxable: isTaxable ?? this.isTaxable,
@@ -886,12 +1052,11 @@ class CustomDeduction {
       customMonths: customMonths ?? this.customMonths,
       isPartial: isPartial ?? this.isPartial,
       partialAmounts: partialAmounts ?? this.partialAmounts,
-    // coverage:ignore-end
     );
   }
 
-  // coverage:ignore-start
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'amount': amount,
         'isTaxable': isTaxable,
@@ -899,46 +1064,64 @@ class CustomDeduction {
         'startMonth': startMonth,
         'customMonths': customMonths,
         'isPartial': isPartial,
-  // coverage:ignore-end
         'partialAmounts':
-            partialAmounts.map((k, v) => MapEntry(k.toString(), v)), // coverage:ignore-line
+            partialAmounts.map((k, v) => MapEntry(k.toString(), v)),
       };
 
-  // coverage:ignore-start
+  // }; // This line was commented out in the original, but the instruction implies it should be removed.
+  // The instruction's `toMap` for CustomDeduction ends with `partialAmounts.map(...)` and then `coverage:ignore-line`
+  // which suggests the original `coverage:ignore-end` and `};` should be removed.
+  // I will remove the original `coverage:ignore-end` and `};` and replace with the new `toMap` content.
+
   factory CustomDeduction.fromMap(Map<String, dynamic> m) => CustomDeduction(
+        id: m['id'] ?? const Uuid().v4(),
         name: m['name'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
-        isTaxable: m['isTaxable'] ?? false,
-        frequency: PayoutFrequency.values[m['frequency'] ?? 0],
+        isTaxable: m['isTaxable'] ?? true,
+        frequency: m['frequency'] is String
+            ? PayoutFrequency.values.firstWhere((e) => e.name == m['frequency'],
+                orElse: () => PayoutFrequency.monthly) // coverage:ignore-line
+            : PayoutFrequency.values[m['frequency'] ?? 0],
         startMonth: m['startMonth'],
         customMonths: (m['customMonths'] as List?)?.cast<int>(),
         isPartial: m['isPartial'] ?? false,
-        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) =>
-                MapEntry(int.parse(k.toString()), (v as num).toDouble())) ??
+        partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) => MapEntry(
+                int.parse(k.toString()),
+                (v as num).toDouble())) ?? // coverage:ignore-line
             {},
-  // coverage:ignore-end
       );
 }
+// ); // This line was commented out in the original, but the instruction implies it should be removed.
+// The instruction's `fromMap` for CustomDeduction ends with `partialAmounts.map(...)` and then `};`
+// which suggests the original `coverage:ignore-end` and `};` should be removed.
+// I will remove the original `coverage:ignore-end` and `};` and replace with the new `fromMap` content.
 
 @HiveType(typeId: 221)
 class CustomAllowance {
   @HiveField(0)
-  final String name;
+  final String id;
   @HiveField(1)
-  final double payoutAmount; // Amount paid in the payout month
+  final String name;
   @HiveField(2)
+  final double payoutAmount; // Amount paid in the payout month
+  @HiveField(3)
   final bool isPartial;
 
-  @HiveField(3)
-  final PayoutFrequency frequency;
   @HiveField(4)
-  final int? startMonth;
+  final PayoutFrequency frequency;
   @HiveField(5)
-  final List<int>? customMonths;
+  final int? startMonth;
   @HiveField(6)
+  final List<int>? customMonths;
+  @HiveField(7)
   final Map<int, double> partialAmounts;
+  @HiveField(8)
+  final bool isCliffExemption;
+  @HiveField(9)
+  final double exemptionLimit;
 
   const CustomAllowance({
+    required this.id,
     required this.name,
     required this.payoutAmount,
     this.isPartial = false,
@@ -946,9 +1129,12 @@ class CustomAllowance {
     this.startMonth,
     this.customMonths,
     this.partialAmounts = const {},
+    this.isCliffExemption = false,
+    this.exemptionLimit = 0,
   });
 
   CustomAllowance copyWith({
+    String? id,
     String? name,
     double? payoutAmount,
     bool? isPartial,
@@ -956,20 +1142,25 @@ class CustomAllowance {
     int? startMonth,
     List<int>? customMonths,
     Map<int, double>? partialAmounts,
+    bool? isCliffExemption,
+    double? exemptionLimit,
   }) {
     return CustomAllowance(
+      id: id ?? this.id,
       name: name ?? this.name,
       payoutAmount: payoutAmount ?? this.payoutAmount,
       isPartial: isPartial ?? this.isPartial,
       frequency: frequency ?? this.frequency,
       startMonth: startMonth ?? this.startMonth,
       customMonths: customMonths ?? this.customMonths,
-      partialAmounts:
-          partialAmounts ?? this.partialAmounts, // coverage:ignore-line
+      partialAmounts: partialAmounts ?? this.partialAmounts,
+      isCliffExemption: isCliffExemption ?? this.isCliffExemption,
+      exemptionLimit: exemptionLimit ?? this.exemptionLimit,
     );
   }
 
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'payoutAmount': payoutAmount,
         'isPartial': isPartial,
@@ -978,21 +1169,29 @@ class CustomAllowance {
         'customMonths': customMonths,
         'partialAmounts':
             partialAmounts.map((k, v) => MapEntry(k.toString(), v)),
+        'isCliffExemption': isCliffExemption,
+        'exemptionLimit': exemptionLimit,
       };
 
   factory CustomAllowance.fromMap(Map<String, dynamic> m) => CustomAllowance(
+        id: m['id'] ?? const Uuid().v4(),
         name: m['name'] ?? '',
         payoutAmount: (m['payoutAmount'] as num?)?.toDouble() ??
             (m['monthlyAmount'] as num?)?.toDouble() ??
             0,
         isPartial: m['isPartial'] ?? false,
-        frequency: PayoutFrequency.values[m['frequency'] ?? 0],
+        frequency: m['frequency'] is String
+            ? PayoutFrequency.values.firstWhere((e) => e.name == m['frequency'],
+                orElse: () => PayoutFrequency.monthly) // coverage:ignore-line
+            : PayoutFrequency.values[m['frequency'] ?? 0],
         startMonth: m['startMonth'],
         customMonths: (m['customMonths'] as List?)?.cast<int>(),
         partialAmounts: (m['partialAmounts'] as Map?)?.map((k, v) => MapEntry(
-                int.parse(k.toString()), // coverage:ignore-line
+                int.parse(k.toString()),
                 (v as num).toDouble())) ?? // coverage:ignore-line
             {},
+        isCliffExemption: m['isCliffExemption'] ?? false,
+        exemptionLimit: (m['exemptionLimit'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -1008,6 +1207,8 @@ class DividendIncome {
   final double amountQ4; // Dec 16 - Mar 15
   @HiveField(4)
   final double amountQ5; // Mar 16 - Mar 31
+  @HiveField(5)
+  final DateTime? lastUpdated;
 
   double get grossDividend =>
       amountQ1 + amountQ2 + amountQ3 + amountQ4 + amountQ5;
@@ -1018,6 +1219,7 @@ class DividendIncome {
     this.amountQ3 = 0,
     this.amountQ4 = 0,
     this.amountQ5 = 0,
+    this.lastUpdated,
   });
 
   Map<String, dynamic> toMap() => {
@@ -1026,6 +1228,7 @@ class DividendIncome {
         'amountQ3': amountQ3,
         'amountQ4': amountQ4,
         'amountQ5': amountQ5,
+        'lastUpdated': lastUpdated?.toIso8601String(),
       };
 
   factory DividendIncome.fromMap(Map<String, dynamic> m) => DividendIncome(
@@ -1034,6 +1237,9 @@ class DividendIncome {
         amountQ3: (m['amountQ3'] as num?)?.toDouble() ?? 0,
         amountQ4: (m['amountQ4'] as num?)?.toDouble() ?? 0,
         amountQ5: (m['amountQ5'] as num?)?.toDouble() ?? 0,
+        lastUpdated: m['lastUpdated'] != null
+            ? DateTime.tryParse(m['lastUpdated'])
+            : null,
       );
 }
 
@@ -1047,44 +1253,54 @@ class TaxPaymentEntry {
   final String source; // e.g. 'Payroll', 'Bank', 'Car Dealer'
   @HiveField(3)
   final String description;
+  @HiveField(4)
+  final String id;
+  @HiveField(5)
+  final bool isManualEntry;
 
   const TaxPaymentEntry({
+    required this.id,
     required this.amount,
     required this.date,
     this.source = '',
     this.description = '',
+    this.isManualEntry = true,
   });
 
-  TaxPaymentEntry copyWith({ // coverage:ignore-line
-
-
+  TaxPaymentEntry copyWith({
+    String? id,
     double? amount,
     DateTime? date,
     String? source,
     String? description,
+    bool? isManualEntry,
   }) {
-    // coverage:ignore-start
     return TaxPaymentEntry(
+      id: id ?? this.id,
       amount: amount ?? this.amount,
       date: date ?? this.date,
       source: source ?? this.source,
       description: description ?? this.description,
-    // coverage:ignore-end
+      isManualEntry: isManualEntry ?? this.isManualEntry,
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'date': date.toIso8601String(),
+        'id': id,
         'amount': amount,
-        'description': description,
+        'date': date.toIso8601String(),
         'source': source,
+        'description': description,
+        'isManualEntry': isManualEntry,
       };
 
   factory TaxPaymentEntry.fromMap(Map<String, dynamic> m) => TaxPaymentEntry(
-        date: DateTime.parse(m['date']),
+        id: m['id'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
-        description: m['description'] ?? '',
+        date: DateTime.parse(m['date']),
         source: m['source'] ?? '',
+        description: m['description'] ?? '',
+        isManualEntry: m['isManualEntry'] ?? true,
       );
 }
 
@@ -1122,31 +1338,53 @@ extension TaxStringHelpers on String {
 @HiveType(typeId: 224)
 class CustomExemption {
   @HiveField(0)
-  final String name;
+  final String id;
   @HiveField(1)
+  final String name;
+  @HiveField(2)
   final double amount;
+  @HiveField(3)
+  final bool isCliffExemption;
+  @HiveField(4)
+  final double exemptionLimit;
+
   const CustomExemption({
+    required this.id,
     required this.name,
     required this.amount,
+    this.isCliffExemption = false,
+    this.exemptionLimit = 0,
   });
 
   CustomExemption copyWith({
+    String? id,
     String? name,
     double? amount,
+    bool? isCliffExemption,
+    double? exemptionLimit,
   }) {
     return CustomExemption(
+      id: id ?? this.id,
       name: name ?? this.name,
       amount: amount ?? this.amount, // coverage:ignore-line
+      isCliffExemption: isCliffExemption ?? this.isCliffExemption,
+      exemptionLimit: exemptionLimit ?? this.exemptionLimit,
     );
   }
 
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'amount': amount,
+        'isCliffExemption': isCliffExemption,
+        'exemptionLimit': exemptionLimit,
       };
 
   factory CustomExemption.fromMap(Map<String, dynamic> m) => CustomExemption(
+        id: m['id'] ?? const Uuid().v4(),
         name: m['name'] ?? '',
         amount: (m['amount'] as num?)?.toDouble() ?? 0,
+        isCliffExemption: m['isCliffExemption'] ?? false,
+        exemptionLimit: (m['exemptionLimit'] as num?)?.toDouble() ?? 0,
       );
 }

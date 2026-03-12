@@ -39,24 +39,29 @@ class TaxYearDataAdapter extends TypeAdapter<TaxYearData> {
       cashGifts: fields[7] == null
           ? const []
           : (fields[7] as List).cast<OtherIncome>(),
-      agricultureIncome: fields[8] == null ? 0 : (fields[8] as num).toDouble(),
-      advanceTax: fields[9] == null ? 0 : (fields[9] as num).toDouble(),
-      tdsEntries: fields[10] == null
+      tdsEntries: fields[8] == null
           ? const []
-          : (fields[10] as List).cast<TaxPaymentEntry>(),
-      tcsEntries: fields[11] == null
+          : (fields[8] as List).cast<TaxPaymentEntry>(),
+      tcsEntries: fields[9] == null
           ? const []
-          : (fields[11] as List).cast<TaxPaymentEntry>(),
-      lastSyncDate: fields[12] as DateTime?,
+          : (fields[9] as List).cast<TaxPaymentEntry>(),
+      lastSyncDate: fields[10] as DateTime?,
       lockedFields:
-          fields[13] == null ? const [] : (fields[13] as List).cast<String>(),
+          fields[11] == null ? const [] : (fields[11] as List).cast<String>(),
+      advanceTaxEntries: fields[12] == null
+          ? const []
+          : (fields[12] as List).cast<TaxPaymentEntry>(),
+      profileId: fields[13] == null ? 'default' : fields[13] as String,
+      agriIncomeHistory: fields[14] == null
+          ? const []
+          : (fields[14] as List).cast<AgriIncomeEntry>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, TaxYearData obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.year)
       ..writeByte(1)
@@ -74,17 +79,19 @@ class TaxYearDataAdapter extends TypeAdapter<TaxYearData> {
       ..writeByte(7)
       ..write(obj.cashGifts)
       ..writeByte(8)
-      ..write(obj.agricultureIncome)
-      ..writeByte(9)
-      ..write(obj.advanceTax)
-      ..writeByte(10)
       ..write(obj.tdsEntries)
-      ..writeByte(11)
+      ..writeByte(9)
       ..write(obj.tcsEntries)
-      ..writeByte(12)
+      ..writeByte(10)
       ..write(obj.lastSyncDate)
+      ..writeByte(11)
+      ..write(obj.lockedFields)
+      ..writeByte(12)
+      ..write(obj.advanceTaxEntries)
       ..writeByte(13)
-      ..write(obj.lockedFields);
+      ..write(obj.profileId)
+      ..writeByte(14)
+      ..write(obj.agriIncomeHistory);
   }
 
   @override

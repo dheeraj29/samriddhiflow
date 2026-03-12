@@ -14,6 +14,7 @@ import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
 import '../utils/connectivity_platform.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/platform_utils.dart' as platform_utils;
 
 const continueOfflineText = 'Continue Offline';
 
@@ -58,7 +59,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         Future.delayed(const Duration(seconds: 120), () {
           if (mounted && _isRedirectingLocal) {
             setState(() => _isRedirectingLocal = false);
-          // coverage:ignore-end
+            // coverage:ignore-end
           }
         });
       }
@@ -124,7 +125,16 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       final isOffline = await checkFn();
       if (isOffline) {
         if (ref.read(isLoggedInProvider) && mounted) {
-          setState(() => _hasVerificationTimedOut = true);
+          final storage = ref.read(storageServiceProvider);
+          final lastLogin = storage.getLastLogin();
+          final isSessionExpired = lastLogin != null &&
+              DateTime.now().difference(lastLogin).inHours >= 1;
+
+          if (isSessionExpired) {
+            setState(() => _hasVerificationTimedOut = false);
+          } else {
+            setState(() => _hasVerificationTimedOut = true);
+          }
         }
         return;
       }
@@ -172,9 +182,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // Use .contains() to handle both Native and Web/PWA error code formats (auth/ prefix)
     if (e.code.contains('user-not-found') ||
         e.code.contains('user-disabled') || // coverage:ignore-line
-        e.code.contains('min-app-version-error')) { // coverage:ignore-line
-
-
+        e.code.contains('min-app-version-error')) {
+      // coverage:ignore-line
       DebugLogger().log("Critical Session Error (${e.code}): Force Logout.");
       // CRITICAL: Only force logout if NOT in background recovery
       // This prevents redirects on iOS/Safari during transient recovery glitches
@@ -184,21 +193,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       return false;
     }
 
-    if (e.code.contains('network-request-failed') || // coverage:ignore-line
-        e.code.contains('unavailable')) { // coverage:ignore-line
-
-
-      if (attempts >= maxAttempts) { // coverage:ignore-line
-
-
-        // coverage:ignore-start
-        ref
-            .read(isOfflineProvider.notifier)
-            .setOffline(true);
+    // coverage:ignore-start
+    if (e.code.contains('network-request-failed') ||
+        e.code.contains('unavailable')) {
+      if (attempts >= maxAttempts) {
+        ref.read(isOfflineProvider.notifier).setOffline(true);
         // coverage:ignore-end
         return false;
       }
-      await Future.delayed( // coverage:ignore-line
+      await Future.delayed(
           Duration(seconds: 2 * attempts)); // coverage:ignore-line
       return true; // Retry
     }
@@ -213,10 +216,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _setupBuildListeners(context, storageInit);
     _manageAutoHealTimer();
 
+    if (kIsWeb && !_isStandalone()) {
+      // coverage:ignore-line
+      return _buildPWAInstallationBlocker(context); // coverage:ignore-line
+    }
+
     return storageInit.when(
-      loading: () => _buildLoadingScreen( // coverage:ignore-line
-          "Starting ${AppConstants.appName}..."),
-      error: (e, s) => // coverage:ignore-line
+      loading: () => _buildLoadingScreen(
+          "Starting ${AppConstants.appName}..."), // coverage:ignore-line
+      error: (e, s) =>
           _buildStorageErrorScreen(context), // coverage:ignore-line
       data: (_) => _buildAuthenticatedContent(context),
     );
@@ -258,7 +266,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final isPersistentLogin = ref.read(isLoggedInProvider);
         if (isPersistentLogin && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-        // coverage:ignore-end
+            // coverage:ignore-end
             const SnackBar(
               content: Text("Connection failed. Switching to Offline Mode."),
               backgroundColor: Colors.orange,
@@ -272,10 +280,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   void _listenLogoutRequests() {
     ref.listen(logoutRequestedProvider, (previous, next) {
-      if (next == true) { // coverage:ignore-line
-
-
-        navigatorKey.currentState // coverage:ignore-line
+      if (next == true) {
+        // coverage:ignore-line
+        navigatorKey.currentState
             ?.popUntil((route) => route.isFirst); // coverage:ignore-line
       }
     });
@@ -338,7 +345,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           duration: const Duration(seconds: 10),
           action: SnackBarAction(
             label: "FIX",
-            onPressed: () => // coverage:ignore-line
+            onPressed: () =>
                 _showSessionFixDialog(context, ref), // coverage:ignore-line
           ),
         ),
@@ -386,28 +393,25 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Future<void> _handleRestoreError(BuildContext context, dynamic e) async {
     final errorStr = e.toString();
     if (errorStr.contains("Passcode required") ||
-        errorStr.contains("Incorrect passcode")) { // coverage:ignore-line
-
-
+        errorStr.contains("Incorrect passcode")) {
+      // coverage:ignore-line
       final p = await UIUtils.showPasscodePrompt(
           context, errorStr.contains("Incorrect"));
 
       if (context.mounted && p != null && p.isNotEmpty) {
         await _performAutoRestoreOperation(context, p);
-      } else if (context.mounted) { // coverage:ignore-line
-
-
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar( // coverage:ignore-line
-
-
+      } else if (context.mounted) {
+        // coverage:ignore-line
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            // coverage:ignore-line
             content: Text("Restore skipped. Continuing with empty data.")));
       }
-    // coverage:ignore-start
+      // coverage:ignore-start
     } else if (!errorStr.contains("No cloud data")) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Restore Info: $errorStr")),
-    // coverage:ignore-end
+          // coverage:ignore-end
         );
       }
     }
@@ -426,22 +430,21 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     return Scaffold(
       body: Center(
         child: Padding(
-  // coverage:ignore-end
+          // coverage:ignore-end
           padding: const EdgeInsets.all(24.0),
-          child: Column( // coverage:ignore-line
-
-
+          child: Column(
+            // coverage:ignore-line
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [ // coverage:ignore-line
-
-
+            children: [
+              // coverage:ignore-line
               const Icon(Icons.error_outline, size: 48, color: Colors.amber),
               const SizedBox(height: 16),
-              Text( // coverage:ignore-line
-
-
+              Text(
+                // coverage:ignore-line
                 "Storage Access Issue",
-                style: Theme.of(context).textTheme.titleLarge, // coverage:ignore-line
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge, // coverage:ignore-line
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -449,14 +452,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               ElevatedButton.icon(
                 onPressed: () async {
                   final isOffline = await NetworkUtils.isOffline();
-              // coverage:ignore-end
+                  // coverage:ignore-end
                   if (isOffline) {
-                    if (context.mounted) { // coverage:ignore-line
-
-
-                      ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+                    if (context.mounted) {
+                      // coverage:ignore-line
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        // coverage:ignore-line
                         const SnackBar(
                           content: Text(
                               "Still Offline. Please check your data/WiFi."),
@@ -466,7 +467,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                     }
                   } else {
                     // ignore: unused_result
-                    ref.refresh( // coverage:ignore-line
+                    ref.refresh(
                         storageInitializerProvider); // coverage:ignore-line
                   }
                 },
@@ -496,6 +497,24 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       );
     }
 
+    if (isOffline && isPersistentLogin) {
+      final storage = ref.read(storageServiceProvider);
+      final lastLogin = storage.getLastLogin();
+      final isSessionExpired = lastLogin != null &&
+          DateTime.now().difference(lastLogin).inHours >= 1;
+
+      if (isSessionExpired) {
+        return _buildErrorScreen(
+          context,
+          title: "Session Expired",
+          message:
+              "Your session has expired. Please connect to the internet to re-verify your account.",
+          icon: Icons.history,
+          showOfflineBypass: false,
+        );
+      }
+    }
+
     if (isPersistentLogin) {
       // ignore: unused_result
       ref.read(firebaseInitializerProvider);
@@ -513,6 +532,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   bool _handleImmediateRedirects(BuildContext context) {
     if (ref.watch(isLoggedInProvider) &&
         (ref.watch(isOfflineProvider) || _hasVerificationTimedOut)) {
+      if (ref.read(isOfflineProvider)) {
+        final storage = ref.read(storageServiceProvider);
+        final lastLogin = storage.getLastLogin();
+        final isSessionExpired = lastLogin != null &&
+            DateTime.now().difference(lastLogin).inHours >= 1;
+        if (isSessionExpired) return false;
+      }
       return true;
     }
     if (kDebugMode && kIsWeb) return true;
@@ -533,16 +559,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       loading: () => _buildLoadingScreen(
         _getLoadingMessage(),
         showOfflineBypass: isPersistentLogin && !_isRedirectingLocal,
-      // coverage:ignore-end
+        // coverage:ignore-end
       ),
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
         if (isPersistentLogin) {
-          return _buildAuthStream( // coverage:ignore-line
-
-
-              context,
-              isPersistentLogin);
+          return _buildAuthStream(
+              context, isPersistentLogin); // coverage:ignore-line
         }
         final isTimeout = e.toString().toLowerCase().contains("timeout");
         return _buildErrorScreen(
@@ -563,13 +586,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   String _getLoadingMessage() {
     if (_isRedirectingLocal) {
       return _isSlowConnection
-  // coverage:ignore-end
+          // coverage:ignore-end
           ? "Slow link. Finalizing Account..."
           : "Finalizing Account...";
     }
-    return _isSlowConnection // coverage:ignore-line
+    return _isSlowConnection
         ? "Slow link. Connecting..."
-        : "Connecting...";
+        : "Connecting..."; // coverage:ignore-line
   }
 
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
@@ -594,7 +617,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               ElevatedButton.icon(
                 onPressed: () {
                   setState(() => _hasVerificationTimedOut = true);
-              // coverage:ignore-end
+                  // coverage:ignore-end
                 },
                 icon: const Icon(Icons.cloud_off_rounded),
                 label: const Text(continueOfflineText),
@@ -602,7 +625,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[200],
                   foregroundColor: Colors.grey[700],
-                // coverage:ignore-end
+                  // coverage:ignore-end
                 ),
               ),
             ],
@@ -623,8 +646,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         if (_isRedirectingLocal) {
-          return _buildLoadingScreen( // coverage:ignore-line
-              "Finalizing Account...");
+          return _buildLoadingScreen(
+              "Finalizing Account..."); // coverage:ignore-line
         }
 
         if (isPersistentLogin) {
@@ -638,13 +661,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         return _buildLoadingScreen("Verifying Session...",
             showOfflineBypass: isPersistentLogin);
       },
-      error: (e, s) { // coverage:ignore-line
-
-
+      error: (e, s) {
+        // coverage:ignore-line
         // If we have a persistent session, STAY on Dashboard even if Firebase is flapping
         if (isPersistentLogin) return const DashboardScreen();
 
-        DebugLogger() // coverage:ignore-line
+        DebugLogger()
             .log("AuthWrapper: Auth Stream Error: $e"); // coverage:ignore-line
         return const LoginScreen();
       },
@@ -694,9 +716,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                     if (!isOffline) {
                       ref.invalidate(firebaseInitializerProvider);
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+                      ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                             content: Text(
                                 "Still offline. Please check your connection."),
@@ -708,15 +728,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 icon: const Icon(Icons.refresh),
                 label: const Text("Retry Connection"),
               ),
-              if (showOfflineBypass) ...[ // coverage:ignore-line
-
-
+              if (showOfflineBypass) ...[
+                // coverage:ignore-line
                 const SizedBox(height: 12),
                 // coverage:ignore-start
                 TextButton.icon(
                   onPressed: () {
                     setState(() => _hasVerificationTimedOut = true);
-                // coverage:ignore-end
+                    // coverage:ignore-end
                   },
                   icon: const Icon(Icons.cloud_off_rounded),
                   label: const Text(continueOfflineText),
@@ -729,18 +748,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     );
   }
 
-  Future<void> _showSessionFixDialog( // coverage:ignore-line
-
-
+  Future<void> _showSessionFixDialog(
+      // coverage:ignore-line
       BuildContext context,
       WidgetRef ref) async {
-    await showDialog( // coverage:ignore-line
-
-
+    await showDialog(
+      // coverage:ignore-line
       context: context,
-      builder: (context) => AlertDialog( // coverage:ignore-line
-
-
+      builder: (context) => AlertDialog(
+        // coverage:ignore-line
         title: const Text("Session Issue"),
         content: const Text(
             "Your secure cloud session could not be restored. You can continue offline, try to reconnect, or login again."),
@@ -748,7 +764,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-        // coverage:ignore-end
+            // coverage:ignore-end
             child: const Text(continueOfflineText),
           ),
           // coverage:ignore-start
@@ -756,7 +772,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             onPressed: () {
               Navigator.pop(context);
               ref.invalidate(firebaseInitializerProvider);
-          // coverage:ignore-end
+              // coverage:ignore-end
             },
             child: const Text("Retry"),
           ),
@@ -765,12 +781,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             onPressed: () {
               Navigator.pop(context);
               ref.read(authServiceProvider).signOut(ref);
-          // coverage:ignore-end
+              // coverage:ignore-end
             },
-            style: TextButton.styleFrom( // coverage:ignore-line
-
-
-                foregroundColor: Theme.of(context).colorScheme.error), // coverage:ignore-line
+            style: TextButton.styleFrom(
+                // coverage:ignore-line
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .error), // coverage:ignore-line
             child: const Text("Login Again"),
           ),
         ],
@@ -787,5 +804,257 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     } catch (e) {
       // Failed to set Optimistic Flag
     }
+  }
+
+  bool _isStandalone() {
+    // coverage:ignore-line
+    if (kDebugMode) return true;
+    return platform_utils.isStandalone(); // coverage:ignore-line
+  }
+
+  // coverage:ignore-start
+  Widget _buildPWAInstallationBlocker(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        // coverage:ignore-end
+        width: double.infinity,
+        decoration: BoxDecoration(
+          // coverage:ignore-line
+          gradient: LinearGradient(
+            // coverage:ignore-line
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              // coverage:ignore-line
+              AppTheme.primary,
+              AppTheme.primary.withValues(alpha: 0.8), // coverage:ignore-line
+            ],
+          ),
+        ),
+        child: SafeArea(
+          // coverage:ignore-line
+          child: Column(
+            // coverage:ignore-line
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // coverage:ignore-line
+              const Spacer(),
+              Container(
+                // coverage:ignore-line
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  // coverage:ignore-line
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  // coverage:ignore-start
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      // coverage:ignore-end
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Hero(
+                  // coverage:ignore-line
+                  tag: 'app_logo',
+                  child: Image.asset(
+                    // coverage:ignore-line
+                    'assets/images/logo.png',
+                    width: 100,
+                    height: 100,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        // coverage:ignore-line
+                        Icons.account_balance_wallet,
+                        size: 100,
+                        color: AppTheme.primary),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                // coverage:ignore-line
+                "SAMRIDDHI FLOW",
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                  // coverage:ignore-line
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                // coverage:ignore-line
+                padding: const EdgeInsets.symmetric(horizontal: 48),
+                child: Text(
+                  // coverage:ignore-line
+                  "Experience the full premium power of Samriddhi Flow by installing it as an app.",
+                  textAlign: TextAlign.center,
+                  style: AppTheme.offlineSafeTextStyle.copyWith(
+                    // coverage:ignore-line
+                    fontSize: 16,
+                    color: Colors.white
+                        .withValues(alpha: 0.9), // coverage:ignore-line
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                // coverage:ignore-line
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  // coverage:ignore-line
+                  color: Colors.white,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(32)),
+                  // coverage:ignore-start
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      // coverage:ignore-end
+                      blurRadius: 40,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  // coverage:ignore-line
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // coverage:ignore-line
+                    _buildInstallStep(
+                      // coverage:ignore-line
+                      context,
+                      icon: Icons.add_to_home_screen_rounded,
+                      title: "How to Install",
+                      subtitle: "Add Samriddhi Flow to your home screen",
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 24),
+                    _buildInstallInstruction(
+                      // coverage:ignore-line
+                      context,
+                      isAndroid:
+                          !platform_utils.isIOS(), // coverage:ignore-line
+                    ),
+                    const SizedBox(height: 48),
+                    // coverage:ignore-start
+                    ElevatedButton(
+                      onPressed: () => platform_utils.reloadApp(),
+                      style: ElevatedButton.styleFrom(
+                        // coverage:ignore-end
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          // coverage:ignore-line
+                          borderRadius:
+                              BorderRadius.circular(16), // coverage:ignore-line
+                        ),
+                      ),
+                      child: const Text("I HAVE INSTALLED IT"),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstallStep(BuildContext context, // coverage:ignore-line
+      {required IconData icon,
+      required String title,
+      required String subtitle}) {
+    // coverage:ignore-start
+    return Row(
+      children: [
+        Container(
+          // coverage:ignore-end
+          padding: const EdgeInsets.all(12),
+          // coverage:ignore-start
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            // coverage:ignore-end
+          ),
+          child: Icon(icon,
+              color: AppTheme.primary, size: 32), // coverage:ignore-line
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          // coverage:ignore-line
+          child: Column(
+            // coverage:ignore-line
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // coverage:ignore-line
+              Text(
+                // coverage:ignore-line
+                title,
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                  // coverage:ignore-line
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              Text(
+                // coverage:ignore-line
+                subtitle,
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                  // coverage:ignore-line
+                  color: Colors.grey[600], // coverage:ignore-line
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstallInstruction(BuildContext context, // coverage:ignore-line
+      {required bool isAndroid}) {
+    if (isAndroid) {
+      return _buildInstructionRow(
+        // coverage:ignore-line
+        icon: Icons.more_vert_rounded,
+        text: "Tap the three dots in your browser and select 'Install App'",
+      );
+    } else {
+      return _buildInstructionRow(
+        // coverage:ignore-line
+        icon: Icons.ios_share_rounded,
+        text: "Tap the share button and select 'Add to Home Screen'",
+      );
+    }
+  }
+
+  // coverage:ignore-start
+  Widget _buildInstructionRow({required IconData icon, required String text}) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.grey[700], size: 24),
+        // coverage:ignore-end
+        const SizedBox(width: 16),
+        Expanded(
+          // coverage:ignore-line
+          child: Text(
+            // coverage:ignore-line
+            text,
+            style: AppTheme.offlineSafeTextStyle.copyWith(
+              // coverage:ignore-line
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

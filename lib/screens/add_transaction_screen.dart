@@ -110,7 +110,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               sortedAccounts, sortedCategories, allTxns, accounts);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')), // coverage:ignore-line
+        error: (e, s) =>
+            Center(child: Text('Error: $e')), // coverage:ignore-line
       ),
     );
   }
@@ -136,8 +137,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final catFreq = <String, int>{};
     for (var t in matchingTxns) {
-      if (t.type == _type) { // coverage:ignore-line
-        catFreq[t.category] = (catFreq[t.category] ?? 0) + 1; // coverage:ignore-line
+      if (t.type == _type) {
+        // coverage:ignore-line
+        catFreq[t.category] =
+            (catFreq[t.category] ?? 0) + 1; // coverage:ignore-line
       }
     }
 
@@ -168,11 +171,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final accFreq = <String, int>{};
     for (var t in matchingTxns) {
-      if (t.accountId != null) { // coverage:ignore-line
-        accFreq[t.accountId!] = (accFreq[t.accountId!] ?? 0) + 1; // coverage:ignore-line
+      if (t.accountId != null) {
+        // coverage:ignore-line
+        accFreq[t.accountId!] =
+            (accFreq[t.accountId!] ?? 0) + 1; // coverage:ignore-line
       }
-      if (t.toAccountId != null) { // coverage:ignore-line
-        accFreq[t.toAccountId!] = (accFreq[t.toAccountId!] ?? 0) + 1; // coverage:ignore-line
+      if (t.toAccountId != null) {
+        // coverage:ignore-line
+        accFreq[t.toAccountId!] =
+            (accFreq[t.toAccountId!] ?? 0) + 1; // coverage:ignore-line
       }
     }
 
@@ -331,7 +338,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onChanged: (v) => _holdingTenureMonths = int.tryParse(v), // coverage:ignore-line
+          onChanged: (v) =>
+              _holdingTenureMonths = int.tryParse(v), // coverage:ignore-line
         ),
       ],
     );
@@ -363,7 +371,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       optionsBuilder: (TextEditingValue textEditingValue) {
         final txns = transactionsAsync.asData?.value ?? [];
         final filteredTxns = txns.where((t) =>
-            _type == TransactionType.transfer || t.category == _category); // coverage:ignore-line
+            _type == TransactionType.transfer ||
+            t.category == _category); // coverage:ignore-line
         if (textEditingValue.text.isEmpty) {
           return filteredTxns.map((t) => t.title).toSet().take(5);
         }
@@ -372,7 +381,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             .toSet()
             .where((title) => title
                 .toLowerCase() // coverage:ignore-line
-                .contains(textEditingValue.text.toLowerCase())) // coverage:ignore-line
+                .contains(textEditingValue.text
+                    .toLowerCase())) // coverage:ignore-line
             .toList();
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -387,16 +397,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           onSaved: (v) => _title = v!,
         );
       },
-      optionsViewBuilder: (context, onSelected, options) { // coverage:ignore-line
-        return Align( // coverage:ignore-line
+      optionsViewBuilder: (context, onSelected, options) {
+        // coverage:ignore-line
+        return Align(
+          // coverage:ignore-line
           alignment: Alignment.topLeft,
-          child: Material( // coverage:ignore-line
+          child: Material(
+            // coverage:ignore-line
             elevation: 4.0,
             // coverage:ignore-start
             child: SizedBox(
               width: MediaQuery.of(context).size.width - 32,
               child: ListView.builder(
-            // coverage:ignore-end
+                // coverage:ignore-end
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 // coverage:ignore-start
@@ -406,7 +419,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   return ListTile(
                     title: Text(option),
                     onTap: () => onSelected(option),
-                // coverage:ignore-end
+                    // coverage:ignore-end
                   );
                 },
               ),
@@ -509,7 +522,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2030));
               if (d != null) setState(() => _date = d);
-            // coverage:ignore-end
+              // coverage:ignore-end
             },
           ),
         ),
@@ -517,9 +530,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           child: TextButton.icon(
             icon: PureIcons.timer(),
             label: Text(_time.format(context)),
-            onPressed: () async { // coverage:ignore-line
-              final t =
-                  await showTimePicker(context: context, initialTime: _time); // coverage:ignore-line
+            onPressed: () async {
+              // coverage:ignore-line
+              final t = await showTimePicker(
+                  context: context, initialTime: _time); // coverage:ignore-line
               if (t != null) setState(() => _time = t); // coverage:ignore-line
             },
           ),
@@ -563,8 +577,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         icon: PureIcons.calendar()),
                   ],
                   selected: {_isScheduleOnly},
-                  onSelectionChanged: (Set<bool> newSelection) { // coverage:ignore-line
-                    setState(() => _isScheduleOnly = newSelection.first); // coverage:ignore-line
+                  onSelectionChanged: (Set<bool> newSelection) {
+                    // coverage:ignore-line
+                    setState(() => _isScheduleOnly =
+                        newSelection.first); // coverage:ignore-line
                   },
                 ),
                 if (_isScheduleOnly) ...[
@@ -580,25 +596,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  Widget _buildFirstExecutionInfo(List<DateTime> holidays) { // coverage:ignore-line
-    return Container( // coverage:ignore-line
+  Widget _buildFirstExecutionInfo(List<DateTime> holidays) {
+    // coverage:ignore-line
+    return Container(
+      // coverage:ignore-line
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       // coverage:ignore-start
       decoration: BoxDecoration(
         color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-      // coverage:ignore-end
+        // coverage:ignore-end
       ),
-      child: Row( // coverage:ignore-line
-        children: [ // coverage:ignore-line
+      child: Row(
+        // coverage:ignore-line
+        children: [
+          // coverage:ignore-line
           const Icon(Icons.info_outline, size: 16, color: Colors.blue),
           const SizedBox(width: 8),
           // coverage:ignore-start
           Expanded(
             child: Text(
               "First Execution: ${DateFormat('EEE, MMM d, y').format(RecurrenceUtils.findFirstOccurrence(baseDate: _date, frequency: _frequency, scheduleType: _scheduleType, selectedWeekday: _selectedWeekday, adjustForHolidays: _adjustForHolidays, holidays: holidays))}",
-          // coverage:ignore-end
+              // coverage:ignore-end
               style: const TextStyle(fontSize: 12, color: Colors.blue),
             ),
           ),
@@ -641,7 +661,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             subtitle: const Text(
                 'Schedule a day earlier if it lands on a holiday/weekend'),
             value: _adjustForHolidays,
-            onChanged: (v) => setState(() => _adjustForHolidays = v), // coverage:ignore-line
+            onChanged: (v) =>
+                setState(() => _adjustForHolidays = v), // coverage:ignore-line
             contentPadding: EdgeInsets.zero,
           ),
           if (_scheduleType == ScheduleType.specificWeekday) ...[
@@ -659,7 +680,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     } else if (_frequency == Frequency.weekly) {
       _scheduleType = ScheduleType.specificWeekday;
       _selectedWeekday ??= _date.weekday;
-    } else if (_frequency == Frequency.monthly) { // coverage:ignore-line
+    } else if (_frequency == Frequency.monthly) {
+      // coverage:ignore-line
       _scheduleType = ScheduleType.fixedDate; // coverage:ignore-line
     }
   }
@@ -688,7 +710,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 child: Text(_getScheduleLabel(s)),
               ))
           .toList(),
-      onChanged: (v) => setState(() => _scheduleType = v!), // coverage:ignore-line
+      onChanged: (v) =>
+          setState(() => _scheduleType = v!), // coverage:ignore-line
     );
   }
 
@@ -706,7 +729,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         DropdownMenuItem(value: 6, child: Text('Saturday')),
         DropdownMenuItem(value: 7, child: Text('Sunday')),
       ],
-      onChanged: (v) => setState(() => _selectedWeekday = v), // coverage:ignore-line
+      onChanged: (v) =>
+          setState(() => _selectedWeekday = v), // coverage:ignore-line
     );
   }
 
@@ -754,7 +778,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (_type == TransactionType.transfer &&
         _selectedAccountId != null &&
         _selectedAccountId == _toAccountId) {
-      ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+      ScaffoldMessenger.of(context).showSnackBar(
+        // coverage:ignore-line
         const SnackBar(
           content: Text('Source and Target accounts cannot be the same.'),
           backgroundColor: Colors.red,
@@ -854,8 +879,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (!_isScheduleOnly) {
       await storage.saveTransaction(txn);
       if (widget.recurringId != null) {
-        await storage.advanceRecurringTransactionDate(widget.recurringId!); // coverage:ignore-line
-        final _ = ref.refresh(recurringTransactionsProvider); // coverage:ignore-line
+        await storage.advanceRecurringTransactionDate(
+            widget.recurringId!); // coverage:ignore-line
+        final _ =
+            ref.refresh(recurringTransactionsProvider); // coverage:ignore-line
       }
       ref.read(txnsSinceBackupProvider.notifier).refresh();
     }
@@ -871,10 +898,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         byMonthDay: (_frequency == Frequency.monthly &&
                 _scheduleType == ScheduleType.fixedDate)
             ? dateTime.day
-      // coverage:ignore-end
+            // coverage:ignore-end
             : null,
         startDate: _isScheduleOnly // coverage:ignore-line
-            ? RecurrenceUtils.findFirstOccurrence( // coverage:ignore-line
+            ? RecurrenceUtils.findFirstOccurrence(
+                // coverage:ignore-line
                 baseDate: dateTime,
                 // coverage:ignore-start
                 frequency: _frequency,
@@ -882,7 +910,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 selectedWeekday: _selectedWeekday,
                 adjustForHolidays: _adjustForHolidays,
                 holidays: ref.read(holidaysProvider))
-                // coverage:ignore-end
+            // coverage:ignore-end
             : dateTime,
         // coverage:ignore-start
         scheduleType: _scheduleType,
@@ -947,7 +975,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (a.creditLimit != null && a.creditLimit! > 0) {
         final available = a.creditLimit! - currentDebt;
         return 'Avail: ${CurrencyUtils.getSmartFormat(available, a.currency)}';
-      // coverage:ignore-end
+        // coverage:ignore-end
       } else {
         return 'Usage: ${CurrencyUtils.getSmartFormat(currentDebt, a.currency)}'; // coverage:ignore-line
       }

@@ -84,7 +84,7 @@ class RecurrenceUtils {
   static bool _matchesWeekly(DateTime date, ScheduleType type, int? weekday) {
     if (type == ScheduleType.specificWeekday && weekday != null) {
       return date.weekday == weekday;
-  // coverage:ignore-end
+      // coverage:ignore-end
     }
     return true;
   }
@@ -96,8 +96,7 @@ class RecurrenceUtils {
       ScheduleType.lastDayOfMonth => date.add(const Duration(days: 1)).month !=
           date.month, // coverage:ignore-line
       ScheduleType.lastWorkingDay => _isLastWorkingDay(date, holidays),
-      ScheduleType.everyWeekend =>
-        date.weekday == 6 || date.weekday == 7, // coverage:ignore-line
+      ScheduleType.everyWeekend => date.weekday == 6 || date.weekday == 7,
       ScheduleType.lastWeekend => _matchesLastWeekend(date),
       ScheduleType.specificWeekday =>
         weekday != null ? date.weekday == weekday : true,
@@ -208,8 +207,8 @@ class RecurrenceUtils {
         return next;
       case ScheduleType.specificWeekday:
         if (selectedWeekday != null) {
-          while (next.weekday != selectedWeekday) { // coverage:ignore-line
-
+          while (next.weekday != selectedWeekday) {
+            // coverage:ignore-line
             next = next.add(const Duration(days: 1)); // coverage:ignore-line
           }
         }
@@ -268,7 +267,7 @@ class RecurrenceUtils {
         final backward = rt.nextExecutionDate.subtract(Duration(days: i));
         if (forward.weekday == targetWeekday) return forward;
         if (backward.weekday == targetWeekday) return backward;
-  // coverage:ignore-end
+        // coverage:ignore-end
       }
     }
     return rt.nextExecutionDate; // coverage:ignore-line
@@ -285,15 +284,15 @@ class RecurrenceUtils {
     return cursor;
   }
 
-  static DateTime _findFirstWorkingDayInMonth( // coverage:ignore-line
-
+  static DateTime _findFirstWorkingDayInMonth(
+      // coverage:ignore-line
       RecurringTransaction rt,
       List<DateTime> holidays) {
-    DateTime base = DateTime(rt.nextExecutionDate.year, // coverage:ignore-line
+    DateTime base = DateTime(rt.nextExecutionDate.year,
         rt.nextExecutionDate.month, 1); // coverage:ignore-line
     DateTime cursor = base;
-    while (_isHolidayOrWeekend(cursor, holidays)) { // coverage:ignore-line
-
+    while (_isHolidayOrWeekend(cursor, holidays)) {
+      // coverage:ignore-line
       cursor = cursor.add(const Duration(days: 1)); // coverage:ignore-line
     }
     return cursor;

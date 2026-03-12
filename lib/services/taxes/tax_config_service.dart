@@ -1,18 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/utils/debug_logger.dart';
 
 class TaxConfigService {
-  late Box<TaxRules> _box;
+  final String profileId;
+  TaxConfigService({this.profileId = 'default'});
+
   static const String _boxName =
       'tax_rules_v2'; // Changed box name for migration safety
 
+  Box<TaxRules> get _box => Hive.box<TaxRules>(_boxName);
+
   Future<void> init() async {
     if (!Hive.isBoxOpen(_boxName)) {
-      // Actually, standard practice is register BEFORE open.
-      _box = await Hive.openBox<TaxRules>(_boxName);
-    } else {
-      _box = Hive.box<TaxRules>(_boxName);
+      await Hive.openBox<TaxRules>(_boxName);
     }
   }
 
@@ -22,26 +25,31 @@ class TaxConfigService {
   /// If not found, attempts to return rules from (year-1).
   /// If that fails, returns default rules.
   TaxRules getRulesForYear(int year) {
-    if (!isReady) return TaxRules();
+    if (!isReady) return TaxRules(profileId: profileId);
 
-    if (_box.containsKey(year)) {
-      return _box.get(year)!;
+    final key = '${profileId}_$year';
+    if (_box.containsKey(key)) {
+      return _box.get(key)!;
     }
 
     // Try Previous Year
-    if (_box.containsKey(year - 1)) {
-      return _box.get(year - 1)!;
+    final prevKey = '${profileId}_${year - 1}';
+    if (_box.containsKey(prevKey)) {
+      return _box.get(prevKey)!;
     }
 
-    return TaxRules();
+    return TaxRules(profileId: profileId);
   }
 
   Future<void> saveRulesForYear(int year, TaxRules rules) async {
-    await _box.put(year, rules);
+    final rulesToSave = rules.profileId == profileId
+        ? rules
+        : rules.copyWith(profileId: profileId);
+    await _box.put('${profileId}_$year', rulesToSave);
   }
 
-  Future<void> deleteRulesForYear(int year) async { // coverage:ignore-line
-    await _box.delete(year); // coverage:ignore-line
+  Future<void> deleteRulesForYear(int year) async {
+    await _box.delete('${profileId}_$year');
   }
 
   /// Explicitly copy rules from one year to another
@@ -51,14 +59,15 @@ class TaxConfigService {
   }
 
   /// Get all rules across all years for backup
-  // coverage:ignore-start
   Map<int, TaxRules> getAllRules() {
     if (!_box.isOpen) return {};
     final Map<int, TaxRules> all = {};
     for (var key in _box.keys) {
-      if (key is int) {
-        all[key] = _box.get(key)!;
-  // coverage:ignore-end
+      if (key is String && key.startsWith('${profileId}_')) {
+        final year = int.tryParse(key.replaceFirst('${profileId}_', ''));
+        if (year != null) {
+          all[year] = _box.get(key)!;
+        }
       }
     }
     return all;
@@ -66,8 +75,8 @@ class TaxConfigService {
 
   /// RESTORE: Bulk save rules with Sanitization
   Future<void> restoreAllRules(Map<int, TaxRules> data) async {
-    if (!_box.isOpen) {
-      _box = await Hive.openBox<TaxRules>(_boxName); // coverage:ignore-line
+    if (!Hive.isBoxOpen(_boxName)) {
+      await Hive.openBox<TaxRules>(_boxName); // coverage:ignore-line
     }
 
     await _box.clear();
@@ -79,11 +88,17 @@ class TaxConfigService {
         // This strips out any hidden "minified" types or runtime wrappers from the source.
         final cleanRules = TaxRules.fromMap(entry.value.toMap());
 
-        await _box.put(entry.key, cleanRules);
+        final keyToSave = '${profileId}_${entry.key}';
+        final rulesToSave = cleanRules.profileId == profileId
+            ? cleanRules
+            : cleanRules.copyWith(profileId: profileId);
+
+        await _box.put(keyToSave, rulesToSave);
       } catch (e) {
         // Detailed logging to identify the "unknown type" error
         // likely caused by minified class names not being registered or mismatch
-        // print("CRITICAL RESTORE ERROR: Failed to save TaxRules for Year ${entry.key}: $e");
+        DebugLogger().log(// coverage:ignore-line
+            "CRITICAL RESTORE ERROR: Failed to save TaxRules for Year ${entry.key}: $e"); // coverage:ignore-line
       }
     }
   }
@@ -117,13 +132,15 @@ class TaxConfigService {
     if (now.month < referenceRules.financialYearStartMonth) {
       return now.year - 1;
     }
-    return now.year; // coverage:ignore-line
+    return now.year;
   }
 
   /// For backward compatibility or convenience property (defaults to CURRENT FY)
-  TaxRules get rules => getRulesForYear(getCurrentFinancialYear()); // coverage:ignore-line
+  TaxRules get rules =>
+      getRulesForYear(getCurrentFinancialYear()); // coverage:ignore-line
 }
 
-final taxConfigServiceProvider = Provider<TaxConfigService>((ref) { // coverage:ignore-line
-  return TaxConfigService(); // coverage:ignore-line
+final taxConfigServiceProvider = Provider<TaxConfigService>((ref) {
+  final profileId = ref.watch(activeProfileIdProvider); // coverage:ignore-line
+  return TaxConfigService(profileId: profileId); // coverage:ignore-line
 });

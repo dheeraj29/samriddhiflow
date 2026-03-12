@@ -15,18 +15,20 @@ class InsurancePolicy {
     bool? isUnitLinked,
     bool? isHandicapDependent,
     bool? isTaxExempt,
+    String? profileId,
   }) {
     return InsurancePolicy(
       id: id,
       policyName: policyName ?? this.policyName,
       policyNumber: policyNumber ?? this.policyNumber,
-      annualPremium: annualPremium ?? this.annualPremium, // coverage:ignore-line
+      annualPremium: annualPremium ?? this.annualPremium,
       sumAssured: sumAssured ?? this.sumAssured,
       startDate: startDate ?? this.startDate,
       maturityDate: maturityDate ?? this.maturityDate,
       isUnitLinked: isUnitLinked ?? this.isUnitLinked,
       isHandicapDependent: isHandicapDependent ?? this.isHandicapDependent,
       isTaxExempt: isTaxExempt ?? this.isTaxExempt,
+      profileId: profileId ?? this.profileId,
     );
   }
 
@@ -60,6 +62,9 @@ class InsurancePolicy {
   @HiveField(9)
   final bool? isTaxExempt; // Persisted Tax Status (null = not calculated)
 
+  @HiveField(10)
+  String profileId;
+
   InsurancePolicy({
     required this.id,
     required this.policyName,
@@ -71,6 +76,7 @@ class InsurancePolicy {
     this.isUnitLinked = false,
     this.isHandicapDependent = false,
     this.isTaxExempt,
+    this.profileId = 'default',
   });
 
   Map<String, dynamic> toMap() => {
@@ -84,6 +90,7 @@ class InsurancePolicy {
         'isUnitLinked': isUnitLinked,
         'isHandicapDependent': isHandicapDependent,
         'isTaxExempt': isTaxExempt,
+        'profileId': profileId,
       };
 
   factory InsurancePolicy.fromMap(Map<String, dynamic> m) => InsurancePolicy(
@@ -97,6 +104,7 @@ class InsurancePolicy {
         isUnitLinked: m['isUnitLinked'] ?? false,
         isHandicapDependent: m['isHandicapDependent'] ?? false,
         isTaxExempt: m['isTaxExempt'],
+        profileId: m['profileId'] ?? 'default',
       );
 
   factory InsurancePolicy.create({
@@ -108,6 +116,7 @@ class InsurancePolicy {
     required DateTime maturity,
     bool isUlip = false,
     bool? isTaxExempt,
+    String profileId = 'default',
   }) {
     return InsurancePolicy(
       id: const Uuid().v4(),
@@ -119,6 +128,7 @@ class InsurancePolicy {
       maturityDate: maturity,
       isUnitLinked: isUlip,
       isTaxExempt: isTaxExempt,
+      profileId: profileId,
     );
   }
 }

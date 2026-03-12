@@ -93,9 +93,23 @@ void main() {
 
       final data = TaxYearData(
         year: 2025,
-        salary: const SalaryDetails(
-          grossSalary: 100000,
-          giftsFromEmployer: 10000,
+        salary: SalaryDetails(
+          history: [
+            SalaryStructure(
+              id: 'test',
+              monthlyBasic: 100000 / 12,
+              effectiveDate: DateTime(2025, 4, 1),
+              customAllowances: const [
+                CustomAllowance(
+                  id: 'gift',
+                  name: 'Gifts',
+                  payoutAmount: 10000,
+                  frequency: PayoutFrequency.annually,
+                  startMonth: 4,
+                )
+              ],
+            )
+          ],
         ),
         houseProperties: [
           const HouseProperty(
@@ -172,22 +186,28 @@ void main() {
         jurisdiction: 'India',
       );
 
-      const data = TaxYearData(
+      final data = TaxYearData(
         year: 2025,
         salary: SalaryDetails(
-          grossSalary: 100000,
-          independentExemptions: [
-            CustomExemption(name: 'Rent', amount: 10000),
+          history: [
+            SalaryStructure(
+              id: 'test',
+              monthlyBasic: 100000 / 12,
+              effectiveDate: DateTime(2025, 4, 1),
+            )
+          ],
+          independentExemptions: const [
+            CustomExemption(id: 'rent-ind', name: 'Rent', amount: 10000),
           ],
         ),
-        houseProperties: [
+        houseProperties: const [
           HouseProperty(
               name: 'Flat', rentReceived: 50000, isSelfOccupied: false),
         ],
-        businessIncomes: [
+        businessIncomes: const [
           BusinessEntity(name: 'Biz', netIncome: 40000),
         ],
-        otherIncomes: [
+        otherIncomes: const [
           OtherIncome(name: 'Misc', amount: 20000),
         ],
       );
@@ -228,10 +248,12 @@ void main() {
         jurisdiction: 'India',
       );
 
-      const data = TaxYearData(
+      final data = TaxYearData(
         year: 2025,
-        agricultureIncome: 20000, // 20k - 5k (ex) = 15k
-        otherIncomes: [OtherIncome(name: 'Interest', amount: 300000)],
+        agriIncomeHistory: [
+          AgriIncomeEntry(id: 'a1', amount: 20000, date: DateTime(2025, 4, 1))
+        ],
+        otherIncomes: const [OtherIncome(name: 'Interest', amount: 300000)],
       );
 
       final liability = service.calculateDetailedLiability(data, rules);
@@ -267,7 +289,7 @@ void main() {
       const data = TaxYearData(
         year: 2025,
         cashGifts: [
-          OtherIncome(name: 'Gift 1', amount: 60000, subtype: 'party'),
+          OtherIncome(name: 'Gift 1', amount: 60000, subtype: 'friend'),
         ],
       );
 
@@ -293,10 +315,12 @@ void main() {
         jurisdiction: 'India',
       );
 
-      const data = TaxYearData(
+      final data = TaxYearData(
         year: 2025,
-        agricultureIncome: 50000,
-        otherIncomes: [OtherIncome(name: 'Interest', amount: 100000)],
+        agriIncomeHistory: [
+          AgriIncomeEntry(id: 'a1', amount: 50000, date: DateTime(2025, 4, 1))
+        ],
+        otherIncomes: const [OtherIncome(name: 'Interest', amount: 100000)],
       );
 
       final liability = service.calculateDetailedLiability(data, rules);

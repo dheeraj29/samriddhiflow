@@ -56,8 +56,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, s) => // coverage:ignore-line
-          AlertDialog( // coverage:ignore-line
-
+          AlertDialog(
               title: const Text('Error'),
               content: Text('$e')), // coverage:ignore-line
     );
@@ -88,9 +87,8 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.isFullyPaid)
-          Container( // coverage:ignore-line
-
-
+          Container(
+            // coverage:ignore-line
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(8),
             // coverage:ignore-start
@@ -98,7 +96,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
               color: Colors.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-            // coverage:ignore-end
+              // coverage:ignore-end
             ),
             child: const Row(
               children: [
@@ -128,9 +126,9 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
                 _originalAmount = double.tryParse(_amountController.text) ?? 0;
                 _amountController.text =
                     _originalAmount!.roundToDouble().toStringAsFixed(2);
-              } else if (_originalAmount != null && _originalAmount! > 0) { // coverage:ignore-line
-
-                _amountController.text = // coverage:ignore-line
+              } else if (_originalAmount != null && _originalAmount! > 0) {
+                // coverage:ignore-line
+                _amountController.text =
                     _originalAmount!.toStringAsFixed(2); // coverage:ignore-line
               }
             });
@@ -153,14 +151,14 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (_, __) => // coverage:ignore-line
-              const Text('Error loading accounts'),
+          error: (_, __) =>
+              const Text('Error loading accounts'), // coverage:ignore-line
         ),
         const SizedBox(height: 16),
         FormUtils.buildDatePickerField(
           context: context,
           selectedDate: _date,
-          onDateTarget: (picked) => // coverage:ignore-line
+          onDateTarget: (picked) =>
               setState(() => _date = picked), // coverage:ignore-line
           label: 'Payment Date',
         ),

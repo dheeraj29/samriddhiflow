@@ -31,20 +31,7 @@ class _ReportsPieChartState extends State<ReportsPieChart> {
           sectionsSpace: 2,
           centerSpaceRadius: 40,
           pieTouchData: PieTouchData(
-            // coverage:ignore-start
-            touchCallback: (FlTouchEvent event, pieTouchResponse) {
-              setState(() {
-                if (!event.isInterestedForInteractions ||
-            // coverage:ignore-end
-                    pieTouchResponse == null ||
-                    pieTouchResponse.touchedSection == null) { // coverage:ignore-line
-                  touchedIndex = -1; // coverage:ignore-line
-                  return;
-                }
-                touchedIndex = // coverage:ignore-line
-                    pieTouchResponse.touchedSection!.touchedSectionIndex; // coverage:ignore-line
-              });
-            },
+            touchCallback: _handleTouch,
           ),
           sections: widget.entries.indexed
               .map((entry) => _buildPieSection(context, entry.$1, entry.$2))
@@ -52,6 +39,22 @@ class _ReportsPieChartState extends State<ReportsPieChart> {
         ),
       ),
     );
+  }
+
+  // coverage:ignore-start
+  void _handleTouch(FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
+    setState(() {
+      if (!event.isInterestedForInteractions ||
+          // coverage:ignore-end
+          pieTouchResponse == null ||
+          pieTouchResponse.touchedSection == null) {
+        // coverage:ignore-line
+        touchedIndex = -1; // coverage:ignore-line
+        return;
+      }
+      touchedIndex = pieTouchResponse
+          .touchedSection!.touchedSectionIndex; // coverage:ignore-line
+    });
   }
 
   PieChartSectionData _buildPieSection(

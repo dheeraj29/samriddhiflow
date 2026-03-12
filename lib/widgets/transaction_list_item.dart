@@ -55,7 +55,7 @@ class TransactionListItem extends StatelessWidget {
         txn.type == TransactionType.transfer &&
         txn.toAccountId == currentAccountIdFilter &&
         txn.accountId != txn.toAccountId;
-        // coverage:ignore-end
+    // coverage:ignore-end
 
     return ListTile(
       selected: isSelected,
@@ -165,49 +165,7 @@ class TransactionListItem extends StatelessWidget {
       padding: const EdgeInsets.only(top: 2.0),
       child: Row(
         children: [
-          if (txn.gainAmount != null) ...[
-            Text(
-              '${txn.gainAmount! >= 0 ? "Profit" : "Loss"}: ',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: txn.gainAmount! >= 0 ? Colors.green : Colors.redAccent,
-              ),
-            ),
-            SmartCurrencyText(
-              value: txn.gainAmount!.abs(),
-              locale: currencyLocale,
-              initialCompact: compactView,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: txn.gainAmount! >= 0 ? Colors.green : Colors.redAccent,
-              ),
-            ),
-          ] else ...[ // coverage:ignore-line
-
-
-            const Text(
-              'Profit: ',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-            SmartCurrencyText( // coverage:ignore-line
-
-
-              value: 0,
-              locale: currencyLocale, // coverage:ignore-line
-              initialCompact: compactView, // coverage:ignore-line
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+          _buildGainAmount(),
           if (txn.gainAmount != null && txn.holdingTenureMonths != null)
             const Text(' • ', style: TextStyle(fontSize: 11)),
           if (txn.holdingTenureMonths != null)
@@ -220,6 +178,64 @@ class TransactionListItem extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGainAmount() {
+    final amount = txn.gainAmount;
+    if (amount == null) {
+      return Row(
+        // coverage:ignore-line
+        children: [
+          // coverage:ignore-line
+          const Text(
+            'Profit: ',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          SmartCurrencyText(
+            // coverage:ignore-line
+            value: 0,
+            locale: currencyLocale, // coverage:ignore-line
+            initialCompact: compactView, // coverage:ignore-line
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      );
+    }
+
+    final isProfit = amount >= 0;
+    final color = isProfit ? Colors.green : Colors.redAccent;
+    final label = isProfit ? "Profit" : "Loss";
+
+    return Row(
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        SmartCurrencyText(
+          value: amount.abs(),
+          locale: currencyLocale,
+          initialCompact: compactView,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 

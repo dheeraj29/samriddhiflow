@@ -23,14 +23,24 @@ void main(List<String> args) {
 
   int totalViolations = 0;
 
-  final dartFiles = libDir.listSync(recursive: true).whereType<File>().where(
-      (file) =>
-          file.path.endsWith('.dart') &&
-          !file.path.endsWith('.g.dart') &&
-          !file.path.endsWith('.freezed.dart'));
+  String? filterPath;
+  if (args.length > 1) {
+    filterPath = args[1].replaceAll('\\', '/');
+  }
+
+  final dartFiles =
+      libDir.listSync(recursive: true).whereType<File>().where((file) {
+    final path = file.path.replaceAll('\\', '/');
+    final isMatch = filterPath == null || path.contains(filterPath);
+    return isMatch &&
+        path.endsWith('.dart') &&
+        !path.endsWith('.g.dart') &&
+        !path.endsWith('.freezed.dart');
+  });
 
   for (final file in dartFiles) {
     try {
+      print('Analyzing ${file.path}...');
       final result = parseFile(
         path: file.path,
         featureSet: FeatureSet.latestLanguageVersion(),
@@ -97,19 +107,19 @@ class _ComplexityVisitor extends RecursiveAstVisitor<void> {
 
     if (visitor.cognitiveComplexity > cogThreshold) {
       print(
-          '[$filePath] Function "$name" exceeds Cognitive Complexity: ${visitor.cognitiveComplexity} > $cogThreshold');
+          '[$filePath] Cognitive Complexity for "$name" is ${visitor.cognitiveComplexity} (threshold $cogThreshold)');
       hasViolation = true;
     }
 
     if (visitor.cyclomaticComplexity > cycThreshold) {
       print(
-          '[$filePath] Function "$name" exceeds Cyclomatic Complexity: ${visitor.cyclomaticComplexity} > $cycThreshold');
+          '[$filePath] Cyclomatic Complexity for "$name" is ${visitor.cyclomaticComplexity} (threshold $cycThreshold)');
       hasViolation = true;
     }
 
     if (visitor.maxNestingDepth > nestingThreshold) {
       print(
-          '[$filePath] Function "$name" exceeds Max Nesting Depth: ${visitor.maxNestingDepth} > $nestingThreshold');
+          '[$filePath] Nesting Depth for "$name" is ${visitor.maxNestingDepth} (threshold $nestingThreshold)');
       hasViolation = true;
     }
 
@@ -123,6 +133,7 @@ class _AstNodeComplexityVisitor extends RecursiveAstVisitor<void> {
   int maxNestingDepth = 0;
 
   int _currentNestingLevel = 0;
+  String? _currentFunctionName;
 
   void _enterNestingBlock() {
     _currentNestingLevel++;
@@ -144,12 +155,86 @@ class _AstNodeComplexityVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    _currentFunctionName = node.name.lexeme;
+    super.visitMethodDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    _currentFunctionName = node.name.lexeme;
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitFunctionExpression(FunctionExpression node) {
+    _enterNestingBlock();
+    super.visitFunctionExpression(node);
+    _exitNestingBlock();
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (_currentFunctionName != null &&
+        node.methodName.name == _currentFunctionName) {
+      cognitiveComplexity++;
+    }
+    if (node.isNullAware) {
+      cognitiveComplexity++;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
   void visitIfStatement(IfStatement node) {
+    bool isElseIf = node.parent is IfStatement &&
+        (node.parent as IfStatement).elseStatement == node;
+
+    if (!isElseIf) {
+      _increaseCognitive();
+    } else {
+      cognitiveComplexity++; // else if contributes 1, but doesn't add nesting
+    }
+
+    _increaseCyclomatic();
+
+    _enterNestingBlock();
+    node.expression.accept(this);
+    node.thenStatement.accept(this);
+    _exitNestingBlock();
+
+    if (node.elseStatement != null) {
+      if (node.elseStatement is! IfStatement) {
+        cognitiveComplexity++; // +1 for 'else'
+        _enterNestingBlock();
+        node.elseStatement!.accept(this);
+        _exitNestingBlock();
+      } else {
+        node.elseStatement!.accept(this);
+      }
+    }
+  }
+
+  @override
+  void visitIfElement(IfElement node) {
     _increaseCognitive();
     _increaseCyclomatic();
+
     _enterNestingBlock();
-    super.visitIfStatement(node);
+    node.expression.accept(this);
+    node.thenElement.accept(this);
     _exitNestingBlock();
+
+    if (node.elseElement != null) {
+      if (node.elseElement is! IfElement) {
+        cognitiveComplexity++; // +1 for 'else'
+        _enterNestingBlock();
+        node.elseElement!.accept(this);
+        _exitNestingBlock();
+      } else {
+        node.elseElement!.accept(this);
+      }
+    }
   }
 
   @override
@@ -198,7 +283,7 @@ class _AstNodeComplexityVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitSwitchCase(SwitchCase node) {
-    _increaseCyclomatic(); // Each case is a branch in Cyclomatic
+    _increaseCyclomatic();
     super.visitSwitchCase(node);
   }
 
@@ -219,9 +304,19 @@ class _AstNodeComplexityVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
-    if (node.operator.lexeme == '&&' || node.operator.lexeme == '||') {
-      cognitiveComplexity++;
+    final op = node.operator.lexeme;
+    if (op == '&&' || op == '||') {
       _increaseCyclomatic();
+      bool isSequence = false;
+      if (node.parent is BinaryExpression) {
+        final parent = node.parent as BinaryExpression;
+        if (parent.operator.lexeme == op) {
+          isSequence = true;
+        }
+      }
+      if (!isSequence) {
+        cognitiveComplexity++;
+      }
     }
     super.visitBinaryExpression(node);
   }
@@ -233,5 +328,54 @@ class _AstNodeComplexityVisitor extends RecursiveAstVisitor<void> {
     _enterNestingBlock();
     super.visitConditionalExpression(node);
     _exitNestingBlock();
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    if (node.isNullAware) {
+      cognitiveComplexity++;
+    }
+    super.visitPropertyAccess(node);
+  }
+
+  @override
+  void visitIndexExpression(IndexExpression node) {
+    if (node.isNullAware) {
+      cognitiveComplexity++;
+    }
+    super.visitIndexExpression(node);
+  }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    final op = node.operator.lexeme;
+    if (op == '??=' || op == '&&=' || op == '||=') {
+      cognitiveComplexity++;
+    }
+    super.visitAssignmentExpression(node);
+  }
+
+  @override
+  void visitPostfixExpression(PostfixExpression node) {
+    if (node.operator.lexeme == '!') {
+      cognitiveComplexity++;
+    }
+    super.visitPostfixExpression(node);
+  }
+
+  @override
+  void visitBreakStatement(BreakStatement node) {
+    if (node.label != null) {
+      cognitiveComplexity++;
+    }
+    super.visitBreakStatement(node);
+  }
+
+  @override
+  void visitContinueStatement(ContinueStatement node) {
+    if (node.label != null) {
+      cognitiveComplexity++;
+    }
+    super.visitContinueStatement(node);
   }
 }

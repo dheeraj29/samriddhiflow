@@ -137,4 +137,89 @@ void main() {
       expect(unpaidInterest, closeTo(19.18, 0.1));
     });
   });
+
+  group('LoanService - Advanced Operations', () {
+    test('calculatePrepaymentImpact handles full payoff', () {
+      sampleLoan.remainingPrincipal = 50000;
+      sampleLoan.emiAmount = 5000;
+      final result = loanService.calculatePrepaymentImpact(
+          loan: sampleLoan, prepaymentAmount: 55000, reduceTenure: true);
+      expect(result['newEMI'], 0.0);
+      expect(result['newTenure'], 0);
+      expect(result['interestSaved'], greaterThan(0));
+    });
+
+    test('calculateRemainingTenure for Personal Loan', () {
+      sampleLoan.remainingPrincipal = 50000;
+      sampleLoan.emiAmount = 5000;
+      sampleLoan.interestRate = 12;
+      sampleLoan.emiDay = 1;
+      sampleLoan.startDate = DateTime(2025, 1, 1);
+
+      final tenure = loanService.calculateRemainingTenure(sampleLoan);
+      expect(tenure.months, greaterThan(0));
+      expect(tenure.days, greaterThan(0));
+    });
+
+    test('calculateRemainingTenure for Gold Loan', () {
+      final goldLoan = Loan(
+        id: 'g1',
+        name: 'Gold',
+        totalPrincipal: 100000,
+        remainingPrincipal: 100000,
+        interestRate: 10,
+        tenureMonths: 12,
+        startDate: DateTime.now().subtract(const Duration(days: 30)),
+        firstEmiDate: DateTime.now(),
+        emiAmount: 10000, // Added missing required param
+        type: LoanType.gold,
+      );
+      final tenure = loanService.calculateRemainingTenure(goldLoan);
+      expect(tenure.months, closeTo(11, 1));
+    });
+
+    test('calculateMaxRemainingTenure returns highest tenure', () {
+      final l1 = Loan.fromMap(sampleLoan.toMap())..remainingPrincipal = 100000;
+      l1.emiAmount = 5000;
+
+      final l2 = Loan.fromMap(sampleLoan.toMap())..remainingPrincipal = 10000;
+      l2.emiAmount = 5000;
+
+      final maxTenure = loanService.calculateMaxRemainingTenure([l1, l2]);
+      expect(maxTenure.months, greaterThan(0));
+    });
+
+    test('_deduceInitialPrincipal and _processLoanTxnImpact coverage', () {
+      // Test topup deduction
+      final topupTxn = LoanTransaction(
+        id: 't2',
+        date: DateTime.now(),
+        amount: 50000,
+        type: LoanTransactionType.topup,
+        principalComponent: 50000,
+        interestComponent: 0,
+        resultantPrincipal: 150000,
+      );
+
+      sampleLoan.transactions = [topupTxn];
+      final interest =
+          loanService.calculateCumulativeAccruedInterest(sampleLoan);
+      expect(interest, isNotNull);
+
+      // Test rate change processing
+      final rateTxn = LoanTransaction(
+        id: 't3',
+        date: DateTime.now(),
+        amount: 14.0, // New rate
+        type: LoanTransactionType.rateChange,
+        principalComponent: 0,
+        interestComponent: 0,
+        resultantPrincipal: 150000,
+      );
+      sampleLoan.transactions = [topupTxn, rateTxn];
+      final interestWithRate =
+          loanService.calculateCumulativeAccruedInterest(sampleLoan);
+      expect(interestWithRate, isNotNull);
+    });
+  });
 }

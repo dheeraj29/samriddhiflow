@@ -108,11 +108,13 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     return Scaffold(
       body: Center(
         child: Padding(
-  // coverage:ignore-end
+          // coverage:ignore-end
           padding: const EdgeInsets.all(24.0),
-          child: Column( // coverage:ignore-line
+          child: Column(
+            // coverage:ignore-line
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [ // coverage:ignore-line
+            children: [
+              // coverage:ignore-line
               const Icon(Icons.error_outline, size: 48, color: Colors.amber),
               const SizedBox(height: 16),
               const Text(
@@ -121,11 +123,14 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text("Unable to initialize secure storage.\n$error", // coverage:ignore-line
+              Text(
+                  "Unable to initialize secure storage.\n$error", // coverage:ignore-line
                   textAlign: TextAlign.center),
               const SizedBox(height: 24),
-              ElevatedButton( // coverage:ignore-line
-                onPressed: () => ref.refresh(storageInitializerProvider), // coverage:ignore-line
+              ElevatedButton(
+                // coverage:ignore-line
+                onPressed: () => ref.refresh(
+                    storageInitializerProvider), // coverage:ignore-line
                 child: const Text("Retry"),
               ),
             ],
@@ -138,13 +143,24 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
   Widget _buildDataView(BuildContext context) {
     final storage = ref.read(storageServiceProvider);
 
+    _setupListeners(context, storage);
+
+    // One-time Check for PIN Reset Request (Forgot PIN Flow)
+    if (_isLocked && storage.getPinResetRequested()) {
+      _handlePinReset(context, storage);
+    }
+
+    return _buildViewStack(storage);
+  }
+
+  void _setupListeners(BuildContext context, dynamic storage) {
     // 1. Watch for manual lock intent
     ref.listen(appLockIntentProvider, (previous, next) {
       // coverage:ignore-start
       if (next == true) {
         setState(() => _isLocked = true);
         ref.read(appLockIntentProvider.notifier).reset();
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     });
 
@@ -154,12 +170,9 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         _handleFallbackLogin(context, storage); // coverage:ignore-line
       }
     });
+  }
 
-    // 3. One-time Check for PIN Reset Request (Forgot PIN Flow)
-    if (_isLocked && storage.getPinResetRequested()) {
-      _handlePinReset(context, storage);
-    }
-
+  Widget _buildViewStack(dynamic storage) {
     return Stack(
       children: [
         Visibility(
@@ -170,22 +183,27 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
         if (_isLocked && !_isFallbackMode)
           Positioned.fill(
             child: AppLockScreen(
-              onUnlocked: () => setState(() => _isLocked = false), // coverage:ignore-line
-              onFallback: () async {
-                await storage.setPinResetRequested(true);
-                await ref.read(authServiceProvider).signOut(ref);
-                if (mounted) {
-                  setState(() => _isFallbackMode = false);
-                }
-              },
+              onUnlocked: () =>
+                  setState(() => _isLocked = false), // coverage:ignore-line
+              onFallback: () => _handleLockFallback(storage),
             ),
           ),
       ],
     );
   }
 
-  void _handleFallbackLogin(BuildContext context, dynamic storage) { // coverage:ignore-line
-    final wasLocked = storage.isAppLockEnabled() && storage.getAppPin() != null; // coverage:ignore-line
+  Future<void> _handleLockFallback(dynamic storage) async {
+    await storage.setPinResetRequested(true);
+    await ref.read(authServiceProvider).signOut(ref);
+    if (mounted) {
+      setState(() => _isFallbackMode = false);
+    }
+  }
+
+  void _handleFallbackLogin(BuildContext context, dynamic storage) {
+    // coverage:ignore-line
+    final wasLocked = storage.isAppLockEnabled() &&
+        storage.getAppPin() != null; // coverage:ignore-line
 
     if (wasLocked) {
       // coverage:ignore-start
@@ -193,7 +211,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      // coverage:ignore-end
+            // coverage:ignore-end
             content: Text('App Unlocked. Please Reset your PIN in Settings.'),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 4),
@@ -206,7 +224,7 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     setState(() {
       _isLocked = false;
       _isFallbackMode = false;
-    // coverage:ignore-end
+      // coverage:ignore-end
     });
   }
 

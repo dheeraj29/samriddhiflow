@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/services/repair_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/providers.dart';
 
 class MockRefReader extends Mock implements RefReader {}
@@ -85,5 +86,100 @@ void main() {
     expect(job.name, isNotEmpty);
     expect(job.description, isNotEmpty);
     expect(job.showInSettings, false);
+  });
+
+  group('RepairTaxSyncJob', () {
+    final job = RepairTaxSyncJob();
+
+    test('has correct metadata', () {
+      expect(job.id, 'repair_tax_sync');
+      expect(job.name, isNotEmpty);
+      expect(job.description, isNotEmpty);
+      expect(job.showInSettings, true); // default from base class
+    });
+
+    test('resets all transaction tax sync flags', () async {
+      final txns = [
+        Transaction(
+          id: 'tx1',
+          title: 'Lunch',
+          amount: 100,
+          type: TransactionType.expense,
+          category: 'Food',
+          date: DateTime.now(),
+          accountId: 'acc1',
+        ),
+        Transaction(
+          id: 'tx2',
+          title: 'Pay',
+          amount: 200,
+          type: TransactionType.income,
+          category: 'Salary',
+          date: DateTime.now(),
+          accountId: 'acc1',
+        ),
+      ];
+
+      when(() => mockStorage.getAllTransactions()).thenReturn(txns);
+      when(() => mockStorage.updateTransactionsTaxSync(any(), any()))
+          .thenAnswer((_) async {});
+
+      final count = await job.run(mockRef);
+
+      expect(count, 2);
+      verify(() => mockStorage.updateTransactionsTaxSync(['tx1', 'tx2'], false))
+          .called(1);
+    });
+
+    test('handles empty transaction list', () async {
+      when(() => mockStorage.getAllTransactions()).thenReturn([]);
+
+      final count = await job.run(mockRef);
+
+      expect(count, 0);
+      verifyNever(() => mockStorage.updateTransactionsTaxSync(any(), any()));
+    });
+  });
+
+  test('RepairService contains RepairTaxSyncJob', () {
+    expect(repairService.jobs.any((j) => j is RepairTaxSyncJob), true);
+  });
+
+  group('RepairDefaultCategoriesJob', () {
+    final job = RepairDefaultCategoriesJob();
+
+    test('has correct metadata', () {
+      expect(job.id, 'repair_default_categories');
+      expect(job.name, isNotEmpty);
+      expect(job.description, isNotEmpty);
+      expect(job.showInSettings, true);
+    });
+
+    test('restores missing defaults while preserving custom categories',
+        () async {
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
+      when(() => mockStorage.repairDefaultCategories('default'))
+          .thenAnswer((_) async => 3);
+
+      final count = await job.run(mockRef);
+
+      expect(count, 3);
+      verify(() => mockStorage.repairDefaultCategories('default')).called(1);
+    });
+
+    test('returns 0 when all defaults already exist', () async {
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
+      when(() => mockStorage.repairDefaultCategories('default'))
+          .thenAnswer((_) async => 0);
+
+      final count = await job.run(mockRef);
+
+      expect(count, 0);
+    });
+  });
+
+  test('RepairService contains RepairDefaultCategoriesJob', () {
+    expect(
+        repairService.jobs.any((j) => j is RepairDefaultCategoriesJob), true);
   });
 }

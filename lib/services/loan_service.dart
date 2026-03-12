@@ -131,16 +131,14 @@ class LoanService {
   }) {
     double newPrincipal = loan.remainingPrincipal - prepaymentAmount;
     if (newPrincipal <= 0) {
-      return { // coverage:ignore-line
+      return {
         'newEMI': 0.0,
         'newTenure': 0,
-        // coverage:ignore-start
         'interestSaved': calculateTotalRemainingInterest(loan),
         'tenureSaved': calculateTenureForEMI(
             principal: loan.remainingPrincipal,
             annualRate: loan.interestRate,
             emi: loan.emiAmount)
-        // coverage:ignore-end
       };
     }
 
@@ -272,7 +270,7 @@ class LoanService {
   /// Calculates the total unpaid accrued interest from the start of the loan
   /// until [tillDate], accounting for all transactions (payments, top-ups, rate changes).
   double calculateCumulativeAccruedInterest(Loan loan, {DateTime? tillDate}) {
-    final endDate = tillDate ?? DateTime.now(); // coverage:ignore-line
+    final endDate = tillDate ?? DateTime.now();
     if (loan.startDate.isAfter(endDate)) return 0;
 
     final sortedTxns = List<LoanTransaction>.from(loan.transactions)
@@ -320,7 +318,7 @@ class LoanService {
     final firstTxn = sortedTxns.first;
     switch (firstTxn.type) {
       case LoanTransactionType.topup:
-        return firstTxn.resultantPrincipal - firstTxn.principalComponent; // coverage:ignore-line
+        return firstTxn.resultantPrincipal - firstTxn.principalComponent;
       case LoanTransactionType.emi:
       case LoanTransactionType.prepayment: // coverage:ignore-line
         return firstTxn.resultantPrincipal + firstTxn.principalComponent;
@@ -333,59 +331,53 @@ class LoanService {
       _processLoanTxnImpact(LoanTransaction txn) {
     switch (txn.type) {
       case LoanTransactionType.emi:
-      case LoanTransactionType.prepayment: // coverage:ignore-line
+      case LoanTransactionType.prepayment:
         return (
           interestPaid: txn.interestComponent,
           newPrincipal: txn.resultantPrincipal,
           newRate: null
         );
-      case LoanTransactionType.topup: // coverage:ignore-line
+      case LoanTransactionType.topup:
         return (
           interestPaid: 0,
-          newPrincipal: txn.resultantPrincipal, // coverage:ignore-line
+          newPrincipal: txn.resultantPrincipal,
           newRate: null
         );
-      case LoanTransactionType.rateChange: // coverage:ignore-line
-        return (interestPaid: 0, newPrincipal: null, newRate: txn.amount); // coverage:ignore-line
+      case LoanTransactionType.rateChange:
+        return (interestPaid: 0, newPrincipal: null, newRate: txn.amount);
     }
   }
 
   /// Calculates how many months/days are left in the loan.
   /// Returns a record with {months, days}.
-  ({double months, int days}) calculateRemainingTenure(Loan loan) { // coverage:ignore-line
-    if (loan.remainingPrincipal <= 0) return (months: 0, days: 0); // coverage:ignore-line
+  ({double months, int days}) calculateRemainingTenure(Loan loan) {
+    if (loan.remainingPrincipal <= 0) return (months: 0, days: 0);
 
-    if (loan.type == LoanType.gold) { // coverage:ignore-line
+    if (loan.type == LoanType.gold) {
       final maturityDate =
-          // coverage:ignore-start
           loan.startDate.add(Duration(days: loan.tenureMonths * 30));
       final daysLeft = maturityDate.difference(DateTime.now()).inDays;
       if (daysLeft <= 0) return (months: 0, days: 0);
       return (months: daysLeft / 30.0, days: daysLeft);
-          // coverage:ignore-end
     } else {
-      // coverage:ignore-start
       final schedule = calculateAmortizationSchedule(loan);
       final monthsLeft = schedule.length;
       return (months: monthsLeft.toDouble(), days: monthsLeft * 30);
-      // coverage:ignore-end
     }
   }
 
   /// Calculates the maximum remaining duration across all loans.
-  ({double months, int days}) calculateMaxRemainingTenure(List<Loan> loans) { // coverage:ignore-line
-    if (loans.isEmpty) return (months: 0, days: 0); // coverage:ignore-line
+  ({double months, int days}) calculateMaxRemainingTenure(List<Loan> loans) {
+    if (loans.isEmpty) return (months: 0, days: 0);
 
     int maxDays = 0;
-    // coverage:ignore-start
     for (final loan in loans) {
       final tenure = calculateRemainingTenure(loan);
       if (tenure.days > maxDays) {
-    // coverage:ignore-end
         maxDays = tenure.days;
       }
     }
 
-    return (months: maxDays / 30.0, days: maxDays); // coverage:ignore-line
+    return (months: maxDays / 30.0, days: maxDays);
   }
 }

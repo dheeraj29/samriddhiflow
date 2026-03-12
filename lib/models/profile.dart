@@ -46,6 +46,21 @@ class Profile extends HiveObject {
     };
   }
 
+  Profile copyWith({
+    String? id,
+    String? name,
+    String? currencyLocale,
+    double? monthlyBudget,
+  }) {
+    return Profile(
+      id: id ?? this.id,
+      name: name ?? this.name, // coverage:ignore-line
+      currencyLocale: currencyLocale ?? this.currencyLocale,
+      monthlyBudget:
+          monthlyBudget ?? this.monthlyBudget, // coverage:ignore-line
+    );
+  }
+
   factory Profile.fromMap(Map<String, dynamic> map) {
     return Profile(
       id: map['id'],

@@ -81,6 +81,7 @@ void main() {
         type: TransactionType.expense,
         category: 'Food',
         profileId: 'default'));
+    registerFallbackValue(Profile(id: 'f', name: 'f'));
   });
 
   setUp(() {
@@ -129,7 +130,58 @@ void main() {
     when(() => mockLendingBox.toMap()).thenReturn({});
     when(() => mockProfileBox.toMap()).thenReturn({});
     when(() => mockAccountBox.toMap()).thenReturn({});
-    when(() => mockTransactionBox.toMap()).thenReturn({});
+    when(() => mockSettingsBox.toMap()).thenReturn({});
+
+    // Explicit stubs for each box to avoid mocktail state issues
+    when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockSettingsBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockSettingsBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockSettingsBox.values).thenReturn([]);
+
+    when(() => mockLoanBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockLoanBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockLoanBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockLoanBox.values).thenReturn([]);
+
+    when(() => mockRecurringBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockRecurringBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockRecurringBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockRecurringBox.values).thenReturn([]);
+
+    when(() => mockCategoryBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockCategoryBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockCategoryBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockCategoryBox.values).thenReturn([]);
+
+    when(() => mockInsuranceBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockInsuranceBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockInsuranceBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockInsuranceBox.values).thenReturn([]);
+
+    when(() => mockTaxBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockTaxBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockTaxBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockTaxBox.values).thenReturn([]);
+
+    when(() => mockLendingBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockLendingBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockLendingBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockLendingBox.values).thenReturn([]);
+
+    when(() => mockProfileBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockProfileBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockProfileBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockProfileBox.values).thenReturn([]);
+
+    when(() => mockAccountBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockAccountBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockAccountBox.values).thenReturn([]);
+
+    when(() => mockTransactionBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockTransactionBox.clear()).thenAnswer((_) async => 0);
+    when(() => mockTransactionBox.values).thenReturn([]);
 
     storageService = StorageService(mockHive);
 
@@ -204,10 +256,12 @@ void main() {
           annualPremium: 10000,
           sumAssured: 10000000,
           startDate: DateTime.now(),
-          maturityDate: DateTime.now().add(const Duration(days: 365)));
+          maturityDate: DateTime.now().add(const Duration(days: 365)),
+          profileId: 'default');
       when(() => mockInsuranceBox.clear()).thenAnswer((_) async => 0);
-      when(() => mockInsuranceBox.put('p1', any())).thenAnswer((_) async {});
+      when(() => mockInsuranceBox.put(any(), any())).thenAnswer((_) async {});
       when(() => mockInsuranceBox.values).thenReturn([policy]);
+      when(() => mockInsuranceBox.toMap()).thenReturn({'p1': policy});
 
       await storageService.saveInsurancePolicies([policy]);
       expect(storageService.getInsurancePolicies(), contains(policy));
@@ -233,9 +287,11 @@ void main() {
     });
 
     test('Tax Year Data Operations', () async {
-      const taxData = TaxYearData(year: 2025);
-      when(() => mockTaxBox.put(2025, any())).thenAnswer((_) async {});
+      const taxData = TaxYearData(year: 2025, profileId: 'default');
+      when(() => mockTaxBox.put(any(), any())).thenAnswer((_) async {});
       when(() => mockTaxBox.get(2025)).thenReturn(taxData);
+      when(() => mockTaxBox.values).thenReturn([taxData]);
+      when(() => mockTaxBox.toMap()).thenReturn({'default_2025': taxData});
 
       await storageService.saveTaxYearData(taxData);
       expect(storageService.getTaxYearData(2025), taxData);

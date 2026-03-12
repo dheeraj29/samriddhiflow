@@ -6,6 +6,7 @@ import '../../models/lending_record.dart';
 import '../../utils/currency_utils.dart';
 import 'add_lending_screen.dart';
 import 'package:intl/intl.dart';
+import 'lending_history_screen.dart';
 
 const dateFormatDdMmmYyyy = 'dd MMM yyyy';
 
@@ -69,14 +70,14 @@ class LendingDashboardScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () { // coverage:ignore-line
-
-          Navigator.push( // coverage:ignore-line
-
+        onPressed: () {
+          // coverage:ignore-line
+          Navigator.push(
+            // coverage:ignore-line
             context,
-            MaterialPageRoute( // coverage:ignore-line
-                builder: (_) => // coverage:ignore-line
-                    const AddLendingScreen()),
+            MaterialPageRoute(
+                builder: (_) =>
+                    const AddLendingScreen()), // coverage:ignore-line
           );
         },
         label: const Text('Add Record'),
@@ -134,7 +135,7 @@ class LendingDashboardScreen extends ConsumerWidget {
                 'Are you sure you want to delete this record? This action cannot be undone.'),
             actions: [
               TextButton(
-                  onPressed: () => // coverage:ignore-line
+                  onPressed: () =>
                       Navigator.of(ctx).pop(false), // coverage:ignore-line
                   child: const Text('Cancel')),
               TextButton(
@@ -164,15 +165,15 @@ class LendingDashboardScreen extends ConsumerWidget {
               style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: _buildRecordSubtitle(record, formattedDate, locale),
           trailing: _buildRecordTrailing(context, ref, record, color, locale),
-          onTap: () { // coverage:ignore-line
-
-            Navigator.push( // coverage:ignore-line
-
+          onTap: () {
+            // coverage:ignore-line
+            Navigator.push(
+              // coverage:ignore-line
               context,
-              MaterialPageRoute( // coverage:ignore-line
-
-                  builder: (_) => AddLendingScreen( // coverage:ignore-line
-                      recordToEdit: record)),
+              MaterialPageRoute(
+                  // coverage:ignore-line
+                  builder: (_) => AddLendingScreen(
+                      recordToEdit: record)), // coverage:ignore-line
             );
           },
         ),
@@ -187,17 +188,19 @@ class LendingDashboardScreen extends ConsumerWidget {
       children: [
         Text('$formattedDate • ${record.reason}'),
         if (record.payments.isNotEmpty)
-          Padding( // coverage:ignore-line
+          Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text( // coverage:ignore-line
-              'Paid: ${CurrencyUtils.formatCurrency(record.totalPaid, locale)} (${record.payments.length} txn)', // coverage:ignore-line
+            child: Text(
+              'Paid: ${CurrencyUtils.formatCurrency(record.totalPaid, locale)} (${record.payments.length} txn)',
               style: const TextStyle(color: Colors.teal, fontSize: 12),
             ),
           ),
         if (record.isClosed)
-          Padding( // coverage:ignore-line
+          Padding(
+            // coverage:ignore-line
             padding: const EdgeInsets.only(top: 2),
-            child: Text( // coverage:ignore-line
+            child: Text(
+              // coverage:ignore-line
               'Closed on ${DateFormat('dd MMM').format(record.closedDate!)}', // coverage:ignore-line
               style: const TextStyle(
                   color: Colors.grey,
@@ -228,12 +231,10 @@ class LendingDashboardScreen extends ConsumerWidget {
               ),
             ),
             if (record.totalPaid > 0 && !record.isClosed)
-              // coverage:ignore-start
               Text(
                 'Bal: ${CurrencyUtils.formatCurrency(record.remainingAmount, locale)}',
                 style: TextStyle(
                   color: color.withValues(alpha: 0.8),
-              // coverage:ignore-end
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -252,25 +253,27 @@ class LendingDashboardScreen extends ConsumerWidget {
       onSelected: (value) {
         switch (value) {
           case 'pay':
-            _showPaymentDialog( // coverage:ignore-line
-                context, ref, record, locale);
+            _showPaymentDialog(context, ref, record, locale);
             break;
           case 'history':
-            _showHistoryDialog(context, record, locale); // coverage:ignore-line
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => LendingHistoryScreen(recordId: record.id)),
+            );
             break;
           case 'settle':
             _showCloseDialog(context, ref, record);
             break;
-          case 'edit': // coverage:ignore-line
-            Navigator.push( // coverage:ignore-line
-
+          case 'edit':
+            Navigator.push(
               context,
-              MaterialPageRoute( // coverage:ignore-line
-                  builder: (_) => AddLendingScreen(recordToEdit: record)), // coverage:ignore-line
+              MaterialPageRoute(
+                  builder: (_) => AddLendingScreen(recordToEdit: record)),
             );
             break;
-          case 'delete': // coverage:ignore-line
-            _confirmDelete(context, ref, record); // coverage:ignore-line
+          case 'delete':
+            _confirmDelete(context, ref, record);
             break;
         }
       },
@@ -288,8 +291,7 @@ class LendingDashboardScreen extends ConsumerWidget {
               ),
             ),
             if (record.payments.isNotEmpty)
-              const PopupMenuItem<String>( // coverage:ignore-line
-
+              const PopupMenuItem<String>(
                 value: 'history',
                 child: Row(
                   children: [
@@ -345,7 +347,7 @@ class LendingDashboardScreen extends ConsumerWidget {
             'Has the amount of ${record.amount} been ${record.type == LendingType.lent ? 'received back from' : 'paid back to'} ${record.personName}?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(), // coverage:ignore-line
+              onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
@@ -361,220 +363,171 @@ class LendingDashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showPaymentDialog( // coverage:ignore-line
-      BuildContext context,
-      WidgetRef ref,
-      LendingRecord record,
-      String locale) {
-    // coverage:ignore-start
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    DateTime payDate = DateTime.now();
-    // coverage:ignore-end
-
-    showDialog( // coverage:ignore-line
-
+  void _showPaymentDialog(BuildContext context, WidgetRef ref,
+      LendingRecord record, String locale) {
+    showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder( // coverage:ignore-line
-
-        builder: (context, setDialogState) => AlertDialog( // coverage:ignore-line
-
-          title: const Text('Record Payment'),
-          content: Column( // coverage:ignore-line
-
-            mainAxisSize: MainAxisSize.min,
-            // coverage:ignore-start
-            children: [
-              Text(
-                'Remaining: ${CurrencyUtils.formatCurrency(record.remainingAmount, locale)}',
-            // coverage:ignore-end
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField( // coverage:ignore-line
-
-                controller: amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Amount Paid',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.currency_rupee),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField( // coverage:ignore-line
-
-                controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: 'Note (Optional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.note),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // coverage:ignore-start
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-              // coverage:ignore-end
-                    context: context,
-                    initialDate: payDate,
-                    firstDate: DateTime(2000), // coverage:ignore-line
-                    lastDate: DateTime(2100), // coverage:ignore-line
-                  );
-                  if (picked != null) {
-                    setDialogState( // coverage:ignore-line
-                        () => payDate = picked); // coverage:ignore-line
-                  }
-                },
-                child: InputDecorator( // coverage:ignore-line
-
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(DateFormat(dateFormatDdMmmYyyy) // coverage:ignore-line
-                      .format(payDate)), // coverage:ignore-line
-                ),
-              ),
-            ],
-          ),
-          // coverage:ignore-start
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-          // coverage:ignore-end
-                child: const Text('Cancel')),
-            // coverage:ignore-start
-            ElevatedButton(
-              onPressed: () {
-                final amt = double.tryParse(amountController.text) ?? 0;
-                if (amt <= 0) return;
-            // coverage:ignore-end
-
-                final payment = LendingPayment.create( // coverage:ignore-line
-
-                  amount: amt,
-                  date: payDate,
-                  note: noteController.text.trim(), // coverage:ignore-line
-                );
-
-                final updated = record.copyWith( // coverage:ignore-line
-
-                  // coverage:ignore-start
-                  payments: [
-                    ...record.payments,
-                    payment
-                  // coverage:ignore-end
-                  ],
-                );
-
-                // Auto-settle if balance hits 0
-                // coverage:ignore-start
-                if (updated.remainingAmount <= 0) {
-                  ref.read(lendingProvider.notifier).updateRecord(
-                      updated.copyWith(isClosed: true, closedDate: payDate));
-                // coverage:ignore-end
-                } else {
-                  ref
-                      .read(lendingProvider.notifier) // coverage:ignore-line
-                      .updateRecord(updated); // coverage:ignore-line
-                }
-
-                Navigator.pop(ctx); // coverage:ignore-line
-              },
-              child: const Text('Save Payment'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHistoryDialog( // coverage:ignore-line
-
-      BuildContext context,
-      LendingRecord record,
-      String locale) {
-    showDialog( // coverage:ignore-line
-
-      context: context,
-      builder: (ctx) => AlertDialog( // coverage:ignore-line
-
-        title: const Text('Payment History'),
-        content: SizedBox( // coverage:ignore-line
-
-          width: double.maxFinite,
-          child: Column( // coverage:ignore-line
-
-            mainAxisSize: MainAxisSize.min,
-            children: [ // coverage:ignore-line
-
-              ...record.payments.reversed.map((p) => ListTile( // coverage:ignore-line
-
-                    dense: true,
-                    // coverage:ignore-start
-                    title: Text(
-                        CurrencyUtils.formatCurrency(
-                            p.amount, locale),
-                    // coverage:ignore-end
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    // coverage:ignore-start
-                    subtitle: Text(
-                        '${DateFormat(dateFormatDdMmmYyyy).format(p.date)}${p.note != null && p.note!.isNotEmpty ? ' • ${p.note}' : ''}'),
-                    trailing: IconButton(
-                    // coverage:ignore-end
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      onPressed: () { // coverage:ignore-line
-
-                        // Optional: allow deleting history item
-                      },
-                    ),
-                  )),
-            ],
-          ),
-        ),
+      builder: (ctx) => _LendingRecordPaymentDialog(
+        record: record,
+        locale: locale,
         // coverage:ignore-start
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-        // coverage:ignore-end
-        ],
+        onSave: (payment) {
+          final updated = record.copyWith(
+            payments: [...record.payments, payment],
+            // coverage:ignore-end
+          );
+          // coverage:ignore-start
+          if (updated.remainingAmount <= 0) {
+            ref.read(lendingProvider.notifier).updateRecord(
+                updated.copyWith(isClosed: true, closedDate: payment.date));
+            // coverage:ignore-end
+          } else {
+            ref
+                .read(lendingProvider.notifier)
+                .updateRecord(updated); // coverage:ignore-line
+          }
+        },
       ),
     );
   }
 
-  void _confirmDelete( // coverage:ignore-line
-
-      BuildContext context,
-      WidgetRef ref,
-      LendingRecord record) {
-    showDialog( // coverage:ignore-line
-
+  void _confirmDelete(
+      BuildContext context, WidgetRef ref, LendingRecord record) {
+    showDialog(
       context: context,
-      builder: (ctx) => AlertDialog( // coverage:ignore-line
-
+      builder: (ctx) => AlertDialog(
         title: const Text('Delete Record?'),
         content: const Text(
             'Are you sure you want to delete this record? This action cannot be undone.'),
-        // coverage:ignore-start
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-        // coverage:ignore-end
               child: const Text('Cancel')),
-          // coverage:ignore-start
           TextButton(
+              // coverage:ignore-start
               onPressed: () {
                 ref.read(lendingProvider.notifier).deleteRecord(record.id);
                 Navigator.of(ctx).pop();
-          // coverage:ignore-end
+                // coverage:ignore-end
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],
       ),
+    );
+  }
+}
+
+class _LendingRecordPaymentDialog extends StatefulWidget {
+  final LendingRecord record;
+  final String locale;
+  final Function(LendingPayment) onSave;
+
+  const _LendingRecordPaymentDialog({
+    required this.record,
+    required this.locale,
+    required this.onSave,
+  });
+
+  @override
+  State<_LendingRecordPaymentDialog> createState() =>
+      _LendingRecordPaymentDialogState();
+}
+
+class _LendingRecordPaymentDialogState
+    extends State<_LendingRecordPaymentDialog> {
+  final _amountController = TextEditingController();
+  final _noteController = TextEditingController();
+  DateTime _payDate = DateTime.now();
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Record Payment'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Remaining: ${CurrencyUtils.formatCurrency(widget.record.remainingAmount, widget.locale)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Amount Paid',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.currency_rupee),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _noteController,
+            decoration: const InputDecoration(
+              labelText: 'Note (Optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.note),
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () async {
+              // coverage:ignore-line
+              final picked = await showDatePicker(
+                // coverage:ignore-line
+                context: context,
+                // coverage:ignore-start
+                initialDate: _payDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                // coverage:ignore-end
+              );
+              if (picked != null) {
+                setState(() => _payDate = picked); // coverage:ignore-line
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Date',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.calendar_today),
+              ),
+              child: Text(DateFormat(dateFormatDdMmmYyyy).format(_payDate)),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        ElevatedButton(
+          // coverage:ignore-start
+          onPressed: () {
+            final amt = double.tryParse(_amountController.text) ?? 0;
+            if (amt <= 0) return;
+            // coverage:ignore-end
+
+            final payment = LendingPayment.create(
+              // coverage:ignore-line
+              amount: amt,
+              date: _payDate, // coverage:ignore-line
+              note: _noteController.text.trim(), // coverage:ignore-line
+            );
+
+            widget.onSave(payment); // coverage:ignore-line
+            Navigator.pop(context); // coverage:ignore-line
+          },
+          child: const Text('Save Payment'),
+        ),
+      ],
     );
   }
 }

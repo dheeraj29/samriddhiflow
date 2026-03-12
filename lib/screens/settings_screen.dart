@@ -55,7 +55,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ConnectivityPlatform.listenForInstallPrompt((event) {
         setState(() {
           _installPrompt = event;
-      // coverage:ignore-end
+          // coverage:ignore-end
         });
       });
     }
@@ -144,7 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Show Budget Indicator'),
           subtitle: const Text('Display monthly budget progress bar'),
           value: config.showBudget,
-          onChanged: (val) => // coverage:ignore-line
+          onChanged: (val) =>
               notifier.updateConfig(showBudget: val), // coverage:ignore-line
           secondary: const Icon(Icons.pie_chart_outline, color: Colors.green),
         ),
@@ -176,48 +176,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return _buildEnableCloudCard(context);
   }
 
-  Widget _buildOfflinePausedCard(BuildContext context) { // coverage:ignore-line
-
-
-    return Container( // coverage:ignore-line
-
-
+  Widget _buildOfflinePausedCard(BuildContext context) {
+    // coverage:ignore-line
+    return Container(
+      // coverage:ignore-line
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       // coverage:ignore-start
       decoration: BoxDecoration(
         color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-      // coverage:ignore-end
+        // coverage:ignore-end
       ),
       // coverage:ignore-start
       child: Column(
         children: [
           Text('Connection Paused',
               style: AppTheme.offlineSafeTextStyle.copyWith(
-      // coverage:ignore-end
+                  // coverage:ignore-end
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  // coverage:ignore-start
                   color: Theme.of(context)
                       .colorScheme
-                      .onSurface)),
-                  // coverage:ignore-end
+                      .onSurface)), // coverage:ignore-line
           const SizedBox(height: 8),
-          Text( // coverage:ignore-line
-
-
+          Text(
+            // coverage:ignore-line
             'You are in Offline Mode. Cloud Sync is deferred.',
             textAlign: TextAlign.center,
-            style: AppTheme.offlineSafeTextStyle.copyWith( // coverage:ignore-line
-
-
+            style: AppTheme.offlineSafeTextStyle.copyWith(
+                // coverage:ignore-line
                 fontSize: 12,
-                // coverage:ignore-start
                 color: Theme.of(context)
                     .colorScheme
-                    .onSurfaceVariant),
-                // coverage:ignore-end
+                    .onSurfaceVariant), // coverage:ignore-line
           ),
           const SizedBox(height: 12),
           const SizedBox(height: 12),
@@ -226,7 +218,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () async {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
+                  // coverage:ignore-end
                   const SnackBar(content: Text("Retrying connection...")),
                 );
               }
@@ -236,15 +228,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref.read(isOfflineProvider.notifier).setOffline(false);
                 ref.invalidate(firebaseInitializerProvider);
                 ScaffoldMessenger.of(context).showSnackBar(
-              // coverage:ignore-end
+                  // coverage:ignore-end
                   const SnackBar(
                       content:
                           Text("Internet restored. Reconnecting cloud...")),
                 );
-              } else if (context.mounted) { // coverage:ignore-line
-
-                ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
+              } else if (context.mounted) {
+                // coverage:ignore-line
+                ScaffoldMessenger.of(context).showSnackBar(
+                  // coverage:ignore-line
                   const SnackBar(content: Text("Still offline.")),
                 );
               }
@@ -255,7 +247,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            // coverage:ignore-end
+              // coverage:ignore-end
             ),
           ),
         ],
@@ -288,15 +280,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: () => Navigator.push( // coverage:ignore-line
-
-
-                context,
-                MaterialPageRoute( // coverage:ignore-line
-
-
-                    builder: (_) => // coverage:ignore-line
-                        const LoginScreen())),
+            onPressed: () => Navigator.push(
+                context, // coverage:ignore-line
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const LoginScreen())), // coverage:ignore-line
             child: const Text('Login to Setup Cloud'),
           )
         ],
@@ -386,15 +374,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Recycle Bin'),
           subtitle: const Text('Restore deleted transactions'),
           leading: PureIcons.recycleBin(color: Colors.red),
-          onTap: () => Navigator.push( // coverage:ignore-line
-
-
-              context,
-              MaterialPageRoute( // coverage:ignore-line
-
-
-                  builder: (_) => // coverage:ignore-line
-                      const RecycleBinScreen())),
+          onTap: () => Navigator.push(
+              context, // coverage:ignore-line
+              MaterialPageRoute(
+                  builder: (_) =>
+                      const RecycleBinScreen())), // coverage:ignore-line
         ),
         ListTile(
           title: const Text('Backup Data (ZIP)'),
@@ -458,7 +442,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => // coverage:ignore-line
+              onPressed: () =>
                   Navigator.pop(dialogContext), // coverage:ignore-line
               child: const Text('Close')),
         ],
@@ -471,8 +455,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     Map<String, dynamic>? args;
 
     if (job.id == 'repair_cc_balances') {
-      args = await _selectCreditCardForRepair( // coverage:ignore-line
-          parentContext);
+      args = await _selectCreditCardForRepair(
+          parentContext); // coverage:ignore-line
       if (args == null && !context.mounted) return; // coverage:ignore-line
     }
 
@@ -493,14 +477,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(
             content: Text('Repair Failed: $e'), backgroundColor: Colors.red));
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     }
   }
 
-  Future<Map<String, dynamic>?> _selectCreditCardForRepair( // coverage:ignore-line
-
-
+  Future<Map<String, dynamic>?> _selectCreditCardForRepair(
+      // coverage:ignore-line
       BuildContext parentContext) async {
     // coverage:ignore-start
     final accounts = (ref.read(accountsProvider).asData?.value ?? [])
@@ -508,25 +491,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .toList();
     // coverage:ignore-end
 
-    if (accounts.isEmpty || !context.mounted) { // coverage:ignore-line
-
-
+    if (accounts.isEmpty || !context.mounted) {
+      // coverage:ignore-line
       return null;
     }
 
-    final result = await showDialog<String>( // coverage:ignore-line
-
-
+    final result = await showDialog<String>(
+      // coverage:ignore-line
       context: parentContext,
-      builder: (ctx) => SimpleDialog( // coverage:ignore-line
-
-
+      builder: (ctx) => SimpleDialog(
+        // coverage:ignore-line
         title: const Text('Select Credit Card'),
         // coverage:ignore-start
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, 'all'),
-        // coverage:ignore-end
+            // coverage:ignore-end
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Text('All Credit Cards',
@@ -538,7 +518,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ...accounts.map((a) => SimpleDialogOption(
                 onPressed: () => Navigator.pop(ctx, a.id),
                 child: Padding(
-          // coverage:ignore-end
+                  // coverage:ignore-end
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(a.name), // coverage:ignore-line
                 ),
@@ -561,40 +541,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Manage Recurring Payments'),
           subtitle: const Text('View or delete automated payments'),
           leading: PureIcons.refresh(color: Colors.orange),
-          onTap: () => Navigator.push( // coverage:ignore-line
-
-
+          onTap: () => Navigator.push(
+              // coverage:ignore-line
               context,
-              MaterialPageRoute( // coverage:ignore-line
-
-
-                  builder: (_) => // coverage:ignore-line
-                      const RecurringManagerScreen())),
+              MaterialPageRoute(
+                  // coverage:ignore-line
+                  builder: (_) =>
+                      const RecurringManagerScreen())), // coverage:ignore-line
         ),
         ListTile(
           title: const Text('Holiday Manager'),
           subtitle: const Text('Configure non-working days'),
           leading: PureIcons.calendar(color: Colors.red),
-          onTap: () => Navigator.push( // coverage:ignore-line
-
-
-              context,
-              MaterialPageRoute( // coverage:ignore-line
-
-
-                  builder: (_) => // coverage:ignore-line
-                      const HolidayManagerScreen())),
+          onTap: () => Navigator.push(
+              context, // coverage:ignore-line
+              MaterialPageRoute(
+                  builder: (_) =>
+                      const HolidayManagerScreen())), // coverage:ignore-line
         ),
         ListTile(
           title: const Text('Manage Categories'),
           subtitle: const Text('Add, edit, or delete categories'),
           leading: PureIcons.icon(Icons.category, color: Colors.blue),
-          onTap: () => showDialog( // coverage:ignore-line
-
-
+          onTap: () => showDialog(
+            // coverage:ignore-line
             context: context,
-            builder: (context) => // coverage:ignore-line
-                const CategoryManagerDialog(),
+            builder: (context) =>
+                const CategoryManagerDialog(), // coverage:ignore-line
           ),
         ),
         SwitchListTile(
@@ -602,12 +575,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text('Enable Quick Sum Tracker on transactions'),
           secondary: PureIcons.calculate(color: Colors.teal),
           value: ref.watch(smartCalculatorEnabledProvider),
-          // coverage:ignore-start
-          onChanged: (_) =>
+          onChanged: (_) => // coverage:ignore-line
               ref
                   .read(smartCalculatorEnabledProvider.notifier)
-                  .toggle(),
-          // coverage:ignore-end
+                  .toggle(), // coverage:ignore-line
         ),
       ],
     );
@@ -625,7 +596,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     .toList(),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) => // coverage:ignore-line
+              error: (e, s) =>
                   ListTile(title: Text('Error: $e')), // coverage:ignore-line
             ),
         _buildAddProfileItem(context),
@@ -650,22 +621,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           IconButton(
             icon: PureIcons.copy(),
             tooltip: 'Copy Categories from another profile',
-            onPressed: () => _showCopyCategoriesDialog( // coverage:ignore-line
-
-
-                context,
-                ref, // coverage:ignore-line
-                p.id), // coverage:ignore-line
+            onPressed: () => _showCopyCategoriesDialog(context, ref, p.id),
           ),
           if (profiles.length > 1 && !isActive)
             IconButton(
               icon: PureIcons.deleteOutlined(color: Colors.red),
-              onPressed: () => _showDeleteProfileDialog( // coverage:ignore-line
-
-
-                  context,
-                  ref, // coverage:ignore-line
-                  p),
+              onPressed: () => _showDeleteProfileDialog(context, ref, p),
             ),
         ],
       ),
@@ -795,16 +756,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (val) {
               _showSetPinDialog(context);
             } else {
-              final verified =
-                  await _showVerifyPinDialog(context); // coverage:ignore-line
-              if (verified) {
-                // coverage:ignore-start
+              final pin = await _showVerifyPinDialog(context);
+              if (pin != null) {
                 setState(
-                    () => _isAppLockEnabled = false);
+                    () => _isAppLockEnabled = false); // coverage:ignore-line
                 await ref
                     .read(storageServiceProvider)
-                    .setAppLockEnabled(false);
-                // coverage:ignore-end
+                    .setAppLockEnabled(false); // coverage:ignore-line
               }
             }
           },
@@ -837,17 +795,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           subtitle: const Text(AppConstants.appVersion),
           leading: PureIcons.info(size: 20),
           onTap: () => // coverage:ignore-line
-              UIUtils.showCommonAboutDialog( // coverage:ignore-line
-
-
-                  context,
-                  AppConstants.appVersion),
+              UIUtils.showCommonAboutDialog(
+                  context, AppConstants.appVersion), // coverage:ignore-line
         ),
         if (_installPrompt != null) ...[
           const Divider(),
-          ListTile( // coverage:ignore-line
-
-
+          ListTile(
+            // coverage:ignore-line
             title: const Text('Install App'),
             subtitle: const Text('Add to Home Screen for Offline use'),
             leading: const Icon(Icons.install_mobile, color: Colors.blue),
@@ -857,55 +811,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await ConnectivityPlatform.triggerInstallPrompt(
                     _installPrompt!);
                 setState(() => _installPrompt = null);
-            // coverage:ignore-end
+                // coverage:ignore-end
               }
             },
-          ),
-        ] else if (kIsWeb &&
-            (defaultTargetPlatform == // coverage:ignore-line
-                    TargetPlatform.iOS ||
-                defaultTargetPlatform == TargetPlatform.macOS)) ...[ // coverage:ignore-line
-
-
-          const Divider(),
-          ListTile( // coverage:ignore-line
-
-
-            title: const Text('Install on iPhone'),
-            subtitle: const Text('Tap "Share" → "Add to Home Screen"'),
-            leading: const Icon(Icons.ios_share, color: Colors.blue),
-            onTap: () => showDialog( // coverage:ignore-line
-
-
-              context: context,
-              builder: (ctx) => AlertDialog( // coverage:ignore-line
-
-
-                title: const Text("Install on iPhone"),
-                content: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text("To install this app for offline use:"),
-                    ListTile(
-                      leading: Icon(Icons.ios_share),
-                      title: Text('1. Tap the Share button'),
-                    ),
-                    ListTile(
-                      leading: Icon(Icons.add_box_outlined),
-                      title:
-                          Text('2. Scroll down and tap "Add to Home Screen"'),
-                    ),
-                  ],
-                ),
-                // coverage:ignore-start
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                // coverage:ignore-end
-                      child: const Text("OK")),
-                ],
-              ),
-            ),
           ),
         ],
         if (user != null && !ref.watch(isOfflineProvider)) ...[
@@ -936,7 +844,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _updateApplication() async {
     if (ref.read(isOfflineProvider)) {
       ScaffoldMessenger.of(context).showSnackBar(
-  // coverage:ignore-end
+        // coverage:ignore-end
         const SnackBar(
             content:
                 Text("Internet connection required to check for updates.")),
@@ -944,9 +852,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+    ScaffoldMessenger.of(context).showSnackBar(
+      // coverage:ignore-line
       const SnackBar(content: Text("Checking for updates...")),
     );
 
@@ -961,9 +868,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await _showUpdateConfirmDialog(); // coverage:ignore-line
   }
 
-  Future<bool> _checkForWebUpdate() async { // coverage:ignore-line
-
-
+  Future<bool> _checkForWebUpdate() async {
+    // coverage:ignore-line
     if (!kIsWeb) return false;
 
     // coverage:ignore-start
@@ -971,7 +877,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-    // coverage:ignore-end
+          // coverage:ignore-end
           const SnackBar(
             content: Text("Offline: Unable to check for updates."),
             backgroundColor: Colors.orange,
@@ -995,7 +901,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final wantReload = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-  // coverage:ignore-end
+        // coverage:ignore-end
         title: const Text('Up to Date'),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
@@ -1011,21 +917,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-        // coverage:ignore-end
+              // coverage:ignore-end
               child: const Text('OK')),
           // coverage:ignore-start
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-          // coverage:ignore-end
+              // coverage:ignore-end
               child: const Text('Force Reload')),
         ],
       ),
     );
 
-    if (wantReload == true && kIsWeb) { // coverage:ignore-line
-
-
+    if (wantReload == true && kIsWeb) {
+      // coverage:ignore-line
       try {
         await ConnectivityPlatform
             .reloadAndClearCache(); // coverage:ignore-line
@@ -1040,7 +945,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-  // coverage:ignore-end
+        // coverage:ignore-end
         icon: const Icon(Icons.system_update_rounded,
             color: Colors.blueAccent, size: 40),
         title: const Text('Update Application'),
@@ -1050,21 +955,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-        // coverage:ignore-end
+              // coverage:ignore-end
               child: const Text('Cancel')),
-          ElevatedButton( // coverage:ignore-line
-
-
-              onPressed: () => // coverage:ignore-line
+          ElevatedButton(
+              // coverage:ignore-line
+              onPressed: () =>
                   Navigator.pop(context, true), // coverage:ignore-line
               child: const Text('Update & Reload')),
         ],
       ),
     );
 
-    if (confirmed == true) { // coverage:ignore-line
-
-
+    if (confirmed == true) {
+      // coverage:ignore-line
       if (kIsWeb) {
         try {
           await ConnectivityPlatform
@@ -1074,9 +977,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       } else {
         if (!mounted) return; // coverage:ignore-line
-        ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-line
           const SnackBar(
               content: Text('Update not available for this platform.')),
         );
@@ -1084,70 +986,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _backupToCloud() async { // coverage:ignore-line
-
-
+  Future<void> _backupToCloud() async {
     // Check PIN if enabled
-    if (_isAppLockEnabled) { // coverage:ignore-line
-
-
-      final verified =
-          await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (!verified) return;
+    String? capturedPin;
+    if (_isAppLockEnabled) {
+      capturedPin = await _showVerifyPinDialog(context, // coverage:ignore-line
+          reason: "Enter PIN to include it in your secure cloud backup.");
+      if (capturedPin == null) return;
     }
 
-    // coverage:ignore-start
     if (!mounted) return;
-    final passcode = await _promptForEncryptionPasscode(
-        context,
-    // coverage:ignore-end
-        "Cloud Backup",
+    final passcode = await _promptForEncryptionPasscode(context, "Cloud Backup",
         "Secure your sensitive financial data (accounts, transactions, etc.) with a passcode. This passcode is NEVER stored and is required to restore.");
 
     if (passcode == null) return; // User Cancelled
 
-    setState(() => _isUploading = true); // coverage:ignore-line
+    setState(() => _isUploading = true);
     try {
-      // coverage:ignore-start
       await ref
           .read(cloudSyncServiceProvider)
-          .syncToCloud(passcode: passcode)
+          .syncToCloud(passcode: passcode, appPin: capturedPin)
           .timeout(const Duration(seconds: 15), onTimeout: () {
-        throw Exception("Request timed out. Please check your connection.");
-      // coverage:ignore-end
+        throw Exception(
+            "Request timed out. Please check your connection."); // coverage:ignore-line
       });
 
-      // coverage:ignore-start
       if (mounted) {
+        ref.read(txnsSinceBackupProvider.notifier).reset();
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("Cloud Sync Success!")));
-      // coverage:ignore-end
       }
     } catch (e) {
       // coverage:ignore-start
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("Sync Error: $e")));
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     } finally {
-      if (mounted) setState(() => _isUploading = false); // coverage:ignore-line
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
   Future<void> _backupToZip() async {
     // Check PIN if enabled
+    String? capturedPin;
     if (_isAppLockEnabled) {
-      final verified =
-          await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (!verified) return;
+      capturedPin = await _showVerifyPinDialog(context, // coverage:ignore-line
+          reason: "Enter PIN to include it in your backup ZIP.");
+      if (capturedPin == null) return;
     }
 
     setState(() => _isUploading = true);
     try {
       // 1. Generate ZIP bytes
-      final bytes =
-          await ref.read(jsonDataServiceProvider).createBackupPackage();
+      final bytes = await ref
+          .read(jsonDataServiceProvider)
+          .createBackupPackage(appPin: capturedPin);
 
       // 2. Save File
       final fileName =
@@ -1164,7 +1059,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Backup Failed: $e')));
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -1174,8 +1069,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _restoreFromZip() async {
     // 1. Check PIN first if enabled (User requirement: PIN should pop immediately)
     if (_isAppLockEnabled) {
-      final verified = await _showVerifyPinDialog(context);
-      if (!verified) return;
+      final pin = await _showVerifyPinDialog(context);
+      if (pin == null) return;
     }
 
     // 2. Pick File
@@ -1208,8 +1103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => // coverage:ignore-line
-                Navigator.pop(ctx, 'CANCEL'), // coverage:ignore-line
+            onPressed: () => Navigator.pop(ctx, 'CANCEL'),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
@@ -1277,7 +1171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           Navigator.pop(ctx);
                           if (!ref.read(isLoggedInProvider)) {
                             ref.read(localModeProvider.notifier).value = true;
-                        // coverage:ignore-end
+                            // coverage:ignore-end
                           }
                           // coverage:ignore-start
                           Navigator.pushAndRemoveUntil(
@@ -1296,19 +1190,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Restore Failed: $e')));
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     } finally {
-      if (mounted) { // coverage:ignore-line
-
-
+      if (mounted) {
+        // coverage:ignore-line
         setState(() => _isDownloading = false); // coverage:ignore-line
       }
     }
   }
 
-  Future<void> _smartRestoreFlow() async { // coverage:ignore-line
-
+  Future<void> _smartRestoreFlow() async {
+    // coverage:ignore-line
     if (!await _verifyAppLockIfNeeded()) return; // coverage:ignore-line
 
     // 1. Safety Dialog
@@ -1320,7 +1213,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) return;
     final passcode = await _promptForEncryptionPasscode(
         context,
-    // coverage:ignore-end
+        // coverage:ignore-end
         "Cloud Restore",
         "If your cloud backup was encrypted, please enter the passcode. If it was not encrypted, leave this blank and continue.",
         isRestore: true);
@@ -1334,9 +1227,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // coverage:ignore-start
   Future<bool> _verifyAppLockIfNeeded() async {
     if (_isAppLockEnabled) {
-      final verified = await _showVerifyPinDialog(context);
-  // coverage:ignore-end
-      if (!verified) return false;
+      final pin = await _showVerifyPinDialog(context);
+      // coverage:ignore-end
+      if (pin == null) return false;
     }
     return true;
   }
@@ -1346,7 +1239,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final decision = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-  // coverage:ignore-end
+        // coverage:ignore-end
         title: const Text("⚠️ Critical Warning"),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
@@ -1363,14 +1256,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'CANCEL'),
-        // coverage:ignore-end
+            // coverage:ignore-end
             child: const Text("Cancel"),
           ),
           // coverage:ignore-start
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, 'RESTORE'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          // coverage:ignore-end
+            // coverage:ignore-end
             child: const Text("Yes, Restore"),
           ),
         ],
@@ -1379,7 +1272,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return decision == 'RESTORE'; // coverage:ignore-line
   }
 
-  Future<void> _executeCloudRestore(String passcode) async { // coverage:ignore-line
+  Future<void> _executeCloudRestore(String passcode) async {
+    // coverage:ignore-line
     setState(() => _isDownloading = true); // coverage:ignore-line
     try {
       // coverage:ignore-start
@@ -1388,10 +1282,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .restoreFromCloud(passcode: passcode)
           .timeout(const Duration(seconds: 15), onTimeout: () {
         throw Exception("Request timed out. Please check your connection.");
-      // coverage:ignore-end
+        // coverage:ignore-end
       });
 
-      if (mounted) { // coverage:ignore-line
+      if (mounted) {
+        // coverage:ignore-line
         // Force refresh providers
         // coverage:ignore-start
         ref.invalidate(accountsProvider);
@@ -1400,7 +1295,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(recurringTransactionsProvider);
         // coverage:ignore-end
 
-        ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
+        ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line
             const SnackBar(content: Text("Restore Complete! Reloading...")));
         // coverage:ignore-start
         Navigator.pushAndRemoveUntil(
@@ -1414,10 +1309,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("Restore Failed: $e")));
-      // coverage:ignore-end
+        // coverage:ignore-end
       }
     } finally {
-      if (mounted) { // coverage:ignore-line
+      if (mounted) {
+        // coverage:ignore-line
         setState(() => _isDownloading = false); // coverage:ignore-line
       }
     }
@@ -1426,9 +1322,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _deactivateAccountFlow() async {
     // Check PIN if enabled
     if (_isAppLockEnabled) {
-      final verified =
-          await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (!verified) return;
+      final pin = await _showVerifyPinDialog(context); // coverage:ignore-line
+      if (pin == null) return;
     }
 
     // 1. Verify Intent
@@ -1475,7 +1370,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // A. Re-authenticate first to ensure session is fresh (Google Auth handles it or we call signIn)
       final response = await authService.signInWithGoogle(ref);
       if (response.status != AuthStatus.success) {
-        throw Exception( // coverage:ignore-line
+        throw Exception(
             "Re-authentication Failed: ${response.message}"); // coverage:ignore-line
       }
 
@@ -1496,7 +1391,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Deactivation Failed: $e")),
-      // coverage:ignore-end
+          // coverage:ignore-end
         );
       }
     } finally {
@@ -1507,9 +1402,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _clearCloudDataFlow() async {
     // Check PIN if enabled
     if (_isAppLockEnabled) {
-      final verified =
-          await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (!verified) return;
+      final pin = await _showVerifyPinDialog(context); // coverage:ignore-line
+      if (pin == null) return;
     }
 
     // 1. Verify Intent
@@ -1554,7 +1448,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final authService = ref.read(authServiceProvider);
       final response = await authService.signInWithGoogle(ref);
       if (response.status != AuthStatus.success) {
-        throw Exception( // coverage:ignore-line
+        throw Exception(
             "Authentication Failed: ${response.message}"); // coverage:ignore-line
       }
 
@@ -1569,7 +1463,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Clear Failed: $e")),
-      // coverage:ignore-end
+          // coverage:ignore-end
         );
       }
     } finally {
@@ -1604,165 +1498,133 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<String?> _promptForEncryptionPasscode( // coverage:ignore-line
-
-
-      BuildContext context,
-      String title,
-      String message,
+  Future<String?> _promptForEncryptionPasscode(
+      BuildContext context, String title, String message,
       {bool isRestore = false}) async {
-    final controller = TextEditingController(); // coverage:ignore-line
+    final controller = TextEditingController();
     bool usePasscode = true;
 
-    final result = await showDialog<String>( // coverage:ignore-line
-
-
+    final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      // coverage:ignore-start
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(title),
-          content: Column(
-      // coverage:ignore-end
-            mainAxisSize: MainAxisSize.min,
-            children: [ // coverage:ignore-line
-
-
-              Text(message), // coverage:ignore-line
-              const SizedBox(height: 8),
-              const Text(
-                "Note: Categories are stored as metadata and are NOT encrypted.",
-                style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.orange,
-                    fontStyle: FontStyle.italic),
-              ),
-              const SizedBox(height: 16),
-              if (!isRestore) ...[ // coverage:ignore-line
-
-
-                SwitchListTile( // coverage:ignore-line
-
-
-                  title: const Text("Encrypt Backup?"),
-                  value: usePasscode,
-                  onChanged: (val) => // coverage:ignore-line
-                      setState(() => usePasscode = val), // coverage:ignore-line
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ],
-              if (usePasscode || isRestore) ...[ // coverage:ignore-line
-
-
-                TextField( // coverage:ignore-line
-
-
-                  controller: controller,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: "Encryption Passcode",
-                    border: OutlineInputBorder(),
-                  ),
-                  autofocus: true,
-                ),
-              ],
-            ],
-          ),
-          // coverage:ignore-start
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-          // coverage:ignore-end
-              child: const Text("CANCEL"),
-            ),
-            ElevatedButton( // coverage:ignore-line
-
-
-              onPressed: () => _handleEncryptionSubmit( // coverage:ignore-line
-
-
-                  context,
-                  controller,
-                  isRestore,
-                  usePasscode),
-              child: Text(_getEncryptionButtonLabel( // coverage:ignore-line
-
-
-                  isRestore,
-                  usePasscode)),
-            ),
-          ],
+        builder: (context, setDialogState) => _buildEncryptionDialog(
+          context,
+          setDialogState,
+          title,
+          message,
+          isRestore,
+          controller,
+          usePasscode,
+          onTogglePasscode: (val) => usePasscode = val,
         ),
       ),
     );
     return result;
   }
 
-  void _handleEncryptionSubmit( // coverage:ignore-line
+  Widget _buildEncryptionDialog(
+    BuildContext context,
+    StateSetter setDialogState,
+    String title,
+    String message,
+    bool isRestore,
+    TextEditingController controller,
+    bool usePasscode, {
+    required void Function(bool) onTogglePasscode,
+  }) {
+    return AlertDialog(
+      title: Text(title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message),
+          const SizedBox(height: 8),
+          const Text(
+            "Note: Categories are stored as metadata and are NOT encrypted.",
+            style: TextStyle(
+                fontSize: 11,
+                color: Colors.orange,
+                fontStyle: FontStyle.italic),
+          ),
+          const SizedBox(height: 16),
+          if (!isRestore) ...[
+            SwitchListTile(
+              title: const Text("Encrypt Backup?"),
+              value: usePasscode,
+              onChanged: (val) => setDialogState(() => onTogglePasscode(val)),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
+          if (usePasscode || isRestore) ...[
+            TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Encryption Passcode",
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null), // coverage:ignore-line
+          child: const Text("CANCEL"),
+        ),
+        ElevatedButton(
+          onPressed: () => _handleEncryptionSubmit(
+              context, controller, isRestore, usePasscode),
+          child: Text(_getEncryptionButtonLabel(isRestore, usePasscode)),
+        ),
+      ],
+    );
+  }
 
-
-      BuildContext context,
-      TextEditingController controller,
-      bool isRestore,
-      bool usePasscode) {
+  void _handleEncryptionSubmit(BuildContext context,
+      TextEditingController controller, bool isRestore, bool usePasscode) {
     if (!isRestore && !usePasscode) {
-      Navigator.pop(context, ""); // coverage:ignore-line
+      Navigator.pop(context, "");
       return;
     }
-    if (isRestore || controller.text.isNotEmpty) { // coverage:ignore-line
-
-
-      Navigator.pop(context, controller.text); // coverage:ignore-line
+    if (isRestore || controller.text.isNotEmpty) {
+      Navigator.pop(context, controller.text);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+    ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Please enter a passcode")),
     );
   }
 
-  String _getEncryptionButtonLabel(bool isRestore, bool usePasscode) { // coverage:ignore-line
-
-
+  String _getEncryptionButtonLabel(bool isRestore, bool usePasscode) {
     if (isRestore) return "RESTORE";
     if (usePasscode) return "ENCRYPT & BACKUP";
     return "BACKUP (UNENCRYPTED)";
   }
 
-  Future<bool> _showVerifyPinDialog(BuildContext context) async {
+  Future<String?> _showVerifyPinDialog(BuildContext context,
+      {String? reason}) async {
     final controller = TextEditingController();
-    final result = await showDialog<bool>(
+    final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-
-
         title: const Text("Verify App PIN"),
         content: Column(
-
-
           mainAxisSize: MainAxisSize.min,
           children: [
-
-
-            const Text("Enter your 4-digit PIN to disable App Lock."),
+            Text(reason ?? "Enter your 4-digit PIN to continue."),
             const SizedBox(height: 16),
             TextField(
-
-
               controller: controller,
               keyboardType: TextInputType.number,
               obscureText: true,
               maxLength: 4,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 16),
-              inputFormatters: [
-
-
-                FilteringTextInputFormatter.digitsOnly
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
                 counterText: "",
                 border: OutlineInputBorder(),
@@ -1773,21 +1635,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), // coverage:ignore-line
+            onPressed: () =>
+                Navigator.pop(context, null), // coverage:ignore-line
             child: const Text("CANCEL"),
           ),
           ElevatedButton(
             onPressed: () {
-              final storedPin = ref.read(storageServiceProvider).getAppPin();
-              if (controller.text == storedPin) {
-                Navigator.pop(context, true);
+              if (ref
+                  .read(storageServiceProvider)
+                  .verifyAppPin(controller.text)) {
+                Navigator.pop(context, controller.text);
               } else {
-                ScaffoldMessenger.of(context).showSnackBar( // coverage:ignore-line
-
-
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Incorrect PIN")),
                 );
-                controller.clear(); // coverage:ignore-line
+                controller.clear();
               }
             },
             child: const Text("VERIFY"),
@@ -1795,7 +1657,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-    return result ?? false;
+    return result;
   }
 
   void _showSetPinDialog(BuildContext context) {
@@ -1851,11 +1713,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: const Text("CANCEL"),
       ),
       if (currentPin != null)
-        // coverage:ignore-start
         ElevatedButton(
           onPressed: () => _handleUseExistingPin(context, storage),
           style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-        // coverage:ignore-end
           child: const Text("USE EXISTING"),
         ),
       ElevatedButton(
@@ -1865,18 +1725,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ];
   }
 
-  Future<void> _handleUseExistingPin( // coverage:ignore-line
-
-
-      BuildContext context,
-      dynamic storage) async {
-    // coverage:ignore-start
+  Future<void> _handleUseExistingPin(
+      BuildContext context, dynamic storage) async {
     await storage.setAppLockEnabled(true);
     setState(() => _isAppLockEnabled = true);
     if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-    // coverage:ignore-end
         const SnackBar(content: Text("App Lock Enabled")),
       );
     }
@@ -1896,50 +1751,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showDeleteProfileDialog( // coverage:ignore-line
-
-
-      BuildContext context,
-      WidgetRef ref,
-      Profile profile) {
-    showDialog( // coverage:ignore-line
-
-
+  void _showDeleteProfileDialog(
+      BuildContext context, WidgetRef ref, Profile profile) {
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog( // coverage:ignore-line
-
-
+      builder: (context) => AlertDialog(
         title: const Text("Delete Profile?"),
-        // coverage:ignore-start
         content: Text(
             "This will PERMANENTLY delete the profile '${profile.name}' and ALL its associated data (accounts, transactions, loans). This cannot be undone."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-        // coverage:ignore-end
+            onPressed: () => Navigator.pop(context), // coverage:ignore-line
             child: const Text("CANCEL"),
           ),
-          // coverage:ignore-start
           TextButton(
             onPressed: () async {
               await ref.read(storageServiceProvider).deleteProfile(profile.id);
               ref.invalidate(profilesProvider);
-          // coverage:ignore-end
               // If we deleted the active profile, switch to default
-              if (ref.read(activeProfileIdProvider) == profile.id) { // coverage:ignore-line
-
-
+              if (ref.read(activeProfileIdProvider) == profile.id) {
                 ref
-                    // coverage:ignore-start
                     .read(activeProfileIdProvider
-                        .notifier)
-                    .setProfile('default');
-                    // coverage:ignore-end
+                        .notifier) // coverage:ignore-line
+                    .setProfile('default'); // coverage:ignore-line
               }
-              if (context.mounted) { // coverage:ignore-line
-
-
-                Navigator.pop(context); // coverage:ignore-line
+              if (context.mounted) {
+                Navigator.pop(context);
               }
             },
             child: const Text("DELETE", style: TextStyle(color: Colors.red)),
@@ -1949,71 +1786,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showCopyCategoriesDialog( // coverage:ignore-line
-
-
-      BuildContext context,
-      WidgetRef ref,
-      String targetProfileId) {
-    final profilesAsync = ref.read(profilesProvider); // coverage:ignore-line
-    profilesAsync.whenData((profiles) { // coverage:ignore-line
-
-
+  void _showCopyCategoriesDialog(
+      BuildContext context, WidgetRef ref, String targetProfileId) {
+    final profilesAsync = ref.read(profilesProvider);
+    profilesAsync.whenData((profiles) {
       final otherProfiles =
-          // coverage:ignore-start
           profiles.where((p) => p.id != targetProfileId).toList();
       if (otherProfiles.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
+          // coverage:ignore-line
           const SnackBar(content: Text('No other profiles to copy from.')),
         );
         return;
       }
 
-      showDialog( // coverage:ignore-line
-
-
+      showDialog(
         context: context,
-        builder: (c) => AlertDialog( // coverage:ignore-line
-
-
-          title: const Text('Copy Categories'),
-          content: SingleChildScrollView( // coverage:ignore-line
-
-
-            child: Column( // coverage:ignore-line
-
-
-              mainAxisSize: MainAxisSize.min,
-              children: otherProfiles
-                  // coverage:ignore-start
-                  .map((p) => ListTile(
-                        title: Text(p.name),
-                        onTap: () async {
-                          final storage = ref.read(storageServiceProvider);
-                          await storage.copyCategories(p.id, targetProfileId);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Categories copied to ${profiles.firstWhere((pr) => pr.id == targetProfileId).name}')),
-                  // coverage:ignore-end
-                            );
-                            Navigator.pop(c); // coverage:ignore-line
-                          }
-                        },
-                      ))
-                  .toList(), // coverage:ignore-line
-            ),
-          ),
-          // coverage:ignore-start
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text('Close')),
-          // coverage:ignore-end
-          ],
+        builder: (c) => _CopyCategoriesDialog(
+          profiles: otherProfiles,
+          targetProfileId: targetProfileId,
+          allProfiles: profiles,
+          onCopy: (sourceId) async {
+            final storage = ref.read(storageServiceProvider);
+            await storage.copyCategories(sourceId, targetProfileId);
+          },
         ),
       );
     });
+  }
+}
+
+class _CopyCategoriesDialog extends StatelessWidget {
+  final List<Profile> profiles;
+  final String targetProfileId;
+  final List<Profile> allProfiles;
+  final Future<void> Function(String sourceId) onCopy;
+
+  const _CopyCategoriesDialog({
+    required this.profiles,
+    required this.targetProfileId,
+    required this.allProfiles,
+    required this.onCopy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Copy Categories'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children:
+              profiles.map((p) => _buildProfileOption(context, p)).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), // coverage:ignore-line
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileOption(BuildContext context, Profile p) {
+    return ListTile(
+      title: Text(p.name),
+      onTap: () async {
+        await onCopy(p.id);
+        if (context.mounted) {
+          final targetName =
+              allProfiles.firstWhere((pr) => pr.id == targetProfileId).name;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Categories copied to $targetName')),
+          );
+          Navigator.pop(context);
+        }
+      },
+    );
   }
 }

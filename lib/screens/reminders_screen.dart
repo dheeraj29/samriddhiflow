@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:clock/clock.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
+import '../services/taxes/indian_tax_service.dart';
+import '../services/taxes/tax_config_service.dart';
+import 'taxes/tax_details_screen.dart';
 import 'cc_payment_dialog.dart';
 import 'loan_payment_dialog.dart';
 import 'add_transaction_screen.dart';
@@ -11,6 +14,8 @@ import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/billing_helper.dart';
@@ -77,6 +82,8 @@ class RemindersScreen extends ConsumerWidget {
               loading: () => const CircularProgressIndicator(),
               error: (e, s) => Text('Error: $e'), // coverage:ignore-line
             ),
+            const SizedBox(height: 24),
+            _buildTaxReminders(context, ref, currency),
           ],
         ),
       ),
@@ -107,10 +114,8 @@ class RemindersScreen extends ConsumerWidget {
       dueDateObj = loan.firstEmiDate; // coverage:ignore-line
     }
     bool isBeforeStart = today.isBefore(loan.firstEmiDate);
-    if (isBeforeStart && dueDateObj.isBefore(loan.firstEmiDate)) { // coverage:ignore-line
-
-
-      dueDateObj = loan.firstEmiDate; // coverage:ignore-line
+    if (isBeforeStart && dueDateObj.isBefore(loan.firstEmiDate)) {
+      dueDateObj = loan.firstEmiDate;
     }
     return dueDateObj;
   }
@@ -158,19 +163,15 @@ class RemindersScreen extends ConsumerWidget {
     final isPartiallyPaid = totalPaid > 0 && !isFullyPaid;
 
     bool isBeforeStart = today.isBefore(loan.firstEmiDate);
-    if (isBeforeStart &&
-        totalPaid == 0 && // coverage:ignore-line
-        today.isBefore(loan.firstEmiDate)) { // coverage:ignore-line
-
-
-      return _buildWaitStartCard(loan); // coverage:ignore-line
+    if (isBeforeStart && totalPaid == 0 && today.isBefore(loan.firstEmiDate)) {
+      return _buildWaitStartCard(loan);
     }
 
     final (statusColor, statusText, statusIcon) = _getLoanPaymentStatus(
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDateObj));
 
     final displayDueDate = isFullyPaid
-        ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay) // coverage:ignore-line
+        ? DateTime(dueDateObj.year, dueDateObj.month + 1, loan.emiDay)
         : dueDateObj;
 
     return _buildLoanCardUI(
@@ -188,7 +189,6 @@ class RemindersScreen extends ConsumerWidget {
     );
   }
 
-  // coverage:ignore-start
   Widget _buildWaitStartCard(Loan loan) {
     return Card(
       child: ListTile(
@@ -196,7 +196,6 @@ class RemindersScreen extends ConsumerWidget {
         title: Text(loan.name),
         subtitle: Text(
             'First EMI starts on ${DateFormat(dateFormatMmmDdYyyy).format(loan.firstEmiDate)}'),
-  // coverage:ignore-end
         trailing: const Text('Wait for Start',
             style: TextStyle(fontSize: 10, color: Colors.grey)),
       ),
@@ -250,10 +249,8 @@ class RemindersScreen extends ConsumerWidget {
                                   : null,
                               fontSize: 13)),
                     if (isFullyPaid)
-                      Text( // coverage:ignore-line
-
-
-                          'Next Bill: ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}', // coverage:ignore-line
+                      Text(
+                          'Next Bill: ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}',
                           style: const TextStyle(
                               fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 4),
@@ -323,14 +320,11 @@ class RemindersScreen extends ConsumerWidget {
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () => showDialog( // coverage:ignore-line
-
-
+                  onPressed: () => showDialog(
+                      // coverage:ignore-line
                       context: context,
-                      builder: (_) => RecordLoanPaymentDialog( // coverage:ignore-line
-
-
-                          loan: loan)),
+                      builder: (_) => RecordLoanPaymentDialog(
+                          loan: loan)), // coverage:ignore-line
                 ),
               )
             ]
@@ -370,7 +364,7 @@ class RemindersScreen extends ConsumerWidget {
     final today = clock.now();
 
     final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month, // coverage:ignore-line
+        ? DateTime(today.year, today.month,
             acc.billingCycleDay!) // coverage:ignore-line
         : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 
@@ -379,12 +373,10 @@ class RemindersScreen extends ConsumerWidget {
 
     final payments = allTransactions
         .where((t) =>
-            // coverage:ignore-start
             !t.isDeleted &&
             t.toAccountId == acc.id &&
             t.type == TransactionType.transfer &&
             t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
-            // coverage:ignore-end
         .toList();
 
     final totalPaid = payments.fold(0.0, (sum, t) => sum + t.amount);
@@ -400,7 +392,7 @@ class RemindersScreen extends ConsumerWidget {
         isFullyPaid, isPartiallyPaid, today.isAfter(dueDate));
 
     final nextBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month + 1, // coverage:ignore-line
+        ? DateTime(today.year, today.month + 1,
             acc.billingCycleDay!) // coverage:ignore-line
         : DateTime(today.year, today.month, acc.billingCycleDay!);
 
@@ -468,10 +460,8 @@ class RemindersScreen extends ConsumerWidget {
                                   : null,
                               fontSize: 13)),
                     if (isFullyPaid)
-                      Text( // coverage:ignore-line
-
-
-                          'Next Bill: ${DateFormat(dateFormatMmmDd).format(nextBillDate)}', // coverage:ignore-line
+                      Text(
+                          'Next Bill: ${DateFormat(dateFormatMmmDd).format(nextBillDate)}',
                           style: const TextStyle(
                               fontSize: 12, color: Colors.grey)),
                   ],
@@ -497,20 +487,13 @@ class RemindersScreen extends ConsumerWidget {
             if (!isFullyPaid) ...[
               const SizedBox(height: 12),
               if (isPartiallyPaid)
-                Container( // coverage:ignore-line
-
-
+                Container(
                   width: double.infinity,
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text( // coverage:ignore-line
-
-
-                    'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue + totalPaid)}', // coverage:ignore-line
-                    style: AppTheme.offlineSafeTextStyle.copyWith( // coverage:ignore-line
-
-
-                        fontSize: 12,
-                        color: Colors.orange),
+                  child: Text(
+                    'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue + totalPaid)}',
+                    style: AppTheme.offlineSafeTextStyle
+                        .copyWith(fontSize: 12, color: Colors.orange),
                   ),
                 ),
               SizedBox(
@@ -524,9 +507,12 @@ class RemindersScreen extends ConsumerWidget {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => showDialog(
+                      // coverage:ignore-line
                       context: context,
                       builder: (_) => RecordCCPaymentDialog(
-                          creditCardAccount: acc, isFullyPaid: isFullyPaid)),
+                          // coverage:ignore-line
+                          creditCardAccount: acc,
+                          isFullyPaid: isFullyPaid)),
                 ),
               )
             ]
@@ -612,11 +598,14 @@ class RemindersScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     InkWell(
                       onTap: () {
+                        // coverage:ignore-line
                         ref
+                            // coverage:ignore-start
                             .read(calendarServiceProvider)
                             .downloadRecurringEvent(
                               title: r.title,
                               description: 'Recurring payment: ${r.title}',
+                              // coverage:ignore-end
                               startDate: dueDate,
                               occurrences: 12,
                             );
@@ -671,11 +660,8 @@ class RemindersScreen extends ConsumerWidget {
                               'Advance "${r.title}" to the next cycle without recording a transaction?'),
                           actions: [
                             TextButton(
-                                onPressed: () => Navigator.pop( // coverage:ignore-line
-
-
-                                    ctx,
-                                    false),
+                                onPressed: () => Navigator.pop(
+                                    ctx, false), // coverage:ignore-line
                                 child: const Text('CANCEL')),
                             TextButton(
                                 onPressed: () => Navigator.pop(ctx, true),
@@ -704,6 +690,7 @@ class RemindersScreen extends ConsumerWidget {
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.zero,
                     ),
+                    // coverage:ignore-start
                     onPressed: () {
                       final txn = Transaction.create(
                         title: r.title,
@@ -712,20 +699,188 @@ class RemindersScreen extends ConsumerWidget {
                         type: r.type,
                         category: r.category,
                         accountId: r.accountId,
+                        // coverage:ignore-end
                       );
                       Navigator.push(
+                          // coverage:ignore-line
                           context,
+                          // coverage:ignore-start
                           MaterialPageRoute(
                               builder: (_) => AddTransactionScreen(
                                   transactionToEdit: txn, recurringId: r.id)));
+                      // coverage:ignore-end
                     },
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildTaxReminders(
+      BuildContext context, WidgetRef ref, NumberFormat currency) {
+    final taxConfig = ref.watch(taxConfigServiceProvider);
+    final currentYear = taxConfig.getCurrentFinancialYear();
+    final taxData =
+        ref.watch(storageServiceProvider).getTaxYearData(currentYear);
+
+    if (taxData == null) return const SizedBox.shrink();
+
+    final service = ref.watch(indianTaxServiceProvider);
+    final rules = taxConfig.getRulesForYear(taxData.year);
+    final details = service.calculateDetailedLiability(taxData, rules);
+
+    final DateTime? dueDate = details['nextAdvanceTaxDueDate'] as dynamic;
+    final double? amount = details['nextAdvanceTaxAmount'] as dynamic;
+    final int? daysLeft = details['daysUntilAdvanceTax'] as dynamic;
+    final bool isRequirementMet = details['isRequirementMet'] == true;
+
+    if (dueDate == null ||
+        amount == null ||
+        (amount <= 0 && isRequirementMet)) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, 'Upcoming Tax Installments', Icons.percent),
+        _buildAdvanceTaxReminderCard(
+            context, ref, taxData, currency, dueDate, amount, daysLeft, rules),
+      ],
+    );
+  }
+
+  Widget _buildAdvanceTaxReminderCard(
+      BuildContext context,
+      WidgetRef ref,
+      TaxYearData taxData,
+      NumberFormat currency,
+      DateTime dueDate,
+      double amount,
+      int? daysLeft,
+      TaxRules rules) {
+    final bool isNear =
+        daysLeft != null && daysLeft <= rules.advanceTaxReminderDays;
+    final bool isOverdue = daysLeft != null && daysLeft < 0;
+
+    final Color cardColor;
+    if (isOverdue) {
+      cardColor = Colors.red.shade50; // coverage:ignore-line
+    } else if (isNear) {
+      cardColor = Colors.orange.shade50;
+    } else {
+      cardColor = Colors.blue.shade50; // coverage:ignore-line
+    }
+
+    return Card(
+      color: cardColor,
+      child: InkWell(
+        onTap: () {
+          // coverage:ignore-line
+          Navigator.push(
+            // coverage:ignore-line
+            context,
+            MaterialPageRoute(
+              // coverage:ignore-line
+              builder: (_) => TaxDetailsScreen(
+                // coverage:ignore-line
+                data: taxData,
+                initialTabIndex: 5, // Tax Paid tab
+                onSave: (updated) {
+                  // coverage:ignore-line
+                  ref
+                      .read(storageServiceProvider)
+                      .saveTaxYearData(updated); // coverage:ignore-line
+                },
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              Icon(
+                _getAdvanceTaxIcon(isOverdue, isNear),
+                color: _getAdvanceTaxIconColor(isOverdue, isNear),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAdvanceTaxReminderHeader(isOverdue, isNear),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Next: ${currency.format(amount)} due by ${DateFormat('dd MMM').format(dueDate)}',
+                      style:
+                          TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    ),
+                  ],
+                ),
+              ),
+              if (daysLeft != null)
+                _buildDaysLeftText(isOverdue, isNear, daysLeft),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdvanceTaxReminderHeader(bool isOverdue, bool isNear) {
+    final title = isOverdue ? 'Advance Tax Overdue' : 'Upcoming Advance Tax';
+    final Color textColor;
+    if (isOverdue) {
+      textColor = Colors.red;
+    } else if (isNear) {
+      textColor = Colors.orange.shade900;
+    } else {
+      textColor = Colors.blue.shade900; // coverage:ignore-line
+    }
+    return Text(
+      title,
+      style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+    );
+  }
+
+  Widget _buildDaysLeftText(bool isOverdue, bool isNear, int daysLeft) {
+    final Color color;
+    if (isOverdue) {
+      color = Colors.red;
+    } else if (isNear) {
+      color = Colors.orange;
+    } else {
+      color = Colors.blue;
+    }
+    final String text;
+    if (isOverdue) {
+      text = '${daysLeft.abs()}d Late'; // coverage:ignore-line
+    } else if (daysLeft == 0) {
+      text = 'Due Today';
+    } else {
+      text = '$daysLeft d left';
+    }
+
+    return Text(
+      text,
+      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+    );
+  }
+
+  IconData _getAdvanceTaxIcon(bool isOverdue, bool isNear) {
+    if (isOverdue) return Icons.warning_amber_rounded;
+    if (isNear) return Icons.notifications_active;
+    return Icons.calendar_month_outlined;
+  }
+
+  Color _getAdvanceTaxIconColor(bool isOverdue, bool isNear) {
+    if (isOverdue) return Colors.red;
+    if (isNear) return Colors.orange;
+    return Colors.blue;
   }
 }

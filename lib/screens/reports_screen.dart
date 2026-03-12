@@ -45,32 +45,46 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Financial Reports')),
-      body: transactionsAsync.when(
-        data: (transactions) {
-          return accountsAsync.when(
-            data: (accounts) {
-              return loansAsync.when(
-                data: (loans) {
-                  return _buildReportBody(
-                      transactions, accounts, loans, currencyLocale);
-                },
-                loading: () => const Center( // coverage:ignore-line
-                    child: CircularProgressIndicator()),
-                error: (error, stack) => Center( // coverage:ignore-line
-                    child: Text('Error: $error')), // coverage:ignore-line
-              );
-            },
-            loading: () => const Center( // coverage:ignore-line
-                child: CircularProgressIndicator()),
-            error: (error, stack) => // coverage:ignore-line
-                Center(child: Text('Error: $error')), // coverage:ignore-line
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => // coverage:ignore-line
-            Center(child: Text('Error: $error')), // coverage:ignore-line
+      body: _buildContent(
+        transactionsAsync,
+        accountsAsync,
+        loansAsync,
+        currencyLocale,
       ),
     );
+  }
+
+  Widget _buildContent(
+    AsyncValue<List<Transaction>> transactionsAsync,
+    AsyncValue<List<dynamic>> accountsAsync,
+    AsyncValue<List<Loan>> loansAsync,
+    String currencyLocale,
+  ) {
+    if (transactionsAsync.isLoading ||
+        accountsAsync.isLoading ||
+        loansAsync.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (transactionsAsync.hasError) {
+      return Center(
+          child: Text(
+              'Error: ${transactionsAsync.error}')); // coverage:ignore-line
+    }
+    if (accountsAsync.hasError) {
+      return Center(
+          child: Text('Error: ${accountsAsync.error}')); // coverage:ignore-line
+    }
+    if (loansAsync.hasError) {
+      return Center(
+          child: Text('Error: ${loansAsync.error}')); // coverage:ignore-line
+    }
+
+    final transactions = transactionsAsync.value ?? [];
+    final accounts = accountsAsync.value ?? [];
+    final loans = loansAsync.value ?? [];
+
+    return _buildReportBody(transactions, accounts, loans, currencyLocale);
   }
 
   Widget _buildReportBody(List<Transaction> transactions,
@@ -95,23 +109,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         const Divider(height: 1),
         _buildFilterBar(
             accounts, loans, dateInfo.monthsAvailable, dateInfo.yearsAvailable),
-        if (capitalGainsInfo.transactions.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _buildCapitalGainsCard(context, capitalGainsInfo.total,
-              capitalGainsInfo.byCategory, currencyLocale),
-        ],
-        if (data.isEmpty && _type != ReportType.loan)
-          const Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Center(child: Text('No data for selected criteria.')),
-          )
-        else ...[
-          const SizedBox(height: 16),
-          if (_type == ReportType.loan)
-            _buildLoanSummary(loans, currencyLocale),
-          if (data.isNotEmpty)
-            _buildDataList(sortedEntries, chartEntries, total, currencyLocale),
-        ],
+        if (capitalGainsInfo.transactions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: _buildCapitalGainsCard(context, capitalGainsInfo.total,
+                capitalGainsInfo.byCategory, currencyLocale),
+          ),
+        _buildMainReportContent(
+            data, loans, sortedEntries, chartEntries, total, currencyLocale),
+      ],
+    );
+  }
+
+  Widget _buildMainReportContent(
+    Map<String, double> data,
+    List<Loan> loans,
+    List<MapEntry<String, double>> sortedEntries,
+    List<MapEntry<String, double>> chartEntries,
+    double total,
+    String currencyLocale,
+  ) {
+    if (data.isEmpty && _type != ReportType.loan) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(child: Text('No data for selected criteria.')),
+      );
+    }
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        if (_type == ReportType.loan) _buildLoanSummary(loans, currencyLocale),
+        if (data.isNotEmpty)
+          _buildDataList(sortedEntries, chartEntries, total, currencyLocale),
       ],
     );
   }
@@ -228,22 +258,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       padding: const EdgeInsets.all(8.0),
       child: Column(
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 10,
-            children: [
-              _buildPeriodDropdown(),
-              if (_type == ReportType.loan)
-                ..._buildLoanFilters(loans)
-              else
-                ..._buildAccountFilters(accounts),
-            ],
-          ),
+          _buildFilterOptions(accounts, loans),
           const SizedBox(height: 8),
           if (_timeFilterMode == 'month') _buildMonthPicker(monthsAvailable),
           if (_timeFilterMode == 'year') _buildYearPicker(yearsAvailable),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterOptions(List<dynamic> accounts, List<Loan> loans) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 10,
+      children: [
+        _buildPeriodDropdown(),
+        if (_type == ReportType.loan)
+          ..._buildLoanFilters(loans)
+        else
+          ..._buildAccountFilters(accounts),
+      ],
     );
   }
 
@@ -257,14 +291,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             labelText: 'Period',
             contentPadding: EdgeInsets.symmetric(horizontal: 10),
             border: OutlineInputBorder()),
-        items: [
-          {'val': '30', 'label': '30 Days'},
-          {'val': '90', 'label': '90 Days'},
-          {'val': '365', 'label': 'Last Year'},
-          {'val': 'month', 'label': 'Month'},
-          {'val': 'year', 'label': 'Year'},
-          {'val': 'all', 'label': 'All Time'},
-        ].map((opt) {
+        items: _getPeriodOptions().map((opt) {
           return DropdownMenuItem<String>(
             value: opt['val'],
             child: Text(opt['label']!, overflow: TextOverflow.ellipsis),
@@ -273,6 +300,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         onChanged: (v) => setState(() => _timeFilterMode = v!),
       ),
     );
+  }
+
+  List<Map<String, String>> _getPeriodOptions() {
+    return [
+      {'val': '30', 'label': '30 Days'},
+      {'val': '90', 'label': '90 Days'},
+      {'val': '365', 'label': 'Last Year'},
+      {'val': 'month', 'label': 'Month'},
+      {'val': 'year', 'label': 'Year'},
+      {'val': 'all', 'label': 'All Time'},
+    ];
   }
 
   List<Widget> _buildLoanFilters(List<Loan> loans) {
@@ -317,7 +355,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 child: Text(t.name.toUpperCase(),
                     overflow: TextOverflow.ellipsis))),
           ],
-          onChanged: (v) => // coverage:ignore-line
+          onChanged: (v) =>
               setState(() => _selectedLoanType = v), // coverage:ignore-line
         ),
       ),
@@ -345,10 +383,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     overflow: TextOverflow.ellipsis)),
             ...accounts.map((a) => DropdownMenuItem<String?>(
                 value: a.id, // coverage:ignore-line
-                child: Text(a.name, // coverage:ignore-line
-                    overflow: TextOverflow.ellipsis))),
+                child: Text(a.name,
+                    overflow: TextOverflow.ellipsis))), // coverage:ignore-line
           ],
-          onChanged: (v) => // coverage:ignore-line
+          onChanged: (v) =>
               setState(() => _selectedAccountId = v), // coverage:ignore-line
         ),
       ),
@@ -373,7 +411,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return DropdownButtonFormField<String>(
       initialValue: _selectedMonth != null
           ? DateFormat(dateFormatMmmmYyyy).format(_selectedMonth!)
-  // coverage:ignore-end
+          // coverage:ignore-end
           : null,
       decoration: const InputDecoration(
           labelText: 'Select Month',
@@ -384,7 +422,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           .map((m) => DropdownMenuItem(value: m, child: Text(m)))
           .toList(),
       onChanged: (v) {
-          // coverage:ignore-end
+        // coverage:ignore-end
         if (v != null) {
           final parse =
               DateFormat(dateFormatMmmmYyyy).parse(v); // coverage:ignore-line
@@ -398,7 +436,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildYearPicker(Set<int> yearsAvailable) {
     return DropdownButtonFormField<int>(
       initialValue: _selectedYear,
-  // coverage:ignore-end
+      // coverage:ignore-end
       decoration: const InputDecoration(
           labelText: 'Select Year',
           contentPadding: EdgeInsets.symmetric(horizontal: 10),
@@ -408,7 +446,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           .map((y) => DropdownMenuItem(value: y, child: Text(y.toString())))
           .toList(),
       onChanged: (v) => setState(() => _selectedYear = v),
-          // coverage:ignore-end
+      // coverage:ignore-end
     );
   }
 
@@ -489,7 +527,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           emiPaid += txn.amount;
         } else if (txn.type == LoanTransactionType.prepayment) {
           prepaymentPaid += txn.amount;
-        // coverage:ignore-end
+          // coverage:ignore-end
         }
       }
     }
@@ -504,12 +542,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             date.year == _selectedMonth!.year, // coverage:ignore-line
       'year' => date.year == _selectedYear,
       '30' => date.isAfter(now.subtract(const Duration(days: 30))),
-      // coverage:ignore-start
       '90' => date.isAfter(
-          now.subtract(const Duration(days: 90))),
+          now.subtract(const Duration(days: 90))), // coverage:ignore-line
       '365' => date.isAfter(
-          now.subtract(const Duration(days: 365))),
-      // coverage:ignore-end
+          now.subtract(const Duration(days: 365))), // coverage:ignore-line
       _ => true, // 'all'
     };
   }
@@ -521,75 +557,78 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       String currencyLocale) {
     return Column(
       children: [
-        Center(
-          child: Column(
-            children: [
-              Text(_type == ReportType.loan ? 'Total Paid' : 'Total',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              SmartCurrencyText(
-                value: total,
-                locale: currencyLocale,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
+        _buildTotalSection(total, currencyLocale),
         const SizedBox(height: 24),
         ReportsPieChart(entries: chartEntries, total: total),
         const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: sortedEntries.length,
-          itemBuilder: (context, index) {
-            final e = sortedEntries[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor:
-                    index < 6 ? ReportUtils.getChartColor(index) : Colors.grey,
-                radius: 8,
-              ),
-              title: Text(e.key),
-              trailing: SmartCurrencyText(
-                value: e.value,
-                locale: currencyLocale,
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => TransactionsScreen(
-                      initialCategory: e.key,
-                      initialRange: TimeRange.custom,
-                      initialCustomRange: _getTimeRange(),
-                      initialType: () {
-                        if (_type == ReportType.spending) {
-                          return TransactionType.expense;
-                        }
-                        if (_type == ReportType.income) { // coverage:ignore-line
-
-                          return TransactionType.income;
-                        }
-                        return null;
-                      }(),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
+        _buildCategoryList(sortedEntries, currencyLocale),
       ],
     );
+  }
+
+  Widget _buildTotalSection(double total, String currencyLocale) {
+    return Center(
+      child: Column(
+        children: [
+          Text(_type == ReportType.loan ? 'Total Paid' : 'Total',
+              style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          SmartCurrencyText(
+            value: total,
+            locale: currencyLocale,
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryList(
+      List<MapEntry<String, double>> sortedEntries, String currencyLocale) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sortedEntries.length,
+      itemBuilder: (context, index) {
+        final e = sortedEntries[index];
+        return _CategoryReportItem(
+          entry: e,
+          index: index,
+          currencyLocale: currencyLocale,
+          onTap: () => _navigateToCategoryTransactions(e.key),
+        );
+      },
+    );
+  }
+
+  void _navigateToCategoryTransactions(String category) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TransactionsScreen(
+          initialCategory: category,
+          initialRange: TimeRange.custom,
+          initialCustomRange: _getTimeRange(),
+          initialType: _getInitialTransactionType(),
+        ),
+      ),
+    );
+  }
+
+  TransactionType? _getInitialTransactionType() {
+    if (_type == ReportType.spending) return TransactionType.expense;
+    if (_type == ReportType.income) {
+      // coverage:ignore-line
+      return TransactionType.income;
+    }
+    return null;
   }
 
   void _showExclusionDialog(List<Transaction> transactions) {
     if (transactions.isEmpty) return;
 
-    // Get all unique categories with amounts
     final categoryTotals = <String, double>{};
     for (var t in transactions) {
       categoryTotals[t.category] = (categoryTotals[t.category] ?? 0) + t.amount;
@@ -600,57 +639,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Filter Categories'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    final isExcluded = _excludedCategories.contains(category);
-
-                    return CheckboxListTile(
-                      title: Text(category),
-                      value: !isExcluded, // Checked means INCLUDED
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _excludedCategories // coverage:ignore-line
-                                .remove(category); // coverage:ignore-line
-                          } else {
-                            _excludedCategories.add(category);
-                          }
-                        });
-                        // Update main screen as well
-                        this.setState(() {});
-                      },
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _excludedCategories.clear();
-                    this.setState(() {});
-                    setState(() {});
-                  },
-                  child: const Text('Reset'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (context) => _CategoryExclusionDialog(
+        categories: categories,
+        excludedCategories: _excludedCategories,
+        onChanged: () => setState(() {}),
+      ),
     );
   }
 
@@ -668,13 +661,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       'month' when _selectedMonth != null => DateTimeRange(
           start: _selectedMonth!,
           end: DateTime(_selectedMonth!.year, _selectedMonth!.month + 1, 0),
-      // coverage:ignore-end
+          // coverage:ignore-end
         ),
       // coverage:ignore-start
       'year' when _selectedYear != null => DateTimeRange(
           start: DateTime(_selectedYear!, 1, 1),
           end: DateTime(_selectedYear!, 12, 31),
-      // coverage:ignore-end
+          // coverage:ignore-end
         ),
       _ =>
         DateTimeRange(start: DateTime(2000), end: now), // coverage:ignore-line
@@ -722,25 +715,37 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     color: Colors.blue[900],
                   ),
             ),
-            if (breakdown.isNotEmpty) ...[
-              const Divider(height: 24),
-              ...breakdown.entries.map((e) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(e.key, style: TextStyle(color: Colors.blue[800])),
-                        SmartCurrencyText(
-                          value: e.value,
-                          locale: locale,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  )),
-            ],
+            if (breakdown.isNotEmpty)
+              _buildCapitalGainsBreakdown(breakdown, locale),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCapitalGainsBreakdown(
+      Map<String, double> breakdown, String locale) {
+    return Column(
+      children: [
+        const Divider(height: 24),
+        ...breakdown.entries.map((e) => _buildGainsItem(e, locale)),
+      ],
+    );
+  }
+
+  Widget _buildGainsItem(MapEntry<String, double> e, String locale) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(e.key, style: TextStyle(color: Colors.blue[800])),
+          SmartCurrencyText(
+            value: e.value,
+            locale: locale,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
@@ -764,6 +769,79 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
 // --- Private helper classes ---
 
+class _CategoryExclusionDialog extends StatelessWidget {
+  final List<String> categories;
+  final Set<String> excludedCategories;
+  final VoidCallback onChanged;
+
+  const _CategoryExclusionDialog({
+    required this.categories,
+    required this.excludedCategories,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StatefulBuilder(
+      builder: (context, setLocalState) {
+        return AlertDialog(
+          title: const Text('Filter Categories'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: _buildExclusionList(setLocalState),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setLocalState(() {
+                  excludedCategories.clear();
+                });
+                onChanged();
+              },
+              child: const Text('Reset'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildExclusionList(StateSetter setLocalState) {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return _CategoryExclusionItem(
+          category: category,
+          isExcluded: excludedCategories.contains(category),
+          onChanged: (isSelected) => _handleExclusionChange(
+            category,
+            isSelected,
+            setLocalState,
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleExclusionChange(
+      String category, bool isSelected, StateSetter setLocalState) {
+    setLocalState(() {
+      if (isSelected) {
+        excludedCategories.remove(category); // coverage:ignore-line
+      } else {
+        excludedCategories.add(category);
+      }
+    });
+    onChanged();
+  }
+}
+
 class _DateInfo {
   final Set<String> monthsAvailable;
   final Set<int> yearsAvailable;
@@ -775,4 +853,56 @@ class _CapitalGainsInfo {
   final double total;
   final List<Transaction> transactions;
   _CapitalGainsInfo(this.byCategory, this.total, this.transactions);
+}
+
+class _CategoryExclusionItem extends StatelessWidget {
+  final String category;
+  final bool isExcluded;
+  final ValueChanged<bool> onChanged;
+
+  const _CategoryExclusionItem({
+    required this.category,
+    required this.isExcluded,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      title: Text(category),
+      value: !isExcluded,
+      onChanged: (bool? value) => onChanged(value ?? false),
+    );
+  }
+}
+
+class _CategoryReportItem extends StatelessWidget {
+  final MapEntry<String, double> entry;
+  final int index;
+  final String currencyLocale;
+  final VoidCallback onTap;
+
+  const _CategoryReportItem({
+    required this.entry,
+    required this.index,
+    required this.currencyLocale,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor:
+            index < 6 ? ReportUtils.getChartColor(index) : Colors.grey,
+        radius: 8,
+      ),
+      title: Text(entry.key),
+      trailing: SmartCurrencyText(
+        value: entry.value,
+        locale: currencyLocale,
+      ),
+      onTap: onTap,
+    );
+  }
 }

@@ -48,8 +48,10 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async { // coverage:ignore-line
-    final picked = await showDatePicker( // coverage:ignore-line
+  Future<void> _selectDate(BuildContext context) async {
+    // coverage:ignore-line
+    final picked = await showDatePicker(
+      // coverage:ignore-line
       context: context,
       // coverage:ignore-start
       initialDate: _selectedDate,
@@ -61,7 +63,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-    // coverage:ignore-end
+        // coverage:ignore-end
       });
     }
   }
@@ -92,7 +94,8 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
           type: _selectedType,
           isClosed: _isClosed,
           closedDate: _isClosed
-              ? (widget.recordToEdit!.closedDate ?? DateTime.now()) // coverage:ignore-line
+              ? (widget.recordToEdit!.closedDate ??
+                  DateTime.now()) // coverage:ignore-line
               : null,
         );
         ref.read(lendingProvider.notifier).updateRecord(updatedRecord);
@@ -136,7 +139,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                 onSelectionChanged: (Set<LendingType> newSelection) {
                   setState(() {
                     _selectedType = newSelection.first;
-                // coverage:ignore-end
+                    // coverage:ignore-end
                   });
                 },
               ),
@@ -209,7 +212,8 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                 SwitchListTile(
                   title: const Text('Mark as Closed / SETTLED'),
                   value: _isClosed,
-                  onChanged: (val) => setState(() => _isClosed = val), // coverage:ignore-line
+                  onChanged: (val) =>
+                      setState(() => _isClosed = val), // coverage:ignore-line
                 ),
 
               const SizedBox(height: 32),

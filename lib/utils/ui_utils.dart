@@ -104,7 +104,7 @@ class UIUtils {
           ),
           actions: [
             TextButton(
-              onPressed: () => // coverage:ignore-line
+              onPressed: () =>
                   Navigator.pop(context, null), // coverage:ignore-line
               child: const Text("SKIP"),
             ),

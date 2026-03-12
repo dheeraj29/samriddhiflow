@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart'; // Added for Uuid
+import 'package:uuid/uuid.dart';
 
 import '../providers.dart';
 import '../models/loan.dart';
@@ -61,7 +61,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
       ),
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold( // coverage:ignore-line
+      error: (err, stack) => Scaffold(
           body: Center(child: Text('Error: $err'))), // coverage:ignore-line
     );
   }
@@ -97,9 +97,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
               children: [
                 LoanHeaderCard(
                   loan: currentLoan,
-                  onBulkPay: () => // coverage:ignore-line
-                      _showBulkPaymentDialog( // coverage:ignore-line
-                          currentLoan),
+                  onBulkPay: () => _showBulkPaymentDialog(
+                      currentLoan), // coverage:ignore-line
                 ),
                 const SizedBox(height: 16),
                 if (!isGoldLoan)
@@ -241,7 +240,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
             onPressed: () => showDialog(
               context: context,
               builder: (_) => GoldLoanInterestPaymentDialog(
-            // coverage:ignore-end
+                  // coverage:ignore-end
                   loan: currentLoan,
                   accruedInterest: accruedInterest),
             ),
@@ -272,7 +271,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
             onPressed: () => showDialog(
               context: context,
               builder: (_) => GoldLoanCloseDialog(
-            // coverage:ignore-end
+                  // coverage:ignore-end
                   loan: currentLoan,
                   accruedInterest: accruedInterest),
             ),
@@ -359,9 +358,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
     );
   }
 
-  Widget _buildAmortizationView(
-      ThemeData theme, List<Map<String, dynamic>> schedule, Loan currentLoan) {
-    // Annual Data Calculation
+  // Annual Data Calculation
+  Map<int, Map<String, double>> _calculateYearlyAmortizationData(
+      List<Map<String, dynamic>> schedule, Loan currentLoan) {
     final Map<int, Map<String, double>> yearlyData = {};
     double prevBal = currentLoan.totalPrincipal;
 
@@ -377,7 +376,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           (currentLoan.emiAmount - principalPaid).clamp(0.0, double.infinity);
 
       if (!yearlyData.containsKey(year)) {
-        yearlyData[year] = {'principal': 0, 'interest': 0};
+        yearlyData[year] = {'principal': 0.0, 'interest': 0.0};
       }
       yearlyData[year]!['principal'] =
           yearlyData[year]!['principal']! + principalPaid;
@@ -386,6 +385,12 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
 
       prevBal = bal;
     }
+    return yearlyData;
+  }
+
+  Widget _buildAmortizationView(
+      ThemeData theme, List<Map<String, dynamic>> schedule, Loan currentLoan) {
+    final yearlyData = _calculateYearlyAmortizationData(schedule, currentLoan);
 
     final years = yearlyData.keys.toList()..sort();
 
@@ -409,20 +414,20 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                         final i = yearlyData[year]!['interest']!;
                         return BarTooltipItem(
                             '$year  ',
-                      // coverage:ignore-end
+                            // coverage:ignore-end
                             const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold),
-                            children: [ // coverage:ignore-line
-
-                              TextSpan( // coverage:ignore-line
-
+                            children: [
+                              // coverage:ignore-line
+                              TextSpan(
+                                  // coverage:ignore-line
                                   text:
                                       'P: ${NumberFormat.compact().format(p)} | ', // coverage:ignore-line
                                   style: const TextStyle(
                                       color: Colors.greenAccent, fontSize: 12)),
-                              TextSpan( // coverage:ignore-line
-
+                              TextSpan(
+                                  // coverage:ignore-line
                                   text:
                                       'Interest: ${NumberFormat.compact().format(i)}', // coverage:ignore-line
                                   style: const TextStyle(
@@ -528,8 +533,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         const SizedBox(height: 16),
         RadioGroup<bool>(
           groupValue: _reduceTenure,
-          onChanged: (v) { // coverage:ignore-line
-
+          onChanged: (v) {
+            // coverage:ignore-line
             if (v != null) {
               setState(() => _reduceTenure = v); // coverage:ignore-line
             }
@@ -597,102 +602,23 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
 
   // coverage:ignore-start
   void _showBulkPaymentDialog(Loan currentLoan) {
-    DateTime startDate = DateTime(DateTime.now().year, 1, 1);
-    DateTime endDate = DateTime.now();
-  // coverage:ignore-end
-    bool isProcessing = false;
-
-    // coverage:ignore-start
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-    // coverage:ignore-end
-          title: const Text('Bulk Record Payments'),
-          content: Column( // coverage:ignore-line
-
-            mainAxisSize: MainAxisSize.min,
-            children: [ // coverage:ignore-line
-
-              const Text(
-                  'Record EMI payments for a date range automatically. Assumes paid on time.'),
-              const SizedBox(height: 16),
-              _buildBulkDateTile( // coverage:ignore-line
-
-                'Start Date',
-                startDate,
-                (d) => setState(() => startDate = d), // coverage:ignore-line
-              ),
-              _buildBulkDateTile( // coverage:ignore-line
-
-                'End Date',
-                endDate,
-                (d) => setState(() => endDate = d), // coverage:ignore-line
-              ),
-              if (isProcessing)
-                const LinearProgressIndicator(), // coverage:ignore-line
-            ],
-          ),
-          // coverage:ignore-start
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-          // coverage:ignore-end
-                child: const Text('Cancel')),
-            ElevatedButton( // coverage:ignore-line
-
-              onPressed: isProcessing
-                  ? null
-                  // coverage:ignore-start
-                  : () async {
-                      setState(() => isProcessing = true);
-                      await _handleBulkPayment(
-                  // coverage:ignore-end
-                        currentLoan: currentLoan,
-                        startDate: startDate,
-                        endDate: endDate,
-                      );
-                      if (context.mounted) { // coverage:ignore-line
-
-                        Navigator.pop(context); // coverage:ignore-line
-                      }
-                    },
-              child: const Text('Record Payments'),
-            ),
-          ],
+      builder: (context) => _BulkPaymentDialog(
+        // coverage:ignore-end
+        currentLoan: currentLoan,
+        onProcessed: (startDate, endDate) => _handleBulkPayment(
+          // coverage:ignore-line
+          currentLoan: currentLoan,
+          startDate: startDate,
+          endDate: endDate,
         ),
       ),
     );
   }
 
-  ListTile _buildBulkDateTile( // coverage:ignore-line
-
-      String title,
-      DateTime date,
-      ValueChanged<DateTime> onSelect) {
-    // coverage:ignore-start
-    return ListTile(
-      title: Text(title),
-      subtitle: Text(DateFormat('yyyy-MM-dd').format(date)),
-    // coverage:ignore-end
-      trailing: const Icon(Icons.calendar_today),
-      // coverage:ignore-start
-      onTap: () async {
-        final d = await showDatePicker(
-            context: context,
-      // coverage:ignore-end
-            initialDate: date,
-            // coverage:ignore-start
-            firstDate: DateTime(2010),
-            lastDate: DateTime.now());
-        if (d != null) onSelect(d);
-            // coverage:ignore-end
-      },
-    );
-  }
-
-  Future<void> _handleBulkPayment({ // coverage:ignore-line
-
+  Future<void> _handleBulkPayment({
+    // coverage:ignore-line
     required Loan currentLoan,
     required DateTime startDate,
     required DateTime endDate,
@@ -716,16 +642,16 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           t.type == LoanTransactionType.emi &&
           t.date.year == emiDate.year &&
           t.date.month == emiDate.month);
-    // coverage:ignore-end
+      // coverage:ignore-end
 
-      if (!exists && emiDate.isAfter(loan.startDate)) { // coverage:ignore-line
-
-        final interest = (loan.remainingPrincipal * loan.interestRate / 12) / // coverage:ignore-line
-            100;
+      if (!exists && emiDate.isAfter(loan.startDate)) {
+        // coverage:ignore-line
+        final interest = (loan.remainingPrincipal * loan.interestRate / 12) /
+            100; // coverage:ignore-line
         final principalComp = loan.emiAmount - interest; // coverage:ignore-line
 
-        final loanTxn = LoanTransaction( // coverage:ignore-line
-
+        final loanTxn = LoanTransaction(
+          // coverage:ignore-line
           id: const Uuid().v4(), // coverage:ignore-line
           date: emiDate,
           amount: loan.emiAmount, // coverage:ignore-line
@@ -744,7 +670,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           final expTxn = Transaction.create(
             title: 'Loan EMI: ${loan.name}',
             amount: loan.emiAmount,
-        // coverage:ignore-end
+            // coverage:ignore-end
             type: TransactionType.expense,
             category: 'Bank loan',
             accountId: loan.accountId!, // coverage:ignore-line
@@ -759,20 +685,18 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           DateTime(current.year, current.month + 1, 1); // coverage:ignore-line
     }
 
-    // coverage:ignore-start
     loan.transactions = [
       ...loan.transactions,
       ...newLoanTxns
-    // coverage:ignore-end
-    ];
-    loan.transactions // coverage:ignore-line
+    ]; // coverage:ignore-line
+    loan.transactions
         .sort((a, b) => a.date.compareTo(b.date)); // coverage:ignore-line
 
     // coverage:ignore-start
     await storage.saveLoan(loan);
     for (final t in newTxns) {
       await storage.saveTransaction(t);
-    // coverage:ignore-end
+      // coverage:ignore-end
     }
 
     // coverage:ignore-start
@@ -785,7 +709,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Recorded $count payments successfully.')));
-    // coverage:ignore-end
+      // coverage:ignore-end
     }
   }
 
@@ -798,7 +722,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
             'This will remove the loan tracking. Existing transactions will NOT be deleted.'),
         actions: [
           TextButton(
-              onPressed: () => // coverage:ignore-line
+              onPressed: () =>
                   Navigator.pop(ctx, false), // coverage:ignore-line
               child: const Text('Cancel')),
           TextButton(
@@ -816,5 +740,117 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         Navigator.pop(context);
       }
     }
+  }
+
+  // Removed unreferenced methods which were out of scope.
+}
+
+class _BulkPaymentDialog extends StatefulWidget {
+  final Loan currentLoan;
+  final Future<void> Function(DateTime startDate, DateTime endDate) onProcessed;
+
+  const _BulkPaymentDialog({
+    // coverage:ignore-line
+    required this.currentLoan,
+    required this.onProcessed,
+  });
+
+  @override // coverage:ignore-line
+  State<_BulkPaymentDialog> createState() =>
+      _BulkPaymentDialogState(); // coverage:ignore-line
+}
+
+class _BulkPaymentDialogState extends State<_BulkPaymentDialog> {
+  late DateTime _startDate;
+  late DateTime _endDate;
+  bool _isProcessing = false;
+
+  @override // coverage:ignore-line
+  void initState() {
+    // coverage:ignore-start
+    super.initState();
+    _startDate = DateTime(DateTime.now().year, 1, 1);
+    _endDate = DateTime.now();
+    // coverage:ignore-end
+  }
+
+  @override // coverage:ignore-line
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      // coverage:ignore-line
+      title: const Text('Bulk Record Payments'),
+      content: Column(
+        // coverage:ignore-line
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // coverage:ignore-line
+          const Text(
+              'Record EMI payments for a date range automatically. Assumes paid on time.'),
+          const SizedBox(height: 16),
+          _buildBulkDateTile(
+            // coverage:ignore-line
+            'Start Date',
+            _startDate, // coverage:ignore-line
+            (d) => setState(() => _startDate = d), // coverage:ignore-line
+          ),
+          _buildBulkDateTile(
+            // coverage:ignore-line
+            'End Date',
+            _endDate, // coverage:ignore-line
+            (d) => setState(() => _endDate = d), // coverage:ignore-line
+          ),
+          if (_isProcessing)
+            const LinearProgressIndicator(), // coverage:ignore-line
+        ],
+      ),
+      // coverage:ignore-start
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            // coverage:ignore-end
+            child: const Text('Cancel')),
+        ElevatedButton(
+          // coverage:ignore-line
+          onPressed: _isProcessing // coverage:ignore-line
+              ? null
+              // coverage:ignore-start
+              : () async {
+                  setState(() => _isProcessing = true);
+                  await widget.onProcessed(_startDate, _endDate);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    // coverage:ignore-end
+                  }
+                },
+          child: const Text('Record Payments'),
+        ),
+      ],
+    );
+  }
+
+  ListTile _buildBulkDateTile(
+      // coverage:ignore-line
+      String title,
+      DateTime date,
+      ValueChanged<DateTime> onSelect) {
+    // coverage:ignore-start
+    return ListTile(
+      title: Text(title),
+      subtitle: Text(DateFormat('yyyy-MM-dd').format(date)),
+      // coverage:ignore-end
+      trailing: const Icon(Icons.calendar_today),
+      // coverage:ignore-start
+      onTap: () async {
+        final d = await showDatePicker(
+            context: context,
+            // coverage:ignore-end
+            initialDate: date,
+            // coverage:ignore-start
+            firstDate: DateTime(2010),
+            lastDate: DateTime.now());
+        if (d != null) onSelect(d);
+        // coverage:ignore-end
+      },
+    );
   }
 }

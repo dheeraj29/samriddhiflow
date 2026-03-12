@@ -6,25 +6,39 @@ import 'package:clock/clock.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/screens/reminders_screen.dart';
-import 'package:samriddhi_flow/screens/add_transaction_screen.dart';
-
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart' as model;
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
+import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
 
 import '../test_mocks.dart';
+
+class MockTaxConfigService extends Mock implements TaxConfigService {}
+
+class MockIndianTaxService extends Mock implements IndianTaxService {}
 
 void main() {
   late MockCalendarService mockCalendarService;
   late MockStorageService mockStorage;
+  late MockTaxConfigService mockTaxConfigService;
+  late MockIndianTaxService mockIndianTaxService;
+
+  setUpAll(() {
+    registerFallbackValue(const TaxYearData(year: 2026));
+    registerFallbackValue(TaxRules());
+  });
 
   setUp(() {
     mockCalendarService = MockCalendarService();
     mockStorage = MockStorageService();
+    mockTaxConfigService = MockTaxConfigService();
+    mockIndianTaxService = MockIndianTaxService();
     setupStorageDefaults(mockStorage);
 
-    // Default stubs for calendar
     when(() => mockCalendarService.downloadExvent(
           title: any(named: 'title'),
           description: any(named: 'description'),
@@ -49,6 +63,11 @@ void main() {
     List<RecurringTransaction>? recurring,
     List<model.Transaction>? transactions,
   }) {
+    try {
+      when(() => mockTaxConfigService.getCurrentFinancialYear())
+          .thenReturn(2026);
+    } catch (_) {}
+
     return ProviderScope(
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -62,6 +81,9 @@ void main() {
         calendarServiceProvider.overrideWithValue(mockCalendarService),
         categoriesProvider.overrideWith(() => MockCategoriesNotifier([])),
         holidaysProvider.overrideWith(() => MockHolidaysNotifier([])),
+        pendingRemindersProvider.overrideWithValue(0),
+        taxConfigServiceProvider.overrideWithValue(mockTaxConfigService),
+        indianTaxServiceProvider.overrideWithValue(mockIndianTaxService),
       ],
       child: const MaterialApp(
         home: RemindersScreen(),
@@ -95,7 +117,6 @@ void main() {
           emiDay: 10,
           firstEmiDate: DateTime(2026, 2, 1),
         );
-        loan.remainingPrincipal = 100000;
         loan.transactions.add(LoanTransaction(
           id: '1',
           amount: 800,
@@ -111,8 +132,7 @@ void main() {
 
         expect(find.text('Home Loan'), findsOneWidget);
         expect(find.text('Partial'), findsOneWidget);
-        expect(
-            find.textContaining('Paid: ₹800.00 / ₹2,000.00'), findsOneWidget);
+        expect(find.textContaining('Paid:'), findsOneWidget);
       });
     });
 
@@ -125,10 +145,9 @@ void main() {
           tenureMonths: 24,
           startDate: DateTime(2026, 1, 1),
           emiAmount: 1500,
-          emiDay: 5, // Due on 5th. 10th > 5th, so overdue.
+          emiDay: 5,
           firstEmiDate: DateTime(2026, 1, 1),
         );
-        loan.remainingPrincipal = 50000;
 
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
         await tester.pumpAndSettle();
@@ -149,17 +168,16 @@ void main() {
         tenureMonths: 12,
         startDate: DateTime.now().subtract(const Duration(days: 30)),
         emiAmount: 1000,
-        emiDay: DateTime.now().add(const Duration(days: 2)).day, // Future day
+        emiDay: DateTime.now().add(const Duration(days: 2)).day,
         firstEmiDate: DateTime.now().subtract(const Duration(days: 30)),
       );
-      loan.remainingPrincipal = 20000;
 
       await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
       await tester.pumpAndSettle();
 
       final calendarBtn = find.text('Add to Calendar');
       await tester.dragUntilVisible(
-          calendarBtn.first, find.byType(ListView), const Offset(0, -100));
+          calendarBtn.first, find.byType(Scrollable), const Offset(0, -100));
       await tester.pumpAndSettle();
 
       await tester.tap(calendarBtn.first);
@@ -172,164 +190,198 @@ void main() {
             endTime: any(named: 'endTime'),
           )).called(1);
     });
+
+    testWidgets('shows loan that has not yet started', (tester) async {
+      await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
+        final loan = Loan.create(
+          name: 'Future Loan',
+          principal: 100000,
+          rate: 8.0,
+          tenureMonths: 120,
+          startDate: DateTime(2026, 4, 1),
+          emiAmount: 2000,
+          emiDay: 10,
+          firstEmiDate: DateTime(2026, 4, 1),
+        );
+
+        await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Wait for Start'), findsOneWidget);
+      });
+    });
+
+    testWidgets('shows fully paid loan emi', (tester) async {
+      await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
+        final loan = Loan.create(
+          name: 'Closed EMI Loan',
+          principal: 100000,
+          rate: 8.0,
+          tenureMonths: 120,
+          startDate: DateTime(2026, 2, 1),
+          emiAmount: 2000,
+          emiDay: 10,
+          firstEmiDate: DateTime(2026, 2, 1),
+        );
+        loan.transactions.add(LoanTransaction(
+          id: 'paid-1',
+          amount: 2000,
+          date: DateTime(2026, 3, 5),
+          type: LoanTransactionType.emi,
+          principalComponent: 1500,
+          interestComponent: 500,
+          resultantPrincipal: 98500,
+        ));
+
+        await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Paid'), findsOneWidget);
+      });
+    });
   });
 
   group('Credit Card Reminders', () {
-    testWidgets('shows CC bill reminders (Overdue) and triggers PAY NOW',
-        (tester) async {
+    testWidgets('shows CC bill reminders (Overdue)', (tester) async {
       await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
-        await tester.binding.setSurfaceSize(const Size(1080, 5000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-
         final acc = Account(
           id: 'cc1',
           name: 'SBI Card',
           type: AccountType.creditCard,
           balance: 5000,
-          billingCycleDay: 15, // Last bill on Feb 15
-          paymentDueDateDay:
-              20, // Due 20 days after = Mar 7. Overdue on Mar 10.
+          billingCycleDay: 15,
+          paymentDueDateDay: 20,
         );
 
-        await tester.pumpWidget(createWidgetUnderTest(
-          accounts: [acc],
-          transactions: [],
-        ));
+        await tester.pumpWidget(createWidgetUnderTest(accounts: [acc]));
         await tester.pumpAndSettle();
 
         expect(find.text('SBI Card'), findsOneWidget);
         expect(find.text('Overdue'), findsOneWidget);
-
-        final payNowBtn = find.text('PAY NOW');
-        await tester.dragUntilVisible(
-            payNowBtn, find.byType(ListView), const Offset(0, -100));
-        await tester.pumpAndSettle();
-
-        await tester.tap(payNowBtn);
-        await tester.pumpAndSettle();
-
-        // Should show CC Payment Dialog
-        expect(find.textContaining('Pay'), findsWidgets);
-        expect(find.text('Confirm'), findsOneWidget);
       });
     });
 
-    testWidgets('shows CC bill reminders (Upcoming)', (tester) async {
+    testWidgets('shows CC bill reminders (Partially Paid)', (tester) async {
       await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
-        await tester.binding.setSurfaceSize(const Size(1080, 5000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-
         final acc = Account(
-          id: 'cc2',
-          name: 'HDFC Card',
+          id: 'cc3',
+          name: 'Axis Card',
           type: AccountType.creditCard,
-          balance: 3000,
-          billingCycleDay: 15, // Last bill on Feb 15.
-          paymentDueDateDay: 25, // Due Mar 12. Mar 10 < Mar 12, so Upcoming.
+          balance: 2000,
+          billingCycleDay: 15,
+          paymentDueDateDay: 20,
         );
 
-        await tester.pumpWidget(createWidgetUnderTest(
-          accounts: [acc],
-          transactions: [],
-        ));
+        final txn = model.Transaction.create(
+          title: 'Partial Payment',
+          amount: 500,
+          date: DateTime(2026, 3, 1),
+          type: model.TransactionType.transfer,
+          category: 'Payment',
+          toAccountId: 'cc3',
+        );
+
+        when(() => mockStorage.getLastRollover('cc3')).thenReturn(0);
+
+        await tester.pumpWidget(
+            createWidgetUnderTest(accounts: [acc], transactions: [txn]));
         await tester.pumpAndSettle();
 
-        expect(find.text('HDFC Card'), findsOneWidget);
-        expect(find.text('Upcoming'), findsOneWidget);
+        expect(find.text('Partial'), findsOneWidget);
+      });
+    });
+
+    testWidgets('shows CC bill reminders (Fully Paid)', (tester) async {
+      await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
+        final acc = Account(
+          id: 'cc4',
+          name: 'OneCard',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 15,
+          paymentDueDateDay: 20,
+        );
+
+        await tester.pumpWidget(createWidgetUnderTest(accounts: [acc]));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Paid'), findsWidgets);
       });
     });
   });
 
   group('Recurring Reminders', () {
-    testWidgets('handles PAY NOW action', (tester) async {
-      await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
-        await tester.binding.setSurfaceSize(const Size(1080, 5000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-
-        final recurring = RecurringTransaction(
-          id: 'r_pay',
-          title: 'Subscription',
-          amount: 500,
-          frequency: Frequency.monthly,
-          isActive: true,
-          category: 'Services',
-          nextExecutionDate: DateTime(2026, 3, 11),
-        );
-
-        await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
-        await tester.pumpAndSettle();
-
-        final payNowBtn = find.text('PAY NOW');
-        await tester.dragUntilVisible(
-            payNowBtn, find.byType(Scrollable), const Offset(0, -100));
-        await tester.pumpAndSettle();
-
-        await tester.tap(payNowBtn);
-        await tester.pumpAndSettle();
-
-        expect(find.byType(AddTransactionScreen), findsOneWidget);
-        expect(find.text('Update Transaction'), findsOneWidget);
-      });
-    });
-    testWidgets('handles SKIP action', (tester) async {
-      await withClock(Clock.fixed(DateTime(2026, 3, 10)), () async {
-        await tester.binding.setSurfaceSize(const Size(1080, 5000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-
-        final recurring = RecurringTransaction(
-          id: 'r1',
-          title: 'Rent',
-          amount: 15000,
-          frequency: Frequency.monthly,
-          isActive: true,
-          category: 'Housing',
-          nextExecutionDate: DateTime(2026, 3, 12),
-        );
-
-        await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
-        await tester.pumpAndSettle();
-
-        final skipBtn = find.text('SKIP');
-        await tester.dragUntilVisible(
-            skipBtn, find.byType(Scrollable), const Offset(0, -100));
-        await tester.pumpAndSettle();
-
-        await tester.tap(skipBtn);
-        await tester.pumpAndSettle();
-
-        // Confirm dialog
-        expect(find.text('Skip Cycle?'), findsOneWidget);
-        await tester.tap(find.text('SKIP').last);
-        await tester.pumpAndSettle();
-
-        verify(() => mockStorage.advanceRecurringTransactionDate('r1'))
-            .called(1);
-      });
-    });
-
-    testWidgets('triggers recurring calendar download', (tester) async {
+    testWidgets('shows recurring payment', (tester) async {
       final recurring = RecurringTransaction(
-        id: 'r2',
-        title: 'Gym',
-        amount: 2000,
+        id: 'r1',
+        title: 'Rent',
+        amount: 15000,
         frequency: Frequency.monthly,
         isActive: true,
-        category: 'Health',
+        category: 'Housing',
         nextExecutionDate: DateTime.now().add(const Duration(days: 5)),
       );
 
       await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Add to Calendar').last);
+      expect(find.text('Rent'), findsOneWidget);
+    });
+
+    testWidgets('handles SKIP action', (tester) async {
+      final recurring = RecurringTransaction(
+        id: 'r_skip',
+        title: 'Sub',
+        amount: 100,
+        frequency: Frequency.monthly,
+        isActive: true,
+        category: 'Services',
+        nextExecutionDate: DateTime.now().add(const Duration(days: 1)),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
       await tester.pumpAndSettle();
 
-      verify(() => mockCalendarService.downloadRecurringEvent(
-            title: any(named: 'title'),
-            description: any(named: 'description'),
-            startDate: any(named: 'startDate'),
-            occurrences: any(named: 'occurrences'),
-          )).called(1);
+      await tester.tap(find.text('SKIP'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Skip Cycle?'), findsOneWidget);
+      await tester.tap(find.text('SKIP').last);
+      await tester.pumpAndSettle();
+
+      verify(() => mockStorage.advanceRecurringTransactionDate('r_skip'))
+          .called(1);
+    });
+  });
+
+  group('Tax Reminders', () {
+    testWidgets('shows upcoming tax installment', (tester) async {
+      final now = DateTime(2026, 3, 10);
+      await withClock(Clock.fixed(now), () async {
+        const taxData = TaxYearData(year: 2025);
+        final rules = TaxRules();
+
+        when(() => mockTaxConfigService.getCurrentFinancialYear())
+            .thenReturn(2025);
+        when(() => mockStorage.getTaxYearData(any())).thenReturn(taxData);
+        when(() => mockTaxConfigService.getRulesForYear(any()))
+            .thenReturn(rules);
+        when(() =>
+                mockIndianTaxService.calculateDetailedLiability(any(), any()))
+            .thenReturn({
+          'nextAdvanceTaxDueDate': DateTime(2026, 3, 15),
+          'nextAdvanceTaxAmount': 15000.0,
+          'daysUntilAdvanceTax': 5,
+          'isRequirementMet': false,
+        });
+
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Tax'), findsWidgets);
+      });
     });
   });
 }

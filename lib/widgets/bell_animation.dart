@@ -52,7 +52,8 @@ class _BellAnimationState extends State<BellAnimation>
   void didUpdateWidget(BellAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.animate != oldWidget.animate) {
-      if (widget.animate) { // coverage:ignore-line
+      if (widget.animate) {
+        // coverage:ignore-line
         _controller.repeat(); // coverage:ignore-line
       } else {
         _controller.stop(); // coverage:ignore-line

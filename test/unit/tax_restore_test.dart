@@ -15,6 +15,8 @@ void main() {
     Hive.registerAdapter<TaxExemptionRule>(TaxExemptionRuleAdapter());
     Hive.registerAdapter<InsurancePremiumRule>(InsurancePremiumRuleAdapter());
     Hive.registerAdapter<TaxMappingRule>(TaxMappingRuleAdapter());
+    Hive.registerAdapter<AdvanceTaxInstallmentRule>(
+        AdvanceTaxInstallmentRuleAdapter());
 
     // Note: We deliberately do NOT register adapters here externally
     // to test if the Service registers them internally as expected.

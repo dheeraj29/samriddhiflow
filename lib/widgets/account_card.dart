@@ -31,42 +31,8 @@ class AccountCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Determine Color and Icon based on Type
-    Color cardColor;
-    Widget iconWidget;
-    switch (account.type) {
-      case AccountType.creditCard:
-        cardColor = const Color(0xFF1A1A2E); // Dark Blue/Black
-        iconWidget = PureIcons.card(color: Colors.white, size: 28);
-        break;
-      case AccountType.savings:
-        cardColor = AppTheme.secondary; // Teal
-        iconWidget = PureIcons.bank(color: Colors.white, size: 28);
-        break;
-      case AccountType.wallet:
-        cardColor = Colors.orangeAccent;
-        iconWidget = PureIcons.wallet(color: Colors.white, size: 28);
-        break;
-    }
-
-    // CC Display Logic:
-    // If we have negative balance (credit/payment), apply it to Billed Amount first for display.
-    double displayBalance = account.balance;
-    double displayBilled = billedAmount;
-
-    if (account.type == AccountType.creditCard && displayBalance < 0) {
-      double credit = -displayBalance; // coverage:ignore-line
-      displayBalance = 0;
-
-      if (credit <= displayBilled) { // coverage:ignore-line
-        displayBilled -= credit; // coverage:ignore-line
-        credit = 0;
-      } else {
-        credit -= displayBilled; // coverage:ignore-line
-        displayBilled = 0;
-        displayBalance = -credit; // coverage:ignore-line
-      }
-    }
+    final (cardColor, iconWidget) = _getCardStyle();
+    final (displayBalance, displayBilled) = _getAdjustedCCData();
 
     return Card(
       color: cardColor,
@@ -84,66 +50,125 @@ class AccountCard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    iconWidget,
-                    if (account.type == AccountType.creditCard)
-                      PureIcons.contactless(color: Colors.white54, size: 20),
-                  ],
-                ),
+                _buildHeader(iconWidget),
                 const SizedBox(height: 8),
-                Text(
-                  account.name,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                _buildAccountName(),
                 const SizedBox(height: 2),
-                // Balance Display
-                if (account.type == AccountType.creditCard) ...[
-                  Text(
-                    _format(displayBalance + displayBilled + unbilledAmount),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18),
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      if (displayBilled > 0)
-                        _buildMiniInfo( // coverage:ignore-line
-                            'Billed', displayBilled, account.currency), // coverage:ignore-line
-                      _buildMiniInfo(
-                          'Unbilled', unbilledAmount, account.currency),
-                      if (displayBalance != 0)
-                        _buildMiniInfo(
-                            'Balance', displayBalance, account.currency),
-                    ],
-                  ),
-                ] else
-                  Text(
-                    _format(account.balance),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20),
-                  ),
-
-                if (account.type == AccountType.creditCard &&
-                    account.creditLimit != null) ...[
-                  const SizedBox(height: 8),
-                  _buildCreditUtilization(account),
-                ],
+                _buildBalanceDisplay(displayBalance, displayBilled),
+                _buildExtraInfo(),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  (Color, Widget) _getCardStyle() {
+    switch (account.type) {
+      case AccountType.creditCard:
+        return (
+          const Color(0xFF1A1A2E),
+          PureIcons.card(color: Colors.white, size: 28)
+        );
+      case AccountType.savings:
+        return (
+          AppTheme.secondary,
+          PureIcons.bank(color: Colors.white, size: 28)
+        );
+      case AccountType.wallet:
+        return (
+          Colors.orangeAccent,
+          PureIcons.wallet(color: Colors.white, size: 28)
+        );
+    }
+  }
+
+  (double, double) _getAdjustedCCData() {
+    double displayBalance = account.balance;
+    double displayBilled = billedAmount;
+
+    if (account.type == AccountType.creditCard && displayBalance < 0) {
+      double credit = -displayBalance; // coverage:ignore-line
+      displayBalance = 0;
+
+      if (credit <= displayBilled) {
+        // coverage:ignore-line
+        displayBilled -= credit; // coverage:ignore-line
+        credit = 0;
+      } else {
+        credit -= displayBilled; // coverage:ignore-line
+        displayBilled = 0;
+        displayBalance = -credit; // coverage:ignore-line
+      }
+    }
+    return (displayBalance, displayBilled);
+  }
+
+  Widget _buildHeader(Widget iconWidget) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        iconWidget,
+        if (account.type == AccountType.creditCard)
+          PureIcons.contactless(color: Colors.white54, size: 20),
+      ],
+    );
+  }
+
+  Widget _buildAccountName() {
+    return Text(
+      account.name,
+      style: const TextStyle(color: Colors.white70, fontSize: 14),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildBalanceDisplay(double displayBalance, double displayBilled) {
+    if (account.type == AccountType.creditCard) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _format(displayBalance + displayBilled + unbilledAmount),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              if (displayBilled > 0)
+                _buildMiniInfo('Billed', displayBilled,
+                    account.currency), // coverage:ignore-line
+              _buildMiniInfo('Unbilled', unbilledAmount, account.currency),
+              if (displayBalance != 0)
+                _buildMiniInfo('Balance', displayBalance, account.currency),
+            ],
+          ),
+        ],
+      );
+    } else {
+      return Text(
+        _format(account.balance),
+        style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+      );
+    }
+  }
+
+  Widget _buildExtraInfo() {
+    if (account.type == AccountType.creditCard && account.creditLimit != null) {
+      return Column(
+        children: [
+          const SizedBox(height: 8),
+          _buildCreditUtilization(account),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildCreditUtilization(Account account) {

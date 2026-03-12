@@ -63,6 +63,11 @@ class MockAppLockIntentNotifier extends AppLockIntentNotifier {
   bool build() => false;
 }
 
+class MockLocalModeNotifier extends LocalModeNotifier {
+  @override
+  bool build() => false;
+}
+
 class MockActiveProfileIdNotifier extends ProfileNotifier {
   @override
   String build() => 'default';
@@ -123,6 +128,8 @@ void main() {
           dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
           appLockStatusProvider.overrideWith((ref) => false),
           appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+          pendingRemindersProvider.overrideWithValue(0),
+          localModeProvider.overrideWith(MockLocalModeNotifier.new),
         ],
         child: const MaterialApp(
           home: DashboardScreen(),

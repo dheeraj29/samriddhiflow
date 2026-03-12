@@ -49,7 +49,8 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
           FormUtils.buildDatePickerField(
             context: context,
             selectedDate: _selectedDate,
-            onDateTarget: (d) => setState(() => _selectedDate = d), // coverage:ignore-line
+            onDateTarget: (d) =>
+                setState(() => _selectedDate = d), // coverage:ignore-line
             label: 'Payment Date',
           ),
           const SizedBox(height: 16),
@@ -58,7 +59,8 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
                   return FormUtils.buildAccountSelector(
                     value: _selectedAccountId ?? 'manual',
                     accounts: accounts,
-                    onChanged: (v) => setState(() => _selectedAccountId = v), // coverage:ignore-line
+                    onChanged: (v) => setState(
+                        () => _selectedAccountId = v), // coverage:ignore-line
                     label: 'Paid From Account',
                     allowManual: true,
                   );

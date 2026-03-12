@@ -17,55 +17,45 @@ class SalaryDetailsAdapter extends TypeAdapter<SalaryDetails> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return SalaryDetails(
-      grossSalary: fields[0] == null ? 0 : (fields[0] as num).toDouble(),
-      npsEmployer: fields[1] == null ? 0 : (fields[1] as num).toDouble(),
-      leaveEncashment: fields[2] == null ? 0 : (fields[2] as num).toDouble(),
-      gratuity: fields[3] == null ? 0 : (fields[3] as num).toDouble(),
-      monthlyGross:
-          fields[4] == null ? const {} : (fields[4] as Map).cast<int, double>(),
-      giftsFromEmployer: fields[5] == null ? 0 : (fields[5] as num).toDouble(),
-      history: fields[7] == null
+      npsEmployer: fields[0] == null ? 0 : (fields[0] as num).toDouble(),
+      leaveEncashment: fields[1] == null ? 0 : (fields[1] as num).toDouble(),
+      gratuity: fields[2] == null ? 0 : (fields[2] as num).toDouble(),
+      history: fields[3] == null
           ? const []
-          : (fields[7] as List).cast<SalaryStructure>(),
+          : (fields[3] as List).cast<SalaryStructure>(),
       netSalaryReceived:
-          fields[8] == null ? const {} : (fields[8] as Map).cast<int, double>(),
-      independentAllowances: fields[10] == null
+          fields[4] == null ? const {} : (fields[4] as Map).cast<int, double>(),
+      independentAllowances: fields[5] == null
           ? const []
-          : (fields[10] as List).cast<CustomAllowance>(),
-      independentExemptions: fields[11] == null
+          : (fields[5] as List).cast<CustomAllowance>(),
+      independentExemptions: fields[6] == null
           ? const []
-          : (fields[11] as List).cast<CustomExemption>(),
-      independentDeductions: fields[12] == null
+          : (fields[6] as List).cast<CustomExemption>(),
+      independentDeductions: fields[7] == null
           ? const []
-          : (fields[12] as List).cast<CustomAllowance>(),
+          : (fields[7] as List).cast<CustomDeduction>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SalaryDetails obj) {
     writer
-      ..writeByte(11)
-      ..writeByte(0)
-      ..write(obj.grossSalary)
-      ..writeByte(1)
-      ..write(obj.npsEmployer)
-      ..writeByte(2)
-      ..write(obj.leaveEncashment)
-      ..writeByte(3)
-      ..write(obj.gratuity)
-      ..writeByte(4)
-      ..write(obj.monthlyGross)
-      ..writeByte(5)
-      ..write(obj.giftsFromEmployer)
-      ..writeByte(7)
-      ..write(obj.history)
       ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.npsEmployer)
+      ..writeByte(1)
+      ..write(obj.leaveEncashment)
+      ..writeByte(2)
+      ..write(obj.gratuity)
+      ..writeByte(3)
+      ..write(obj.history)
+      ..writeByte(4)
       ..write(obj.netSalaryReceived)
-      ..writeByte(10)
+      ..writeByte(5)
       ..write(obj.independentAllowances)
-      ..writeByte(11)
+      ..writeByte(6)
       ..write(obj.independentExemptions)
-      ..writeByte(12)
+      ..writeByte(7)
       ..write(obj.independentDeductions);
   }
 
@@ -97,13 +87,16 @@ class HousePropertyAdapter extends TypeAdapter<HouseProperty> {
       municipalTaxes: fields[3] == null ? 0 : (fields[3] as num).toDouble(),
       interestOnLoan: fields[4] == null ? 0 : (fields[4] as num).toDouble(),
       loanId: fields[5] as String?,
+      lastUpdated: fields[6] as DateTime?,
+      isManualEntry: fields[7] == null ? true : fields[7] as bool,
+      transactionDate: fields[8] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HouseProperty obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -115,7 +108,13 @@ class HousePropertyAdapter extends TypeAdapter<HouseProperty> {
       ..writeByte(4)
       ..write(obj.interestOnLoan)
       ..writeByte(5)
-      ..write(obj.loanId);
+      ..write(obj.loanId)
+      ..writeByte(6)
+      ..write(obj.lastUpdated)
+      ..writeByte(7)
+      ..write(obj.isManualEntry)
+      ..writeByte(8)
+      ..write(obj.transactionDate);
   }
 
   @override
@@ -146,13 +145,16 @@ class BusinessEntityAdapter extends TypeAdapter<BusinessEntity> {
       grossTurnover: fields[2] == null ? 0 : (fields[2] as num).toDouble(),
       netIncome: fields[3] == null ? 0 : (fields[3] as num).toDouble(),
       presumptiveIncome: fields[4] == null ? 0 : (fields[4] as num).toDouble(),
+      lastUpdated: fields[5] as DateTime?,
+      isManualEntry: fields[6] == null ? true : fields[6] as bool,
+      transactionDate: fields[7] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, BusinessEntity obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -162,7 +164,13 @@ class BusinessEntityAdapter extends TypeAdapter<BusinessEntity> {
       ..writeByte(3)
       ..write(obj.netIncome)
       ..writeByte(4)
-      ..write(obj.presumptiveIncome);
+      ..write(obj.presumptiveIncome)
+      ..writeByte(5)
+      ..write(obj.lastUpdated)
+      ..writeByte(6)
+      ..write(obj.isManualEntry)
+      ..writeByte(7)
+      ..write(obj.transactionDate);
   }
 
   @override
@@ -200,13 +208,16 @@ class CapitalGainEntryAdapter extends TypeAdapter<CapitalGainEntry> {
           : fields[7] as ReinvestmentType,
       reinvestDate: fields[8] as DateTime?,
       intendToReinvest: fields[9] == null ? false : fields[9] as bool,
+      lastUpdated: fields[10] as DateTime?,
+      isManualEntry: fields[11] == null ? true : fields[11] as bool,
+      transactionDate: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CapitalGainEntry obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.description)
       ..writeByte(1)
@@ -226,7 +237,13 @@ class CapitalGainEntryAdapter extends TypeAdapter<CapitalGainEntry> {
       ..writeByte(8)
       ..write(obj.reinvestDate)
       ..writeByte(9)
-      ..write(obj.intendToReinvest);
+      ..write(obj.intendToReinvest)
+      ..writeByte(10)
+      ..write(obj.lastUpdated)
+      ..writeByte(11)
+      ..write(obj.isManualEntry)
+      ..writeByte(12)
+      ..write(obj.transactionDate);
   }
 
   @override
@@ -256,13 +273,16 @@ class OtherIncomeAdapter extends TypeAdapter<OtherIncome> {
       type: fields[2] == null ? 'Other' : fields[2] as String,
       subtype: fields[3] == null ? 'other' : fields[3] as String,
       linkedExemptionId: fields[4] as String?,
+      lastUpdated: fields[5] as DateTime?,
+      isManualEntry: fields[6] == null ? true : fields[6] as bool,
+      transactionDate: fields[7] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, OtherIncome obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -272,7 +292,13 @@ class OtherIncomeAdapter extends TypeAdapter<OtherIncome> {
       ..writeByte(3)
       ..write(obj.subtype)
       ..writeByte(4)
-      ..write(obj.linkedExemptionId);
+      ..write(obj.linkedExemptionId)
+      ..writeByte(5)
+      ..write(obj.lastUpdated)
+      ..writeByte(6)
+      ..write(obj.isManualEntry)
+      ..writeByte(7)
+      ..write(obj.transactionDate);
   }
 
   @override
@@ -282,6 +308,52 @@ class OtherIncomeAdapter extends TypeAdapter<OtherIncome> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is OtherIncomeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class AgriIncomeEntryAdapter extends TypeAdapter<AgriIncomeEntry> {
+  @override
+  final typeId = 231;
+
+  @override
+  AgriIncomeEntry read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return AgriIncomeEntry(
+      id: fields[0] as String,
+      amount: (fields[1] as num).toDouble(),
+      date: fields[2] as DateTime,
+      description: fields[3] == null ? '' : fields[3] as String,
+      isManualEntry: fields[4] == null ? true : fields[4] as bool,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, AgriIncomeEntry obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.amount)
+      ..writeByte(2)
+      ..write(obj.date)
+      ..writeByte(3)
+      ..write(obj.description)
+      ..writeByte(4)
+      ..write(obj.isManualEntry);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AgriIncomeEntryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
@@ -402,39 +474,42 @@ class CustomDeductionAdapter extends TypeAdapter<CustomDeduction> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CustomDeduction(
-      name: fields[0] as String,
-      amount: (fields[1] as num).toDouble(),
-      isTaxable: fields[2] == null ? true : fields[2] as bool,
-      frequency: fields[3] == null
+      id: fields[0] as String,
+      name: fields[1] as String,
+      amount: (fields[2] as num).toDouble(),
+      isTaxable: fields[3] == null ? true : fields[3] as bool,
+      frequency: fields[4] == null
           ? PayoutFrequency.monthly
-          : fields[3] as PayoutFrequency,
-      startMonth: (fields[4] as num?)?.toInt(),
-      customMonths: (fields[5] as List?)?.cast<int>(),
-      isPartial: fields[6] == null ? false : fields[6] as bool,
+          : fields[4] as PayoutFrequency,
+      startMonth: (fields[5] as num?)?.toInt(),
+      customMonths: (fields[6] as List?)?.cast<int>(),
+      isPartial: fields[7] == null ? false : fields[7] as bool,
       partialAmounts:
-          fields[7] == null ? const {} : (fields[7] as Map).cast<int, double>(),
+          fields[8] == null ? const {} : (fields[8] as Map).cast<int, double>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomDeduction obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.amount)
+      ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.isTaxable)
+      ..write(obj.amount)
       ..writeByte(3)
-      ..write(obj.frequency)
+      ..write(obj.isTaxable)
       ..writeByte(4)
-      ..write(obj.startMonth)
+      ..write(obj.frequency)
       ..writeByte(5)
-      ..write(obj.customMonths)
+      ..write(obj.startMonth)
       ..writeByte(6)
-      ..write(obj.isPartial)
+      ..write(obj.customMonths)
       ..writeByte(7)
+      ..write(obj.isPartial)
+      ..writeByte(8)
       ..write(obj.partialAmounts);
   }
 
@@ -460,37 +535,46 @@ class CustomAllowanceAdapter extends TypeAdapter<CustomAllowance> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CustomAllowance(
-      name: fields[0] as String,
-      payoutAmount: (fields[1] as num).toDouble(),
-      isPartial: fields[2] == null ? false : fields[2] as bool,
-      frequency: fields[3] == null
+      id: fields[0] as String,
+      name: fields[1] as String,
+      payoutAmount: (fields[2] as num).toDouble(),
+      isPartial: fields[3] == null ? false : fields[3] as bool,
+      frequency: fields[4] == null
           ? PayoutFrequency.monthly
-          : fields[3] as PayoutFrequency,
-      startMonth: (fields[4] as num?)?.toInt(),
-      customMonths: (fields[5] as List?)?.cast<int>(),
+          : fields[4] as PayoutFrequency,
+      startMonth: (fields[5] as num?)?.toInt(),
+      customMonths: (fields[6] as List?)?.cast<int>(),
       partialAmounts:
-          fields[6] == null ? const {} : (fields[6] as Map).cast<int, double>(),
+          fields[7] == null ? const {} : (fields[7] as Map).cast<int, double>(),
+      isCliffExemption: fields[8] == null ? false : fields[8] as bool,
+      exemptionLimit: fields[9] == null ? 0 : (fields[9] as num).toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomAllowance obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(10)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.payoutAmount)
+      ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.isPartial)
+      ..write(obj.payoutAmount)
       ..writeByte(3)
-      ..write(obj.frequency)
+      ..write(obj.isPartial)
       ..writeByte(4)
-      ..write(obj.startMonth)
+      ..write(obj.frequency)
       ..writeByte(5)
-      ..write(obj.customMonths)
+      ..write(obj.startMonth)
       ..writeByte(6)
-      ..write(obj.partialAmounts);
+      ..write(obj.customMonths)
+      ..writeByte(7)
+      ..write(obj.partialAmounts)
+      ..writeByte(8)
+      ..write(obj.isCliffExemption)
+      ..writeByte(9)
+      ..write(obj.exemptionLimit);
   }
 
   @override
@@ -520,13 +604,14 @@ class DividendIncomeAdapter extends TypeAdapter<DividendIncome> {
       amountQ3: fields[2] == null ? 0 : (fields[2] as num).toDouble(),
       amountQ4: fields[3] == null ? 0 : (fields[3] as num).toDouble(),
       amountQ5: fields[4] == null ? 0 : (fields[4] as num).toDouble(),
+      lastUpdated: fields[5] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DividendIncome obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.amountQ1)
       ..writeByte(1)
@@ -536,7 +621,9 @@ class DividendIncomeAdapter extends TypeAdapter<DividendIncome> {
       ..writeByte(3)
       ..write(obj.amountQ4)
       ..writeByte(4)
-      ..write(obj.amountQ5);
+      ..write(obj.amountQ5)
+      ..writeByte(5)
+      ..write(obj.lastUpdated);
   }
 
   @override
@@ -561,17 +648,19 @@ class TaxPaymentEntryAdapter extends TypeAdapter<TaxPaymentEntry> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return TaxPaymentEntry(
+      id: fields[4] as String,
       amount: (fields[0] as num).toDouble(),
       date: fields[1] as DateTime,
       source: fields[2] == null ? '' : fields[2] as String,
       description: fields[3] == null ? '' : fields[3] as String,
+      isManualEntry: fields[5] == null ? true : fields[5] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaxPaymentEntry obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.amount)
       ..writeByte(1)
@@ -579,7 +668,11 @@ class TaxPaymentEntryAdapter extends TypeAdapter<TaxPaymentEntry> {
       ..writeByte(2)
       ..write(obj.source)
       ..writeByte(3)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(4)
+      ..write(obj.id)
+      ..writeByte(5)
+      ..write(obj.isManualEntry);
   }
 
   @override
@@ -604,19 +697,28 @@ class CustomExemptionAdapter extends TypeAdapter<CustomExemption> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CustomExemption(
-      name: fields[0] as String,
-      amount: (fields[1] as num).toDouble(),
+      id: fields[0] as String,
+      name: fields[1] as String,
+      amount: (fields[2] as num).toDouble(),
+      isCliffExemption: fields[3] == null ? false : fields[3] as bool,
+      exemptionLimit: fields[4] == null ? 0 : (fields[4] as num).toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomExemption obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(5)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.amount);
+      ..write(obj.name)
+      ..writeByte(2)
+      ..write(obj.amount)
+      ..writeByte(3)
+      ..write(obj.isCliffExemption)
+      ..writeByte(4)
+      ..write(obj.exemptionLimit);
   }
 
   @override

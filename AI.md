@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v3.9.0
+**Current Version:** v3.10.0
 
 ## 2. Architecture
 
@@ -83,7 +83,7 @@ graph TD
 ### D. Cloud Sync & Data Partitioning
 *   **Mechanism:** Encrypted Partitioned Snapshot Synchronization.
 *   **Backend:** Firebase Firestore (NoSQL).
-*   **Partitioning Strategy (v3.6.0+):** 
+*   **Partitioning Strategy:** 
     *   **Transactions:** Partitioned into monthly buckets (e.g., `2025-02`) under `transactions_v2` to avoid Firestore document size limits.
     *   **Tax Data:** Partitioned by year under `tax_data_v2`.
     *   **Loans:** Each loan is stored as a separate encrypted entry keyed by `loanId` under `loans_v2`.
@@ -119,20 +119,6 @@ graph TD
 *   **Status:** Records can be marked as `Closed` with a specific date once settled.
 *   **Aggregated View:** Provided via `totalLentProvider` and `totalBorrowedProvider` for effective debt management.
 *   **Profile Scoping:** Automatically filtered by the active profile.
-
-## 4. Current Status (v3.8.0)
-*   **Stable:** Core financial logic, partitioned cloud sync, tax engine, and security features are fully operational.
-*   **Recent Updates (v3.8.0):**
-    *   **Loan Reminders Fix**: Refactored reminders logic and widget tests using the `clock` package to resolve flaky failures caused by specific dates (e.g., the 1st of the month).
-    *   **Tax UI Overflow Fixes**: Resolved horizontal layout overflows on small screens in both `TaxDetailsScreen` (using `Expanded` headers) and `TaxDashboardScreen` (using `FittedBox` for the year/jurisdiction selector).
-    *   **Other Income & Gift Enhancements**: Implemented a clean, technical-key-first pattern for multi-category dropdowns (e.g., `savings_interest` -> "Savings Interest"). Standardized internal storage and sync to use these lowercase keys exclusively for a more robust and maintainable system.
-    *   **HP Income Flooring**: Updated tax engine to floor taxable income at 0 for *each individual* house property.
-    *   **Salary Structure Fixes**: Resolved critical mutation crashes when adding salary history and fixed custom allowance editing/refresh logic.
-    *   **SDK Compatibility**: Replaced deprecated `value` with `initialValue` in `DropdownButtonFormField` across tax dialogs.
-*   **Previous Updates (v3.7.0):**
-    *   **Tax UI Overhaul**: Reorganized Tax Dashboard layout; fixed "Total 0" display bugs.
-    *   **Data Partitioning**: Implemented monthly partitioning for transactions and per-ID partitioning for loans in Cloud Sync.
-    *   **Tax Engine Refinement**: Implemented head-specific custom exemptions (**Salary, HP, Business, Other, Gift, Agriculture**).
 
 ## 5. Build Instructions
 Run: `build_pwa.bat`

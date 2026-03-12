@@ -20,6 +20,10 @@ void main() {
     mockStorage = MockStorageService();
     mockConfig = MockTaxConfigService();
     fetcher = TaxDataFetcher(mockStorage, mockConfig);
+
+    // Default stub for taxSync update
+    when(() => mockStorage.updateTransactionsTaxSync(any(), any()))
+        .thenAnswer((_) async {});
   });
 
   group('TaxDataFetcher - fetchAndAggregate', () {
@@ -72,7 +76,9 @@ void main() {
 
       expect(result.data.houseProperties.first.rentReceived, 30000);
       expect(result.data.businessIncomes.first.netIncome, 50000);
-      expect(result.data.agricultureIncome, 10000);
+      expect(
+          result.data.agriIncomeHistory.fold(0.0, (sum, e) => sum + e.amount),
+          10000);
       expect(result.warnings, isEmpty);
     });
 
@@ -316,6 +322,64 @@ void main() {
       expect(result.data.cashGifts.length, 1);
       expect(result.data.cashGifts.first.subtype, 'other');
       expect(result.data.cashGifts.first.type, 'Gift');
+    });
+
+    test('taxSync: Filters out already synced transactions unless forced',
+        () async {
+      const year = 2024;
+      final rules = TaxRules(financialYearStartMonth: 4, tagMappings: {
+        'Rent': 'houseProp',
+      });
+
+      when(() => mockConfig.getRulesForYear(year)).thenReturn(rules);
+      when(() => mockStorage.getCategories()).thenReturn([]);
+      when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorage.updateTransactionsTaxSync(any(), any()))
+          .thenAnswer((_) async {});
+
+      final txns = [
+        Transaction(
+            id: 'synced-1',
+            title: 'Synced Rent',
+            amount: 10000,
+            date: DateTime(2024, 5, 1),
+            type: TransactionType.income,
+            category: 'Rent',
+            taxSync: true),
+        Transaction(
+            id: 'new-1',
+            title: 'New Rent',
+            amount: 20000,
+            date: DateTime(2024, 6, 1),
+            type: TransactionType.income,
+            category: 'Rent',
+            taxSync: false),
+        Transaction(
+            id: 'null-1',
+            title: 'Null Sync Rent',
+            amount: 5000,
+            date: DateTime(2024, 7, 1),
+            type: TransactionType.income,
+            category: 'Rent',
+            taxSync: null),
+      ];
+      when(() => mockStorage.getAllTransactions()).thenReturn(txns);
+
+      // 1. Partial sync (Normal)
+      final result = await fetcher.fetchAndAggregate(year);
+      // Should include new-1 and null-1 = 20000 + 5000 = 25000
+      expect(result.data.houseProperties.first.rentReceived, 25000);
+      verify(() =>
+              mockStorage.updateTransactionsTaxSync(['new-1', 'null-1'], true))
+          .called(1);
+
+      // 2. Force resync
+      final resultForced =
+          await fetcher.fetchAndAggregate(year, forceResync: true);
+      // Should include all = 10000 + 20000 + 5000 = 35000
+      expect(resultForced.data.houseProperties.first.rentReceived, 35000);
+      verify(() => mockStorage.updateTransactionsTaxSync(
+          ['synced-1', 'new-1', 'null-1'], true)).called(1);
     });
   });
 }

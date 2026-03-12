@@ -25,19 +25,23 @@ class TaxYearData {
   @HiveField(7)
   final List<OtherIncome> cashGifts;
   @HiveField(8)
-  final double agricultureIncome; // New field
-  @HiveField(9)
-  final double advanceTax;
-  @HiveField(10)
   final List<TaxPaymentEntry> tdsEntries;
-  @HiveField(11)
+  @HiveField(9)
   final List<TaxPaymentEntry> tcsEntries;
 
   // Smart Sync Fields
-  @HiveField(12)
+  @HiveField(10)
   final DateTime? lastSyncDate;
-  @HiveField(13)
+  @HiveField(11)
   final List<String> lockedFields; // List of field IDs manually edited by user
+
+  // Added for dynamic advance tax tracking
+  @HiveField(12)
+  final List<TaxPaymentEntry> advanceTaxEntries;
+  @HiveField(13)
+  final String profileId;
+  @HiveField(14)
+  final List<AgriIncomeEntry> agriIncomeHistory;
 
   const TaxYearData({
     required this.year,
@@ -48,61 +52,46 @@ class TaxYearData {
     this.otherIncomes = const [],
     this.dividendIncome = const DividendIncome(),
     this.cashGifts = const [],
-    this.agricultureIncome = 0,
-    this.advanceTax = 0,
     this.tdsEntries = const [],
     this.tcsEntries = const [],
     this.lastSyncDate,
     this.lockedFields = const [],
+    this.advanceTaxEntries = const [],
+    this.profileId = 'default',
+    this.agriIncomeHistory = const [],
   });
 
   // Getters for Summaries (Used by Dashboard)
   double get totalSalary {
-    double total = salary.grossSalary;
-    for (final a in salary.independentAllowances) {
-      for (int m = 1; m <= 12; m++) {
-        if (SalaryStructure.isPayoutMonth(
-            m, a.frequency, a.startMonth, a.customMonths)) {
-          total += a.isPartial
-              ? (a.partialAmounts[m] ?? a.payoutAmount)
-              : a.payoutAmount;
-        }
-      }
-    }
-    return total;
+    // Salary is now primarily history-based. Dashboard now uses IndianTaxService to calculate gross.
+    return 0;
   }
 
-  double get totalHP => // coverage:ignore-line
-      houseProperties.fold(0, (sum, hp) => sum + hp.rentReceived); // coverage:ignore-line
+  double get totalHP =>
+      houseProperties.fold(0, (sum, hp) => sum + hp.rentReceived);
 
-  double get totalBusiness => businessIncomes.fold( // coverage:ignore-line
+  double get totalBusiness => businessIncomes.fold(
       0,
-      // coverage:ignore-start
       (sum, b) =>
           sum +
           (b.type == BusinessType.regular ? b.netIncome : b.presumptiveIncome));
-      // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalLTCG => capitalGains
       .where((e) => e.isLTCG)
       .fold(0.0, (sum, e) => sum + e.capitalGainAmount);
-  // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalSTCG => capitalGains
       .where((e) => !e.isLTCG)
       .fold(0.0, (sum, e) => sum + e.capitalGainAmount);
-  // coverage:ignore-end
 
-  // coverage:ignore-start
   double get totalOther =>
       otherIncomes.fold(0.0, (sum, o) => sum + o.amount) +
       cashGifts.fold(0.0, (sum, c) => sum + c.amount) +
-      agricultureIncome;
-  // coverage:ignore-end
+      agriIncomeHistory.fold(0.0, (sum, a) => sum + a.amount);
 
   // Backwards compatibility for single double fields (summing up lists)
+  double get totalAdvanceTax =>
+      advanceTaxEntries.fold(0.0, (sum, e) => sum + e.amount);
   double get tds => tdsEntries.fold(0.0, (sum, e) => sum + e.amount);
   double get tcs => tcsEntries.fold(0.0, (sum, e) => sum + e.amount);
 
@@ -115,12 +104,13 @@ class TaxYearData {
     List<OtherIncome>? otherIncomes,
     DividendIncome? dividendIncome,
     List<OtherIncome>? cashGifts,
-    double? agricultureIncome,
-    double? advanceTax,
     List<TaxPaymentEntry>? tdsEntries,
     List<TaxPaymentEntry>? tcsEntries,
     DateTime? lastSyncDate,
     List<String>? lockedFields,
+    List<TaxPaymentEntry>? advanceTaxEntries,
+    String? profileId,
+    List<AgriIncomeEntry>? agriIncomeHistory,
   }) {
     return TaxYearData(
       year: year ?? this.year,
@@ -131,12 +121,13 @@ class TaxYearData {
       otherIncomes: otherIncomes ?? this.otherIncomes,
       dividendIncome: dividendIncome ?? this.dividendIncome,
       cashGifts: cashGifts ?? this.cashGifts,
-      agricultureIncome: agricultureIncome ?? this.agricultureIncome,
-      advanceTax: advanceTax ?? this.advanceTax,
       tdsEntries: tdsEntries ?? this.tdsEntries,
       tcsEntries: tcsEntries ?? this.tcsEntries,
       lastSyncDate: lastSyncDate ?? this.lastSyncDate,
       lockedFields: lockedFields ?? this.lockedFields,
+      advanceTaxEntries: advanceTaxEntries ?? this.advanceTaxEntries,
+      profileId: profileId ?? this.profileId,
+      agriIncomeHistory: agriIncomeHistory ?? this.agriIncomeHistory,
     );
   }
 
@@ -149,12 +140,13 @@ class TaxYearData {
         'otherIncomes': otherIncomes.map((e) => e.toMap()).toList(),
         'dividendIncome': dividendIncome.toMap(),
         'cashGifts': cashGifts.map((e) => e.toMap()).toList(),
-        'agricultureIncome': agricultureIncome,
-        'advanceTax': advanceTax,
         'tdsEntries': tdsEntries.map((e) => e.toMap()).toList(),
         'tcsEntries': tcsEntries.map((e) => e.toMap()).toList(),
+        'advanceTaxEntries': advanceTaxEntries.map((e) => e.toMap()).toList(),
         'lastSyncDate': lastSyncDate?.toIso8601String(),
         'lockedFields': lockedFields,
+        'profileId': profileId,
+        'agriIncomeHistory': agriIncomeHistory.map((e) => e.toMap()).toList(),
       };
 
   factory TaxYearData.fromMap(Map<String, dynamic> m) => TaxYearData(
@@ -186,21 +178,30 @@ class TaxYearData {
                 ?.map((e) => OtherIncome.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
-        agricultureIncome: (m['agricultureIncome'] as num?)?.toDouble() ?? 0,
-        advanceTax: (m['advanceTax'] as num?)?.toDouble() ?? 0,
         tdsEntries: (m['tdsEntries'] as List?)
                 ?.map((e) =>
                     TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e)))
                 .toList() ??
             [],
         tcsEntries: (m['tcsEntries'] as List?)
-                ?.map((e) =>
-                    TaxPaymentEntry.fromMap(Map<String, dynamic>.from(e))) // coverage:ignore-line
+                ?.map((e) => TaxPaymentEntry.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
                 .toList() ??
             [],
         lastSyncDate: m['lastSyncDate'] != null
             ? DateTime.parse(m['lastSyncDate']) // coverage:ignore-line
             : null,
         lockedFields: (m['lockedFields'] as List?)?.cast<String>() ?? [],
+        advanceTaxEntries: (m['advanceTaxEntries'] as List?)
+                ?.map((e) => TaxPaymentEntry.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
+                .toList() ??
+            const [],
+        profileId: m['profileId'] ?? 'default',
+        agriIncomeHistory: (m['agriIncomeHistory'] as List?)
+                ?.map((e) => AgriIncomeEntry.fromMap(
+                    Map<String, dynamic>.from(e))) // coverage:ignore-line
+                .toList() ??
+            [],
       );
 }

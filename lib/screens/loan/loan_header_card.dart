@@ -31,7 +31,7 @@ class LoanHeaderCard extends ConsumerWidget {
         : loan.transactions
             .map((t) => t.date)
             .reduce((a, b) => a.isAfter(b) ? a : b);
-        // coverage:ignore-end
+    // coverage:ignore-end
     final daysElapsed = DateTime.now().difference(lastPaymentDate).inDays;
 
     final currentRate = loan.currentRate;
@@ -137,12 +137,12 @@ class LoanHeaderCard extends ConsumerWidget {
                           .add(Duration(days: loan.tenureMonths * 30));
                       ref.read(calendarServiceProvider).downloadExvent(
                             title: 'Loan Maturity: ${loan.name}',
-                    // coverage:ignore-end
+                            // coverage:ignore-end
                             description:
                                 'Maturity date for Gold Loan: ${loan.name}. Principal and Interest due.', // coverage:ignore-line
                             startTime: maturityDate,
-                            endTime: maturityDate.add(const Duration( // coverage:ignore-line
-                                hours: 1)),
+                            endTime: maturityDate.add(const Duration(
+                                hours: 1)), // coverage:ignore-line
                           );
                     },
                   )
@@ -155,12 +155,12 @@ class LoanHeaderCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   InkWell(
-                    onTap: () { // coverage:ignore-line
-
-                      showDialog( // coverage:ignore-line
-
+                    onTap: () {
+                      // coverage:ignore-line
+                      showDialog(
+                          // coverage:ignore-line
                           context: context,
-                          builder: (_) => LoanRecalculateDialog( // coverage:ignore-line
+                          builder: (_) => LoanRecalculateDialog(
                               loan: loan)); // coverage:ignore-line
                     },
                     child: Row(
@@ -184,12 +184,12 @@ class LoanHeaderCard extends ConsumerWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () { // coverage:ignore-line
-
-                      showDialog( // coverage:ignore-line
-
+                    onTap: () {
+                      // coverage:ignore-line
+                      showDialog(
+                          // coverage:ignore-line
                           context: context,
-                          builder: (_) => LoanUpdateRateDialog( // coverage:ignore-line
+                          builder: (_) => LoanUpdateRateDialog(
                               loan: loan)); // coverage:ignore-line
                     },
                     child: Row(

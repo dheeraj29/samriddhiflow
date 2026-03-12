@@ -109,14 +109,8 @@ void main() async {
     final status = s.statusText;
     final fileName = key.replaceFirst('lib/', '');
 
-    // Bold important files (Screens/Providers)
-    final displayName =
-        (key.contains('/screens/') || key.contains('/providers'))
-            ? '**$fileName**'
-            : fileName;
-
     buffer.writeln(
-        '| $displayName | **${percent.toStringAsFixed(1)}%** | ${s.coveredLines}/${s.totalLines} | $status |');
+        '| $fileName | ${percent.toStringAsFixed(1)}% | ${s.coveredLines}/${s.totalLines} | $status |');
   }
 
   final outFile = File('coverage.md');
@@ -133,7 +127,7 @@ class _FileStats {
 
   String get statusText {
     if (percent >= 80) return 'PASS';
-    if (percent >= 50) return 'WARN';
+    if (percent >= 60) return 'WARN';
     return 'FAIL';
   }
 }
