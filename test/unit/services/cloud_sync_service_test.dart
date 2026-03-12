@@ -7,7 +7,11 @@ import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
+import 'package:samriddhi_flow/models/recurring_transaction.dart';
+import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
@@ -41,20 +45,15 @@ void main() {
     registerFallbackValue(Profile(id: 'f', name: 'f'));
     registerFallbackValue(
         Category(id: 'f', name: 'f', usage: CategoryUsage.expense));
-    registerFallbackValue(Account(
-      id: 'f',
-      name: 'f',
-      type: AccountType.savings,
-      balance: 0,
-    ));
+    registerFallbackValue(
+        Account(id: 'f', name: 'f', type: AccountType.savings, balance: 0));
     registerFallbackValue(Transaction(
-      id: 'f',
-      title: 'f',
-      amount: 0,
-      date: DateTime.now(),
-      type: TransactionType.expense,
-      category: 'c',
-    ));
+        id: 'f',
+        title: 'f',
+        amount: 0,
+        date: DateTime.now(),
+        type: TransactionType.expense,
+        category: 'c'));
     registerFallbackValue(Loan(
         id: 'f',
         name: 'f',
@@ -67,16 +66,30 @@ void main() {
         firstEmiDate: DateTime.now()));
     registerFallbackValue(const TaxYearData(year: 2025));
     registerFallbackValue(TaxRules());
+    registerFallbackValue(RecurringTransaction(
+        id: 'f',
+        title: 'f',
+        amount: 0,
+        category: 'c',
+        frequency: Frequency.monthly,
+        nextExecutionDate: DateTime.now()));
+    registerFallbackValue(<InsurancePolicy>[]);
+    registerFallbackValue(LendingRecord(
+        id: 'f',
+        personName: 'f',
+        amount: 0,
+        reason: 'f',
+        type: LendingType.lent,
+        date: DateTime.now()));
+    registerFallbackValue(<int, TaxRules>{});
+    registerFallbackValue(<String, dynamic>{});
 
     when(() => mockAuth.currentUser).thenReturn(mockUser);
     when(() => mockUser.uid).thenReturn('user123');
 
     cloudSyncService = CloudSyncService(
-      mockCloudStorage,
-      mockStorageService,
-      mockTaxConfigService,
-      firebaseAuth: mockAuth,
-    );
+        mockCloudStorage, mockStorageService, mockTaxConfigService,
+        firebaseAuth: mockAuth);
   });
 
   group('CloudSyncService - syncToCloud', () {
@@ -276,6 +289,246 @@ void main() {
       await cloudSyncService.deleteCloudData();
 
       verify(() => mockCloudStorage.deleteData('user123')).called(1);
+    });
+
+    test('throws when user is null', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+      expect(() => cloudSyncService.deleteCloudData(), throwsException);
+    });
+  });
+
+  group('CloudSyncService - restoreFromCloud full paths', () {
+    /// Helper that stubs fetchData to return `cloudData`
+    /// and sets up standard mock returns for clearAllData, save*, etc.
+    void stubRestore(Map<String, dynamic> cloudData) {
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() => mockStorageService.saveProfile(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.addCategory(any(), isRestore: true))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveAccount(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.initRolloverForImport(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveTransaction(any(), applyImpact: false))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveLoan(any())).thenAnswer((_) async {});
+      when(() => mockStorageService.saveRecurringTransaction(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveSettings(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveInsurancePolicies(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveTaxYearData(any()))
+          .thenAnswer((_) async {});
+      when(() => mockTaxConfigService.restoreAllRules(any()))
+          .thenAnswer((_) async {});
+      when(() => mockStorageService.saveLendingRecord(any()))
+          .thenAnswer((_) async {});
+    }
+
+    test('restores profiles', () async {
+      stubRestore({
+        'profiles': [
+          {'id': 'p1', 'name': 'Main'},
+        ],
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      verify(() => mockStorageService.saveProfile(any())).called(1);
+    });
+
+    test('restores accounts with credit card rollover', () async {
+      stubRestore({
+        'accounts': [
+          {
+            'id': 'cc1',
+            'name': 'CC',
+            'type': AccountType.creditCard.index,
+            'balance': 0,
+            'billingCycleDay': 15,
+          },
+          {
+            'id': 'sv1',
+            'name': 'Savings',
+            'type': AccountType.savings.index,
+            'balance': 5000,
+          },
+        ],
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      verify(() => mockStorageService.saveAccount(any())).called(2);
+      verify(() => mockStorageService.initRolloverForImport('cc1', 15))
+          .called(1);
+    });
+
+    test('restores recurring transactions', () async {
+      stubRestore({
+        'recurring': [
+          {
+            'id': 'rt1',
+            'title': 'Rent',
+            'amount': 15000,
+            'type': 1,
+            'category': 'Rent',
+            'frequency': Frequency.monthly.index,
+            'nextExecutionDate': DateTime(2024, 1, 1).toIso8601String(),
+          },
+        ],
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      verify(() => mockStorageService.saveRecurringTransaction(any()))
+          .called(1);
+    });
+
+    test('restores insurance policies', () async {
+      stubRestore({
+        'insurance_policies': [
+          {
+            'id': 'ip1',
+            'policyName': 'Term Plan',
+            'policyNumber': 'TP001',
+            'annualPremium': 15000,
+            'sumAssured': 5000000,
+            'startDate': DateTime(2020, 1, 1).toIso8601String(),
+            'maturityDate': DateTime(2050, 1, 1).toIso8601String(),
+          },
+        ],
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      verify(() => mockStorageService.saveInsurancePolicies(any())).called(1);
+    });
+
+    test('restores lending records', () async {
+      stubRestore({
+        'lending_records': [
+          {
+            'id': 'lr1',
+            'personName': 'John',
+            'amount': 5000,
+            'reason': 'Loan',
+            'type': LendingType.lent.index,
+            'date': DateTime(2024, 6, 1).toIso8601String(),
+          },
+        ],
+      });
+
+      await cloudSyncService.restoreFromCloud();
+
+      verify(() => mockStorageService.saveLendingRecord(any())).called(1);
+    });
+
+    test('mergeLocalTaxSafety preserves local data when cloud is empty',
+        () async {
+      // Local has tax data for 2025 with salary
+      final localTaxData = [
+        TaxYearData(
+            year: 2025,
+            salary: SalaryDetails(history: [
+              SalaryStructure(
+                  id: 'local',
+                  monthlyBasic: 500000 / 12,
+                  effectiveDate: DateTime(2025, 4, 1))
+            ])),
+      ];
+      when(() => mockStorageService.getAllTaxYearData())
+          .thenReturn(localTaxData);
+
+      // Cloud has no tax data
+      stubRestore({});
+      // Override getAllTaxYearData specifically for this test
+      when(() => mockStorageService.getAllTaxYearData())
+          .thenReturn(localTaxData);
+
+      await cloudSyncService.restoreFromCloud();
+
+      // Local data for year 2025 should be re-saved (not in restored set)
+      verify(() => mockStorageService.saveTaxYearData(any())).called(1);
+    });
+
+    test('mergeLocalTaxSafety merges salary when cloud has empty salary',
+        () async {
+      final localTaxData = [
+        TaxYearData(
+            year: 2025,
+            salary: SalaryDetails(history: [
+              SalaryStructure(
+                  id: 'local',
+                  monthlyBasic: 600000 / 12,
+                  effectiveDate: DateTime(2025, 4, 1))
+            ])),
+      ];
+      when(() => mockStorageService.getAllTaxYearData())
+          .thenReturn(localTaxData);
+
+      // Cloud has tax_data_v2 for 2025 but empty salary
+      stubRestore({
+        'tax_data_v2': {
+          '2025': {'year': 2025},
+        },
+      });
+      when(() => mockStorageService.getAllTaxYearData())
+          .thenReturn(localTaxData);
+
+      // After restoring, getTaxYearData will return the cloud's version (empty salary)
+      when(() => mockStorageService.getTaxYearData(2025))
+          .thenReturn(const TaxYearData(year: 2025));
+
+      await cloudSyncService.restoreFromCloud();
+
+      // saveTaxYearData should be called: once for restore, once for merge
+      verify(() => mockStorageService.saveTaxYearData(any())).called(2);
+    });
+
+    test('restoreFromCloud throws if no data found', () async {
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => null);
+
+      expect(() => cloudSyncService.restoreFromCloud(), throwsException);
+    });
+
+    test('syncToCloud with partitioned tax rules', () async {
+      when(() => mockStorageService.getAllAccounts()).thenReturn([]);
+      when(() => mockStorageService.getAllTransactions()).thenReturn([]);
+      when(() => mockStorageService.getAllLoans()).thenReturn([]);
+      when(() => mockStorageService.getAllRecurring()).thenReturn([]);
+      when(() => mockStorageService.getAllCategories()).thenReturn([]);
+      when(() => mockStorageService.getProfiles()).thenReturn([]);
+      when(() => mockStorageService.getAllSettings()).thenReturn({});
+      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([
+        const TaxYearData(year: 2025),
+      ]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockTaxConfigService.getAllRules()).thenReturn({
+        2025: TaxRules(),
+      });
+
+      when(() => mockCloudStorage.syncData(any(), any()))
+          .thenAnswer((_) async {});
+
+      await cloudSyncService.syncToCloud();
+
+      final captured =
+          verify(() => mockCloudStorage.syncData('user123', captureAny()))
+              .captured
+              .single as Map<String, dynamic>;
+
+      // Tax rules and data should be partitioned by year
+      expect(captured['tax_rules_v2'], isA<Map>());
+      expect((captured['tax_rules_v2'] as Map).containsKey('2025'), isTrue);
+      expect(captured['tax_data_v2'], isA<Map>());
+      expect((captured['tax_data_v2'] as Map).containsKey('2025'), isTrue);
     });
   });
 }

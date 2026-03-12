@@ -7,6 +7,7 @@ import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:clock/clock.dart';
 
 class TaxSyncResult {
   final TaxYearData data;
@@ -23,23 +24,40 @@ class TaxDataFetcher {
   /// Fetches transactions for the given year and aggregates them into TaxYearData.
   /// Returns warnings for unmapped Income transactions.
   Future<TaxSyncResult> fetchAndAggregate(int year,
-      {DateTime? customStart, DateTime? customEnd}) async {
+      {DateTime? customStart,
+      DateTime? customEnd,
+      bool forceResync = false}) async {
     final rules = _config.getRulesForYear(year);
     final dateRange = _computeDateRange(year, rules, customStart, customEnd);
     final start = dateRange.start;
     final end = dateRange.end;
 
     final categoryTagMap = _buildCategoryTagMap();
-    final incomeTxns = _filterIncomeTransactions(start, end);
+    final incomeTxns = _filterIncomeTransactions(start, end, forceResync);
 
     // Aggregate income by tax heads
     final aggregation = _AggregationResult();
+    final syncedTransactionIds = <String>[];
+
     for (final txn in incomeTxns) {
-      _aggregateTransaction(txn, rules, categoryTagMap, start, aggregation);
+      final head = _resolveHead(
+          txn, categoryTagMap[txn.category] ?? CategoryTag.none, rules);
+      if (head != null) {
+        _addToHead(head, txn, txn.amount, start, aggregation);
+        syncedTransactionIds.add(txn.id);
+      } else {
+        aggregation.warnings.add(
+            'Unmapped Income: "${txn.amount.toStringAsFixed(0)} - ${txn.category}"');
+      }
     }
 
     // Integrate insurance maturity
     _aggregateInsuranceMaturity(start, end, aggregation);
+
+    // Update taxSync flag for transactions
+    if (syncedTransactionIds.isNotEmpty) {
+      await _storage.updateTransactionsTaxSync(syncedTransactionIds, true);
+    }
 
     return TaxSyncResult(
         _buildTaxYearData(year, aggregation), aggregation.warnings);
@@ -57,7 +75,7 @@ class TaxDataFetcher {
     final start =
         startMonth == 1 ? DateTime(year, 1, 1) : DateTime(year, startMonth, 1);
     final end = startMonth == 1
-        ? DateTime(year + 1, 1, 1) // coverage:ignore-line
+        ? DateTime(year + 1, 1, 1)
             .subtract(const Duration(seconds: 1)) // coverage:ignore-line
         : DateTime(year + 1, startMonth, 1)
             .subtract(const Duration(seconds: 1));
@@ -74,38 +92,20 @@ class TaxDataFetcher {
 
   // --- Transaction Filtering ---
 
-  List<Transaction> _filterIncomeTransactions(DateTime start, DateTime end) {
+  List<Transaction> _filterIncomeTransactions(
+      DateTime start, DateTime end, bool forceResync) {
     return _storage.getAllTransactions().where((t) {
       if (t.type != TransactionType.income) return false;
       if (t.date.isBefore(start) || t.date.isAfter(end)) return false;
+      if (!forceResync && t.taxSync == true) return false;
       return true;
     }).toList();
   }
 
   // --- Transaction Aggregation ---
 
-  void _aggregateTransaction(
-      Transaction txn,
-      TaxRules rules,
-      Map<String, CategoryTag> categoryTagMap,
-      DateTime start,
-      _AggregationResult agg) {
-    final amount = txn.amount;
+  String? _resolveHead(Transaction txn, CategoryTag catTag, TaxRules rules) {
     final catName = txn.category;
-    final catTag = categoryTagMap[catName] ?? CategoryTag.none;
-
-    final head = _resolveHead(txn, catName, catTag, rules);
-    if (head == null) {
-      agg.warnings.add(
-          'Unmapped Income: "${amount.toStringAsFixed(0)} - ${txn.category}"');
-      return;
-    }
-
-    _addToHead(head, txn, amount, start, agg);
-  }
-
-  String? _resolveHead(
-      Transaction txn, String catName, CategoryTag catTag, TaxRules rules) {
     // 1. Try advanced mappings first
     final advancedRule = _findMatchingAdvancedRule(
         txn, catName, catTag, rules.advancedTagMappings);
@@ -144,13 +144,15 @@ class TaxDataFetcher {
   bool _matchesDescriptions(TaxMappingRule rule, Transaction txn) {
     if (rule.matchDescriptions.isEmpty) return true;
     final title = txn.title; // coverage:ignore-line
-    return rule.matchDescriptions.any((pattern) => title.contains(pattern)); // coverage:ignore-line
+    return rule.matchDescriptions
+        .any((pattern) => title.contains(pattern)); // coverage:ignore-line
   }
 
   bool _isExcludedByDescription(TaxMappingRule rule, Transaction txn) {
     if (rule.excludeDescriptions.isEmpty) return false;
     final title = txn.title; // coverage:ignore-line
-    return rule.excludeDescriptions.any((pattern) => title.contains(pattern)); // coverage:ignore-line
+    return rule.excludeDescriptions
+        .any((pattern) => title.contains(pattern)); // coverage:ignore-line
   }
 
   void _addToHead(String head, Transaction txn, double amount, DateTime start,
@@ -183,11 +185,15 @@ class TaxDataFetcher {
       String head, Transaction txn, double amount, _AggregationResult agg) {
     final name = txn.title.isNotEmpty ? txn.title : txn.category;
     if (head == 'other') {
-      agg.otherIncomes.add(OtherIncome( // coverage:ignore-line
+      agg.otherIncomes.add(OtherIncome(
+        // coverage:ignore-line
         name: name,
         amount: amount,
         type: 'Other',
         subtype: 'others', // Technical key
+        isManualEntry: false,
+        lastUpdated: clock.now(), // coverage:ignore-line
+        transactionDate: txn.date, // coverage:ignore-line
       ));
     } else if (head == 'gift') {
       agg.cashGifts.add(OtherIncome(
@@ -195,6 +201,9 @@ class TaxDataFetcher {
         amount: amount,
         type: 'Gift',
         subtype: 'other', // Technical key
+        isManualEntry: false,
+        lastUpdated: clock.now(),
+        transactionDate: txn.date,
       ));
     }
   }
@@ -210,6 +219,9 @@ class TaxDataFetcher {
       saleAmount: amount,
       gainDate: txn.date,
       costOfAcquisition: cost,
+      isManualEntry: false,
+      lastUpdated: clock.now(),
+      transactionDate: txn.date,
     ));
   }
 
@@ -257,6 +269,9 @@ class TaxDataFetcher {
           saleAmount: policy.sumAssured,
           costOfAcquisition: cost,
           gainDate: policy.maturityDate,
+          isManualEntry: false,
+          lastUpdated: clock.now(),
+          transactionDate: policy.maturityDate,
         ));
       } else {
         final gain = (policy.sumAssured - cost).clamp(0.0, policy.sumAssured);
@@ -265,6 +280,9 @@ class TaxDataFetcher {
           amount: gain,
           type: 'Other',
           subtype: 'other',
+          isManualEntry: false,
+          lastUpdated: clock.now(),
+          transactionDate: policy.maturityDate,
         ));
       }
     }
@@ -273,23 +291,27 @@ class TaxDataFetcher {
   // --- Result Building ---
 
   TaxYearData _buildTaxYearData(int year, _AggregationResult agg) {
+    final now = clock.now();
     const salaryDetails = SalaryDetails(
-      grossSalary: 0,
-      giftsFromEmployer: 0,
-      netSalaryReceived: {},
+      history: [],
     );
 
     final dividendDetails = DividendIncome(
-        amountQ1: agg.divQ1,
-        amountQ2: agg.divQ2,
-        amountQ3: agg.divQ3,
-        amountQ4: agg.divQ4,
-        amountQ5: agg.divQ5);
+      amountQ1: agg.divQ1,
+      amountQ2: agg.divQ2,
+      amountQ3: agg.divQ3,
+      amountQ4: agg.divQ4,
+      amountQ5: agg.divQ5,
+      lastUpdated: now,
+    );
 
     final houseProps = agg.rentTotal > 0
         ? [
             HouseProperty(
-                name: 'Aggregated Properties', rentReceived: agg.rentTotal)
+                name: 'Aggregated Properties',
+                rentReceived: agg.rentTotal,
+                isManualEntry: false,
+                lastUpdated: now)
           ]
         : <HouseProperty>[];
 
@@ -298,7 +320,9 @@ class TaxDataFetcher {
             BusinessEntity(
                 name: 'Aggregated Business',
                 type: BusinessType.regular,
-                netIncome: agg.businessTotal)
+                netIncome: agg.businessTotal,
+                isManualEntry: false,
+                lastUpdated: now)
           ]
         : <BusinessEntity>[];
 
@@ -310,8 +334,19 @@ class TaxDataFetcher {
       capitalGains: agg.cgEntries,
       otherIncomes: agg.otherIncomes,
       cashGifts: agg.cashGifts,
-      agricultureIncome: agg.agriTotal,
       dividendIncome: dividendDetails,
+      lastSyncDate: now,
+      agriIncomeHistory: agg.agriTotal > 0
+          ? [
+              AgriIncomeEntry(
+                id: 'sync_agri_$year',
+                amount: agg.agriTotal,
+                date: now,
+                description: 'Synced Agriculture Income',
+                isManualEntry: false,
+              )
+            ]
+          : [],
     );
   }
 
@@ -351,10 +386,10 @@ class _AggregationResult {
   List<CapitalGainEntry> cgEntries = [];
 }
 
-// coverage:ignore-start
 final taxDataFetcherProvider = Provider<TaxDataFetcher>((ref) {
+  // coverage:ignore-start
   final storage = ref.watch(storageServiceProvider);
   final config = ref.watch(taxConfigServiceProvider);
   return TaxDataFetcher(storage, config);
-// coverage:ignore-end
+  // coverage:ignore-end
 });

@@ -32,13 +32,14 @@ class PaginationBar extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: safeCurrentPage > 1
-                    ? () => onPageChanged(safeCurrentPage - 1) // coverage:ignore-line
+                    ? () => onPageChanged(
+                        safeCurrentPage - 1) // coverage:ignore-line
                     : null,
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: safeCurrentPage < totalPages
-                    ? () => onPageChanged(safeCurrentPage + 1) // coverage:ignore-line
+                    ? () => onPageChanged(safeCurrentPage + 1)
                     : null,
               ),
             ],

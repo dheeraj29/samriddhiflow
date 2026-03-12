@@ -30,21 +30,27 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   void _onBackspace() {
     if (_pin.isNotEmpty) {
       setState(() => _pin = _pin.substring(0, _pin.length - 1));
-  // coverage:ignore-end
+      // coverage:ignore-end
     }
   }
 
   void _verify() {
     final storage = ref.read(storageServiceProvider);
-    final storedPin = storage.getAppPin();
 
-    if (_pin == storedPin) {
+    if (storage.verifyAppPin(_pin)) {
       widget.onUnlocked();
     } else {
-      setState(() {
-        _pin = "";
-        _error = "Incorrect PIN";
-      });
+      final attempts = storage.getFailedPinAttempts();
+      if (attempts >= 3) {
+        // Log user out after 3 failed attempts
+        ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
+        // AuthWrapper will handle redirect to login
+      } else {
+        setState(() {
+          _pin = "";
+          _error = "Incorrect PIN (${3 - attempts} attempts left)";
+        });
+      }
     }
   }
 

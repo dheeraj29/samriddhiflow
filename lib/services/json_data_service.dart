@@ -22,7 +22,7 @@ class JsonDataService {
   JsonDataService(this._storageService, this._taxConfigService);
 
   /// Creates a ZIP package containing separate JSON files for each data type.
-  Future<List<int>> createBackupPackage() async {
+  Future<List<int>> createBackupPackage({String? appPin}) async {
     final archive = Archive();
 
     // 1. Metadata
@@ -65,6 +65,9 @@ class JsonDataService {
 
     // 8. Settings
     final settings = _storageService.getAllSettings();
+    if (appPin != null) {
+      settings['appPin'] = appPin; // coverage:ignore-line
+    }
     _addToArchive(archive, 'settings.json', settings);
 
     // 9. Insurance Policies
@@ -146,8 +149,13 @@ class JsonDataService {
     // A-F, J-K: Restore list-based entities
     await _restoreEntityList(getJson, 'profiles.json', stats, 'profiles',
         (p) async => await _storageService.saveProfile(Profile.fromMap(p)));
-    await _restoreEntityList(getJson, 'categories.json', stats, 'categories',
-        (c) async => await _storageService.addCategory(Category.fromMap(c)));
+    await _restoreEntityList(
+        getJson,
+        'categories.json',
+        stats,
+        'categories',
+        (c) async => await _storageService.addCategory(Category.fromMap(c),
+            isRestore: true));
     await _restoreEntityList(getJson, 'accounts.json', stats, 'accounts',
         (a) async => await _storageService.saveAccount(Account.fromMap(a)));
     await _restoreEntityList(
@@ -162,38 +170,32 @@ class JsonDataService {
         'loans.json',
         stats,
         'loans',
-        (l) async => await _storageService // coverage:ignore-line
+        (l) async => await _storageService
             .saveLoan(Loan.fromMap(l))); // coverage:ignore-line
     await _restoreEntityList(
         getJson,
         'recurring.json',
         stats,
         'recurring',
-        // coverage:ignore-start
-        (r) async => await _storageService
+        (r) async => await _storageService // coverage:ignore-line
             .saveRecurringTransaction(
-                RecurringTransaction.fromMap(r)));
-        // coverage:ignore-end
+                RecurringTransaction.fromMap(r))); // coverage:ignore-line
     await _restoreEntityList(
         getJson,
         'tax_data.json',
         stats,
         'tax_data',
-        // coverage:ignore-start
-        (td) async =>
+        (td) async => // coverage:ignore-line
             await _storageService.saveTaxYearData(
-                TaxYearData.fromMap(td)));
-        // coverage:ignore-end
+                TaxYearData.fromMap(td))); // coverage:ignore-line
     await _restoreEntityList(
         getJson,
         'lending_records.json',
         stats,
         'lending_records',
-        // coverage:ignore-start
-        (l) async =>
+        (l) async => // coverage:ignore-line
             await _storageService.saveLendingRecord(
-                LendingRecord.fromMap(l)));
-        // coverage:ignore-end
+                LendingRecord.fromMap(l))); // coverage:ignore-line
 
     // G. Settings
     await _restoreSettings(getJson, stats);
@@ -231,6 +233,14 @@ class JsonDataService {
     if (settingsMap is Map) {
       settingsMap.remove('isLoggedIn');
       settingsMap.remove('last_sync');
+
+      // Ensure restored plaintext PINs are hashed via StorageService setter
+      if (settingsMap.containsKey('appPin') && settingsMap['appPin'] != null) {
+        await _storageService
+            .setAppPin(settingsMap['appPin']); // coverage:ignore-line
+        // Remove it from the batch settings to avoid overwriting the hash with plaintext
+        settingsMap.remove('appPin'); // coverage:ignore-line
+      }
     }
 
     await _storageService.saveSettings(settingsMap);

@@ -24,6 +24,11 @@ class MockIsOfflineNotifier extends IsOfflineNotifier {
   bool build() => false;
 }
 
+class MockLocalModeNotifier extends LocalModeNotifier {
+  @override
+  bool build() => false;
+}
+
 class MockTxnsSinceBackupNotifier extends TxnsSinceBackupNotifier {
   @override
   int build() => 0;
@@ -124,6 +129,8 @@ void main() {
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+        pendingRemindersProvider.overrideWithValue(0),
+        localModeProvider.overrideWith(MockLocalModeNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -241,6 +248,8 @@ void main() {
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+        pendingRemindersProvider.overrideWithValue(0),
+        localModeProvider.overrideWith(MockLocalModeNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -340,6 +349,8 @@ void main() {
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+        pendingRemindersProvider.overrideWithValue(0),
+        localModeProvider.overrideWith(MockLocalModeNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),

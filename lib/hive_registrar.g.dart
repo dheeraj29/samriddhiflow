@@ -19,6 +19,8 @@ extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(AccountAdapter());
     registerAdapter(AccountTypeAdapter());
+    registerAdapter(AdvanceTaxInstallmentRuleAdapter());
+    registerAdapter(AgriIncomeEntryAdapter());
     registerAdapter(AssetTypeAdapter());
     registerAdapter(BusinessEntityAdapter());
     registerAdapter(BusinessTypeAdapter());
@@ -64,6 +66,8 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(AccountAdapter());
     registerAdapter(AccountTypeAdapter());
+    registerAdapter(AdvanceTaxInstallmentRuleAdapter());
+    registerAdapter(AgriIncomeEntryAdapter());
     registerAdapter(AssetTypeAdapter());
     registerAdapter(BusinessEntityAdapter());
     registerAdapter(BusinessTypeAdapter());

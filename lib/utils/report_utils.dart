@@ -46,7 +46,7 @@ class ReportUtils {
               t.category == 'Loan Repayment' ||
               t.category == 'Loan Principal' ||
               t.category == 'Loan Interest')) {
-              // coverage:ignore-end
+        // coverage:ignore-end
         data[t.title] = (data[t.title] ?? 0) + t.amount;
       }
     }

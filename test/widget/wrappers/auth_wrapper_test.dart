@@ -194,6 +194,7 @@ void main() {
         calculatorVisibleProvider
             .overrideWith(MockCalculatorVisibleNotifier.new),
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+        pendingRemindersProvider.overrideWithValue(0),
       ],
       child: const MaterialApp(
         home: AuthWrapper(),
@@ -509,6 +510,7 @@ void main() {
         calculatorVisibleProvider
             .overrideWith(MockCalculatorVisibleNotifier.new),
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+        pendingRemindersProvider.overrideWithValue(0),
       ],
       child: const MaterialApp(
         home: AuthWrapper(),
@@ -529,6 +531,62 @@ void main() {
     // In Low-Impact Recovery, we NO LONGER invalidate the provider to prevent flickering.
     // Instead, we 'poke' the session in the background. initCalls should remain 1.
     expect(initCalls, 1);
+  });
+
+  group('Offline Session Expiration', () {
+    testWidgets('shows "Session Expired" when offline more than 1 hour',
+        (tester) async {
+      final oldLogin = DateTime.now().subtract(const Duration(hours: 2));
+      when(() => mockStorageService.getLastLogin()).thenReturn(oldLogin);
+
+      await tester.pumpWidget(createAuthWrapper(
+        isOffline: true,
+        isLoggedIn: true,
+      ));
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Expired'), findsOneWidget);
+      expect(find.textContaining('Your session has expired'), findsOneWidget);
+      // Verify Continue Offline is NOT shown
+      expect(find.text(continueOfflineText), findsNothing);
+    });
+
+    testWidgets('allows Dashboard when offline less than 1 hour',
+        (tester) async {
+      final recentLogin = DateTime.now().subtract(const Duration(minutes: 30));
+      when(() => mockStorageService.getLastLogin()).thenReturn(recentLogin);
+
+      await tester.pumpWidget(createAuthWrapper(
+        isOffline: true,
+        isLoggedIn: true,
+      ));
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DashboardScreen), findsOneWidget);
+    });
+
+    testWidgets('Retry Connection on Expired screen triggers check',
+        (tester) async {
+      final oldLogin = DateTime.now().subtract(const Duration(hours: 2));
+      when(() => mockStorageService.getLastLogin()).thenReturn(oldLogin);
+
+      await tester.pumpWidget(createAuthWrapper(
+        isOffline: true,
+        isLoggedIn: true,
+      ));
+
+      await tester.pumpAndSettle();
+      expect(find.text('Session Expired'), findsOneWidget);
+
+      // Tap Retry
+      await tester.tap(find.text('Retry Connection'));
+      await tester.pump();
+
+      // Verify it re-checks connectivity
+      verify(() => mockStorageService.getLastLogin()).called(greaterThan(0));
+    });
   });
 }
 

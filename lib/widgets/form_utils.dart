@@ -77,15 +77,15 @@ class FormUtils {
     DateTime? lastDate,
   }) {
     return InkWell(
-      onTap: () async { // coverage:ignore-line
-
-        final picked = await showDatePicker( // coverage:ignore-line
-
+      onTap: () async {
+        // coverage:ignore-line
+        final picked = await showDatePicker(
+          // coverage:ignore-line
           context: context,
           initialDate: selectedDate,
           firstDate: firstDate ?? DateTime(2020), // coverage:ignore-line
           lastDate: lastDate ??
-              DateTime.now() // coverage:ignore-line
+              DateTime.now()
                   .add(const Duration(days: 365)), // coverage:ignore-line
         );
         if (picked != null) onDateTarget(picked); // coverage:ignore-line

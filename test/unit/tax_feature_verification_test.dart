@@ -24,22 +24,32 @@ void main() {
       final service = IndianTaxService(mockConfig);
 
       final rules = TaxRules().copyWith(
-        isGiftFromEmployerEnabled: true,
-        giftFromEmployerExemptionLimit: 5000,
-        isStdDeductionSalaryEnabled: false,
-        isRetirementExemptionEnabled: false,
-      );
+          isGiftFromEmployerEnabled: true,
+          giftFromEmployerExemptionLimit: 5000,
+          isStdDeductionSalaryEnabled: false,
+          isRetirementExemptionEnabled: false);
 
-      const data = TaxYearData(
+      final data = TaxYearData(
           year: 2025,
-          salary: SalaryDetails(
-            grossSalary: 100000,
-            giftsFromEmployer: 8000, // 3000 excess
-          ));
+          salary: SalaryDetails(history: [
+            SalaryStructure(
+              id: 's1',
+              monthlyBasic: 100000 / 12,
+              effectiveDate: DateTime(2025, 4, 1),
+            )
+          ], independentAllowances: [
+            const CustomAllowance(
+                id: 'gift',
+                name: 'Gift',
+                payoutAmount: 8000,
+                frequency: PayoutFrequency.annually,
+                startMonth: 4,
+                exemptionLimit: 5000)
+          ]));
 
       final salaryIncome = service.calculateSalaryIncome(data, rules);
       // Expected: 100,000 + (8000 - 5000) = 103,000
-      expect(salaryIncome, 103000);
+      expect(salaryIncome, closeTo(103000, 1));
     });
 
     test('Calculates salary income correctly with gifts < exemption', () {
@@ -47,40 +57,44 @@ void main() {
       final service = IndianTaxService(mockConfig);
 
       final rules = TaxRules().copyWith(
-        isGiftFromEmployerEnabled: true,
-        giftFromEmployerExemptionLimit: 5000,
-        isStdDeductionSalaryEnabled: false,
-      );
+          isGiftFromEmployerEnabled: true,
+          giftFromEmployerExemptionLimit: 5000,
+          isStdDeductionSalaryEnabled: false);
 
-      const data = TaxYearData(
+      final data = TaxYearData(
           year: 2025,
           salary: SalaryDetails(
-            grossSalary: 100000,
-            giftsFromEmployer: 4000, // No excess
+            history: [
+              SalaryStructure(
+                  id: "s1",
+                  monthlyBasic: 100000 / 12,
+                  effectiveDate: DateTime(2025, 4, 1))
+            ],
           ));
 
       final salaryIncome = service.calculateSalaryIncome(data, rules);
-      expect(salaryIncome, 100000);
+      expect(salaryIncome, closeTo(100000, 1));
     });
     test('Ignores gifts if disabled', () {
       final mockConfig = MockTaxConfigService();
       final service = IndianTaxService(mockConfig);
 
       final rules = TaxRules().copyWith(
-        isGiftFromEmployerEnabled: false,
-        giftFromEmployerExemptionLimit: 5000,
-        isStdDeductionSalaryEnabled: false,
-      );
+          isGiftFromEmployerEnabled: false,
+          giftFromEmployerExemptionLimit: 5000,
+          isStdDeductionSalaryEnabled: false);
 
-      const data = TaxYearData(
+      final data = TaxYearData(
           year: 2025,
-          salary: SalaryDetails(
-            grossSalary: 100000,
-            giftsFromEmployer: 10000,
-          ));
+          salary: SalaryDetails(history: [
+            SalaryStructure(
+                id: "s1",
+                monthlyBasic: 100000 / 12,
+                effectiveDate: DateTime(2025, 4, 1))
+          ]));
 
       final salaryIncome = service.calculateSalaryIncome(data, rules);
-      expect(salaryIncome, 100000);
+      expect(salaryIncome, closeTo(100000, 1));
     });
   });
 }

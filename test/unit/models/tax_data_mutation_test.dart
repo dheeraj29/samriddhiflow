@@ -6,7 +6,6 @@ void main() {
     test('Can add to history when initialized from immutable const list', () {
       // 1. Emulate a new/empty year which uses a const [] for history
       const initialSalary = SalaryDetails(
-        grossSalary: 100000,
         history: [], // This is a constant empty list in Dart
       );
 
@@ -26,7 +25,6 @@ void main() {
 
     test('Directly adding to const history throws', () {
       const initialSalary = SalaryDetails(
-        grossSalary: 100000,
         history: [],
       );
 

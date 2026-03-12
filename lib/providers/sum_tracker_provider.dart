@@ -29,7 +29,7 @@ class SumEntry {
         value: (json['value'] as num).toDouble(),
         name: json['name'],
         operation: (json['operation'] as String?) ?? '+',
-  // coverage:ignore-end
+        // coverage:ignore-end
       );
 }
 
@@ -81,13 +81,14 @@ class SumProfile {
         'entries': entries.map((e) => e.toJson()).toList(),
       };
 
-  factory SumProfile.fromJson(Map<String, dynamic> json) { // coverage:ignore-line
+  factory SumProfile.fromJson(Map<String, dynamic> json) {
+    // coverage:ignore-line
     // Migration logic for old data (List<double>)
     // coverage:ignore-start
     List<SumEntry> entries = [];
     if (json['values'] != null) {
       final values = List<double>.from(json['values']);
-    // coverage:ignore-end
+      // coverage:ignore-end
       entries =
           // coverage:ignore-start
           values.map((v) => SumEntry(id: const Uuid().v4(), value: v)).toList();
@@ -95,14 +96,14 @@ class SumProfile {
       entries = (json['entries'] as List)
           .map((e) => SumEntry.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-          // coverage:ignore-end
+      // coverage:ignore-end
     }
 
     // coverage:ignore-start
     return SumProfile(
       id: json['id'],
       name: json['name'],
-    // coverage:ignore-end
+      // coverage:ignore-end
       entries: entries,
     );
   }
@@ -137,7 +138,8 @@ class SumTrackerNotifier extends Notifier<SumTrackerState> {
   SumTrackerState build() {
     final init = ref.watch(storageInitializerProvider);
     if (!init.hasValue) {
-      return SumTrackerState(profiles: [], activeProfileId: null); // coverage:ignore-line
+      return SumTrackerState(
+          profiles: [], activeProfileId: null); // coverage:ignore-line
     }
 
     _box = Hive.box(
@@ -169,7 +171,8 @@ class SumTrackerNotifier extends Notifier<SumTrackerState> {
       }
     }
 
-    return SumTrackerState( // coverage:ignore-line
+    return SumTrackerState(
+      // coverage:ignore-line
       profiles: profiles,
       activeProfileId: activeId,
     );
@@ -195,7 +198,7 @@ class SumTrackerNotifier extends Notifier<SumTrackerState> {
   Future<void> activateProfile(String id) async {
     state = state.copyWith(activeProfileId: id);
     await _save();
-  // coverage:ignore-end
+    // coverage:ignore-end
   }
 
   Future<void> addValue(double value,

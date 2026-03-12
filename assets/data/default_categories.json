@@ -48,6 +48,12 @@
         "iconCode": 60001
     },
     {
+        "name": "Miscellaneous",
+        "usage": "income",
+        "tag": "taxFree",
+        "iconCode": 59924
+    },
+    {
         "name": "Gadgets",
         "usage": "expense",
         "tag": "none",

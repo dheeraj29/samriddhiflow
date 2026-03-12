@@ -10,6 +10,8 @@ import 'services/json_data_service.dart';
 import 'services/calendar_service.dart';
 import 'services/notification_service.dart';
 import 'services/taxes/tax_config_service.dart';
+import 'services/taxes/indian_tax_service.dart';
+import 'models/taxes/tax_data.dart';
 import 'utils/billing_helper.dart';
 import 'models/account.dart';
 import 'models/transaction.dart';
@@ -56,10 +58,41 @@ final pendingRemindersProvider = Provider<int>((ref) {
   final storage = ref.watch(storageServiceProvider);
   final recurring = ref.watch(recurringTransactionsProvider).value ?? [];
 
+  final taxConfig = ref.watch(taxConfigServiceProvider);
+  final currentYear = taxConfig.getCurrentFinancialYear();
+  final taxData = storage.getTaxYearData(currentYear);
+
   return _countPendingLoans(loans, today) +
       _countPendingCreditCards(accounts, txns, now, today, storage) +
-      _countPendingRecurring(recurring, today);
+      _countPendingRecurring(recurring, today) +
+      (taxData != null
+          ? _countPendingAdvanceTax(taxData, ref)
+          : 0); // coverage:ignore-line
 });
+
+// coverage:ignore-start
+int _countPendingAdvanceTax(TaxYearData data, Ref ref) {
+  final service = ref.watch(indianTaxServiceProvider);
+  final config = ref.watch(taxConfigServiceProvider);
+  final rules = config.getRulesForYear(data.year);
+  final details = service.calculateDetailedLiability(data, rules);
+// coverage:ignore-end
+
+  // coverage:ignore-start
+  final double? amount = details['nextAdvanceTaxAmount'] as dynamic;
+  final int? daysLeft = details['daysUntilAdvanceTax'] as dynamic;
+  final bool isRequirementMet = details['isRequirementMet'] == true;
+  // coverage:ignore-end
+
+  if (amount != null &&
+      (amount > 0 || !isRequirementMet) && // coverage:ignore-line
+      daysLeft != null &&
+      daysLeft <= 7) {
+    // coverage:ignore-line
+    return 1;
+  }
+  return 0;
+}
 
 int _countPendingLoans(List<Loan> loans, DateTime today) {
   int count = 0;
@@ -71,7 +104,7 @@ int _countPendingLoans(List<Loan> loans, DateTime today) {
     if (today.year == loan.firstEmiDate.year &&
         today.month == loan.firstEmiDate.month) {
       dueDateObj = loan.firstEmiDate;
-    // coverage:ignore-end
+      // coverage:ignore-end
     }
 
     // coverage:ignore-start
@@ -85,9 +118,8 @@ int _countPendingLoans(List<Loan> loans, DateTime today) {
     final isFullyPaid = totalPaid >= loan.emiAmount - 1;
     // coverage:ignore-end
 
-    if (!isFullyPaid && dueDateObj.difference(today).inDays <= 7) { // coverage:ignore-line
-
-
+    if (!isFullyPaid && dueDateObj.difference(today).inDays <= 7) {
+      // coverage:ignore-line
       count++; // coverage:ignore-line
     }
   }
@@ -117,8 +149,8 @@ int _countPendingRecurring(
     List<RecurringTransaction> recurring, DateTime today) {
   int count = 0;
   for (final r in recurring) {
-    if (r.isActive && !r.nextExecutionDate.isAfter(today)) { // coverage:ignore-line
-
+    if (r.isActive && !r.nextExecutionDate.isAfter(today)) {
+      // coverage:ignore-line
       count++; // coverage:ignore-line
     }
   }

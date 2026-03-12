@@ -13,6 +13,8 @@ void main() {
     Hive.registerAdapter<TaxSlab>(TaxSlabAdapter());
     Hive.registerAdapter<TaxExemptionRule>(TaxExemptionRuleAdapter());
     Hive.registerAdapter<InsurancePremiumRule>(InsurancePremiumRuleAdapter());
+    Hive.registerAdapter<AdvanceTaxInstallmentRule>(
+        AdvanceTaxInstallmentRuleAdapter());
     Hive.registerAdapter<TaxMappingRule>(TaxMappingRuleAdapter());
 
     // Create a TaxRules object exactly like fromMap

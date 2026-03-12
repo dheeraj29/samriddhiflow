@@ -56,18 +56,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           if (!mounted) break;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(nudge),
-        // coverage:ignore-end
+            // coverage:ignore-end
             duration: const Duration(seconds: 5),
-            action: SnackBarAction( // coverage:ignore-line
-
-
-                label: 'Dismiss',
-                onPressed: () {}), // coverage:ignore-line
+            action: SnackBarAction(
+                label: 'Dismiss', onPressed: () {}), // coverage:ignore-line
             behavior: SnackBarBehavior.floating,
           ));
           // Slight delay so they don't all stack instantly if multiple
-          await Future.delayed( // coverage:ignore-line
-              const Duration(milliseconds: 500));
+          await Future.delayed(
+              const Duration(milliseconds: 500)); // coverage:ignore-line
         }
       }
     });
@@ -82,188 +79,185 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accountsAsync = ref.watch(accountsProvider);
-    final transactionsAsync = ref.watch(transactionsProvider);
-    final txnsSinceBackup = ref.watch(txnsSinceBackupProvider);
-    final backupThreshold = ref.watch(backupThresholdProvider);
-    final theme = Theme.of(context);
+    _handleCalculatorsReactivity();
+
     final activeProfile = ref.watch(activeProfileProvider);
-    final categories = ref.watch(categoriesProvider);
-    final currencyLocale = ref.watch(currencyProvider);
-    final dashboardConfig = ref.watch(dashboardConfigProvider);
-
-    // 3. Calculator Reactivity: Ensure overlay reappears if toggled ON
-    ref.listen(smartCalculatorEnabledProvider, (previous, enabled) {
-      if (enabled) {
-        // Slight delay to allow overlay to rebuild
-        // coverage:ignore-start
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ref.read(calculatorVisibleProvider.notifier).value = true;
-        // coverage:ignore-end
-          }
-        });
-      }
-    });
-
-    final title = (activeProfile == null ||
-            activeProfile.id == 'default')
+    final title = (activeProfile == null || activeProfile.id == 'default')
         ? 'My Samriddh'
         : '${activeProfile.name} Budget';
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            Text(
-              'Profile: ${activeProfile?.name ?? 'Default'}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).brightness == Brightness.light
-                    ? Colors.black54
-                    : Colors.white60,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          _buildProfileSwitcher(context, ref),
-          BellAnimation(
-            animate: ref.watch(pendingRemindersProvider) > 0,
-            child: IconButton(
-              onPressed: () => Navigator.push( // coverage:ignore-line
+      appBar: _buildAppBar(title, activeProfile),
+      body: _buildBody(),
+      bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
 
+  void _handleCalculatorsReactivity() {
+    ref.listen(smartCalculatorEnabledProvider, (previous, enabled) {
+      if (enabled) {
+        // coverage:ignore-start
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(calculatorVisibleProvider.notifier).value = true;
+            // coverage:ignore-end
+          }
+        });
+      }
+    });
+  }
 
-                  context,
-                  MaterialPageRoute( // coverage:ignore-line
-
-
-                      builder: (_) => // coverage:ignore-line
-                          const RemindersScreen())),
-              icon: PureIcons.notifications(
-                  isActive: ref.watch(pendingRemindersProvider) > 0),
-              tooltip: 'Reminders',
-            ),
-          ),
-          if (ref.watch(appLockStatusProvider))
-            IconButton( // coverage:ignore-line
-
-
-              // coverage:ignore-start
-              onPressed: () => ref
-                  .read(appLockIntentProvider.notifier)
-                  .lock(),
-              // coverage:ignore-end
-              icon: const Icon(Icons.lock_outline),
-              tooltip: 'Lock App',
-            ),
-          // Show logout if logged in (Stream value) OR local offline login flag
-          // But only if ONLINE (logout requires connectivity).
-          if ((ref.watch(authStreamProvider).value != null ||
-                  ref.watch(isLoggedInProvider)) &&
-              !ref.watch(isOfflineProvider) &&
-              !ref.watch(localModeProvider))
-            IconButton(
-              onPressed: () => // coverage:ignore-line
-                  UIUtils.handleLogout(context, ref), // coverage:ignore-line
-              icon: PureIcons.logout(),
-              tooltip: 'Logout',
-            ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
+  PreferredSizeWidget _buildAppBar(String title, dynamic activeProfile) {
+    final theme = Theme.of(context);
+    return AppBar(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (txnsSinceBackup >= backupThreshold)
-                  _buildBackupReminder(context, ref, txnsSinceBackup),
-                _buildNetWorthCard(context, accountsAsync, currencyLocale, ref),
-                const SizedBox(height: 16),
-                _buildMonthlySummary(context, transactionsAsync, categories,
-                    currencyLocale, ref, _isPrivacyMode, dashboardConfig),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text('Quick Actions',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 12),
-                _buildQuickActions(context),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text('Recent Transactions',
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      TextButton(
-                          onPressed: () => Navigator.push( // coverage:ignore-line
-
-
-                              context,
-                              MaterialPageRoute( // coverage:ignore-line
-
-
-                                  builder: (_) => // coverage:ignore-line
-                                      const TransactionsScreen())),
-                          child: const Text('View All')),
-                    ],
-                  ),
-                ),
-                _buildRecentTransactions(
-                    context, transactionsAsync, currencyLocale, categories),
-              ],
+          Text(title,
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Profile: ${activeProfile?.name ?? 'Default'}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Colors.black54
+                  : Colors.white60,
             ),
           ),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-                icon: PureIcons.home(), tooltip: 'Home', onPressed: () {}),
-            IconButton(
-              icon: PureIcons.accounts(),
-              tooltip: 'Accounts',
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AccountsScreen())),
-            ),
-            IconButton(
-              icon: PureIcons.reports(),
-              tooltip: 'Reports',
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ReportsScreen())),
-            ),
-            IconButton(
-              icon: PureIcons.settings(),
-              tooltip: 'Settings',
-              onPressed: () => Navigator.push( // coverage:ignore-line
-
-
-                  context,
-                  MaterialPageRoute( // coverage:ignore-line
-
-
-                      builder: (_) => // coverage:ignore-line
-                          const SettingsScreen())),
-            ),
-          ],
+      actions: [
+        _buildProfileSwitcher(context, ref),
+        BellAnimation(
+          animate: ref.watch(pendingRemindersProvider) > 0,
+          child: IconButton(
+            onPressed: () => Navigator.push(
+                context, // coverage:ignore-line
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const RemindersScreen())), // coverage:ignore-line
+            icon: PureIcons.notifications(
+                isActive: ref.watch(pendingRemindersProvider) > 0),
+            tooltip: 'Reminders',
+          ),
         ),
+        if (ref.watch(appLockStatusProvider))
+          IconButton(
+            // coverage:ignore-line
+            onPressed: () => ref
+                .read(appLockIntentProvider.notifier)
+                .lock(), // coverage:ignore-line
+            icon: const Icon(Icons.lock_outline),
+            tooltip: 'Lock App',
+          ),
+        if ((ref.watch(authStreamProvider).value != null ||
+                ref.watch(isLoggedInProvider)) &&
+            !ref.watch(isOfflineProvider) &&
+            !ref.watch(localModeProvider))
+          IconButton(
+            onPressed: () =>
+                UIUtils.handleLogout(context, ref), // coverage:ignore-line
+            icon: PureIcons.logout(),
+            tooltip: 'Logout',
+          ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    final txnsSinceBackup = ref.watch(txnsSinceBackupProvider);
+    final backupThreshold = ref.watch(backupThresholdProvider);
+    final accountsAsync = ref.watch(accountsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
+    final currencyLocale = ref.watch(currencyProvider);
+    final categories = ref.watch(categoriesProvider);
+    final dashboardConfig = ref.watch(dashboardConfigProvider);
+    final theme = Theme.of(context);
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (txnsSinceBackup >= backupThreshold)
+                _buildBackupReminder(context, ref, txnsSinceBackup),
+              _buildNetWorthCard(context, accountsAsync, currencyLocale, ref),
+              const SizedBox(height: 16),
+              _buildMonthlySummary(context, transactionsAsync, categories,
+                  currencyLocale, ref, _isPrivacyMode, dashboardConfig),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('Quick Actions',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              _buildQuickActions(context),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text('Recent Transactions',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    TextButton(
+                        // coverage:ignore-start
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TransactionsScreen())),
+                        // coverage:ignore-end
+                        child: const Text('View All')),
+                  ],
+                ),
+              ),
+              _buildRecentTransactions(
+                  context, transactionsAsync, currencyLocale, categories),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    return BottomAppBar(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          IconButton(icon: PureIcons.home(), tooltip: 'Home', onPressed: () {}),
+          IconButton(
+            icon: PureIcons.accounts(),
+            tooltip: 'Accounts',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AccountsScreen())),
+          ),
+          IconButton(
+            icon: PureIcons.reports(),
+            tooltip: 'Reports',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ReportsScreen())),
+          ),
+          IconButton(
+            icon: PureIcons.settings(),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+                context, // coverage:ignore-line
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const SettingsScreen())), // coverage:ignore-line
+          ),
+        ],
       ),
     );
   }
@@ -485,36 +479,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               if (loans.isNotEmpty && data.totalLoanLiability > 0) ...[
                 const SizedBox(height: 8),
-                Builder(builder: (context) { // coverage:ignore-line
-
-
+                Builder(builder: (context) {
+                  // coverage:ignore-line
                   final tenure = ref
                       .read(loanServiceProvider) // coverage:ignore-line
-                      .calculateMaxRemainingTenure( // coverage:ignore-line
-                          loans);
+                      .calculateMaxRemainingTenure(
+                          loans); // coverage:ignore-line
 
-                  if (tenure.days <= 0) { // coverage:ignore-line
-
-
+                  if (tenure.days <= 0) {
+                    // coverage:ignore-line
                     return const SizedBox();
                   }
 
-                  return Row( // coverage:ignore-line
-
-
-                    children: [ // coverage:ignore-line
-
-
+                  return Row(
+                    // coverage:ignore-line
+                    children: [
+                      // coverage:ignore-line
                       const SizedBox(width: 36),
                       // coverage:ignore-start
-                      Text(
-                        'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
-                        style: TextStyle(
-                      // coverage:ignore-end
-                            fontSize: 12,
-                            color: Colors.orange
-                                .withValues(alpha: 0.8), // coverage:ignore-line
-                            fontStyle: FontStyle.italic),
+                      Expanded(
+                        child: Text(
+                          'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
+                          style: TextStyle(
+                              // coverage:ignore-end
+                              fontSize: 12,
+                              color: Colors.orange.withValues(
+                                  alpha: 0.8), // coverage:ignore-line
+                              fontStyle: FontStyle.italic),
+                        ),
                       ),
                     ],
                   );
@@ -808,68 +800,55 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(width: 16),
           InkWell(
-            onTap: () => Navigator.push( // coverage:ignore-line
-
-
+            onTap: () => Navigator.push(
+                // coverage:ignore-line
                 context,
-                MaterialPageRoute( // coverage:ignore-line
-
-
-                    builder: (_) => const AddTransactionScreen( // coverage:ignore-line
-
-
+                MaterialPageRoute(
+                    // coverage:ignore-line
+                    builder: (_) => const AddTransactionScreen(
+                        // coverage:ignore-line
                         initialType: TransactionType.transfer))),
             child: _buildActionItem(
                 context, Icons.swap_horiz, 'Transfer', Colors.blue),
           ),
           const SizedBox(width: 16),
           InkWell(
-            onTap: () => Navigator.push( // coverage:ignore-line
-
-
+            onTap: () => Navigator.push(
+                // coverage:ignore-line
                 context,
-                MaterialPageRoute( // coverage:ignore-line
-
-
-                    builder: (_) => const AddTransactionScreen( // coverage:ignore-line
-
-
+                MaterialPageRoute(
+                    // coverage:ignore-line
+                    builder: (_) => const AddTransactionScreen(
+                        // coverage:ignore-line
                         initialType: TransactionType.expense))),
             child: _buildActionItem(
                 context, Icons.payment, 'Pay Bill', Colors.orange),
           ),
           const SizedBox(width: 16),
           InkWell(
-            onTap: () => Navigator.push( // coverage:ignore-line
-
-
-                context,
-                MaterialPageRoute( // coverage:ignore-line
-
-
-                    builder: (_) => // coverage:ignore-line
-                        const LoansScreen())),
+            onTap: () => Navigator.push(
+                context, // coverage:ignore-line
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const LoansScreen())), // coverage:ignore-line
             child: _buildActionItem(
                 context, Icons.account_balance, 'Loans', Colors.purple),
           ),
           const SizedBox(width: 16),
           InkWell(
-            onTap: () => // coverage:ignore-line
+            onTap: () =>
                 Navigator.pushNamed(context, '/taxes'), // coverage:ignore-line
             child: _buildActionItem(
                 context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
           ),
           const SizedBox(width: 16),
           InkWell(
-            onTap: () => Navigator.push( // coverage:ignore-line
-
-
+            onTap: () => Navigator.push(
+              // coverage:ignore-line
               context,
-              MaterialPageRoute( // coverage:ignore-line
-
-
-                  builder: (_) => // coverage:ignore-line
-                      const LendingDashboardScreen()),
+              MaterialPageRoute(
+                  builder: (_) =>
+                      const LendingDashboardScreen()), // coverage:ignore-line
             ),
             child: _buildActionItem(
                 context, Icons.handshake, 'Lending', Colors.teal),
@@ -927,23 +906,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               accounts: accounts,
               categories: categories,
               compactView: true,
-              onTap: () async { // coverage:ignore-line
-
-
-                final result = await Navigator.push( // coverage:ignore-line
-
-
+              onTap: () async {
+                // coverage:ignore-line
+                final result = await Navigator.push(
+                  // coverage:ignore-line
                   context,
                   // coverage:ignore-start
                   MaterialPageRoute(
                     builder: (_) =>
                         AddTransactionScreen(transactionToEdit: txn),
-                  // coverage:ignore-end
+                    // coverage:ignore-end
                   ),
                 );
-                if (result == true) { // coverage:ignore-line
-
-
+                if (result == true) {
+                  // coverage:ignore-line
                   // Refreshing is handled by the providers
                 }
               },
@@ -990,18 +966,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             children: [
               TextButton(
-                onPressed: () => Navigator.pushNamed( // coverage:ignore-line
-
-
-                    context,
-                    '/settings'),
+                onPressed: () => Navigator.pushNamed(
+                    context, '/settings'), // coverage:ignore-line
                 child: const Text('Go to Backup'),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () => // coverage:ignore-line
                     ref
-                        .read(txnsSinceBackupProvider.notifier) // coverage:ignore-line
+                        .read(txnsSinceBackupProvider.notifier)
                         .reset(), // coverage:ignore-line
                 child:
                     const Text('Dismiss', style: TextStyle(color: Colors.grey)),
@@ -1026,16 +999,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             orElse: () => profiles.first);
         // coverage:ignore-end
 
-        return PopupMenuButton<String>( // coverage:ignore-line
-
-
+        return PopupMenuButton<String>(
+          // coverage:ignore-line
           initialValue: activeProfileId,
           // coverage:ignore-start
           icon: PureIcons.person(),
           tooltip: 'Switch Profile (${activeProfile.name})',
           onSelected: (id) async {
             await ref.read(activeProfileIdProvider.notifier).setProfile(id);
-          // coverage:ignore-end
+            // coverage:ignore-end
             // Providers watching activeProfileIdProvider will react
             // coverage:ignore-start
             ref.invalidate(accountsProvider);
@@ -1058,7 +1030,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Text(p.name,
                             style: TextStyle(
                                 fontWeight: p.id == activeProfileId
-          // coverage:ignore-end
+                                    // coverage:ignore-end
                                     ? FontWeight.bold
                                     : FontWeight.normal)),
                       ],

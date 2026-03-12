@@ -78,13 +78,15 @@ class CommonDialogs {
         content: Text(content),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), // coverage:ignore-line
+            onPressed: () =>
+                Navigator.pop(context, false), // coverage:ignore-line
             child: Text(cancelLabel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: confirmColor != null
-                ? ElevatedButton.styleFrom( // coverage:ignore-line
+                ? ElevatedButton.styleFrom(
+                    // coverage:ignore-line
                     backgroundColor: confirmColor,
                     foregroundColor: Colors.white)
                 : null,

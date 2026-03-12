@@ -57,6 +57,9 @@ class Transaction extends HiveObject {
   @HiveField(13)
   String? profileId;
 
+  @HiveField(14)
+  bool? taxSync;
+
   Transaction({
     required this.id,
     required this.title,
@@ -72,6 +75,7 @@ class Transaction extends HiveObject {
     this.holdingTenureMonths,
     this.gainAmount,
     this.profileId,
+    this.taxSync,
   });
 
   factory Transaction.create({
@@ -121,6 +125,7 @@ class Transaction extends HiveObject {
     int? holdingTenureMonths,
     double? gainAmount,
     String? profileId,
+    bool? taxSync,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -137,6 +142,7 @@ class Transaction extends HiveObject {
       holdingTenureMonths: holdingTenureMonths ?? this.holdingTenureMonths,
       gainAmount: gainAmount ?? this.gainAmount,
       profileId: profileId ?? this.profileId,
+      taxSync: taxSync ?? this.taxSync,
     );
   }
 
@@ -156,6 +162,7 @@ class Transaction extends HiveObject {
       'holdingTenureMonths': holdingTenureMonths,
       'gainAmount': gainAmount,
       'profileId': profileId,
+      'taxSync': taxSync,
     };
   }
 
@@ -164,7 +171,7 @@ class Transaction extends HiveObject {
     if (amount.isInfinite || amount.isNaN) amount = 0.0;
 
     double? gainAmount = (map['gainAmount'] as num?)?.toDouble();
-    if (gainAmount != null && (gainAmount.isInfinite || gainAmount.isNaN)) { // coverage:ignore-line
+    if (gainAmount != null && (gainAmount.isInfinite || gainAmount.isNaN)) {
       gainAmount = 0.0;
     }
 
@@ -183,6 +190,7 @@ class Transaction extends HiveObject {
       holdingTenureMonths: map['holdingTenureMonths'],
       gainAmount: gainAmount,
       profileId: map['profileId'],
+      taxSync: map['taxSync'],
     );
   }
 }

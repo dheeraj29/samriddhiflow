@@ -73,7 +73,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
         onPanUpdate: (details) {
           setState(() {
             _position += details.delta;
-        // coverage:ignore-end
+            // coverage:ignore-end
           });
         },
         child: Material(
@@ -174,7 +174,8 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: PureIcons.close(size: 18),
-                  onPressed: () => setState(() => _isExpanded = false), // coverage:ignore-line
+                  onPressed: () => setState(
+                      () => _isExpanded = false), // coverage:ignore-line
                 ),
               ],
             ],
@@ -199,15 +200,20 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
               ? const Center(
                   child: Text('Add values below',
                       style: TextStyle(color: Colors.grey, fontSize: 11)))
-              : ListView.builder( // coverage:ignore-line
+              : ListView.builder(
+                  // coverage:ignore-line
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.entries.length, // coverage:ignore-line
-                  itemBuilder: (context, index) { // coverage:ignore-line
-                    final entry =
-                        active.entries[active.entries.length - 1 - index]; // coverage:ignore-line
-                    return Padding( // coverage:ignore-line
+                  itemBuilder: (context, index) {
+                    // coverage:ignore-line
+                    final entry = active.entries[active.entries.length -
+                        1 -
+                        index]; // coverage:ignore-line
+                    return Padding(
+                      // coverage:ignore-line
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row( // coverage:ignore-line
+                      child: Row(
+                        // coverage:ignore-line
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         // coverage:ignore-start
                         children: [
@@ -215,14 +221,15 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                             child: Text(
                                 entry.name ??
                                     (entry.operation == '+'
-                        // coverage:ignore-end
+                                        // coverage:ignore-end
                                         ? 'Value'
                                         : 'Op: ${entry.operation}'), // coverage:ignore-line
                                 style: const TextStyle(
                                     fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis),
                           ),
-                          Text( // coverage:ignore-line
+                          Text(
+                              // coverage:ignore-line
                               '${entry.operation == '+' ? '' : ('${entry.operation} ')}${(entry.operation == '*' || entry.operation == '/') ? entry.value : formatter.format(entry.value)}', // coverage:ignore-line
                               style: const TextStyle(
                                   fontSize: 11, fontWeight: FontWeight.w500)),
@@ -280,8 +287,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                         style: const TextStyle(fontSize: 13),
                         keyboardType: TextInputType.text,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegexUtils.mathExp)
+                          FilteringTextInputFormatter.allow(RegexUtils.mathExp)
                         ],
                         onSubmitted: (_) => _addValue(),
                       ),
@@ -375,16 +381,19 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                       trailing: p.id ==
                               ref.read(sumTrackerProvider).activeProfileId
                           ? PureIcons.checkCircle(color: Colors.green, size: 20)
-                          : IconButton( // coverage:ignore-line
-                              icon: PureIcons.deleteOutlined( // coverage:ignore-line
-                                  size: 18, color: Colors.redAccent),
+                          : IconButton(
+                              // coverage:ignore-line
+                              icon: PureIcons.deleteOutlined(
+                                  // coverage:ignore-line
+                                  size: 18,
+                                  color: Colors.redAccent),
                               // coverage:ignore-start
                               onPressed: () {
                                 ref
                                     .read(sumTrackerProvider.notifier)
                                     .deleteProfile(p.id);
                                 Navigator.pop(context);
-                              // coverage:ignore-end
+                                // coverage:ignore-end
                               }),
                       // coverage:ignore-start
                       onTap: () {
@@ -392,7 +401,7 @@ class _QuickSumTrackerState extends ConsumerState<QuickSumTracker> {
                             .read(sumTrackerProvider.notifier)
                             .activateProfile(p.id);
                         Navigator.pop(context);
-                      // coverage:ignore-end
+                        // coverage:ignore-end
                       },
                     )),
                 const Divider(),

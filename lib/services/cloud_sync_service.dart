@@ -34,16 +34,15 @@ class CloudSyncService {
   FirebaseAuth? get _auth {
     if (_firebaseAuth != null) return _firebaseAuth;
     try {
-      if (Firebase.apps.isNotEmpty) { // coverage:ignore-line
-
-
+      if (Firebase.apps.isNotEmpty) {
+        // coverage:ignore-line
         return FirebaseAuth.instance; // coverage:ignore-line
       }
     } catch (_) {}
     return null;
   }
 
-  Future<void> syncToCloud({String? passcode}) async {
+  Future<void> syncToCloud({String? passcode, String? appPin}) async {
     final auth = _auth;
     if (auth == null) {
       throw Exception(errFirebaseNotInit); // coverage:ignore-line
@@ -64,6 +63,11 @@ class CloudSyncService {
     final lastSync = settings['last_sync'];
     final Map<String, dynamic> settingsToEncrypt = Map.from(settings);
     settingsToEncrypt.remove('last_sync');
+
+    // Inject plaintext appPin for backup if provided
+    if (appPin != null) {
+      settingsToEncrypt['appPin'] = appPin; // coverage:ignore-line
+    }
 
     // Serialize all app data
     final data = {
@@ -122,24 +126,20 @@ class CloudSyncService {
       Map<int, TaxRules> rules, dynamic Function(dynamic) encryptor) {
     return {
       for (var entry in rules.entries)
-        entry.key.toString(): // coverage:ignore-line
-            encryptor(entry.value.toMap()) // coverage:ignore-line
+        entry.key.toString(): encryptor(entry.value.toMap())
     };
   }
 
   Map<String, dynamic> _preparePartitionedTaxData(
       List<TaxYearData> taxData, dynamic Function(dynamic) encryptor) {
-    return {
-      for (var td in taxData)
-        td.year.toString(): encryptor(td.toMap()) // coverage:ignore-line
-    };
+    return {for (var td in taxData) td.year.toString(): encryptor(td.toMap())};
   }
 
   void _handleSyncError(FirebaseException e) {
     if (e.code.contains('unauthenticated') ||
         e.code.contains('unavailable') ||
-        e.code.contains('permission-denied')) { // coverage:ignore-line
-
+        e.code.contains('permission-denied')) {
+      // coverage:ignore-line
       throw Exception(
           "Cloud Sync temporarily unavailable (${e.code}). Please try again later.");
     }
@@ -167,7 +167,7 @@ class CloudSyncService {
   Future<void> restoreFromCloud({String? passcode}) async {
     final rawData = await _validateAuthAndFetchData();
     if (rawData == null) {
-      throw Exception("No cloud data found"); // coverage:ignore-line
+      throw Exception("No cloud data found");
     }
 
     final data = _sanitizeFirestoreData(rawData) as Map<String, dynamic>;
@@ -176,17 +176,15 @@ class CloudSyncService {
     final encryption =
         isEncrypted ? EncryptionService() : null; // coverage:ignore-line
 
-    if (isEncrypted && (passcode == null || passcode.isEmpty)) { // coverage:ignore-line
-
-
-      throw Exception( // coverage:ignore-line
-          "Passcode required for encrypted backup");
+    if (isEncrypted && (passcode == null || passcode.isEmpty)) {
+      // coverage:ignore-line
+      throw Exception(
+          "Passcode required for encrypted backup"); // coverage:ignore-line
     }
 
     dynamic decrypt(dynamic payload) {
-      if (!isEncrypted || payload == null || payload is! String) { // coverage:ignore-line
-
-
+      if (!isEncrypted || payload == null || payload is! String) {
+        // coverage:ignore-line
         return payload;
       }
       try {
@@ -194,8 +192,8 @@ class CloudSyncService {
             encryption!.decryptData(payload, passcode!); // coverage:ignore-line
         return jsonDecode(decryptedString); // coverage:ignore-line
       } catch (e) {
-        throw Exception( // coverage:ignore-line
-            "Incorrect passcode or corrupted data");
+        throw Exception(
+            "Incorrect passcode or corrupted data"); // coverage:ignore-line
       }
     }
 
@@ -233,9 +231,8 @@ class CloudSyncService {
       return await _cloudStorage.fetchData(user.uid);
     } on FirebaseException catch (e) {
       if (e.code.contains('unauthenticated') ||
-          e.code.contains('unavailable')) { // coverage:ignore-line
-
-
+          e.code.contains('unavailable')) {
+        // coverage:ignore-line
         throw Exception("Cloud Restore failed: Connection issues (${e.code})");
       }
       rethrow;
@@ -245,12 +242,10 @@ class CloudSyncService {
   Future<void> _restoreProfiles(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['profiles'] == null) return;
-    // coverage:ignore-start
     final profiles = decrypt(data['profiles']);
     for (var p in (profiles as List)) {
       await _storageService
           .saveProfile(Profile.fromMap(Map<String, dynamic>.from(p)));
-    // coverage:ignore-end
     }
   }
 
@@ -258,29 +253,24 @@ class CloudSyncService {
     if (data['categories'] == null) return;
     // coverage:ignore-start
     for (var c in (data['categories'] as List)) {
-      await _storageService
-          .addCategory(Category.fromMap(Map<String, dynamic>.from(c)));
-    // coverage:ignore-end
+      await _storageService.addCategory(
+          Category.fromMap(Map<String, dynamic>.from(c)),
+          // coverage:ignore-end
+          isRestore: true);
     }
   }
 
   Future<void> _restoreAccounts(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['accounts'] == null) return;
-    // coverage:ignore-start
     final accList = decrypt(data['accounts']);
     for (var a in (accList as List)) {
       final acc = Account.fromMap(Map<String, dynamic>.from(a));
       await _storageService.saveAccount(acc);
-    // coverage:ignore-end
 
-      if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) { // coverage:ignore-line
-
-        await _storageService.initRolloverForImport( // coverage:ignore-line
-
-
-            acc.id, // coverage:ignore-line
-            acc.billingCycleDay!); // coverage:ignore-line
+      if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+        await _storageService.initRolloverForImport(
+            acc.id, acc.billingCycleDay!);
       }
     }
   }
@@ -315,12 +305,10 @@ class CloudSyncService {
   Future<void> _restoreRecurring(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['recurring'] == null) return;
-    // coverage:ignore-start
     final recs = decrypt(data['recurring']);
     for (var rt in (recs as List)) {
       await _storageService.saveRecurringTransaction(
           RecurringTransaction.fromMap(Map<String, dynamic>.from(rt)));
-    // coverage:ignore-end
     }
   }
 
@@ -350,15 +338,12 @@ class CloudSyncService {
   Future<void> _restoreInsurancePolicies(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['insurance_policies'] == null) return;
-    // coverage:ignore-start
     final List<InsurancePolicy> policies = [];
     final insPolicies = decrypt(data['insurance_policies']);
     for (var p in (insPolicies as List)) {
       policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
-    // coverage:ignore-end
     }
-    await _storageService // coverage:ignore-line
-        .saveInsurancePolicies(policies); // coverage:ignore-line
+    await _storageService.saveInsurancePolicies(policies);
   }
 
   Future<void> _restoreTaxRules(
@@ -394,47 +379,38 @@ class CloudSyncService {
   Future<void> _mergeLocalTaxSafety(
       List<TaxYearData> localTaxData, Set<int> restoredTaxYears) async {
     for (final local in localTaxData) {
-      if (!restoredTaxYears.contains(local.year)) { // coverage:ignore-line
-
-
-        await _storageService.saveTaxYearData(local); // coverage:ignore-line
+      if (!restoredTaxYears.contains(local.year)) {
+        await _storageService.saveTaxYearData(local);
         continue;
       }
 
-      final restored =
-          _storageService.getTaxYearData(local.year); // coverage:ignore-line
+      final restored = _storageService.getTaxYearData(local.year);
       if (restored == null) continue;
-      if (restored.salary.grossSalary != 0 || local.salary.grossSalary <= 0) { // coverage:ignore-line
-
-
+      if (restored.salary.history.isNotEmpty || local.salary.history.isEmpty) {
         continue;
       }
 
       // Cloud had empty salary, Local had real salary → merge
-      // coverage:ignore-start
       final merged = restored.copyWith(
         salary: local.salary,
         houseProperties: restored.houseProperties.isEmpty
             ? local.houseProperties
-            : restored.houseProperties,
+            : restored.houseProperties, // coverage:ignore-line
         businessIncomes: restored.businessIncomes.isEmpty
             ? local.businessIncomes
-            : restored.businessIncomes,
-      // coverage:ignore-end
+            : restored.businessIncomes, // coverage:ignore-line
       );
-      await _storageService.saveTaxYearData(merged); // coverage:ignore-line
+      await _storageService.saveTaxYearData(merged);
     }
   }
 
   Future<void> _restoreLendingRecords(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
     if (data['lending_records'] == null) return;
-    // coverage:ignore-start
     final lendings = decrypt(data['lending_records']);
     for (var l in (lendings as List)) {
       await _storageService.saveLendingRecord(
           LendingRecord.fromMap(Map<String, dynamic>.from(l)));
-    // coverage:ignore-end
     }
   }
 
@@ -445,7 +421,7 @@ class CloudSyncService {
     }
     final user = auth.currentUser;
     if (user == null) {
-      throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+      throw Exception(errUserNotLoggedIn);
     }
 
     await _cloudStorage.deleteData(user.uid);

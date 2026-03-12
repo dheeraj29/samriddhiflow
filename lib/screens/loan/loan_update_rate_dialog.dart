@@ -53,7 +53,7 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
           FormUtils.buildDatePickerField(
             context: context,
             selectedDate: _selectedDate,
-            onDateTarget: (d) => // coverage:ignore-line
+            onDateTarget: (d) =>
                 setState(() => _selectedDate = d), // coverage:ignore-line
             label: 'Effective Date',
           ),

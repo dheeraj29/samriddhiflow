@@ -58,7 +58,8 @@ class _RecordLoanPaymentDialogState
           onChanged: (v) => setState(() {
             _type = v!;
             _amountController.text = _type == LoanTransactionType.emi
-                ? widget.loan.emiAmount.toStringAsFixed(2) // coverage:ignore-line
+                ? widget.loan.emiAmount
+                    .toStringAsFixed(2) // coverage:ignore-line
                 : '';
           }),
           child: const Row(
@@ -98,7 +99,8 @@ class _RecordLoanPaymentDialogState
                 return FormUtils.buildAccountSelector(
                   value: _selectedAccountId,
                   accounts: savingsAccounts,
-                  onChanged: (v) => setState(() => _selectedAccountId = v!), // coverage:ignore-line
+                  onChanged: (v) => setState(
+                      () => _selectedAccountId = v!), // coverage:ignore-line
                   label: 'Payment Account (Optional)',
                 );
               },
@@ -109,7 +111,8 @@ class _RecordLoanPaymentDialogState
         FormUtils.buildDatePickerField(
           context: context,
           selectedDate: _date,
-          onDateTarget: (picked) => setState(() => _date = picked), // coverage:ignore-line
+          onDateTarget: (picked) =>
+              setState(() => _date = picked), // coverage:ignore-line
           label: 'Payment Date',
         ),
         const SizedBox(height: 8),
@@ -119,7 +122,8 @@ class _RecordLoanPaymentDialogState
               style: TextStyle(fontWeight: FontWeight.bold)),
           RadioGroup<bool>(
             groupValue: _reduceTenure,
-            onChanged: (v) => setState(() => _reduceTenure = v!), // coverage:ignore-line
+            onChanged: (v) =>
+                setState(() => _reduceTenure = v!), // coverage:ignore-line
             child: const Row(
               children: [
                 Expanded(
@@ -249,9 +253,10 @@ class _RecordLoanPaymentDialogState
       final now = DateTime.now();
       int monthsLeft = (endDate.difference(now).inDays / 30).ceil();
       if (monthsLeft < 1) monthsLeft = 1;
-          // coverage:ignore-end
+      // coverage:ignore-end
 
-      loan.emiAmount = loanService.calculateEMI( // coverage:ignore-line
+      loan.emiAmount = loanService.calculateEMI(
+          // coverage:ignore-line
           principal: newPrincipal,
           annualRate: loan.interestRate, // coverage:ignore-line
           tenureMonths: monthsLeft);

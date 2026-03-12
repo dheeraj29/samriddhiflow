@@ -114,12 +114,36 @@ class Account extends HiveObject {
     };
   }
 
+  Account copyWith({
+    String? id,
+    String? name,
+    AccountType? type,
+    double? balance,
+    String? currency,
+    double? creditLimit,
+    int? billingCycleDay,
+    int? paymentDueDateDay,
+    String? profileId,
+  }) {
+    return Account(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      balance: balance ?? this.balance,
+      currency: currency ?? this.currency,
+      creditLimit: creditLimit ?? this.creditLimit,
+      billingCycleDay: billingCycleDay ?? this.billingCycleDay,
+      paymentDueDateDay: paymentDueDateDay ?? this.paymentDueDateDay,
+      profileId: profileId ?? this.profileId,
+    );
+  }
+
   factory Account.fromMap(Map<String, dynamic> map) {
     double balance = (map['balance'] as num).toDouble();
     if (balance.isInfinite || balance.isNaN) balance = 0.0;
 
     double? creditLimit = (map['creditLimit'] as num?)?.toDouble();
-    if (creditLimit != null && (creditLimit.isInfinite || creditLimit.isNaN)) { // coverage:ignore-line
+    if (creditLimit != null && (creditLimit.isInfinite || creditLimit.isNaN)) {
       creditLimit = 0.0;
     }
 

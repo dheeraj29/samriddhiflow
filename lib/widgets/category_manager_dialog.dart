@@ -129,7 +129,8 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                         child: Text(u.name.toHumanReadable(),
                             style: const TextStyle(fontSize: 13))))
                     .toList(),
-                onChanged: (v) => setState(() => _usage = v!), // coverage:ignore-line
+                onChanged: (v) =>
+                    setState(() => _usage = v!), // coverage:ignore-line
               ),
             ),
             const SizedBox(width: 12),
@@ -149,7 +150,8 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                         child: Text(t.name.toHumanReadable(),
                             style: const TextStyle(fontSize: 13))))
                     .toList(),
-                onChanged: (v) => setState(() => _tag = v!), // coverage:ignore-line
+                onChanged: (v) =>
+                    setState(() => _tag = v!), // coverage:ignore-line
               ),
             ),
           ],
@@ -178,12 +180,14 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: InkWell(
-                    onTap: () => setState(() => _iconCode = code), // coverage:ignore-line
+                    onTap: () => setState(
+                        () => _iconCode = code), // coverage:ignore-line
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: _iconCode == code
-                            ? Colors.blue.withValues(alpha: 0.2) // coverage:ignore-line
+                            ? Colors.blue
+                                .withValues(alpha: 0.2) // coverage:ignore-line
                             : null,
                         border: Border.all(
                             color:
@@ -208,28 +212,51 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
         Expanded(
           child: ElevatedButton(
             onPressed: () async {
-              if (_controller.text.trim().isEmpty) return;
+              final name = _controller.text.trim();
+              if (name.isEmpty) return;
+              if (name.toLowerCase() == 'bank loan') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  // coverage:ignore-line
+                  const SnackBar(
+                      content: Text('Category name "Bank loan" is reserved.')),
+                );
+                return;
+              }
+
+              final allCats = ref.read(categoriesProvider);
+              if (allCats.any((c) =>
+                  c.id != _editingCategoryId &&
+                  c.name.trim().toLowerCase() == name.toLowerCase())) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  // coverage:ignore-line
+                  const SnackBar(content: Text('Category already exists.')),
+                );
+                return;
+              }
+
               if (_editingCategoryId == null) {
                 await ref
                     .read(categoriesProvider.notifier)
                     .addCategory(Category(
                       id: const Uuid().v4(),
-                      name: _controller.text.trim(),
+                      name: name,
                       usage: _usage,
                       tag: _tag,
                       iconCode: _iconCode,
                     ));
               } else {
-                // coverage:ignore-start
                 await ref.read(categoriesProvider.notifier).updateCategory(
-                      _editingCategoryId!,
-                      name: _controller.text.trim(),
+                      // coverage:ignore-line
+                      _editingCategoryId!, // coverage:ignore-line
+                      name: name,
+                      // coverage:ignore-start
                       usage: _usage,
                       tag: _tag,
                       iconCode: _iconCode,
-                // coverage:ignore-end
+                      // coverage:ignore-end
                     );
-                setState(() => _editingCategoryId = null); // coverage:ignore-line
+                setState(
+                    () => _editingCategoryId = null); // coverage:ignore-line
               }
               _controller.clear();
             },
@@ -256,28 +283,39 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 18),
-                  // coverage:ignore-start
-                  onPressed: () {
-                    setState(() {
-                      _editingCategoryId = cat.id;
-                      _controller.text = cat.name;
-                      _usage = cat.usage;
-                      _tag = cat.tag;
-                      _iconCode = cat.iconCode;
-                  // coverage:ignore-end
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                  // coverage:ignore-start
-                  onPressed: () => ref
-                      .read(categoriesProvider.notifier)
-                      .removeCategory(cat.id),
-                  // coverage:ignore-end
-                ),
+                if (cat.name.trim().toLowerCase() != 'bank loan') ...[
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 18),
+                    // coverage:ignore-start
+                    onPressed: () {
+                      setState(() {
+                        _editingCategoryId = cat.id;
+                        _controller.text = cat.name;
+                        _usage = cat.usage;
+                        _tag = cat.tag;
+                        _iconCode = cat.iconCode;
+                        // coverage:ignore-end
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                    // coverage:ignore-start
+                    onPressed: () => ref
+                        .read(categoriesProvider.notifier)
+                        .removeCategory(cat.id),
+                    // coverage:ignore-end
+                  ),
+                ] else
+                  const Padding(
+                    // coverage:ignore-line
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Tooltip(
+                      message: 'System reserved category',
+                      child: Icon(Icons.lock_outline,
+                          size: 18, color: Colors.grey),
+                    ),
+                  ),
               ],
             ),
           );

@@ -86,12 +86,10 @@ class TransactionFilterUtils {
             DateTime(now.year, now.month - 1, 1); // coverage:ignore-line
         final end = DateTime(now.year, now.month, 0); // coverage:ignore-line
         return filtered
-            // coverage:ignore-start
             .where((t) =>
                 t.date.isAfter(start) &&
-                t.date.isBefore(end))
-            .toList();
-            // coverage:ignore-end
+                t.date.isBefore(end)) // coverage:ignore-line
+            .toList(); // coverage:ignore-line
       case TimeRange.custom:
         if (customRange == null) return filtered;
         final start = customRange.start;

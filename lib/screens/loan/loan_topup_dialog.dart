@@ -51,7 +51,8 @@ class _LoanTopupDialogState extends ConsumerState<LoanTopupDialog> {
                   return FormUtils.buildAccountSelector(
                     value: _selectedAccountId ?? 'manual',
                     accounts: accounts,
-                    onChanged: (v) => setState(() => _selectedAccountId = v), // coverage:ignore-line
+                    onChanged: (v) => setState(
+                        () => _selectedAccountId = v), // coverage:ignore-line
                     label: 'Credit to Account',
                     allowManual: true,
                   );
@@ -64,21 +65,22 @@ class _LoanTopupDialogState extends ConsumerState<LoanTopupDialog> {
               style: TextStyle(fontWeight: FontWeight.bold)),
           RadioGroup<bool>(
             groupValue: _updateTenure,
-            onChanged: (v) { // coverage:ignore-line
-              if (v != null) setState(() => _updateTenure = v); // coverage:ignore-line
+            onChanged: (v) {
+              // coverage:ignore-line
+              if (v != null) {
+                setState(() => _updateTenure = v); // coverage:ignore-line
+              }
             },
             child: const Column(
               children: [
                 RadioListTile<bool>.adaptive(
                   title: Text('Adjust EMI'),
-                  subtitle:
-                      Text('Keep Tenure constant. EMI will increase.'),
+                  subtitle: Text('Keep Tenure constant. EMI will increase.'),
                   value: false,
                 ),
                 RadioListTile<bool>.adaptive(
                   title: Text('Adjust Tenure'),
-                  subtitle:
-                      Text('Keep EMI constant. Tenure will increase.'),
+                  subtitle: Text('Keep EMI constant. Tenure will increase.'),
                   value: true,
                 ),
               ],
@@ -175,7 +177,7 @@ class _LoanTopupDialogState extends ConsumerState<LoanTopupDialog> {
         principal: loan.remainingPrincipal,
         annualRate: loan.interestRate,
         emi: loan.emiAmount,
-      // coverage:ignore-end
+        // coverage:ignore-end
       );
     }
 

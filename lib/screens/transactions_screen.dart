@@ -70,36 +70,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   List<Widget> _buildSelectionActions() {
-    final transactionsAsync = ref.watch(transactionsProvider);
-    final accountsAsync = ref.watch(accountsProvider);
     return [
       IconButton(
         icon: PureIcons.selectAll(),
         tooltip: 'Select All (Filtered)',
-        onPressed: () {
-          transactionsAsync.whenData((transactions) {
-            accountsAsync.whenData((accounts) {
-              final filtered = TransactionFilterUtils.filter(
-                transactions: transactions,
-                type: _typeFilter,
-                category: _category,
-                accountId: _selectedAccountId,
-                range: _range,
-                customRange: _customRange,
-              );
-
-              final filteredIds = filtered.map((t) => t.id).toSet();
-              setState(() {
-                if (_selectedIds.containsAll(filteredIds)) {
-                  _selectedIds.removeAll(filteredIds);
-                  if (_selectedIds.isEmpty) _isSelectionMode = false;
-                } else {
-                  _selectedIds.addAll(filteredIds);
-                }
-              });
-            });
-          });
-        },
+        onPressed: _handleSelectAll,
       ),
       IconButton(
         icon: PureIcons.delete(),
@@ -112,11 +87,43 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           setState(() {
             _isSelectionMode = false;
             _selectedIds.clear();
-        // coverage:ignore-end
+            // coverage:ignore-end
           });
         },
       ),
     ];
+  }
+
+  void _handleSelectAll() {
+    final transactionsAsync = ref.read(transactionsProvider);
+    final accountsAsync = ref.read(accountsProvider);
+
+    transactionsAsync.whenData((transactions) {
+      accountsAsync.whenData((accounts) {
+        _applySelection(transactions, accounts);
+      });
+    });
+  }
+
+  void _applySelection(List<Transaction> transactions, List<Account> accounts) {
+    final filtered = TransactionFilterUtils.filter(
+      transactions: transactions,
+      type: _typeFilter,
+      category: _category,
+      accountId: _selectedAccountId,
+      range: _range,
+      customRange: _customRange,
+    );
+
+    final filteredIds = filtered.map((t) => t.id).toSet();
+    setState(() {
+      if (_selectedIds.containsAll(filteredIds)) {
+        _selectedIds.removeAll(filteredIds);
+        if (_selectedIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedIds.addAll(filteredIds);
+      }
+    });
   }
 
   List<Widget> _buildNormalActions() {
@@ -165,7 +172,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         const SizedBox(width: 8),
         IconButton(
           icon: PureIcons.deleteOutlined(size: 20, color: Colors.grey),
-          onPressed: () => // coverage:ignore-line
+          onPressed: () =>
               _confirmSingleDelete(context, txn), // coverage:ignore-line
         ),
       ],
@@ -195,14 +202,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           return accountsAsync.when(
             data: (accounts) => _buildFilteredBody(context, transactions,
                 accounts, categories, allCategories, currencyLocale),
-            loading: () => const Center( // coverage:ignore-line
-                child: CircularProgressIndicator()),
-            error: (e, s) => // coverage:ignore-line
+            loading: () => const Center(
+                child: CircularProgressIndicator()), // coverage:ignore-line
+            error: (e, s) =>
                 Center(child: Text('Error: $e')), // coverage:ignore-line
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => // coverage:ignore-line
+        error: (e, s) =>
             Center(child: Text('Error: $e')), // coverage:ignore-line
       ),
     );
@@ -257,9 +264,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               setState(() {
                 _range = v;
                 _currentPage = 1;
-            // coverage:ignore-end
+                // coverage:ignore-end
               });
-              if (v == TimeRange.custom) { // coverage:ignore-line
+              if (v == TimeRange.custom) {
+                // coverage:ignore-line
                 _selectCustomRange(context); // coverage:ignore-line
               }
             },
@@ -267,19 +275,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             onCategoryChanged: (v) => setState(() {
               _category = v;
               _currentPage = 1;
-            // coverage:ignore-end
+              // coverage:ignore-end
             }),
             // coverage:ignore-start
             onAccountChanged: (v) => setState(() {
               _selectedAccountId = v;
               _currentPage = 1;
-            // coverage:ignore-end
+              // coverage:ignore-end
             }),
             onTypeChanged: (v) => setState(() {
               _typeFilter = v;
               _currentPage = 1;
             }),
-            onCustomRangeTap: () => // coverage:ignore-line
+            onCustomRangeTap: () =>
                 _selectCustomRange(context), // coverage:ignore-line
             customRangeLabel: _customRange != null
                 ? '${DateFormat('MMM dd').format(_customRange!.start)} - ${DateFormat('MMM dd').format(_customRange!.end)}'
@@ -288,8 +296,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         if (transactions.isEmpty)
           const Expanded(child: Center(child: Text('No transactions found.')))
         else if (filtered.isEmpty)
-          const Expanded( // coverage:ignore-line
-
+          const Expanded(
+              // coverage:ignore-line
               child: Center(child: Text('No matches for this filter.')))
         else ...[
           _buildTransactionList(
@@ -297,7 +305,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           PaginationBar(
             safeCurrentPage: safeCurrentPage,
             totalPages: totalPages,
-            onPageChanged: (page) => setState(() => _currentPage = page), // coverage:ignore-line
+            onPageChanged: (page) =>
+                setState(() => _currentPage = page), // coverage:ignore-line
           ),
         ]
       ],
@@ -321,7 +330,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               txn.type == TransactionType.transfer &&
               txn.toAccountId == _selectedAccountId &&
               txn.accountId != txn.toAccountId;
-              // coverage:ignore-end
+          // coverage:ignore-end
 
           return TransactionListItem(
             txn: txn,
@@ -336,16 +345,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             onTap: () {
               if (_isSelectionMode) {
                 _toggleSelection(txn.id);
-            // coverage:ignore-end
+                // coverage:ignore-end
               } else {
-                Navigator.push( // coverage:ignore-line
-
+                Navigator.push(
+                  // coverage:ignore-line
                   context,
                   // coverage:ignore-start
                   MaterialPageRoute(
                     builder: (_) =>
                         AddTransactionScreen(transactionToEdit: txn),
-                  // coverage:ignore-end
+                    // coverage:ignore-end
                   ),
                 );
               }
@@ -358,7 +367,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 });
               }
             },
-            onSelectionChanged: (v) => // coverage:ignore-line
+            onSelectionChanged: (v) =>
                 _toggleSelection(txn.id), // coverage:ignore-line
             trailing:
                 _buildTrailingWidget(txn, isIncomingTransfer, currencyLocale),
@@ -376,7 +385,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               content: const Text('Items will be moved to Recycle Bin.'),
               actions: [
                 TextButton(
-                    onPressed: () => // coverage:ignore-line
+                    onPressed: () =>
                         Navigator.pop(ctx, false), // coverage:ignore-line
                     child: const Text('Cancel')),
                 TextButton(
@@ -404,26 +413,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
   }
 
-  Future<void> _confirmSingleDelete( // coverage:ignore-line
-
+  Future<void> _confirmSingleDelete(
+      // coverage:ignore-line
       BuildContext context,
       Transaction txn) async {
-    final confirm = await showDialog<bool>( // coverage:ignore-line
-
+    final confirm = await showDialog<bool>(
+        // coverage:ignore-line
         context: context,
-        builder: (ctx) => AlertDialog( // coverage:ignore-line
-
+        builder: (ctx) => AlertDialog(
+              // coverage:ignore-line
               title: const Text('Delete Transaction?'),
               content: const Text('This will be moved to Recycle Bin.'),
               // coverage:ignore-start
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-              // coverage:ignore-end
+                    // coverage:ignore-end
                     child: const Text('Cancel')),
-                TextButton( // coverage:ignore-line
-
-                    onPressed: () => // coverage:ignore-line
+                TextButton(
+                    // coverage:ignore-line
+                    onPressed: () =>
                         Navigator.pop(ctx, true), // coverage:ignore-line
                     child: const Text('Delete')),
               ],
@@ -435,7 +444,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       await storage.deleteTransaction(txn.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-    // coverage:ignore-end
+            // coverage:ignore-end
             const SnackBar(content: Text('Moved to Recycle Bin')));
       }
     }
@@ -447,11 +456,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         DateTimeRange(
           start: DateTime.now().subtract(const Duration(days: 7)),
           end: DateTime.now(),
-  // coverage:ignore-end
+          // coverage:ignore-end
         );
 
-    final newRange = await showDateRangePicker( // coverage:ignore-line
-
+    final newRange = await showDateRangePicker(
+      // coverage:ignore-line
       context: context,
       firstDate: DateTime(2020), // coverage:ignore-line
       lastDate:
@@ -465,7 +474,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         _range = TimeRange.custom;
         _customRange = newRange;
         _currentPage = 1;
-      // coverage:ignore-end
+        // coverage:ignore-end
       });
     }
   }
@@ -476,7 +485,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       if (_selectedIds.contains(id)) {
         _selectedIds.remove(id);
         if (_selectedIds.isEmpty) _isSelectionMode = false;
-  // coverage:ignore-end
+        // coverage:ignore-end
       } else {
         _selectedIds.add(id); // coverage:ignore-line
       }

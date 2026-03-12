@@ -49,14 +49,16 @@ class PeriodSelector extends StatelessWidget {
                   onPressed: () {
                     final newDate = selectedPeriod == AnalysisPeriod.month
                         ? DateTime(selectedDate.year, selectedDate.month - 1)
-                        : DateTime(selectedDate.year - 1); // coverage:ignore-line
+                        : DateTime(
+                            selectedDate.year - 1); // coverage:ignore-line
                     onDateChanged(newDate);
                   },
                 ),
                 Text(
                   selectedPeriod == AnalysisPeriod.month
                       ? DateFormat('MMMM yyyy').format(selectedDate)
-                      : DateFormat('yyyy').format(selectedDate), // coverage:ignore-line
+                      : DateFormat('yyyy')
+                          .format(selectedDate), // coverage:ignore-line
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -64,7 +66,8 @@ class PeriodSelector extends StatelessWidget {
                   onPressed: () {
                     final newDate = selectedPeriod == AnalysisPeriod.month
                         ? DateTime(selectedDate.year, selectedDate.month + 1)
-                        : DateTime(selectedDate.year + 1); // coverage:ignore-line
+                        : DateTime(
+                            selectedDate.year + 1); // coverage:ignore-line
                     onDateChanged(newDate);
                   },
                 ),

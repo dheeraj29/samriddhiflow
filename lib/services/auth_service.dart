@@ -50,8 +50,8 @@ class AuthService {
 
     final auth = _auth;
     if (auth == null) {
-      return AuthResponse( // coverage:ignore-line
-
+      return AuthResponse(
+          // coverage:ignore-line
           status: AuthStatus.error,
           message:
               "Firebase Services are not available. Please check your internet connection.");
@@ -67,8 +67,8 @@ class AuthService {
 
   Future<AuthResponse?> _lazyInitFirebase() async {
     try {
-      await Firebase.initializeApp( // coverage:ignore-line
-
+      await Firebase.initializeApp(
+        // coverage:ignore-line
         options: kDebugMode
             ? dev.DefaultFirebaseOptions.currentPlatform
             : prod
@@ -109,17 +109,17 @@ class AuthService {
     }
   }
 
-  Future<AuthResponse> _performNewSignIn(FirebaseAuth auth, dynamic ref) async { // coverage:ignore-line
-
+  Future<AuthResponse> _performNewSignIn(FirebaseAuth auth, dynamic ref) async {
+    // coverage:ignore-line
     try {
       // coverage:ignore-start
       if (isWeb) {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider.setCustomParameters({'prompt': 'select_account'});
-      // coverage:ignore-end
+        // coverage:ignore-end
         try {
-          ConnectivityPlatform.setSessionStorageItem( // coverage:ignore-line
-
+          ConnectivityPlatform.setSessionStorageItem(
+              // coverage:ignore-line
               'auth_redirect_pending',
               'true');
         } catch (_) {}
@@ -128,24 +128,18 @@ class AuthService {
 
       // Optimization: Flag that we are logged in for next startup
       try {
-        // coverage:ignore-start
-        if (_storageService != null) {
-          await _storageService.setAuthFlag(true);
-        } else if (Hive.isBoxOpen('settings')) {
-          await Hive.box('settings').put('isLoggedIn', true);
-        // coverage:ignore-end
-        }
+        await _setLoggedInFlag(true); // coverage:ignore-line
       } catch (_) {}
 
       // Reset logout flag
       if (ref != null) {
-        ref.read(logoutRequestedProvider.notifier).value = // coverage:ignore-line
-            false;
+        ref.read(logoutRequestedProvider.notifier).value =
+            false; // coverage:ignore-line
       }
 
       return AuthResponse(status: AuthStatus.success); // coverage:ignore-line
     } catch (e) {
-      return AuthResponse( // coverage:ignore-line
+      return AuthResponse(
           status: AuthStatus.error,
           message: e.toString()); // coverage:ignore-line
     }
@@ -160,13 +154,7 @@ class AuthService {
       ref.read(logoutRequestedProvider.notifier).value = true;
 
       // 2. Clear local session flag instantly
-      if (_storageService != null) {
-        await _storageService.setAuthFlag(false);
-      } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-
-        await Hive.box('settings') // coverage:ignore-line
-            .put('isLoggedIn', false); // coverage:ignore-line
-      }
+      await _setLoggedInFlag(false);
 
       // 3. Fully Decoupled Background Cleanup
       unawaited(Future(() async {
@@ -180,11 +168,9 @@ class AuthService {
         }
       }));
     } catch (e) {
-      // coverage:ignore-start
       DebugLogger()
-          .log("AuthService: SignOut Error: $e");
-      isSignOutInProgress = false;
-      // coverage:ignore-end
+          .log("AuthService: SignOut Error: $e"); // coverage:ignore-line
+      isSignOutInProgress = false; // coverage:ignore-line
     }
   }
 
@@ -244,9 +230,9 @@ class AuthService {
   Future<void> _setLoggedInFlag(bool value) async {
     if (_storageService != null) {
       await _storageService.setAuthFlag(value);
-    } else if (Hive.isBoxOpen('settings')) { // coverage:ignore-line
-
-      await Hive.box('settings') // coverage:ignore-line
+    } else if (Hive.isBoxOpen('settings')) {
+      // coverage:ignore-line
+      await Hive.box('settings')
           .put('isLoggedIn', value); // coverage:ignore-line
     }
   }

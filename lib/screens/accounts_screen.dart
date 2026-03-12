@@ -11,6 +11,7 @@ import '../widgets/account_card.dart';
 import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
+import '../services/storage_service.dart';
 import 'cc_payment_dialog.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
@@ -44,86 +45,100 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
-    final transactionsAsync = ref.watch(transactionsProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('My Accounts'),
-        actions: [
-          IconButton(
-            icon: _compactView
-                ? PureIcons.listExtended(size: 20)
-                : PureIcons.listCompact(size: 20),
-            tooltip: _compactView
-                ? 'Switch to Extended Numbers'
-                : 'Switch to Compact Numbers',
-            onPressed: () => setState(() => _compactView = !_compactView),
+      appBar: _buildAppBar(context),
+      body: accountsAsync.when(
+        data: (accounts) => _buildBody(context, accounts),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) =>
+            Center(child: Text('Error: $e')), // coverage:ignore-line
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: const Text('My Accounts'),
+      actions: [
+        IconButton(
+          icon: _compactView
+              ? PureIcons.listExtended(size: 20)
+              : PureIcons.listCompact(size: 20),
+          tooltip: _compactView
+              ? 'Switch to Extended Numbers'
+              : 'Switch to Compact Numbers',
+          onPressed: () => setState(() => _compactView = !_compactView),
+        ),
+        IconButton(
+          icon: Icon(
+            ref.watch(showCreditUsageProvider)
+                ? Icons.visibility
+                : Icons.visibility_off,
           ),
-          IconButton(
-            icon: Icon(
-              ref.watch(showCreditUsageProvider)
-                  ? Icons.visibility
-                  : Icons.visibility_off,
-            ),
-            tooltip: ref.watch(showCreditUsageProvider)
-                ? 'Hide Credit Usage'
-                : 'Show Credit Usage',
+          tooltip: ref.watch(showCreditUsageProvider)
+              ? 'Hide Credit Usage'
+              : 'Show Credit Usage',
+          onPressed: () => ref.read(showCreditUsageProvider.notifier).toggle(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(BuildContext context, List<Account> accounts) {
+    if (accounts.isEmpty) {
+      return _buildEmptyState(context);
+    }
+    return _buildAccountList(context, accounts);
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PureIcons.accounts(size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('No accounts found.'),
+          TextButton(
             onPressed: () =>
-                ref.read(showCreditUsageProvider.notifier).toggle(),
+                _showAddAccountSheet(context, ref), // coverage:ignore-line
+            child: const Text('Add Account'),
           ),
         ],
       ),
-      body: accountsAsync.when(
-        data: (accounts) {
-          if (accounts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  PureIcons.accounts(size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('No accounts found.'),
-                  TextButton(
-                    onPressed: () => _showAddAccountSheet(context, ref), // coverage:ignore-line
-                    child: const Text('Add Account'),
-                  ),
-                ],
-              ),
-            );
-          }
+    );
+  }
 
-          final summaryWidget = _buildCreditUsageSummary(
-              context, accounts, transactionsAsync.value ?? []);
+  Widget _buildAccountList(BuildContext context, List<Account> accounts) {
+    final transactionsAsync = ref.watch(transactionsProvider);
+    final summaryWidget = _buildCreditUsageSummary(
+        context, accounts, transactionsAsync.value ?? []);
 
-          return Column(
-            children: [
-              if (summaryWidget != null && ref.watch(showCreditUsageProvider))
-                summaryWidget,
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 220,
-                    childAspectRatio: 0.78,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: accounts.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == accounts.length) {
-                      return _buildAddCard(context, ref);
-                    }
-                    return _buildAccountItem(context, ref, accounts[index]);
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')), // coverage:ignore-line
-      ),
+    return Column(
+      children: [
+        if (summaryWidget != null && ref.watch(showCreditUsageProvider))
+          summaryWidget,
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 220,
+              childAspectRatio: 0.78,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: accounts.length + 1,
+            itemBuilder: (context, index) {
+              if (index == accounts.length) {
+                return _buildAddCard(context, ref);
+              }
+              return _buildAccountItem(context, ref, accounts[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -411,7 +426,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     if (acc.billingCycleDay == null) return false;
     final today = DateTime.now();
     final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month, acc.billingCycleDay!) // coverage:ignore-line
+        ? DateTime(today.year, today.month,
+            acc.billingCycleDay!) // coverage:ignore-line
         : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
 
     final allTxns = ref.read(transactionsProvider).value ?? [];
@@ -422,7 +438,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             t.toAccountId == acc.id &&
             t.type == TransactionType.transfer &&
             t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
-            // coverage:ignore-end
+        // coverage:ignore-end
         .fold(0.0, (sum, t) => sum + t.amount);
 
     final storage = ref.read(storageServiceProvider);
@@ -451,7 +467,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 'This will set the current "Billed Amount" to 0 without recording a payment transaction.'),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context, false), // coverage:ignore-line
+                  onPressed: () =>
+                      Navigator.pop(context, false), // coverage:ignore-line
                   child: const Text('Cancel')),
               TextButton(
                   onPressed: () => Navigator.pop(context, true),
@@ -484,7 +501,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       onTap: () async {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-      // coverage:ignore-end
+          // coverage:ignore-end
           const SnackBar(content: Text('Recalculating bill...')),
         );
         // coverage:ignore-start
@@ -492,7 +509,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Bill recalculated for ${acc.name}.')),
-        // coverage:ignore-end
+            // coverage:ignore-end
           );
         }
         ref.invalidate(accountsProvider); // coverage:ignore-line
@@ -600,74 +617,21 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(widget.account == null ? 'New Account' : 'Edit Account',
-                style: Theme.of(context).textTheme.headlineSmall),
+            _buildHeader(),
             const SizedBox(height: 24),
-            TextFormField(
-              initialValue: _name,
-              decoration: const InputDecoration(labelText: 'Account Name'),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Required';
-                final nameLower = v.trim().toLowerCase();
-                if (nameLower == 'manual' || nameLower == 'deleted account') {
-                  return 'Reserved name';
-                }
-                return null;
-              },
-              onSaved: (v) => _name = v!.trim(),
-            ),
+            _buildNameField(),
             const SizedBox(height: 16),
-            IgnorePointer(
-              ignoring: widget.account != null,
-              child: Opacity(
-                opacity: widget.account != null ? 0.5 : 1.0,
-                child: DropdownButtonFormField<AccountType>(
-                  initialValue: _type,
-                  decoration: const InputDecoration(labelText: 'Type'),
-                  items: AccountType.values
-                      .map((t) => DropdownMenuItem<AccountType>(
-                            value: t,
-                            child: Text(t.name.toUpperCase()),
-                          ))
-                      .toList(),
-                  onChanged: (v) => setState(() => _type = v!), // coverage:ignore-line
-                ),
-              ),
-            ),
+            _buildTypeDropdown(),
             const SizedBox(height: 16),
             if (_type == AccountType.wallet) ...[
               _buildCurrencyDropdown(), // coverage:ignore-line
               const SizedBox(height: 16),
             ],
             const SizedBox(height: 16),
-            TextFormField(
-              initialValue: _initialBalance.toString(),
-              decoration: InputDecoration(
-                labelText: _type == AccountType.creditCard
-                    ? 'Current Balance (Debt)'
-                    : 'Current Balance',
-                prefixText:
-                    '${CurrencyUtils.getSymbol(_type == AccountType.wallet ? _currency : ref.watch(currencyProvider))} ',
-              ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-              ],
-              onSaved: (v) => _initialBalance = double.tryParse(v ?? '') ?? 0,
-            ),
+            _buildBalanceField(),
             if (_type == AccountType.creditCard) ..._buildCreditCardFields(),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Text(
-                  widget.account == null ? 'Create Account' : 'Update Account'),
-            ),
+            _buildSubmitButton(),
             const SizedBox(height: 32),
           ],
         ),
@@ -675,13 +639,85 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     );
   }
 
+  Widget _buildHeader() {
+    return Text(widget.account == null ? 'New Account' : 'Edit Account',
+        style: Theme.of(context).textTheme.headlineSmall);
+  }
+
+  Widget _buildNameField() {
+    return TextFormField(
+      initialValue: _name,
+      decoration: const InputDecoration(labelText: 'Account Name'),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Required';
+        final nameLower = v.trim().toLowerCase();
+        if (nameLower == 'manual' || nameLower == 'deleted account') {
+          return 'Reserved name';
+        }
+        return null;
+      },
+      onSaved: (v) => _name = v!.trim(),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return IgnorePointer(
+      ignoring: widget.account != null,
+      child: Opacity(
+        opacity: widget.account != null ? 0.5 : 1.0,
+        child: DropdownButtonFormField<AccountType>(
+          initialValue: _type,
+          decoration: const InputDecoration(labelText: 'Type'),
+          items: AccountType.values
+              .map((t) => DropdownMenuItem<AccountType>(
+                    value: t,
+                    child: Text(t.name.toUpperCase()),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _type = v!), // coverage:ignore-line
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceField() {
+    return TextFormField(
+      initialValue: _initialBalance.toString(),
+      decoration: InputDecoration(
+        labelText: _type == AccountType.creditCard
+            ? 'Current Balance (Debt)'
+            : 'Current Balance',
+        prefixText:
+            '${CurrencyUtils.getSymbol(_type == AccountType.wallet ? _currency : ref.watch(currencyProvider))} ',
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+      ],
+      onSaved: (v) => _initialBalance = double.tryParse(v ?? '') ?? 0,
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return ElevatedButton(
+      onPressed: _save,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF6C63FF),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: Text(widget.account == null ? 'Create Account' : 'Update Account'),
+    );
+  }
+
   // coverage:ignore-start
   Widget _buildCurrencyDropdown() {
     return DropdownButtonFormField<String>(
       initialValue: _currency,
-  // coverage:ignore-end
+      // coverage:ignore-end
       decoration: const InputDecoration(labelText: 'Currency'),
-      items: { // coverage:ignore-line
+      items: {
+        // coverage:ignore-line
         'en_US': 'US Dollar (\$)',
         'en_IN': 'Indian Rupee (₹)',
         'en_GB': 'British Pound (£)',
@@ -695,84 +731,149 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
           .map((e) => DropdownMenuItem(
                 value: e.key,
                 child: Text(e.value),
-          // coverage:ignore-end
+                // coverage:ignore-end
               ))
           .toList(), // coverage:ignore-line
       onChanged: (v) => setState(() => _currency = v!), // coverage:ignore-line
     );
   }
 
-  List<Widget> _buildCreditCardFields() { // coverage:ignore-line
-    return [ // coverage:ignore-line
+  List<Widget> _buildCreditCardFields() {
+    // coverage:ignore-line
+    return [
+      // coverage:ignore-line
       const SizedBox(height: 16),
-      // coverage:ignore-start
-      TextFormField(
-        initialValue: _limit?.toString(),
-        decoration: InputDecoration(
-      // coverage:ignore-end
-          labelText: 'Credit Limit',
-          prefixText:
-              '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ', // coverage:ignore-line
-        ),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [ // coverage:ignore-line
-          FilteringTextInputFormatter.allow(RegexUtils.amountExp) // coverage:ignore-line
-        ],
-        validator: (v) => v!.isEmpty ? 'Required' : null, // coverage:ignore-line
-        onSaved: (v) => _limit = double.tryParse(v ?? '') ?? 0, // coverage:ignore-line
-      ),
+      _buildLimitField(), // coverage:ignore-line
       const SizedBox(height: 16),
-      Row( // coverage:ignore-line
-        crossAxisAlignment: CrossAxisAlignment.start,
-        // coverage:ignore-start
-        children: [
-          Expanded(
-            child: TextFormField(
-              initialValue: _billingDay?.toString(),
-        // coverage:ignore-end
-              decoration: const InputDecoration(
-                  labelText: 'Bill Gen. Day',
-                  hintText: 'e.g. 15',
-                  helperText: 'Day of month'),
-              keyboardType: TextInputType.number,
-              // coverage:ignore-start
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (v) {
-                if (v!.isEmpty) return 'Req';
-                final d = int.tryParse(v);
-                if (d == null || d < 1 || d > 31) return '1-31';
-              // coverage:ignore-end
-                return null;
-              },
-              onSaved: (v) => _billingDay = int.tryParse(v ?? ''), // coverage:ignore-line
-            ),
-          ),
-          const SizedBox(width: 16),
-          // coverage:ignore-start
-          Expanded(
-            child: TextFormField(
-              initialValue: _dueDay?.toString(),
-          // coverage:ignore-end
-              decoration: const InputDecoration(
-                  labelText: 'Payment Due Day',
-                  hintText: 'e.g. 5',
-                  helperText: 'Day of month'),
-              keyboardType: TextInputType.number,
-              // coverage:ignore-start
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (v) {
-                if (v!.isEmpty) return 'Req';
-                final d = int.tryParse(v);
-                if (d == null || d < 1 || d > 31) return '1-31';
-              // coverage:ignore-end
-                return null;
-              },
-              onSaved: (v) => _dueDay = int.tryParse(v ?? ''), // coverage:ignore-line
-            ),
-          ),
-        ],
-      )
+      _buildBillingCycleFields(), // coverage:ignore-line
     ];
+  }
+
+  // coverage:ignore-start
+  Widget _buildLimitField() {
+    return TextFormField(
+      initialValue: _limit?.toString(),
+      decoration: InputDecoration(
+        // coverage:ignore-end
+        labelText: 'Credit Limit',
+        prefixText:
+            '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ', // coverage:ignore-line
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        // coverage:ignore-line
+        FilteringTextInputFormatter.allow(
+            RegexUtils.amountExp) // coverage:ignore-line
+      ],
+      validator: (v) => v!.isEmpty ? 'Required' : null, // coverage:ignore-line
+      onSaved: (v) =>
+          _limit = double.tryParse(v ?? '') ?? 0, // coverage:ignore-line
+    );
+  }
+
+  Widget _buildBillingCycleFields() {
+    // coverage:ignore-line
+    return Row(
+      // coverage:ignore-line
+      crossAxisAlignment: CrossAxisAlignment.start,
+      // coverage:ignore-start
+      children: [
+        Expanded(
+          child: TextFormField(
+            initialValue: _billingDay?.toString(),
+            // coverage:ignore-end
+            decoration: const InputDecoration(
+                labelText: 'Bill Gen. Day',
+                hintText: 'e.g. 15',
+                helperText: 'Day of month'),
+            keyboardType: TextInputType.number,
+            // coverage:ignore-start
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            validator: (v) {
+              if (v!.isEmpty) return 'Req';
+              final d = int.tryParse(v);
+              if (d == null || d < 1 || d > 31) return '1-31';
+              // coverage:ignore-end
+              return null;
+            },
+            onSaved: (v) =>
+                _billingDay = int.tryParse(v ?? ''), // coverage:ignore-line
+          ),
+        ),
+        const SizedBox(width: 16),
+        // coverage:ignore-start
+        Expanded(
+          child: TextFormField(
+            initialValue: _dueDay?.toString(),
+            // coverage:ignore-end
+            decoration: const InputDecoration(
+                labelText: 'Payment Due Day',
+                hintText: 'e.g. 5',
+                helperText: 'Day of month'),
+            keyboardType: TextInputType.number,
+            // coverage:ignore-start
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            validator: (v) {
+              if (v!.isEmpty) return 'Req';
+              final d = int.tryParse(v);
+              if (d == null || d < 1 || d > 31) return '1-31';
+              // coverage:ignore-end
+              return null;
+            },
+            onSaved: (v) =>
+                _dueDay = int.tryParse(v ?? ''), // coverage:ignore-line
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _shouldKeepBilledStatus(StorageService storage) {
+    if (widget.account == null ||
+        widget.account!.type !=
+            AccountType.creditCard || // coverage:ignore-line
+        _billingDay == null) {
+      // coverage:ignore-line
+      return false;
+    }
+
+    // coverage:ignore-start
+    final lastRollover = storage.getLastRollover(widget.account!.id);
+    final allTxns = ref.read(transactionsProvider).value ?? [];
+    final currentBilled = BillingHelper.calculateBilledAmount(
+        widget.account!, allTxns, DateTime.now(), lastRollover);
+    // coverage:ignore-end
+
+    return currentBilled == 0 &&
+        widget.account!.billingCycleDay != _billingDay; // coverage:ignore-line
+  }
+
+  Future<void> _createOrUpdateAccount(
+      StorageService storage, bool keepBilledStatus) async {
+    if (widget.account != null) {
+      // coverage:ignore-start
+      final acc = widget.account!;
+      acc.name = _name;
+      acc.balance = _initialBalance;
+      acc.creditLimit = _limit;
+      acc.billingCycleDay = _billingDay;
+      acc.paymentDueDateDay = _dueDay;
+      acc.currency = _currency;
+      await storage.saveAccount(acc, keepBilledStatus: keepBilledStatus);
+      // coverage:ignore-end
+    } else {
+      final newAccount = Account.create(
+        name: _name,
+        type: _type,
+        initialBalance: _initialBalance,
+        currency: _currency,
+        creditLimit: _limit,
+        billingCycleDay: _billingDay,
+        paymentDueDateDay: _dueDay,
+        profileId: ref.read(activeProfileIdProvider),
+      );
+      await storage.saveAccount(newAccount);
+    }
   }
 
   void _save() async {
@@ -780,50 +881,9 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       _formKey.currentState!.save();
       final storage = ref.read(storageServiceProvider);
 
-      // Smart Update Logic: Check if we need to preserve "Billed = 0" status
-      bool keepBilledStatus = false;
-      if (widget.account != null &&
-          // coverage:ignore-start
-          widget.account!.type == AccountType.creditCard &&
-          _billingDay != null) {
-        final lastRollover = storage.getLastRollover(widget.account!.id);
-        final allTxns = ref.read(transactionsProvider).value ?? [];
-        final now = DateTime.now();
-        final currentBilled = BillingHelper.calculateBilledAmount(
-            widget.account!, allTxns, now, lastRollover);
-          // coverage:ignore-end
+      bool keepBilledStatus = _shouldKeepBilledStatus(storage);
+      await _createOrUpdateAccount(storage, keepBilledStatus);
 
-        if (currentBilled == 0 && // coverage:ignore-line
-            widget.account!.billingCycleDay != _billingDay) { // coverage:ignore-line
-          keepBilledStatus = true;
-        }
-      }
-
-      if (widget.account != null) {
-        // coverage:ignore-start
-        final acc = widget.account!;
-        acc.name = _name;
-        acc.balance = _initialBalance;
-        acc.creditLimit = _limit;
-        acc.billingCycleDay = _billingDay;
-        acc.paymentDueDateDay = _dueDay;
-        acc.currency = _currency;
-        await storage.saveAccount(acc, keepBilledStatus: keepBilledStatus);
-        // coverage:ignore-end
-      } else {
-        final profileId = ref.read(activeProfileIdProvider);
-        final newAccount = Account.create(
-          name: _name,
-          type: _type,
-          initialBalance: _initialBalance,
-          currency: _currency,
-          creditLimit: _limit,
-          billingCycleDay: _billingDay,
-          paymentDueDateDay: _dueDay,
-          profileId: profileId,
-        );
-        await storage.saveAccount(newAccount);
-      }
       ref.invalidate(accountsProvider);
       if (mounted) Navigator.pop(context);
     }

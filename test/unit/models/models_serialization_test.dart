@@ -33,16 +33,21 @@ void main() {
 
   group('Tax Data Models Serialization', () {
     test('SalaryDetails', () {
-      const data = SalaryDetails(
-        grossSalary: 500000,
+      final data = SalaryDetails(
+        history: [
+          SalaryStructure(
+            id: 's1',
+            effectiveDate: DateTime(2024, 4, 1),
+            monthlyBasic: 500000 / 12,
+          )
+        ],
         npsEmployer: 20000,
         leaveEncashment: 50000,
         gratuity: 100000,
-        giftsFromEmployer: 4000,
       );
       final map = data.toMap();
       final fromMap = SalaryDetails.fromMap(map);
-      expect(fromMap.grossSalary, 500000);
+      expect(fromMap.history.length, 1);
       expect(fromMap.gratuity, 100000);
     });
 
@@ -111,21 +116,21 @@ void main() {
     });
     test('CustomAllowance', () {
       const allowance = CustomAllowance(
+        id: 'a1',
         name: 'Bonus',
-        payoutAmount: 50000,
-        frequency: PayoutFrequency.annually,
-        startMonth: 3,
+        payoutAmount: 12000,
+        frequency: PayoutFrequency.monthly,
       );
 
       final map = allowance.toMap();
       expect(map['name'], 'Bonus');
-      expect(map['payoutAmount'], 50000.0);
-      expect(map['frequency'], PayoutFrequency.annually.index);
+      expect(map['payoutAmount'], 12000.0);
+      expect(map['frequency'], PayoutFrequency.monthly.index);
 
       final fromMap = CustomAllowance.fromMap(map);
       expect(fromMap.name, 'Bonus');
-      expect(fromMap.payoutAmount, 50000.0);
-      expect(fromMap.frequency, PayoutFrequency.annually);
+      expect(fromMap.payoutAmount, 12000.0);
+      expect(fromMap.frequency, PayoutFrequency.monthly);
     });
 
     test('CustomAllowance monthlyAmount backward compatibility (fromMap)', () {
@@ -144,7 +149,11 @@ void main() {
           effectiveDate: DateTime(2024, 4, 1),
           monthlyBasic: 50000,
           customAllowances: const [
-            CustomAllowance(name: 'A1', payoutAmount: 100)
+            CustomAllowance(
+                id: 'test-id',
+                name: 'A1',
+                payoutAmount: 100,
+                frequency: PayoutFrequency.monthly)
           ]);
       final map = ss.toMap();
       final fromMap = SalaryStructure.fromMap(map);
@@ -176,7 +185,18 @@ void main() {
     test('TaxYearData full serialization', () {
       final data = TaxYearData(
         year: 2024,
-        salary: const SalaryDetails(grossSalary: 100),
+        salary: SalaryDetails(
+          history: [
+            SalaryStructure(
+              id: 's1',
+              effectiveDate: DateTime(2024, 4, 1),
+              monthlyBasic: 100 / 12,
+            )
+          ],
+          independentExemptions: const [
+            CustomExemption(id: 'e1', name: 'Rent', amount: 10000),
+          ],
+        ),
         houseProperties: const [HouseProperty(name: 'HP1', interestOnLoan: 50)],
         businessIncomes: const [BusinessEntity(name: 'B1')],
         capitalGains: [
@@ -184,18 +204,21 @@ void main() {
               gainDate: DateTime.now(), saleAmount: 20, costOfAcquisition: 10)
         ],
         otherIncomes: const [OtherIncome(name: 'O1', amount: 500)],
-        tdsEntries: [TaxPaymentEntry(date: DateTime.now(), amount: 100)],
+        tdsEntries: [
+          TaxPaymentEntry(id: 't1', date: DateTime.now(), amount: 100)
+        ],
       );
 
       final map = data.toMap();
       final fromMap = TaxYearData.fromMap(map);
 
       expect(fromMap.year, 2024);
-      expect(fromMap.salary.grossSalary, 100);
+      expect(fromMap.salary.history.length, 1);
       expect(fromMap.houseProperties.length, 1);
       expect(fromMap.businessIncomes.length, 1);
       expect(fromMap.capitalGains.length, 1);
       expect(fromMap.tdsEntries.length, 1);
+      expect(fromMap.salary.independentExemptions.length, 1);
     });
   });
 

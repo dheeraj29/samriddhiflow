@@ -56,7 +56,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
         PaginationBar(
           safeCurrentPage: paginationResult.currentPage,
           totalPages: paginationResult.totalPages,
-          onPageChanged: (page) => setState(() => _currentPage = page), // coverage:ignore-line
+          onPageChanged: (page) =>
+              setState(() => _currentPage = page), // coverage:ignore-line
         ),
       ],
     );
@@ -75,7 +76,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
               t.date
                   .isBefore(_filterDateRange!.end.add(const Duration(days: 1))))
           .toList();
-          // coverage:ignore-end
+      // coverage:ignore-end
     }
     txns.sort((a, b) => b.date.compareTo(a.date));
     return txns;
@@ -126,7 +127,9 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
             IconButton(
               icon: PureIcons.icon(Icons.date_range,
                   color: _filterDateRange != null
-                      ? Theme.of(context).colorScheme.primary // coverage:ignore-line
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primary // coverage:ignore-line
                       : null),
               onPressed: () => _showFilterDateDialog(), // coverage:ignore-line
               tooltip: 'Filter by Date',
@@ -252,7 +255,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
               setState(() {
                 _filterType = null;
                 _currentPage = 1;
-            // coverage:ignore-end
+                // coverage:ignore-end
               });
               Navigator.pop(context); // coverage:ignore-line
             },
@@ -280,14 +283,14 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2030),
       initialDateRange: _filterDateRange,
-  // coverage:ignore-end
+      // coverage:ignore-end
     );
     if (range != null) {
       // coverage:ignore-start
       setState(() {
         _filterDateRange = range;
         _currentPage = 1;
-      // coverage:ignore-end
+        // coverage:ignore-end
       });
     }
   }
@@ -311,7 +314,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                 ),
                 actions: [
                   TextButton(
-                      onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+                      onPressed: () =>
+                          Navigator.pop(ctx, false), // coverage:ignore-line
                       child: const Text('Cancel')),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
@@ -324,13 +328,14 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
         var loan = widget.loan;
         // Reverse Impact
         if (txn.type == LoanTransactionType.emi ||
-            txn.type == LoanTransactionType.prepayment) { // coverage:ignore-line
+            txn.type == LoanTransactionType.prepayment) {
+          // coverage:ignore-line
           loan.remainingPrincipal += txn.principalComponent;
-        // coverage:ignore-start
+          // coverage:ignore-start
         } else if (txn.type == LoanTransactionType.topup) {
           loan.remainingPrincipal -= txn.amount;
           loan.totalPrincipal -= txn.amount;
-        // coverage:ignore-end
+          // coverage:ignore-end
         }
 
         // Remove

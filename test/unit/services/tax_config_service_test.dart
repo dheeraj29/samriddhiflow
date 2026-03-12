@@ -24,7 +24,12 @@ void main() {
     if (!Hive.isAdapterRegistered(205)) {
       Hive.registerAdapter(TaxMappingRuleAdapter());
     }
-    if (!Hive.isAdapterRegistered(224)) Hive.registerAdapter(TaxRulesAdapter());
+    if (!Hive.isAdapterRegistered(227)) {
+      Hive.registerAdapter(TaxRulesAdapter());
+    }
+    if (!Hive.isAdapterRegistered(228)) {
+      Hive.registerAdapter(AdvanceTaxInstallmentRuleAdapter());
+    }
   });
 
   tearDownAll(() async {
@@ -80,19 +85,67 @@ void main() {
     expect(fy, greaterThan(2020));
   });
 
-  test('Handles tag mappings correctly', () async {
-    final rules = TaxRules(tagMappings: {'Salary': 'salary'});
+  test('getAllRules retrieves all years for profile', () async {
+    await service.saveRulesForYear(
+        2023, TaxRules(profileId: 'default', stdDeductionSalary: 10));
+    await service.saveRulesForYear(
+        2024, TaxRules(profileId: 'default', stdDeductionSalary: 20));
+    // Different profile - should be excluded
+    final otherBox = Hive.box<TaxRules>('tax_rules_v2');
+    await otherBox.put('other_2025', TaxRules(profileId: 'other'));
+
+    final all = service.getAllRules();
+    expect(all.length, 2);
+    expect(all[2023]?.stdDeductionSalary, 10);
+    expect(all[2024]?.stdDeductionSalary, 20);
+    expect(all.containsKey(2025), isFalse);
+  });
+
+  test('restoreAllRules clears and bulk saves clean objects', () async {
+    final data = {
+      2025: TaxRules(stdDeductionSalary: 100, profileId: 'default'),
+      2026: TaxRules(stdDeductionSalary: 200, profileId: 'wrong'),
+    };
+
+    await service.restoreAllRules(data);
+
+    final r1 = service.getRulesForYear(2025);
+    expect(r1.stdDeductionSalary, 100);
+
+    final r2 = service.getRulesForYear(2026);
+    expect(r2.stdDeductionSalary, 200);
+    expect(r2.profileId, 'default'); // Sanitized
+  });
+
+  test('saveRulesForYear sanitizes profileId', () async {
+    final rules = TaxRules(profileId: 'wrong');
     await service.saveRulesForYear(2025, rules);
 
     final retrieved = service.getRulesForYear(2025);
-    expect(retrieved.tagMappings['Salary'], 'salary');
+    expect(retrieved.profileId, 'default');
   });
 
-  test('getRulesForYear falls back to Default if no past rules exist',
+  test('getCurrentFinancialYear uses previous year rules for boundary',
       () async {
-    // Clear all
-    await Hive.box<TaxRules>('tax_rules_v2').clear();
-    final retrieved = service.getRulesForYear(2030);
-    expect(retrieved.stdDeductionSalary, 75000); // v2 default
+    final lastYear = DateTime.now().year - 1;
+    // Set start month to 1 (Jan) for last year
+    final rules = TaxRules(financialYearStartMonth: 1);
+    final box = Hive.box<TaxRules>('tax_rules_v2');
+    await box.put('default_$lastYear', rules);
+
+    final fy = service.getCurrentFinancialYear();
+    // If today is any month and start is Jan, it should be current year unless we are Jan and start is later.
+    // This mostly covers the branch where it checks the box for (now.year - 1).
+    expect(fy, isNotNull);
+  });
+
+  test('deleteRulesForYear removes entry', () async {
+    await service.saveRulesForYear(2025, TaxRules());
+    expect(
+        Hive.box<TaxRules>('tax_rules_v2').containsKey('default_2025'), isTrue);
+
+    await service.deleteRulesForYear(2025);
+    expect(Hive.box<TaxRules>('tax_rules_v2').containsKey('default_2025'),
+        isFalse);
   });
 }

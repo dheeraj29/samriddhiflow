@@ -235,7 +235,7 @@ class Loan extends HiveObject {
             .where((t) => t.type == LoanTransactionType.rateChange)
             .reduce((a, b) => a.date.isAfter(b.date) ? a : b)
             .amount;
-        // coverage:ignore-end
+    // coverage:ignore-end
   }
 
   double calculateAccruedInterest() {
@@ -248,7 +248,7 @@ class Loan extends HiveObject {
                 t.type == LoanTransactionType.prepayment)
             .map((t) => t.date)
             .reduce((a, b) => a.isAfter(b) ? a : b);
-        // coverage:ignore-end
+    // coverage:ignore-end
     final daysElapsed = DateTime.now().difference(lastPaymentDate).inDays;
 
     return (remainingPrincipal * currentRate * daysElapsed) / (365.0 * 100.0);

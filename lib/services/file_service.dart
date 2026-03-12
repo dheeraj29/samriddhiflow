@@ -10,6 +10,11 @@ import '../utils/file_picker_wrapper.dart';
 import '../utils/connectivity_platform.dart';
 
 class FileService {
+  @visibleForTesting
+  bool forceWebForTest = false;
+  @visibleForTesting
+  bool forceAndroidForTest = false;
+
   final FilePickerWrapper _picker;
 
   FileService({FilePickerWrapper? picker})
@@ -20,12 +25,12 @@ class FileService {
   /// On Windows: Saves to the Downloads folder.
   /// On Android: Requests permissions and saves to the Downloads/Documents folder.
   Future<String?> saveFile(String fileName, List<int> bytes) async {
-    if (kIsWeb) {
-      return _saveFileWeb(fileName, bytes); // coverage:ignore-line
-    } else if (Platform.isWindows) {
+    if (kIsWeb || forceWebForTest) {
+      return _saveFileWeb(fileName, bytes);
+    } else if (Platform.isWindows && !forceAndroidForTest) {
       return _saveFileWindows(fileName, bytes);
-    } else if (Platform.isAndroid) { // coverage:ignore-line
-      return _saveFileAndroid(fileName, bytes); // coverage:ignore-line
+    } else if (Platform.isAndroid || forceAndroidForTest) {
+      return _saveFileAndroid(fileName, bytes);
     }
     return null;
   }
@@ -45,15 +50,21 @@ class FileService {
   }
 
   // --- PRIVATE WEB LOGIC ---
-  Future<String> _saveFileWeb(String fileName, List<int> bytes) async { // coverage:ignore-line
-    return ConnectivityPlatform.saveFileWeb(fileName, bytes); // coverage:ignore-line
+  Future<String> _saveFileWeb(String fileName, List<int> bytes) async {
+    return ConnectivityPlatform.saveFileWeb(fileName, bytes);
   }
 
   // --- PRIVATE WINDOWS LOGIC ---
   Future<String> _saveFileWindows(String fileName, List<int> bytes) async {
     try {
-      final directory = await getDownloadsDirectory() ??
-          await getApplicationDocumentsDirectory(); // coverage:ignore-line
+      Directory? directory;
+      try {
+        directory = await getDownloadsDirectory();
+      } catch (_) {
+        // Downloads directory not supported on this platform (e.g. Windows in some versions of path_provider)
+      }
+      directory ??= await getApplicationDocumentsDirectory();
+
       final path = "${directory.path}\\$fileName";
       final file = File(path);
       await file.writeAsBytes(bytes);
@@ -64,14 +75,15 @@ class FileService {
   }
 
   // --- PRIVATE ANDROID LOGIC ---
-  Future<String> _saveFileAndroid(String fileName, List<int> bytes) async { // coverage:ignore-line
+  Future<String> _saveFileAndroid(String fileName, List<int> bytes) async {
     try {
       // Android 13+ doesn't need storage permission for media, but for generic files we might.
       // For simplicity and compatibility:
-      if (await Permission.storage.request().isGranted) { // coverage:ignore-line
+      if (await Permission.storage.request().isGranted) {
         // use getExternalStorageDirectory or path_provider's equivalent
         // Use path_provider to get safe application directory (Sonar Compliant)
-        final directory = await getApplicationSupportDirectory(); // coverage:ignore-line
+        final directory =
+            await getApplicationSupportDirectory(); // coverage:ignore-line
 
         // coverage:ignore-start
         final path = "${directory.path}/$fileName";
@@ -79,16 +91,16 @@ class FileService {
         return "Saved to: $path";
         // coverage:ignore-end
       } else {
-        throw Exception("Storage permission denied"); // coverage:ignore-line
+        throw Exception("Storage permission denied");
       }
     } catch (e) {
       // Allow testing on Desktop/Web where Permission handler might throw PlatformException
       if (kIsWeb ||
-          // coverage:ignore-start
+          forceWebForTest ||
           Platform.isWindows ||
-          Platform.isLinux ||
+          Platform.isLinux || // coverage:ignore-line
           Platform.isMacOS) {
-          // coverage:ignore-end
+        // coverage:ignore-line
         rethrow;
       }
       throw Exception("Android save failed: $e"); // coverage:ignore-line

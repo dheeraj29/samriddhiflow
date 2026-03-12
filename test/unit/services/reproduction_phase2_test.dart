@@ -45,6 +45,7 @@ void main() {
         ],
         independentExemptions: [
           const CustomExemption(
+            id: 'test-id',
             name: 'Huge Planning',
             amount: 200000, // Should save ~20k in tax (10% bracket mostly)
           )
@@ -78,7 +79,7 @@ void main() {
   });
 
   test('Model Serialization: CustomExemption simple toMap/fromMap', () {
-    const ex = CustomExemption(name: 'Test', amount: 5000);
+    const ex = CustomExemption(id: 'e1', name: 'Test', amount: 5000);
     final map = ex.toMap();
     final back = CustomExemption.fromMap(map);
 

@@ -31,13 +31,14 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       holdingTenureMonths: (fields[11] as num?)?.toInt(),
       gainAmount: (fields[12] as num?)?.toDouble(),
       profileId: fields[13] as String?,
+      taxSync: fields[14] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Transaction obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -65,7 +66,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       ..writeByte(12)
       ..write(obj.gainAmount)
       ..writeByte(13)
-      ..write(obj.profileId);
+      ..write(obj.profileId)
+      ..writeByte(14)
+      ..write(obj.taxSync);
   }
 
   @override

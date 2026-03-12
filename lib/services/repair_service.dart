@@ -22,7 +22,7 @@ abstract class RepairJob {
   String get id;
   String get name;
   String get description;
-  bool get showInSettings => true; // coverage:ignore-line
+  bool get showInSettings => true;
   Future<int> run(RefReader ref, {Map<String, dynamic>? args});
 }
 
@@ -77,12 +77,53 @@ class RepairAccountCurrencyJob extends RepairJob {
   }
 }
 
+class RepairTaxSyncJob extends RepairJob {
+  @override
+  String get id => 'repair_tax_sync';
+  @override
+  String get name => 'Reset Tax Sync Flags';
+  @override
+  String get description =>
+      'Resets the "taxSync" flag on all transactions, allowing a fresh "Smart Sync" in Taxes to pick them up again.';
+
+  @override
+  Future<int> run(RefReader ref, {Map<String, dynamic>? args}) async {
+    final storage = ref.read(storageServiceProvider);
+    final txns = storage.getAllTransactions();
+    final ids = txns.map((t) => t.id).cast<String>().toList();
+
+    if (ids.isNotEmpty) {
+      await storage.updateTransactionsTaxSync(ids, false);
+    }
+    return ids.length;
+  }
+}
+
+class RepairDefaultCategoriesJob extends RepairJob {
+  @override
+  String get id => 'repair_default_categories';
+  @override
+  String get name => 'Restore Default Categories';
+  @override
+  String get description =>
+      'Re-adds any missing default categories for your active profile. Your custom categories are preserved.';
+
+  @override
+  Future<int> run(RefReader ref, {Map<String, dynamic>? args}) async {
+    final storage = ref.read(storageServiceProvider);
+    final profileId = storage.getActiveProfileId();
+    return await storage.repairDefaultCategories(profileId);
+  }
+}
+
 final repairServiceProvider = Provider((ref) => RepairService());
 
 class RepairService {
   final List<RepairJob> jobs = [
     RepairAccountCurrencyJob(),
     RecalculateBilledAmountJob(),
+    RepairTaxSyncJob(),
+    RepairDefaultCategoriesJob(),
   ];
 
   RepairJob getJob(String id) {

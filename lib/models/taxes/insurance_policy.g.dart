@@ -27,13 +27,14 @@ class InsurancePolicyAdapter extends TypeAdapter<InsurancePolicy> {
       isUnitLinked: fields[7] == null ? false : fields[7] as bool,
       isHandicapDependent: fields[8] == null ? false : fields[8] as bool,
       isTaxExempt: fields[9] as bool?,
+      profileId: fields[10] == null ? 'default' : fields[10] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, InsurancePolicy obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class InsurancePolicyAdapter extends TypeAdapter<InsurancePolicy> {
       ..writeByte(8)
       ..write(obj.isHandicapDependent)
       ..writeByte(9)
-      ..write(obj.isTaxExempt);
+      ..write(obj.isTaxExempt)
+      ..writeByte(10)
+      ..write(obj.profileId);
   }
 
   @override

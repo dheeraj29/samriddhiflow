@@ -235,22 +235,22 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
             ),
             const SizedBox(height: 16),
             InkWell(
-              onTap: () async { // coverage:ignore-line
-
-                final d = await showDatePicker( // coverage:ignore-line
-
+              onTap: () async {
+                // coverage:ignore-line
+                final d = await showDatePicker(
+                    // coverage:ignore-line
                     context: context,
                     // coverage:ignore-start
                     initialDate: selectedDate,
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2030));
-                    // coverage:ignore-end
+                // coverage:ignore-end
                 if (d != null) {
                   // coverage:ignore-start
                   setState(() {
                     selectedDate = d;
                     dateController.text = DateFormat('yyyy-MM-dd').format(d);
-                  // coverage:ignore-end
+                    // coverage:ignore-end
                   });
                 }
               },

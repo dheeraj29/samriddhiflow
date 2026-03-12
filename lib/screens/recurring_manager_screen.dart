@@ -58,14 +58,14 @@ class RecurringManagerScreen extends ConsumerWidget {
                       IconButton(
                         icon: PureIcons.calendar(color: Colors.blueGrey),
                         tooltip: 'Add to System Calendar',
-                        onPressed: () { // coverage:ignore-line
-
+                        onPressed: () {
+                          // coverage:ignore-line
                           ref
                               // coverage:ignore-start
                               .read(calendarServiceProvider)
                               .downloadRecurringEvent(
                                 title: rule.title,
-                              // coverage:ignore-end
+                                // coverage:ignore-end
                                 description:
                                     'Recurring payment: ${rule.title} for ${currency.format(rule.amount)}', // coverage:ignore-line
                                 startDate: rule
@@ -92,7 +92,7 @@ class RecurringManagerScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => // coverage:ignore-line
+        error: (e, s) =>
             Center(child: Text('Error: $e')), // coverage:ignore-line
       ),
     );
@@ -105,11 +105,9 @@ class RecurringManagerScreen extends ConsumerWidget {
     return switch (rule.scheduleType) {
       ScheduleType.fixedDate =>
         '$freqStr - Every ${rule.nextExecutionDate.day}${_getDaySuffix(rule.nextExecutionDate.day)}',
-      ScheduleType.everyWeekend => // coverage:ignore-line
-        'Every Weekend (Sat/Sun)',
-      ScheduleType.lastWeekend => // coverage:ignore-line
-        'Last Weekend of Month',
       // coverage:ignore-start
+      ScheduleType.everyWeekend => 'Every Weekend (Sat/Sun)',
+      ScheduleType.lastWeekend => 'Last Weekend of Month',
       ScheduleType.specificWeekday =>
         'Every ${_getWeekdayName(rule.selectedWeekday ?? 1)}',
       ScheduleType.lastDayOfMonth => 'Last Day of Month$adjText',
@@ -133,8 +131,8 @@ class RecurringManagerScreen extends ConsumerWidget {
     }
   }
 
-  String _getWeekdayName(int day) { // coverage:ignore-line
-
+  String _getWeekdayName(int day) {
+    // coverage:ignore-line
     const names = [
       '',
       'Monday',
@@ -158,7 +156,7 @@ class RecurringManagerScreen extends ConsumerWidget {
                   'This will stop automatic payments for "${rule.title}". Past transactions will NOT be deleted.'),
               actions: [
                 TextButton(
-                    onPressed: () => // coverage:ignore-line
+                    onPressed: () =>
                         Navigator.pop(context, false), // coverage:ignore-line
                     child: const Text('Cancel')),
                 TextButton(
@@ -207,7 +205,7 @@ class RecurringManagerScreen extends ConsumerWidget {
               final val = double.tryParse(controller.text);
               if (val != null && val > 0) {
                 Navigator.pop(context, val);
-            // coverage:ignore-end
+                // coverage:ignore-end
               }
             },
             child: const Text('Save'),

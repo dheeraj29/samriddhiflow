@@ -161,7 +161,8 @@ void main() {
 
     when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
     when(() => mockStorageService.saveProfile(any())).thenAnswer((_) async {});
-    when(() => mockStorageService.addCategory(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.addCategory(any(),
+        isRestore: any(named: 'isRestore'))).thenAnswer((_) async {});
     when(() => mockStorageService.saveAccount(any())).thenAnswer((_) async {});
     when(() => mockStorageService.saveTransaction(any(),
         applyImpact: any(named: 'applyImpact'))).thenAnswer((_) async {});
@@ -184,10 +185,12 @@ void main() {
     // Verify
     verify(() => mockStorageService.clearAllData()).called(1);
     verify(() => mockStorageService.saveProfile(any())).called(1);
-    verify(() => mockStorageService.addCategory(any())).called(1);
-    verify(() => mockStorageService.saveAccount(any())).called(1);
-    verify(() => mockStorageService.saveTransaction(any(), applyImpact: false))
-        .called(1);
+    verify(() => mockStorageService.addCategory(any(),
+        isRestore: any(named: 'isRestore'))).called(1);
+    verify(() => mockStorageService.saveAccount(any(),
+        keepBilledStatus: any(named: 'keepBilledStatus'))).called(1);
+    verify(() => mockStorageService.saveTransaction(any(),
+        applyImpact: false, now: any(named: 'now'))).called(1);
     verify(() => mockStorageService.saveSettings(any())).called(1);
 
     expect(stats['profiles'], 1);

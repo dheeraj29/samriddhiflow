@@ -202,11 +202,16 @@ void main() {
     });
 
     test('AppLock PIN get/set/enabled', () async {
+      const pin1234Hash =
+          '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+      const pin5678Hash =
+          'f8638b979b2f4f793ddb6dbd197e0ee25a7a6ea32b0ae22f5e3c5d119d839e75';
+
       await storageService.setAppPin('1234');
-      expect(storageService.getAppPin(), '1234');
+      expect(storageService.getAppPin(), pin1234Hash);
 
       await storageService.setAppPin('5678');
-      expect(storageService.getAppPin(), '5678');
+      expect(storageService.getAppPin(), pin5678Hash);
 
       await storageService.setAppLockEnabled(true);
       expect(storageService.isAppLockEnabled(), true);
@@ -303,12 +308,13 @@ void main() {
     });
 
     test('TaxData store/retrieve', () async {
-      const tax = TaxYearData(year: 2024);
+      const tax = TaxYearData(year: 2024, profileId: 'default');
       when(() => mockTaxBox.get(2024)).thenReturn(tax);
+      when(() => mockTaxBox.values).thenReturn([tax]);
       expect(storageService.getTaxYearData(2024), tax);
 
       await storageService.saveTaxYearData(tax);
-      verify(() => mockTaxBox.put(2024, any())).called(1);
+      verify(() => mockTaxBox.put('default_2024', any())).called(1);
     });
 
     test('InsurancePolicy CRUD', () async {
@@ -320,12 +326,14 @@ void main() {
         sumAssured: 1000,
         startDate: DateTime.now(),
         maturityDate: DateTime.now().add(const Duration(days: 365)),
+        profileId: 'default',
       );
       when(() => mockInsuranceBox.values).thenReturn([policy]);
+      when(() => mockInsuranceBox.toMap()).thenReturn({'pol1': policy});
       expect(storageService.getInsurancePolicies().length, 1);
 
       await storageService.saveInsurancePolicies([]);
-      verify(() => mockInsuranceBox.clear()).called(1);
+      verify(() => mockInsuranceBox.delete('pol1')).called(1);
     });
   });
 

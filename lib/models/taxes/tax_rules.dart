@@ -19,6 +19,9 @@ class TaxExemptionRule {
   @HiveField(5)
   final String id; // Unique ID for mapping
 
+  @HiveField(6)
+  final bool isCliffExemption;
+
   const TaxExemptionRule({
     required this.id,
     required this.name,
@@ -26,24 +29,27 @@ class TaxExemptionRule {
     required this.limit,
     this.isPercentage = false,
     this.isEnabled = true,
+    this.isCliffExemption = false,
   });
-  TaxExemptionRule copyWith({ // coverage:ignore-line
+  TaxExemptionRule copyWith({
     String? id,
     String? name,
     String? incomeHead,
     double? limit,
     bool? isPercentage,
     bool? isEnabled,
+    bool? isCliffExemption,
   }) {
-    // coverage:ignore-start
     return TaxExemptionRule(
+      // coverage:ignore-start
       id: id ?? this.id,
       name: name ?? this.name,
       incomeHead: incomeHead ?? this.incomeHead,
       limit: limit ?? this.limit,
       isPercentage: isPercentage ?? this.isPercentage,
       isEnabled: isEnabled ?? this.isEnabled,
-    // coverage:ignore-end
+      isCliffExemption: isCliffExemption ?? this.isCliffExemption,
+      // coverage:ignore-end
     );
   }
 
@@ -54,6 +60,7 @@ class TaxExemptionRule {
         'limit': limit,
         'isPercentage': isPercentage,
         'isEnabled': isEnabled,
+        'isCliffExemption': isCliffExemption,
       };
 
   factory TaxExemptionRule.fromMap(Map<String, dynamic> m) => TaxExemptionRule(
@@ -61,9 +68,10 @@ class TaxExemptionRule {
             'rule_${DateTime.now().millisecondsSinceEpoch}', // Fallback for old data
         name: m['name'] ?? '',
         incomeHead: m['incomeHead'] ?? '',
-        limit: (m['limit'] as num?)?.toDouble() ?? 0.0,
-        isPercentage: m['isPercentage'] ?? false,
-        isEnabled: m['isEnabled'] ?? true,
+        limit: double.tryParse(m['limit']?.toString() ?? '0') ?? 0,
+        isPercentage: m['isPercentage'] as bool? ?? false,
+        isEnabled: m['isEnabled'] as bool? ?? true,
+        isCliffExemption: m['isCliffExemption'] as bool? ?? false,
       );
 }
 
@@ -137,32 +145,30 @@ class TaxMappingRule {
     this.minHoldingMonths,
   });
 
-  TaxMappingRule copyWith({ // coverage:ignore-line
+  TaxMappingRule copyWith({
     String? categoryName,
     String? taxHead,
     List<String>? matchDescriptions,
     List<String>? excludeDescriptions,
     int? minHoldingMonths,
   }) {
-    // coverage:ignore-start
     return TaxMappingRule(
-      categoryName: categoryName ?? this.categoryName,
-      taxHead: taxHead ?? this.taxHead,
+      categoryName: categoryName ?? this.categoryName, // coverage:ignore-line
+      taxHead: taxHead ?? this.taxHead, // coverage:ignore-line
       matchDescriptions: matchDescriptions ?? this.matchDescriptions,
-      excludeDescriptions: excludeDescriptions ?? this.excludeDescriptions,
-      minHoldingMonths: minHoldingMonths ?? this.minHoldingMonths,
-    // coverage:ignore-end
+      excludeDescriptions: excludeDescriptions ??
+          this.excludeDescriptions, // coverage:ignore-line
+      minHoldingMonths:
+          minHoldingMonths ?? this.minHoldingMonths, // coverage:ignore-line
     );
   }
 
-  // coverage:ignore-start
   Map<String, dynamic> toMap() => {
         'categoryName': categoryName,
         'taxHead': taxHead,
         'matchDescriptions': matchDescriptions,
         'excludeDescriptions': excludeDescriptions,
         'minHoldingMonths': minHoldingMonths,
-  // coverage:ignore-end
       };
 
   factory TaxMappingRule.fromMap(Map<String, dynamic> m) => TaxMappingRule(
@@ -171,6 +177,69 @@ class TaxMappingRule {
         matchDescriptions: List<String>.from(m['matchDescriptions'] ?? []),
         excludeDescriptions: List<String>.from(m['excludeDescriptions'] ?? []),
         minHoldingMonths: m['minHoldingMonths'],
+      );
+}
+
+@HiveType(typeId: 228)
+class AdvanceTaxInstallmentRule {
+  @HiveField(0)
+  final int startMonth;
+  @HiveField(1)
+  final int startDay;
+  @HiveField(2)
+  final int endMonth;
+  @HiveField(3)
+  final int endDay;
+  @HiveField(4)
+  final double requiredPercentage;
+  @HiveField(5)
+  final double interestRate;
+
+  const AdvanceTaxInstallmentRule({
+    required this.startMonth,
+    required this.startDay,
+    required this.endMonth,
+    required this.endDay,
+    required this.requiredPercentage,
+    required this.interestRate,
+  });
+
+  AdvanceTaxInstallmentRule copyWith({
+    int? startMonth,
+    int? startDay,
+    int? endMonth,
+    int? endDay,
+    double? requiredPercentage,
+    double? interestRate,
+  }) {
+    return AdvanceTaxInstallmentRule(
+      startMonth: startMonth ?? this.startMonth, // coverage:ignore-line
+      startDay: startDay ?? this.startDay,
+      endMonth: endMonth ?? this.endMonth,
+      endDay: endDay ?? this.endDay,
+      requiredPercentage:
+          requiredPercentage ?? this.requiredPercentage, // coverage:ignore-line
+      interestRate: interestRate ?? this.interestRate,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'startMonth': startMonth,
+        'startDay': startDay,
+        'endMonth': endMonth,
+        'endDay': endDay,
+        'requiredPercentage': requiredPercentage,
+        'interestRate': interestRate,
+      };
+
+  factory AdvanceTaxInstallmentRule.fromMap(Map<String, dynamic> m) =>
+      AdvanceTaxInstallmentRule(
+        startMonth: m['startMonth'] as int? ?? 1,
+        startDay: m['startDay'] as int? ?? 1,
+        endMonth: m['endMonth'] as int? ?? 12,
+        endDay: m['endDay'] as int? ?? 31,
+        requiredPercentage: (m['requiredPercentage'] as num?)?.toDouble() ?? 0,
+        interestRate: (m['interestRate'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -187,26 +256,22 @@ class TaxRules {
   @HiveField(2)
   final double stdExemption112A;
 
-  // @HiveField(3) - Removed legacyReserved
-
-  @HiveField(4)
+  @HiveField(3)
   final double ltcgRateEquity;
 
-  @HiveField(5)
+  @HiveField(4)
   final double stcgRate;
 
-  @HiveField(6)
+  @HiveField(5)
   final double windowGainReinvest;
 
-  // @HiveField(7) - Removed legacyReservedInt
-
-  @HiveField(8)
+  @HiveField(6)
   final Map<String, String> tagMappings;
 
-  @HiveField(12)
+  @HiveField(7)
   final double limitGratuity;
 
-  @HiveField(13)
+  @HiveField(8)
   final double limitLeaveEncashment;
 
   @HiveField(9)
@@ -219,104 +284,155 @@ class TaxRules {
   @HiveField(11)
   final double cessRate; // e.g. 4.0
 
-  @HiveField(14)
-  final double maxCGReinvestLimit; // 10 Cr limit u/s 54/54F
+  @HiveField(12)
+  final double maxCGReinvestLimit; // 10 Cr limit
 
-  @HiveField(15)
+  @HiveField(13)
   final double
       maxHPDeductionLimit; // Custom Rule: Max deduction for Municipal Tax + 30% Std
 
-  @HiveField(16)
+  @HiveField(14)
   final double standardDeductionRateHP; // Default 30.0
 
   // --- INSURANCE CUSTOMIZATION ---
-  @HiveField(17)
+  @HiveField(15)
   final double limitInsuranceULIP; // Default 2.5L
-  @HiveField(18)
+  @HiveField(16)
   final DateTime dateEffectiveULIP; // Default Feb 1, 2021
 
-  @HiveField(19)
+  @HiveField(17)
   final double limitInsuranceNonULIP; // Default 5.0L
-  @HiveField(20)
+  @HiveField(18)
   final DateTime dateEffectiveNonULIP; // Default Apr 1, 2023
 
-  @HiveField(21)
+  @HiveField(19)
   final List<TaxExemptionRule> customExemptions;
 
-  @HiveField(22)
+  @HiveField(20)
   final String jurisdiction; // 'India', 'USA', etc.
 
-  @HiveField(23)
+  @HiveField(21)
   final double cashGiftExemptionLimit; // Default 50000 for India
 
   // --- NEW INSURANCE PREMIUM LIMITS (Replacing single fields) ---
-  @HiveField(24)
+  @HiveField(22)
   final List<InsurancePremiumRule> insurancePremiumRules;
 
   // --- EXEMPTION TOGGLES ---
-  // @HiveField(25) - Removed legacyToggle1
-  @HiveField(26)
+  @HiveField(23)
   final bool isCashGiftExemptionEnabled;
 
-  @HiveField(27)
+  @HiveField(24)
   final double agricultureIncomeThreshold; // Default 5000
-  @HiveField(28)
+  @HiveField(25)
   final double agricultureBasicExemptionLimit; // Default 400,000
 
-  @HiveField(29)
+  @HiveField(26)
   final String customJurisdictionName;
-  @HiveField(30)
+  @HiveField(27)
   final bool isStdDeductionSalaryEnabled;
-  @HiveField(31)
+  @HiveField(28)
   final bool isStdDeductionHPEnabled;
-  @HiveField(32)
+  @HiveField(29)
   final bool isCessEnabled;
-  @HiveField(33)
+  @HiveField(30)
   final bool isRebateEnabled;
-  @HiveField(34)
+  @HiveField(31)
   final bool isLTCGExemption112AEnabled;
-  @HiveField(35)
+  @HiveField(32)
   final bool isInsuranceExemptionEnabled;
-  @HiveField(36)
+  @HiveField(33)
   final bool isInsuranceAggregateLimitEnabled;
-  @HiveField(37)
+  @HiveField(34)
   final bool isInsurancePremiumPercentEnabled;
-  @HiveField(38)
+  @HiveField(35)
   final bool isRetirementExemptionEnabled;
-  @HiveField(39)
+  @HiveField(36)
   final bool isHPMaxInterestEnabled;
-  @HiveField(40)
+  @HiveField(37)
   final bool isCGReinvestmentEnabled;
-  @HiveField(41)
+  @HiveField(38)
   final bool isCGRatesEnabled;
-  @HiveField(42)
+  @HiveField(39)
   final bool isAgriIncomeEnabled;
 
-  @HiveField(43)
+  @HiveField(40)
   final List<TaxMappingRule> advancedTagMappings;
 
-  @HiveField(44)
+  @HiveField(41)
   final int financialYearStartMonth; // Default 4 (April)
 
-  @HiveField(45)
+  @HiveField(42)
   final double giftFromEmployerExemptionLimit; // Default 5000
 
-  @HiveField(46)
+  @HiveField(43)
   final bool isGiftFromEmployerEnabled;
 
-  @HiveField(47)
+  @HiveField(44)
   final bool is44ADEnabled;
-  @HiveField(48)
+  @HiveField(45)
   final double limit44AD;
-  @HiveField(49)
+  @HiveField(46)
   final double rate44AD;
 
-  @HiveField(50)
+  @HiveField(47)
   final bool is44ADAEnabled;
-  @HiveField(51)
+  @HiveField(48)
   final double limit44ADA;
-  @HiveField(52)
+  @HiveField(49)
   final double rate44ADA;
+
+  @HiveField(50)
+  final List<AdvanceTaxInstallmentRule> advanceTaxRules;
+  @HiveField(51)
+  final bool enableAdvanceTaxInterest;
+  @HiveField(52)
+  final List<String> taxableGiftKeys;
+  @HiveField(53)
+  final bool interestTillPaymentDate;
+  @HiveField(54)
+  final String profileId;
+  @HiveField(55)
+  final int advanceTaxReminderDays;
+  @HiveField(56)
+  final double advanceTaxInterestThreshold;
+  @HiveField(57)
+  final bool isCgIncludedInAdvanceTax;
+
+  static const List<AdvanceTaxInstallmentRule> defaultAdvanceTaxRules = [
+    AdvanceTaxInstallmentRule(
+      startMonth: 4,
+      startDay: 1,
+      endMonth: 6,
+      endDay: 15,
+      requiredPercentage: 15.0,
+      interestRate: 1.0,
+    ),
+    AdvanceTaxInstallmentRule(
+      startMonth: 6,
+      startDay: 16,
+      endMonth: 9,
+      endDay: 15,
+      requiredPercentage: 45.0,
+      interestRate: 1.0,
+    ),
+    AdvanceTaxInstallmentRule(
+      startMonth: 9,
+      startDay: 16,
+      endMonth: 12,
+      endDay: 15,
+      requiredPercentage: 75.0,
+      interestRate: 1.0,
+    ),
+    AdvanceTaxInstallmentRule(
+      startMonth: 12,
+      startDay: 16,
+      endMonth: 3,
+      endDay: 15,
+      requiredPercentage: 100.0,
+      interestRate: 1.0,
+    ),
+  ];
 
   TaxRules({
     this.currencyLimit10_10D = 500000,
@@ -377,6 +493,14 @@ class TaxRules {
     this.is44ADAEnabled = true,
     this.limit44ADA = 5000000,
     this.rate44ADA = 50.0,
+    this.advanceTaxRules = defaultAdvanceTaxRules,
+    this.enableAdvanceTaxInterest = true,
+    this.taxableGiftKeys = const ['friend', 'other'],
+    this.interestTillPaymentDate = false,
+    this.profileId = 'default',
+    this.advanceTaxReminderDays = 15,
+    this.advanceTaxInterestThreshold = 10000.0,
+    this.isCgIncludedInAdvanceTax = false,
   })  : dateEffectiveULIP = dateEffectiveULIP ?? DateTime(2021, 2, 1),
         dateEffectiveNonULIP = dateEffectiveNonULIP ?? DateTime(2023, 4, 1),
         insurancePremiumRules = insurancePremiumRules ??
@@ -438,6 +562,14 @@ class TaxRules {
     bool? is44ADAEnabled,
     double? limit44ADA,
     double? rate44ADA,
+    List<AdvanceTaxInstallmentRule>? advanceTaxRules,
+    bool? enableAdvanceTaxInterest,
+    List<String>? taxableGiftKeys,
+    bool? interestTillPaymentDate,
+    String? profileId,
+    int? advanceTaxReminderDays,
+    double? advanceTaxInterestThreshold,
+    bool? isCgIncludedInAdvanceTax,
   }) {
     return TaxRules(
       currencyLimit10_10D: currencyLimit10_10D ?? this.currencyLimit10_10D,
@@ -510,6 +642,19 @@ class TaxRules {
       is44ADAEnabled: is44ADAEnabled ?? this.is44ADAEnabled,
       limit44ADA: limit44ADA ?? this.limit44ADA,
       rate44ADA: rate44ADA ?? this.rate44ADA,
+      advanceTaxRules: advanceTaxRules ?? this.advanceTaxRules,
+      enableAdvanceTaxInterest:
+          enableAdvanceTaxInterest ?? this.enableAdvanceTaxInterest,
+      taxableGiftKeys: taxableGiftKeys ?? this.taxableGiftKeys,
+      interestTillPaymentDate:
+          interestTillPaymentDate ?? this.interestTillPaymentDate,
+      profileId: profileId ?? this.profileId,
+      advanceTaxReminderDays:
+          advanceTaxReminderDays ?? this.advanceTaxReminderDays,
+      advanceTaxInterestThreshold:
+          advanceTaxInterestThreshold ?? this.advanceTaxInterestThreshold,
+      isCgIncludedInAdvanceTax:
+          isCgIncludedInAdvanceTax ?? this.isCgIncludedInAdvanceTax,
     );
   }
 
@@ -567,6 +712,14 @@ class TaxRules {
         'is44ADAEnabled': is44ADAEnabled,
         'limit44ADA': limit44ADA,
         'rate44ADA': rate44ADA,
+        'advanceTaxRules': advanceTaxRules.map((e) => e.toMap()).toList(),
+        'enableAdvanceTaxInterest': enableAdvanceTaxInterest,
+        'taxableGiftKeys': taxableGiftKeys,
+        'interestTillPaymentDate': interestTillPaymentDate,
+        'profileId': profileId,
+        'advanceTaxReminderDays': advanceTaxReminderDays,
+        'advanceTaxInterestThreshold': advanceTaxInterestThreshold,
+        'isCgIncludedInAdvanceTax': isCgIncludedInAdvanceTax,
       };
 
   factory TaxRules.fromMap(Map<String, dynamic> m) {
@@ -586,7 +739,7 @@ class TaxRules {
       slabs: (m['slabs'] as List?)
               ?.map((e) => TaxSlab.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
-          [], // coverage:ignore-line
+          [],
       rebateLimit: (m['rebateLimit'] as num?)?.toDouble() ?? 1200000,
       cessRate: (m['cessRate'] as num?)?.toDouble() ?? 4.0,
       maxCGReinvestLimit:
@@ -649,6 +802,20 @@ class TaxRules {
       is44ADAEnabled: m['is44ADAEnabled'] ?? true,
       limit44ADA: (m['limit44ADA'] as num?)?.toDouble() ?? 5000000,
       rate44ADA: (m['rate44ADA'] as num?)?.toDouble() ?? 50.0,
+      advanceTaxRules: (m['advanceTaxRules'] as List?)
+              ?.map((e) => AdvanceTaxInstallmentRule.fromMap(
+                  Map<String, dynamic>.from(e)))
+              .toList() ??
+          defaultAdvanceTaxRules,
+      enableAdvanceTaxInterest: m['enableAdvanceTaxInterest'] ?? true,
+      taxableGiftKeys: (m['taxableGiftKeys'] as List?)?.cast<String>() ??
+          ['friend', 'other'],
+      interestTillPaymentDate: m['interestTillPaymentDate'] ?? false,
+      profileId: m['profileId'] ?? 'default',
+      advanceTaxReminderDays: m['advanceTaxReminderDays'] ?? 15,
+      advanceTaxInterestThreshold:
+          (m['advanceTaxInterestThreshold'] as num?)?.toDouble() ?? 10000.0,
+      isCgIncludedInAdvanceTax: m['isCgIncludedInAdvanceTax'] as bool? ?? false,
     );
   }
 }
