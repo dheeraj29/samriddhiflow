@@ -23,9 +23,22 @@ import '../utils/billing_helper.dart';
 const dateFormatMmmDd = 'MMM dd';
 const payNowText = 'PAY NOW';
 const dateFormatMmmDdYyyy = 'MMM dd, yyyy';
+const upComingLoanEMIsText = 'Upcoming Loan EMIs';
+const creditCardBillsText = 'Credit Card Bills';
+const recurringPaymentsText = 'Recurring Payments';
 
-class RemindersScreen extends ConsumerWidget {
+class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key});
+
+  @override
+  ConsumerState<RemindersScreen> createState() => _RemindersScreenState();
+}
+
+class _RemindersScreenState extends ConsumerState<RemindersScreen> {
+  bool _isLoanExpanded = false;
+  bool _isCCExpanded = false;
+  bool _isRecurringExpanded = false;
+  bool _isTaxExpanded = false;
 
   (Color, String, IconData) _getCCPaymentStatus(
       bool isFullyPaid, bool isPartiallyPaid, bool isOverdue) {
@@ -40,12 +53,15 @@ class RemindersScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final loansAsync = ref.watch(loansProvider);
     final accountsAsync = ref.watch(accountsProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
     final recurringAsync = ref.watch(recurringTransactionsProvider);
     final currencyLocale = ref.watch(currencyProvider);
     final currency = NumberFormat.simpleCurrency(locale: currencyLocale);
+    final now = clock.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reminders & Notifications')),
@@ -54,55 +70,219 @@ class RemindersScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle(
-                context, 'Upcoming Loan EMIs', Icons.account_balance),
             loansAsync.when(
-              data: (loans) =>
-                  _buildLoanReminders(context, ref, loans, currency),
-              loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              data: (loans) => _buildExpandableSection(
+                context: context,
+                title: upComingLoanEMIsText,
+                icon: Icons.account_balance,
+                isExpanded: _isLoanExpanded,
+                onToggle: () =>
+                    setState(() => _isLoanExpanded = !_isLoanExpanded),
+                pendingCount: _countPendingLoans(loans, today),
+                child: _buildLoanReminders(context, ref, loans, currency),
+              ),
+              loading: () => _buildExpandableSection(
+                context: context,
+                title: upComingLoanEMIsText,
+                icon: Icons.account_balance,
+                isExpanded: _isLoanExpanded,
+                onToggle: () => // coverage:ignore-line
+                    setState(() => _isLoanExpanded =
+                        !_isLoanExpanded), // coverage:ignore-line
+                pendingCount: 0,
+                child: const CircularProgressIndicator(),
+              ),
+              error: (e, s) => _buildExpandableSection(
+                // coverage:ignore-line
+                context: context,
+                title: upComingLoanEMIsText,
+                icon: Icons.account_balance,
+                // coverage:ignore-start
+                isExpanded: _isLoanExpanded,
+                onToggle: () =>
+                    setState(() => _isLoanExpanded = !_isLoanExpanded),
+                // coverage:ignore-end
+                pendingCount: 0,
+                child: Text('Error: $e'), // coverage:ignore-line
+              ),
             ),
             const SizedBox(height: 24),
-            _buildSectionTitle(context, 'Credit Card Bills', Icons.credit_card),
             accountsAsync.when(
-              data: (accounts) => ref.watch(transactionsProvider).when(
-                    data: (txns) => _buildCCReminders(
-                        context, ref, accounts, currency, txns),
-                    loading: () => const CircularProgressIndicator(),
-                    error: (e, s) => Text('Error: $e'), // coverage:ignore-line
-                  ),
-              loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              data: (accounts) => transactionsAsync.when(
+                data: (txns) => _buildExpandableSection(
+                  context: context,
+                  title: creditCardBillsText,
+                  icon: Icons.credit_card,
+                  isExpanded: _isCCExpanded,
+                  onToggle: () =>
+                      setState(() => _isCCExpanded = !_isCCExpanded),
+                  pendingCount: _countPendingCreditCards(accounts, txns, now),
+                  child:
+                      _buildCCReminders(context, ref, accounts, currency, txns),
+                ),
+                loading: () => _buildExpandableSection(
+                  // coverage:ignore-line
+                  context: context,
+                  title: creditCardBillsText,
+                  icon: Icons.credit_card,
+                  // coverage:ignore-start
+                  isExpanded: _isCCExpanded,
+                  onToggle: () =>
+                      setState(() => _isCCExpanded = !_isCCExpanded),
+                  // coverage:ignore-end
+                  pendingCount: 0,
+                  child: const CircularProgressIndicator(),
+                ),
+                error: (e, s) => _buildExpandableSection(
+                  // coverage:ignore-line
+                  context: context,
+                  title: creditCardBillsText,
+                  icon: Icons.credit_card,
+                  // coverage:ignore-start
+                  isExpanded: _isCCExpanded,
+                  onToggle: () =>
+                      setState(() => _isCCExpanded = !_isCCExpanded),
+                  // coverage:ignore-end
+                  pendingCount: 0,
+                  child: Text('Error: $e'), // coverage:ignore-line
+                ),
+              ),
+              loading: () => _buildExpandableSection(
+                context: context,
+                title: creditCardBillsText,
+                icon: Icons.credit_card,
+                isExpanded: _isCCExpanded,
+                onToggle: () => setState(() =>
+                    _isCCExpanded = !_isCCExpanded), // coverage:ignore-line
+                pendingCount: 0,
+                child: const CircularProgressIndicator(),
+              ),
+              error: (e, s) => _buildExpandableSection(
+                // coverage:ignore-line
+                context: context,
+                title: creditCardBillsText,
+                icon: Icons.credit_card,
+                isExpanded: _isCCExpanded, // coverage:ignore-line
+                onToggle: () => setState(() =>
+                    _isCCExpanded = !_isCCExpanded), // coverage:ignore-line
+                pendingCount: 0,
+                child: Text('Error: $e'), // coverage:ignore-line
+              ),
             ),
             const SizedBox(height: 24),
-            _buildSectionTitle(context, 'Recurring Payments', Icons.repeat),
             recurringAsync.when(
-              data: (recurring) =>
-                  _buildRecurringReminders(context, ref, recurring, currency),
-              loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+              data: (recurring) => _buildExpandableSection(
+                context: context,
+                title: recurringPaymentsText,
+                icon: Icons.repeat,
+                isExpanded: _isRecurringExpanded,
+                onToggle: () => setState(
+                    () => _isRecurringExpanded = !_isRecurringExpanded),
+                pendingCount: _countPendingRecurring(recurring, today),
+                child:
+                    _buildRecurringReminders(context, ref, recurring, currency),
+              ),
+              loading: () => _buildExpandableSection(
+                context: context,
+                title: recurringPaymentsText,
+                icon: Icons.repeat,
+                isExpanded: _isRecurringExpanded,
+                onToggle: () => setState(// coverage:ignore-line
+                    () => _isRecurringExpanded =
+                        !_isRecurringExpanded), // coverage:ignore-line
+                pendingCount: 0,
+                child: const CircularProgressIndicator(),
+              ),
+              error: (e, s) => _buildExpandableSection(
+                // coverage:ignore-line
+                context: context,
+                title: recurringPaymentsText,
+                icon: Icons.repeat,
+                // coverage:ignore-start
+                isExpanded: _isRecurringExpanded,
+                onToggle: () => setState(
+                    () => _isRecurringExpanded = !_isRecurringExpanded),
+                // coverage:ignore-end
+                pendingCount: 0,
+                child: Text('Error: $e'), // coverage:ignore-line
+              ),
             ),
             const SizedBox(height: 24),
-            _buildTaxReminders(context, ref, currency),
+            _buildTaxSection(context, currency),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          PureIcons.icon(icon, color: Theme.of(context).primaryColor),
-          const SizedBox(width: 8),
-          Text(title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-        ],
+  Widget _buildExpandableSection({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required bool isExpanded,
+    required VoidCallback onToggle,
+    required int pendingCount,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                PureIcons.icon(icon, color: theme.primaryColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(title,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                if (!isExpanded && pendingCount > 0)
+                  _buildPendingCountBadge(pendingCount),
+                AnimatedRotation(
+                  turns: isExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.expand_more,
+                      color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: child,
+          ),
+          crossFadeState:
+              isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPendingCountBadge(int count) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.red.shade100,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        count.toString(),
+        style: TextStyle(
+          color: Colors.red.shade700,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -545,11 +725,15 @@ class RemindersScreen extends ConsumerWidget {
 
   Widget _buildRecurringReminders(BuildContext context, WidgetRef ref,
       List<RecurringTransaction> recurring, NumberFormat currency) {
-    final active = recurring.where((r) => r.isActive).toList();
-    if (active.isEmpty) return const Text('No active recurring payments.');
+    final now = clock.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = recurring
+        .where((r) => r.isActive && !_isRecurringInFuture(r, today))
+        .toList();
+    if (due.isEmpty) return const Text('No due recurring payments.');
 
     return Column(
-      children: active.map((r) {
+      children: due.map((r) {
         return _buildRecurringCard(context, ref, r, currency);
       }).toList(),
     );
@@ -720,38 +904,110 @@ class RemindersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaxReminders(
-      BuildContext context, WidgetRef ref, NumberFormat currency) {
+  Widget _buildTaxSection(BuildContext context, NumberFormat currency) {
     final taxConfig = ref.watch(taxConfigServiceProvider);
     final currentYear = taxConfig.getCurrentFinancialYear();
-    final taxData =
-        ref.watch(storageServiceProvider).getTaxYearData(currentYear);
-
-    if (taxData == null) return const SizedBox.shrink();
-
     final service = ref.watch(indianTaxServiceProvider);
-    final rules = taxConfig.getRulesForYear(taxData.year);
-    final details = service.calculateDetailedLiability(taxData, rules);
+    final taxDataAsync = ref.watch(taxYearDataProvider(currentYear));
 
-    final DateTime? dueDate = details['nextAdvanceTaxDueDate'] as dynamic;
-    final double? amount = details['nextAdvanceTaxAmount'] as dynamic;
-    final int? daysLeft = details['daysUntilAdvanceTax'] as dynamic;
-    final bool isRequirementMet = details['isRequirementMet'] == true;
+    int pendingCount = 0;
+    Widget child = taxDataAsync.when(
+      data: (taxData) {
+        if (taxData == null) {
+          return const Text('No upcoming tax installments.');
+        }
+        final rules = taxConfig.getRulesForYear(taxData.year);
+        final details = service.calculateDetailedLiability(taxData, rules);
 
-    if (dueDate == null ||
-        amount == null ||
-        (amount <= 0 && isRequirementMet)) {
-      return const SizedBox.shrink();
-    }
+        final DateTime? dueDate = details['nextAdvanceTaxDueDate'] as dynamic;
+        final double? amount = details['nextAdvanceTaxAmount'] as dynamic;
+        final int? daysLeft = details['daysUntilAdvanceTax'] as dynamic;
+        final bool isRequirementMet = details['isRequirementMet'] == true;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(context, 'Upcoming Tax Installments', Icons.percent),
-        _buildAdvanceTaxReminderCard(
-            context, ref, taxData, currency, dueDate, amount, daysLeft, rules),
-      ],
+        if (dueDate != null &&
+            amount != null &&
+            daysLeft != null &&
+            _shouldShowAdvanceTaxReminder(
+                amount, daysLeft, rules, isRequirementMet)) {
+          pendingCount = 1;
+          return _buildAdvanceTaxReminderCard(context, ref, taxData, currency,
+              dueDate, amount, daysLeft, rules);
+        }
+        return const Text('No upcoming tax installments.');
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (e, s) => Text('Error: $e'), // coverage:ignore-line
     );
+
+    return _buildExpandableSection(
+      context: context,
+      title: 'Upcoming Tax Installments',
+      icon: Icons.percent,
+      isExpanded: _isTaxExpanded,
+      onToggle: () => setState(() => _isTaxExpanded = !_isTaxExpanded),
+      pendingCount: pendingCount,
+      child: child,
+    );
+  }
+
+  bool _shouldShowAdvanceTaxReminder(
+      double amount, int daysLeft, TaxRules rules, bool isRequirementMet) {
+    if (isRequirementMet) return false;
+    if (amount <= 0.01) return false;
+    return daysLeft <= rules.advanceTaxReminderDays;
+  }
+
+  bool _isRecurringInFuture(RecurringTransaction r, DateTime today) {
+    final dueDate = DateTime(r.nextExecutionDate.year,
+        r.nextExecutionDate.month, r.nextExecutionDate.day);
+    return dueDate.isAfter(today);
+  }
+
+  int _countPendingLoans(List<Loan> loans, DateTime today) {
+    int count = 0;
+    for (final loan in loans) {
+      if (loan.remainingPrincipal <= 0) continue;
+      final dueDateObj = _getLoanDueDate(loan, today);
+      final paymentsForPeriod = loan.transactions
+          .where((t) =>
+              t.type == LoanTransactionType.emi &&
+              t.date.year == dueDateObj.year &&
+              t.date.month == dueDateObj.month)
+          .toList();
+      final totalPaid = paymentsForPeriod.fold(0.0, (sum, t) => sum + t.amount);
+      final isFullyPaid = totalPaid >= loan.emiAmount - 1;
+      if (!isFullyPaid && dueDateObj.difference(today).inDays <= 7) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  int _countPendingCreditCards(
+      List<Account> accounts, List<Transaction> txns, DateTime now) {
+    final storage = ref.read(storageServiceProvider);
+    int count = 0;
+    for (final acc in accounts.where((a) => a.type == AccountType.creditCard)) {
+      if (acc.billingCycleDay == null) continue;
+      final billed = BillingHelper.calculateBilledAmount(
+          acc, txns, now, storage.getLastRollover(acc.id));
+      final totalDue = acc.balance + billed;
+      if (totalDue > 0.01) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  int _countPendingRecurring(
+      List<RecurringTransaction> recurring, DateTime today) {
+    int count = 0;
+    for (final r in recurring) {
+      if (r.isActive && !_isRecurringInFuture(r, today)) {
+        count++;
+      }
+    }
+    return count;
   }
 
   Widget _buildAdvanceTaxReminderCard(

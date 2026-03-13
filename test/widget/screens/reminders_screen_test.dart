@@ -62,6 +62,7 @@ void main() {
     List<Account>? accounts,
     List<RecurringTransaction>? recurring,
     List<model.Transaction>? transactions,
+    TaxYearData? taxData,
   }) {
     try {
       when(() => mockTaxConfigService.getCurrentFinancialYear())
@@ -84,11 +85,17 @@ void main() {
         pendingRemindersProvider.overrideWithValue(0),
         taxConfigServiceProvider.overrideWithValue(mockTaxConfigService),
         indianTaxServiceProvider.overrideWithValue(mockIndianTaxService),
+        taxYearDataProvider.overrideWith((ref, year) => Stream.value(taxData)),
       ],
       child: const MaterialApp(
         home: RemindersScreen(),
       ),
     );
+  }
+
+  Future<void> expandSection(WidgetTester tester, String title) async {
+    await tester.tap(find.text(title));
+    await tester.pumpAndSettle();
   }
 
   testWidgets('RemindersScreen shows empty states by default', (tester) async {
@@ -99,9 +106,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Upcoming Loan EMIs'), findsOneWidget);
+
+    await expandSection(tester, 'Upcoming Loan EMIs');
     expect(find.text('No active loans.'), findsOneWidget);
+
+    await expandSection(tester, 'Credit Card Bills');
     expect(find.text('No credit cards.'), findsOneWidget);
-    expect(find.text('No active recurring payments.'), findsOneWidget);
+
+    await expandSection(tester, 'Recurring Payments');
+    expect(find.text('No due recurring payments.'), findsOneWidget);
+
+    await expandSection(tester, 'Upcoming Tax Installments');
+    expect(find.text('No upcoming tax installments.'), findsOneWidget);
   });
 
   group('Loan Reminders', () {
@@ -130,6 +146,8 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
         await tester.pumpAndSettle();
 
+        await expandSection(tester, 'Upcoming Loan EMIs');
+
         expect(find.text('Home Loan'), findsOneWidget);
         expect(find.text('Partial'), findsOneWidget);
         expect(find.textContaining('Paid:'), findsOneWidget);
@@ -151,6 +169,8 @@ void main() {
 
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
         await tester.pumpAndSettle();
+
+        await expandSection(tester, 'Upcoming Loan EMIs');
 
         expect(find.text('Personal Loan'), findsOneWidget);
         expect(find.text('Overdue'), findsOneWidget);
@@ -174,6 +194,8 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
       await tester.pumpAndSettle();
+
+      await expandSection(tester, 'Upcoming Loan EMIs');
 
       final calendarBtn = find.text('Add to Calendar');
       await tester.dragUntilVisible(
@@ -207,6 +229,8 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
         await tester.pumpAndSettle();
 
+        await expandSection(tester, 'Upcoming Loan EMIs');
+
         expect(find.text('Wait for Start'), findsOneWidget);
       });
     });
@@ -236,6 +260,8 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
         await tester.pumpAndSettle();
 
+        await expandSection(tester, 'Upcoming Loan EMIs');
+
         expect(find.text('Paid'), findsOneWidget);
       });
     });
@@ -255,6 +281,8 @@ void main() {
 
         await tester.pumpWidget(createWidgetUnderTest(accounts: [acc]));
         await tester.pumpAndSettle();
+
+        await expandSection(tester, 'Credit Card Bills');
 
         expect(find.text('SBI Card'), findsOneWidget);
         expect(find.text('Overdue'), findsOneWidget);
@@ -287,6 +315,8 @@ void main() {
             createWidgetUnderTest(accounts: [acc], transactions: [txn]));
         await tester.pumpAndSettle();
 
+        await expandSection(tester, 'Credit Card Bills');
+
         expect(find.text('Partial'), findsOneWidget);
       });
     });
@@ -305,6 +335,8 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest(accounts: [acc]));
         await tester.pumpAndSettle();
 
+        await expandSection(tester, 'Credit Card Bills');
+
         expect(find.text('Paid'), findsWidgets);
       });
     });
@@ -312,45 +344,55 @@ void main() {
 
   group('Recurring Reminders', () {
     testWidgets('shows recurring payment', (tester) async {
-      final recurring = RecurringTransaction(
-        id: 'r1',
-        title: 'Rent',
-        amount: 15000,
-        frequency: Frequency.monthly,
-        isActive: true,
-        category: 'Housing',
-        nextExecutionDate: DateTime.now().add(const Duration(days: 5)),
-      );
+      final now = DateTime(2026, 3, 10);
+      await withClock(Clock.fixed(now), () async {
+        final recurring = RecurringTransaction(
+          id: 'r1',
+          title: 'Rent',
+          amount: 15000,
+          frequency: Frequency.monthly,
+          isActive: true,
+          category: 'Housing',
+          nextExecutionDate: DateTime(2026, 3, 10),
+        );
 
-      await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Rent'), findsOneWidget);
+        await expandSection(tester, 'Recurring Payments');
+
+        expect(find.text('Rent'), findsOneWidget);
+      });
     });
 
     testWidgets('handles SKIP action', (tester) async {
-      final recurring = RecurringTransaction(
-        id: 'r_skip',
-        title: 'Sub',
-        amount: 100,
-        frequency: Frequency.monthly,
-        isActive: true,
-        category: 'Services',
-        nextExecutionDate: DateTime.now().add(const Duration(days: 1)),
-      );
+      final now = DateTime(2026, 3, 10);
+      await withClock(Clock.fixed(now), () async {
+        final recurring = RecurringTransaction(
+          id: 'r_skip',
+          title: 'Sub',
+          amount: 100,
+          frequency: Frequency.monthly,
+          isActive: true,
+          category: 'Services',
+          nextExecutionDate: DateTime(2026, 3, 9),
+        );
 
-      await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidgetUnderTest(recurring: [recurring]));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('SKIP'));
-      await tester.pumpAndSettle();
+        await expandSection(tester, 'Recurring Payments');
 
-      expect(find.text('Skip Cycle?'), findsOneWidget);
-      await tester.tap(find.text('SKIP').last);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('SKIP'));
+        await tester.pumpAndSettle();
 
-      verify(() => mockStorage.advanceRecurringTransactionDate('r_skip'))
-          .called(1);
+        expect(find.text('Skip Cycle?'), findsOneWidget);
+        await tester.tap(find.text('SKIP').last);
+        await tester.pumpAndSettle();
+
+        verify(() => mockStorage.advanceRecurringTransactionDate('r_skip'))
+            .called(1);
+      });
     });
   });
 
@@ -375,10 +417,12 @@ void main() {
           'isRequirementMet': false,
         });
 
-        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpWidget(createWidgetUnderTest(taxData: taxData));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pumpAndSettle();
+
+        await expandSection(tester, 'Upcoming Tax Installments');
 
         expect(find.textContaining('Tax'), findsWidgets);
       });

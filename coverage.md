@@ -2,10 +2,10 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-03-13T23:42:51.975944**
+> **Generated on: 2026-03-14T00:48:48.106576**
 > based on `lcov.info` from `flutter test --coverage`
 
-### **Total Project Coverage: 92.8%**
+### **Total Project Coverage: 92.7%**
 
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
@@ -35,9 +35,9 @@
 | screens/login_screen.dart | 93.2% | 82/88 | PASS |
 | services/storage_service.dart | 93.8% | 619/660 | PASS |
 | providers.dart | 93.8% | 287/306 | PASS |
-| feature_providers.dart | 94.1% | 64/68 | PASS |
 | widgets/pagination_bar.dart | 94.1% | 16/17 | PASS |
 | widgets/quick_sum_tracker.dart | 94.3% | 164/174 | PASS |
+| screens/reminders_screen.dart | 94.3% | 398/422 | PASS |
 | screens/cc_payment_dialog.dart | 94.3% | 100/106 | PASS |
 | screens/recurring_manager_screen.dart | 94.6% | 70/74 | PASS |
 | screens/loan_payment_dialog.dart | 94.8% | 91/96 | PASS |
@@ -45,7 +45,7 @@
 | screens/accounts_screen.dart | 95.0% | 322/339 | PASS |
 | services/json_data_service.dart | 95.5% | 105/110 | PASS |
 | utils/network_utils.dart | 95.5% | 21/22 | PASS |
-| screens/reminders_screen.dart | 95.5% | 321/336 | PASS |
+| feature_providers.dart | 95.5% | 64/67 | PASS |
 | screens/loan/loan_ledger_view.dart | 96.0% | 120/125 | PASS |
 | screens/loan/loan_part_payment_dialog.dart | 96.4% | 54/56 | PASS |
 | utils/recurrence_utils.dart | 96.5% | 109/113 | PASS |

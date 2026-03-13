@@ -60,7 +60,7 @@ final pendingRemindersProvider = Provider<int>((ref) {
 
   final taxConfig = ref.watch(taxConfigServiceProvider);
   final currentYear = taxConfig.getCurrentFinancialYear();
-  final taxData = storage.getTaxYearData(currentYear);
+  final taxData = ref.watch(taxYearDataProvider(currentYear)).value;
 
   return _countPendingLoans(loans, today) +
       _countPendingCreditCards(accounts, txns, now, today, storage) +
@@ -85,9 +85,10 @@ int _countPendingAdvanceTax(TaxYearData data, Ref ref) {
   // coverage:ignore-end
 
   if (amount != null &&
-      (amount > 0 || !isRequirementMet) && // coverage:ignore-line
+      !isRequirementMet &&
+      amount > 0.01 && // coverage:ignore-line
       daysLeft != null &&
-      daysLeft <= 7) {
+      daysLeft <= rules.advanceTaxReminderDays) {
     // coverage:ignore-line
     return 1;
   }
@@ -149,9 +150,12 @@ int _countPendingRecurring(
     List<RecurringTransaction> recurring, DateTime today) {
   int count = 0;
   for (final r in recurring) {
-    if (r.isActive && !r.nextExecutionDate.isAfter(today)) {
-      // coverage:ignore-line
-      count++; // coverage:ignore-line
+    // coverage:ignore-start
+    final dueDate = DateTime(r.nextExecutionDate.year,
+        r.nextExecutionDate.month, r.nextExecutionDate.day);
+    if (r.isActive && !dueDate.isAfter(today)) {
+      count++;
+      // coverage:ignore-end
     }
   }
   return count;
