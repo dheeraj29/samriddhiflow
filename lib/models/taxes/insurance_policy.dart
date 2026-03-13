@@ -16,6 +16,9 @@ class InsurancePolicy {
     bool? isHandicapDependent,
     bool? isTaxExempt,
     String? profileId,
+    bool? isInstallmentEnabled,
+    DateTime? installmentStartDate,
+    Map<int, bool>? isIncomeAddedByYear,
   }) {
     return InsurancePolicy(
       id: id,
@@ -29,6 +32,9 @@ class InsurancePolicy {
       isHandicapDependent: isHandicapDependent ?? this.isHandicapDependent,
       isTaxExempt: isTaxExempt ?? this.isTaxExempt,
       profileId: profileId ?? this.profileId,
+      isInstallmentEnabled: isInstallmentEnabled ?? this.isInstallmentEnabled,
+      installmentStartDate: installmentStartDate ?? this.installmentStartDate,
+      isIncomeAddedByYear: isIncomeAddedByYear ?? this.isIncomeAddedByYear,
     );
   }
 
@@ -65,6 +71,15 @@ class InsurancePolicy {
   @HiveField(10)
   String profileId;
 
+  @HiveField(11)
+  final bool isInstallmentEnabled;
+
+  @HiveField(12)
+  final DateTime? installmentStartDate;
+
+  @HiveField(13)
+  final Map<int, bool> isIncomeAddedByYear;
+
   InsurancePolicy({
     required this.id,
     required this.policyName,
@@ -77,6 +92,9 @@ class InsurancePolicy {
     this.isHandicapDependent = false,
     this.isTaxExempt,
     this.profileId = 'default',
+    this.isInstallmentEnabled = false,
+    this.installmentStartDate,
+    this.isIncomeAddedByYear = const {},
   });
 
   Map<String, dynamic> toMap() => {
@@ -91,6 +109,10 @@ class InsurancePolicy {
         'isHandicapDependent': isHandicapDependent,
         'isTaxExempt': isTaxExempt,
         'profileId': profileId,
+        'isInstallmentEnabled': isInstallmentEnabled,
+        'installmentStartDate': installmentStartDate?.toIso8601String(),
+        'isIncomeAddedByYear':
+            isIncomeAddedByYear.map((k, v) => MapEntry(k.toString(), v)),
       };
 
   factory InsurancePolicy.fromMap(Map<String, dynamic> m) => InsurancePolicy(
@@ -105,6 +127,13 @@ class InsurancePolicy {
         isHandicapDependent: m['isHandicapDependent'] ?? false,
         isTaxExempt: m['isTaxExempt'],
         profileId: m['profileId'] ?? 'default',
+        isInstallmentEnabled: m['isInstallmentEnabled'] ?? false,
+        installmentStartDate: m['installmentStartDate'] != null
+            ? DateTime.parse(m['installmentStartDate']) // coverage:ignore-line
+            : null,
+        isIncomeAddedByYear: (m['isIncomeAddedByYear'] as Map?)
+                ?.map((k, v) => MapEntry(int.parse(k.toString()), v as bool)) ??
+            {},
       );
 
   factory InsurancePolicy.create({
@@ -117,6 +146,8 @@ class InsurancePolicy {
     bool isUlip = false,
     bool? isTaxExempt,
     String profileId = 'default',
+    bool isInstallmentEnabled = false,
+    DateTime? installmentStartDate,
   }) {
     return InsurancePolicy(
       id: const Uuid().v4(),
@@ -129,6 +160,8 @@ class InsurancePolicy {
       isUnitLinked: isUlip,
       isTaxExempt: isTaxExempt,
       profileId: profileId,
+      isInstallmentEnabled: isInstallmentEnabled,
+      installmentStartDate: installmentStartDate,
     );
   }
 }

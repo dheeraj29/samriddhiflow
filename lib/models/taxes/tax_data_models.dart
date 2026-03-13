@@ -386,6 +386,9 @@ class CapitalGainEntry {
   @HiveField(12)
   final DateTime? transactionDate;
 
+  @HiveField(13)
+  final bool isLongTerm;
+
   // Computed helpers
   double get capitalGainAmount => saleAmount - costOfAcquisition;
 
@@ -403,7 +406,45 @@ class CapitalGainEntry {
     this.lastUpdated,
     this.isManualEntry = true,
     this.transactionDate,
+    this.isLongTerm = false,
   });
+
+  CapitalGainEntry copyWith({
+    // coverage:ignore-line
+    String? description,
+    AssetType? matchAssetType,
+    bool? isLTCG,
+    double? saleAmount,
+    double? costOfAcquisition,
+    DateTime? gainDate,
+    double? reinvestedAmount,
+    ReinvestmentType? matchReinvestType,
+    DateTime? reinvestDate,
+    bool? intendToReinvest,
+    DateTime? lastUpdated,
+    bool? isManualEntry,
+    DateTime? transactionDate,
+    bool? isLongTerm,
+  }) {
+    // coverage:ignore-start
+    return CapitalGainEntry(
+      description: description ?? this.description,
+      matchAssetType: matchAssetType ?? this.matchAssetType,
+      isLTCG: isLTCG ?? this.isLTCG,
+      saleAmount: saleAmount ?? this.saleAmount,
+      costOfAcquisition: costOfAcquisition ?? this.costOfAcquisition,
+      gainDate: gainDate ?? this.gainDate,
+      reinvestedAmount: reinvestedAmount ?? this.reinvestedAmount,
+      matchReinvestType: matchReinvestType ?? this.matchReinvestType,
+      reinvestDate: reinvestDate ?? this.reinvestDate,
+      intendToReinvest: intendToReinvest ?? this.intendToReinvest,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isManualEntry: isManualEntry ?? this.isManualEntry,
+      transactionDate: transactionDate ?? this.transactionDate,
+      isLongTerm: isLongTerm ?? this.isLongTerm,
+      // coverage:ignore-end
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'description': description,
@@ -418,6 +459,8 @@ class CapitalGainEntry {
         'intendToReinvest': intendToReinvest,
         'lastUpdated': lastUpdated?.toIso8601String(),
         'isManualEntry': isManualEntry,
+        'transactionDate': transactionDate?.toIso8601String(),
+        'isLongTerm': isLongTerm,
       };
 
   factory CapitalGainEntry.fromMap(Map<String, dynamic> m) => CapitalGainEntry(
@@ -437,6 +480,10 @@ class CapitalGainEntry {
             ? DateTime.tryParse(m['lastUpdated'])
             : null,
         isManualEntry: m['isManualEntry'] ?? true,
+        transactionDate: m['transactionDate'] != null
+            ? DateTime.tryParse(m['transactionDate']) // coverage:ignore-line
+            : null,
+        isLongTerm: m['isLongTerm'] ?? false,
       );
 }
 

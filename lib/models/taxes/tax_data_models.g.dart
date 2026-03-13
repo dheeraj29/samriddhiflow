@@ -211,13 +211,14 @@ class CapitalGainEntryAdapter extends TypeAdapter<CapitalGainEntry> {
       lastUpdated: fields[10] as DateTime?,
       isManualEntry: fields[11] == null ? true : fields[11] as bool,
       transactionDate: fields[12] as DateTime?,
+      isLongTerm: fields[13] == null ? false : fields[13] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, CapitalGainEntry obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.description)
       ..writeByte(1)
@@ -243,7 +244,9 @@ class CapitalGainEntryAdapter extends TypeAdapter<CapitalGainEntry> {
       ..writeByte(11)
       ..write(obj.isManualEntry)
       ..writeByte(12)
-      ..write(obj.transactionDate);
+      ..write(obj.transactionDate)
+      ..writeByte(13)
+      ..write(obj.isLongTerm);
   }
 
   @override

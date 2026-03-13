@@ -455,6 +455,47 @@ final recurringTransactionsProvider =
   yield* box.watch().map((_) => storage.getRecurring());
 });
 
+final insurancePoliciesProvider =
+    StreamProvider<List<InsurancePolicy>>((ref) async* {
+  // coverage:ignore-start
+  await ref.watch(storageInitializerProvider.future);
+  final storage = ref.watch(storageServiceProvider);
+  final box = Hive.box<InsurancePolicy>('insurance_policies');
+  // coverage:ignore-end
+
+  yield storage.getInsurancePolicies(); // coverage:ignore-line
+  yield* box
+      .watch()
+      .map((_) => storage.getInsurancePolicies()); // coverage:ignore-line
+});
+
+final taxYearDataProvider =
+    StreamProvider.family<TaxYearData?, int>((ref, year) async* {
+  // coverage:ignore-start
+  await ref.watch(storageInitializerProvider.future);
+  final storage = ref.watch(storageServiceProvider);
+  final box = Hive.box<TaxYearData>('tax_data');
+  // coverage:ignore-end
+
+  yield storage.getTaxYearData(year); // coverage:ignore-line
+  yield* box
+      .watch()
+      .map((_) => storage.getTaxYearData(year)); // coverage:ignore-line
+});
+
+final allTaxYearDataProvider = StreamProvider<List<TaxYearData>>((ref) async* {
+  // coverage:ignore-start
+  await ref.watch(storageInitializerProvider.future);
+  final storage = ref.watch(storageServiceProvider);
+  final box = Hive.box<TaxYearData>('tax_data');
+  // coverage:ignore-end
+
+  yield storage.getAllTaxYearData(); // coverage:ignore-line
+  yield* box
+      .watch()
+      .map((_) => storage.getAllTaxYearData()); // coverage:ignore-line
+});
+
 // --- Settings Providers (Profile Aware) ---
 
 class CurrencyNotifier extends Notifier<String> {

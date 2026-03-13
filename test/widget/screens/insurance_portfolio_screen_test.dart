@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -7,6 +6,7 @@ import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:samriddhi_flow/screens/taxes/insurance_portfolio_screen.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
@@ -17,6 +17,8 @@ class MockStorageService extends Mock implements StorageService {}
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
 class MockInsuranceTaxService extends Mock implements InsuranceTaxService {}
+
+class MockBox<T> extends Mock implements Box<T> {}
 
 class MockCurrencyNotifier extends CurrencyNotifier {
   @override
@@ -29,31 +31,63 @@ void main() {
   late MockStorageService mockStorage;
   late MockTaxConfigService mockConfig;
   late MockInsuranceTaxService mockInsuranceTax;
-  late Box<InsurancePolicy> policiesBox;
+  late MockBox<InsurancePolicy> policiesBox;
+  late ValueNotifier<Box<InsurancePolicy>> policiesListenable;
 
   setUpAll(() async {
+    registerFallbackValue(InsurancePolicy.create(
+      name: 'test',
+      number: '123',
+      premium: 0,
+      sumAssured: 0,
+      start: DateTime.now(),
+      maturity: DateTime.now(),
+    ));
+    registerFallbackValue(const TaxYearData(year: 2024));
+    registerFallbackValue(TaxRules());
     TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('hive_insurance_tests');
-    Hive.init(dir.path);
-    if (!Hive.isAdapterRegistered(InsurancePolicyAdapter().typeId)) {
-      Hive.registerAdapter(InsurancePolicyAdapter());
-    }
-    if (!Hive.isBoxOpen(StorageService.boxInsurancePolicies)) {
-      await Hive.openBox<InsurancePolicy>(StorageService.boxInsurancePolicies);
-    }
   });
 
   setUp(() async {
     mockStorage = MockStorageService();
     mockConfig = MockTaxConfigService();
     mockInsuranceTax = MockInsuranceTaxService();
-    policiesBox =
-        Hive.box<InsurancePolicy>(StorageService.boxInsurancePolicies);
-    await policiesBox.clear();
+    policiesBox = MockBox<InsurancePolicy>();
+    policiesListenable = ValueNotifier<Box<InsurancePolicy>>(policiesBox);
 
     when(() => mockStorage.getInsurancePoliciesBox()).thenReturn(policiesBox);
+    when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
+    when(() => mockStorage.getInsurancePoliciesListenable())
+        .thenReturn(policiesListenable);
+    when(() => policiesBox.toMap()).thenReturn({});
+    when(() => policiesBox.values).thenReturn([]);
+
     when(() => mockConfig.getRulesForYear(any())).thenReturn(TaxRules());
     when(() => mockInsuranceTax.optimizeMaturityTax(any())).thenReturn([]);
+    when(() => mockInsuranceTax.isApplicableForYear(any(), any()))
+        .thenReturn(true);
+    when(() => mockInsuranceTax.calculateInsuranceSummaryData(any(), any()))
+        .thenReturn(InsuranceSummaryData(
+      totalPremium: 0,
+      currentTaxableGain: 0,
+      futureTaxableGain: 0,
+      taxableUlipTotal: 0,
+      taxableNonUlipTotal: 0,
+      hasPendingCalculations: false,
+    ));
+    when(() => mockInsuranceTax.getEventDateForYear(any(), any()))
+        .thenReturn(DateTime(2030, 1, 1));
+    when(() => mockInsuranceTax.calculateTaxableIncomeSplit(any())).thenReturn({
+      'saleConsideration': 100000,
+      'costOfAcquisition': 80000,
+      'taxableGain': 20000,
+      'totalGain': 20000,
+    });
+
+    // Support saving
+    when(() => mockStorage.getTaxYearData(any())).thenReturn(null);
+    when(() => mockStorage.saveTaxYearData(any())).thenAnswer((_) async {});
+    when(() => policiesBox.put(any(), any())).thenAnswer((_) async {});
   });
 
   Widget createInsurancePortfolioScreen() {
@@ -73,32 +107,80 @@ void main() {
   testWidgets('InsurancePortfolioScreen renders tabs and summary',
       (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('Insurance Portfolio'), findsOneWidget);
     expect(find.text('Policies List'), findsOneWidget);
     expect(find.text('Tax Rules'), findsOneWidget);
-    expect(find.text('Tax Optimization'), findsOneWidget);
+    expect(find.text('Tax Optimization (Gains)'), findsOneWidget);
   });
 
   testWidgets('Add Policy dialog opening', (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     final addButton = find.byTooltip('Add Policy');
     await tester.tap(addButton);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Add Policy'), findsOneWidget);
     expect(find.text('Policy Name'), findsOneWidget);
-    expect(find.text('Annual Premium (₹)'), findsOneWidget);
+    expect(find.textContaining('Annual Premium'), findsOneWidget);
+
+    // New installment fields
+    expect(find.text('Enable Installment Option?'), findsOneWidget);
+  });
+
+  testWidgets('Populate Income dialog works', (WidgetTester tester) async {
+    final policy = InsurancePolicy.create(
+      name: 'Taxable Policy',
+      number: 'T1',
+      premium: 10000,
+      sumAssured: 100000,
+      start: DateTime(2020, 1, 1),
+      maturity: DateTime(2030, 1, 1),
+      isTaxExempt: false,
+    );
+    when(() => policiesBox.toMap()).thenReturn({'key1': policy});
+    when(() => policiesBox.values).thenReturn([policy]);
+    when(() => mockStorage.getInsurancePolicies()).thenReturn([policy]);
+
+    await tester.pumpWidget(createInsurancePortfolioScreen());
+    await tester.pump();
+    await tester.pump();
+
+    // Find the populate income button (icon: Icons.add_chart)
+    final populateButton = find.byTooltip('Populate income to Tax Dashboard');
+    expect(populateButton, findsOneWidget);
+    await tester.tap(populateButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Populate Taxable Income'), findsOneWidget);
+    expect(find.text('Tax Year'), findsOneWidget);
+    expect(find.text('Tax Head'), findsOneWidget);
+
+    // Click Add to Dashboard
+    await tester.tap(find.text('Add to Dashboard'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final captured = verify(() => mockStorage.saveTaxYearData(captureAny()))
+        .captured
+        .last as TaxYearData;
+    expect(captured.otherIncomes.last.transactionDate, DateTime(2030, 1, 1));
+    expect(find.textContaining('Income added to'), findsOneWidget);
   });
 
   testWidgets('Tax Rules tab interactions', (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     await tester.tap(find.text('Tax Rules'));
     await tester.pumpAndSettle();
@@ -112,17 +194,20 @@ void main() {
 
     // Toggle a switch
     await tester.tap(aggregateSwitch0);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Save Rules'), findsOneWidget);
   });
 
   testWidgets('Recalculate tax button trigger', (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     await tester.tap(find.byTooltip('Sync & Recalculate Status'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     verify(() => mockInsuranceTax.optimizeMaturityTax(any())).called(1);
     expect(find.text('Tax status recalculated and saved.'), findsOneWidget);

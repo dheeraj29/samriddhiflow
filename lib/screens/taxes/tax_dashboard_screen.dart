@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import '../../services/taxes/tax_data_fetcher.dart';
+import '../../services/taxes/insurance_tax_service.dart';
 import '../../services/taxes/tax_config_service.dart';
 import '../../services/taxes/indian_tax_service.dart';
 import '../../widgets/smart_currency_text.dart';
 import '../../models/taxes/tax_data.dart';
 import '../../models/taxes/tax_data_models.dart';
+import '../../models/taxes/insurance_policy.dart';
 import '../../utils/currency_utils.dart';
 import 'tax_rules_screen.dart';
 
@@ -43,7 +45,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           _isServiceInitialized = true;
           // Fix: Use correct financial year logic (Feb 2026 -> FY 2025 if Apr cycle)
           _selectedYear = config.getCurrentFinancialYear();
-          _loadData();
         });
       }
     } catch (e) {
@@ -62,18 +63,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     }
   }
 
-  // Load TaxYearData from Hive
-  void _loadData() {
-    final storage = ref.read(storageServiceProvider);
-    final savedData = storage.getTaxYearData(_selectedYear);
-    final allData = storage.getAllTaxYearData();
-
-    setState(() {
-      _taxData = savedData ?? TaxYearData(year: _selectedYear);
-      _allTaxData = allData..sort((a, b) => b.year.compareTo(a.year));
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_isServiceInitialized) {
@@ -81,6 +70,16 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    // Reactive Data Fetching
+    final taxDataAsync = ref.watch(taxYearDataProvider(_selectedYear));
+    final allTaxDataAsync = ref.watch(allTaxYearDataProvider);
+    final policiesAsync = ref.watch(insurancePoliciesProvider);
+
+    _taxData = taxDataAsync.value ?? TaxYearData(year: _selectedYear);
+    _allTaxData = (allTaxDataAsync.value ?? [])
+      ..sort((a, b) => b.year.compareTo(a.year));
+    final policies = policiesAsync.value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -93,7 +92,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const InsurancePortfolioScreen())),
+                    builder: (_) =>
+                        InsurancePortfolioScreen(initialYear: _selectedYear))),
           ),
         ],
       ),
@@ -104,6 +104,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             _buildYearSelector(),
             const SizedBox(height: 12),
             _buildActionButtons(),
+            _buildInsuranceTaxDisclaimer(policies),
             if (_taxData != null) ...[
               _buildAdvanceTaxReminder(_taxData!),
               const SizedBox(height: 16),
@@ -111,6 +112,59 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
               const SizedBox(height: 16),
               _buildExemptionsCard(_taxData!),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsuranceTaxDisclaimer(List<InsurancePolicy> policies) {
+    final service = ref.read(insuranceTaxServiceProvider);
+    if (!service.hasUnaddedTaxableInsurance(policies, _selectedYear)) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          border: Border.all(color: Colors.orange.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Taxable Insurance Alert',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.orange),
+                  ),
+                  Text(
+                    'You have insurance policies that may be taxable in FY $_selectedYear-${_selectedYear + 1}. Ensure income is added to avoid penalties.',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              // coverage:ignore-start
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        InsurancePortfolioScreen(initialYear: _selectedYear)),
+                // coverage:ignore-end
+              ),
+              child: const Text('View Policies'),
+            ),
           ],
         ),
       ),
@@ -394,13 +448,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                         await ref
                             .read(storageServiceProvider)
                             .deleteTaxYearData(gainYearData.year);
-                        _loadData();
                         // coverage:ignore-end
                       },
                     ),
                   ),
                 );
-                _loadData(); // coverage:ignore-line
               },
             ),
           _buildGainStatusIcon(gain, isExpired), // coverage:ignore-line
@@ -417,7 +469,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     final trackingGains =
         _collectTrackingGains(data, rules.windowGainReinvest.toInt());
 
-    if (trackingGains.isEmpty) return const SizedBox.shrink();
+    if (trackingGains.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Card(
       // coverage:ignore-line
@@ -599,11 +653,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           // coverage:ignore-end
           data: data,
           initialTabIndex: 5, // Tax Paid tab
-          // coverage:ignore-start
           onSave: (updated) {
-            ref.read(storageServiceProvider).saveTaxYearData(updated);
-            _loadData();
-            // coverage:ignore-end
+            // coverage:ignore-line
+            ref
+                .read(storageServiceProvider)
+                .saveTaxYearData(updated); // coverage:ignore-line
           },
         ),
       ),
@@ -685,7 +739,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           ),
           Text(
             'Next: ${CurrencyUtils.formatCurrency(amount, currencyLocale)} due by ${dueDate.day}/${dueDate.month}/${dueDate.year}',
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -766,7 +820,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                     if (val != null) {
                       setState(() {
                         _selectedYear = val;
-                        _loadData();
                       });
                     }
                   },
@@ -805,11 +858,10 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                     onChanged: (val) async {
                       // coverage:ignore-line
                       if (val != null) {
-                        // coverage:ignore-start
-                        final newRules = rules.copyWith(jurisdiction: val);
-                        await config.saveRulesForYear(_selectedYear, newRules);
-                        _loadData();
-                        // coverage:ignore-end
+                        final newRules = rules.copyWith(
+                            jurisdiction: val); // coverage:ignore-line
+                        await config.saveRulesForYear(
+                            _selectedYear, newRules); // coverage:ignore-line
                       }
                     },
                   );
@@ -843,7 +895,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                       await ref
                           .read(storageServiceProvider)
                           .saveTaxYearData(newData);
-                      _loadData();
                       // coverage:ignore-end
                     },
                     // coverage:ignore-start
@@ -851,7 +902,6 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                       await ref
                           .read(storageServiceProvider)
                           .deleteTaxYearData(_selectedYear);
-                      _loadData();
                       // coverage:ignore-end
                     },
                   ),

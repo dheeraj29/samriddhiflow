@@ -6,20 +6,26 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_data_fetcher.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/services/taxes/insurance_tax_service.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
+class MockInsuranceTaxService extends Mock implements InsuranceTaxService {}
+
 void main() {
   late TaxDataFetcher fetcher;
   late MockStorageService mockStorage;
   late MockTaxConfigService mockConfig;
+  late MockInsuranceTaxService mockInsuranceTax;
 
   setUp(() {
     mockStorage = MockStorageService();
     mockConfig = MockTaxConfigService();
-    fetcher = TaxDataFetcher(mockStorage, mockConfig);
+    mockInsuranceTax = MockInsuranceTaxService();
+    fetcher = TaxDataFetcher(mockStorage, mockConfig, mockInsuranceTax);
 
     // Default stub for taxSync update
     when(() => mockStorage.updateTransactionsTaxSync(any(), any()))
@@ -169,6 +175,29 @@ void main() {
         ),
       ];
       when(() => mockStorage.getInsurancePolicies()).thenReturn(policies);
+
+      // Mock the service calls
+      when(() => mockInsuranceTax.getTaxableIncomeEntry(policies[0], year))
+          .thenReturn(OtherIncome(
+        name: 'Insurance Maturity: Non-ULIP',
+        amount: 400000,
+        type: 'Other',
+        subtype: 'others',
+        transactionDate: now,
+        lastUpdated: DateTime.now(),
+      ));
+
+      when(() => mockInsuranceTax.getTaxableIncomeEntry(policies[1], year))
+          .thenReturn(CapitalGainEntry(
+        description: 'Insurance Maturity: ULIP',
+        matchAssetType: AssetType.other,
+        isLTCG: true,
+        saleAmount: 300000,
+        costOfAcquisition: 25000,
+        gainDate: now.add(const Duration(days: 1)),
+        transactionDate: now.add(const Duration(days: 1)),
+        lastUpdated: DateTime.now(),
+      ));
 
       final result = await fetcher.fetchAndAggregate(year);
 

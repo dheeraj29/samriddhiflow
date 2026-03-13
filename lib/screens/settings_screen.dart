@@ -1090,7 +1090,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final decision = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("⚠️ Restoring from ZIP"),
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.orange, size: 40),
+        title: const Text("Restoring from ZIP"),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1240,7 +1242,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         // coverage:ignore-end
-        title: const Text("⚠️ Critical Warning"),
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.red, size: 40),
+        title: const Text("Critical Warning"),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1331,7 +1335,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("⚠️ Deactivate Cloud Account?"),
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.red, size: 40),
+        title: const Text("Deactivate Cloud Account?"),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1411,7 +1417,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("⚠️ Clear Cloud Data?"),
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.orange, size: 40),
+        title: const Text("Clear Cloud Data?"),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1607,21 +1615,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<String?> _showVerifyPinDialog(BuildContext context,
       {String? reason}) async {
     final controller = TextEditingController();
+    const int minPinLength = 4;
+    const int maxPinLength = 6;
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text("Verify App PIN"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(reason ?? "Enter your 4-digit PIN to continue."),
+            Text(reason ?? "Enter your 4-6 digit PIN to continue."),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               obscureText: true,
-              maxLength: 4,
+              maxLength: maxPinLength,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 16),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -1641,13 +1651,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (ref
-                  .read(storageServiceProvider)
-                  .verifyAppPin(controller.text)) {
+              if (controller.text.length < minPinLength ||
+                  controller.text.length > maxPinLength) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  // coverage:ignore-line
+                  const SnackBar(content: Text("PIN must be 4-6 digits long.")),
+                );
+                return;
+              }
+              final storage = ref.read(storageServiceProvider);
+              if (storage.isPinLocked()) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  // coverage:ignore-line
+                  const SnackBar(
+                      content: Text("Too many attempts. Try again later.")),
+                );
+                controller.clear(); // coverage:ignore-line
+                return;
+              }
+              if (storage.verifyAppPin(controller.text)) {
                 Navigator.pop(context, controller.text);
               } else {
+                final isLocked = storage.isPinLocked();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Incorrect PIN")),
+                  SnackBar(
+                      content: Text(isLocked
+                          ? "Too many attempts. Try again later."
+                          : "Incorrect PIN")),
                 );
                 controller.clear();
               }
@@ -1683,14 +1713,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(currentPin == null
-            ? "Enter a 4-digit PIN to secure the app."
+            ? "Enter a 4-6 digit PIN to secure the app."
             : "You have an existing PIN. Do you want to use it or set a new one?"),
         const SizedBox(height: 16),
         TextField(
           controller: controller,
           keyboardType: TextInputType.number,
           obscureText: true,
-          maxLength: 4,
+          maxLength: 6,
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 24, letterSpacing: 16),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -1739,7 +1769,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _handleSaveAndEnableLock(BuildContext context, dynamic storage,
       TextEditingController controller) async {
-    if (controller.text.length != 4) return;
+    if (controller.text.length < 4 || controller.text.length > 6) {
+      if (context.mounted) {
+        // coverage:ignore-line
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-line
+          const SnackBar(content: Text("PIN must be 4-6 digits long.")),
+        );
+      }
+      return;
+    }
     await storage.setAppPin(controller.text);
     await storage.setAppLockEnabled(true);
     setState(() => _isAppLockEnabled = true);

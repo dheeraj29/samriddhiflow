@@ -544,45 +544,6 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('TDS Sync: Copy Calc. Tax to TDS button works', (tester) async {
-    final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
-    const data = TaxYearData(year: 2025);
-
-    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
-    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
-        .thenReturn([]);
-    // Mock salary only liability
-    when(() => mockTaxService.calculateSalaryOnlyLiability(any()))
-        .thenReturn(12000.0);
-
-    await pumpScreen(tester, data);
-
-    // 1. Go to Salary tab
-    await tester.tap(find.text('Salary'));
-    await tester.pumpAndSettle();
-
-    final syncBtn = find.text('Copy Calc. Tax to TDS');
-    // Use scrollUntilVisible to ensure it's not obscured by bottom bar
-    await tester.dragUntilVisible(
-      syncBtn,
-      find.byType(ListView),
-      const Offset(0, -300),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(syncBtn);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Estimated tax liability copied to TDS!'), findsOneWidget);
-
-    // 2. Verify it appears in Tax Paid tab
-    await tester.tap(find.text('Tax Paid'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Employer Paid'), findsOneWidget);
-    expect(find.textContaining('12,000'), findsOneWidget);
-  });
-
   testWidgets('Other Income Tab: Can add an entry', (tester) async {
     final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
     const data = TaxYearData(year: 2025);

@@ -311,6 +311,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
     double unbilled = 0;
     double billed = 0;
+    double payments = 0;
     if (acc.type == AccountType.creditCard) {
       final now = DateTime.now();
       final allTxns = ref.watch(transactionsProvider).value ?? [];
@@ -320,12 +321,15 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       final lastRollover = storage.getLastRollover(acc.id);
       billed =
           BillingHelper.calculateBilledAmount(acc, allTxns, now, lastRollover);
+      payments = BillingHelper.calculatePaymentsSinceLastRollover(
+          acc, allTxns, lastRollover);
     }
 
     return AccountCard(
       account: acc,
       unbilledAmount: unbilled,
       billedAmount: billed,
+      totalPaymentsSinceRollover: payments,
       compactView: _compactView,
       onTap: () => _showAccountOptions(context, ref, acc),
     );
@@ -690,9 +694,10 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         prefixText:
             '${CurrencyUtils.getSymbol(_type == AccountType.wallet ? _currency : ref.watch(currencyProvider))} ',
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      keyboardType:
+          const TextInputType.numberWithOptions(decimal: true, signed: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+        FilteringTextInputFormatter.allow(RegexUtils.negativeAmountExp)
       ],
       onSaved: (v) => _initialBalance = double.tryParse(v ?? '') ?? 0,
     );

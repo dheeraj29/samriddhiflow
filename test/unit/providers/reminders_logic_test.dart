@@ -22,6 +22,7 @@ void main() {
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
         taxConfigServiceProvider.overrideWithValue(mockTaxConfig),
+        taxYearDataProvider.overrideWith((ref, year) => Stream.value(null)),
         accountsProvider.overrideWithValue(AsyncData(accounts ??
             [
               Account(

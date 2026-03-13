@@ -455,6 +455,15 @@ void main() {
       expect(restored.name, 'LTC');
       expect(restored.exemptionLimit, 25000);
     });
+
+    test('simple toMap/fromMap', () {
+      const ex = CustomExemption(id: 'e1', name: 'Test', amount: 5000);
+      final map = ex.toMap();
+      final back = CustomExemption.fromMap(map);
+
+      expect(back.name, 'Test');
+      expect(back.amount, 5000);
+    });
   });
 
   group('DividendIncome', () {

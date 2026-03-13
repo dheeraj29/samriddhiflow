@@ -106,6 +106,7 @@ void main() {
     when(() => mockStorage.getActiveProfileId()).thenReturn('p1');
     when(() => mockStorage.getAuthFlag()).thenReturn(false);
     when(() => mockStorage.getAppPin()).thenReturn(null);
+    when(() => mockStorage.isPinLocked()).thenReturn(false);
 
     when(() => mockStorage.setThemeMode(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveDashboardConfig(any())).thenAnswer((_) async {});
@@ -364,6 +365,27 @@ void main() {
     verify(() => mockStorage.setAppLockEnabled(true)).called(1);
   });
 
+  testWidgets('App Lock PIN flow accepts 6-digit PIN',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    final appLockTile = find.text('App Lock (PIN)');
+    await tester.scrollUntilVisible(appLockTile, 500);
+    await tester.tap(appLockTile);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set App PIN'), findsOneWidget);
+
+    final textField = find.byType(TextField);
+    await tester.enterText(textField, '123456');
+    await tester.tap(find.text('SAVE & ENABLE'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorage.setAppPin('123456')).called(1);
+    verify(() => mockStorage.setAppLockEnabled(true)).called(1);
+  });
+
   testWidgets('Clear Cloud Data flow', (WidgetTester tester) async {
     final mockUser = MockUser();
     when(() => mockUser.email).thenReturn('test@example.com');
@@ -379,7 +401,7 @@ void main() {
     await tester.tap(clearTile);
     await tester.pumpAndSettle();
 
-    expect(find.text('⚠️ Clear Cloud Data?'), findsOneWidget);
+    expect(find.text('Clear Cloud Data?'), findsOneWidget);
     await tester.tap(find.text('CLEAR CLOUD DATA'));
     await tester.pumpAndSettle();
 
@@ -402,7 +424,7 @@ void main() {
     await tester.tap(deactivateTile);
     await tester.pumpAndSettle();
 
-    expect(find.text('⚠️ Deactivate Cloud Account?'), findsOneWidget);
+    expect(find.text('Deactivate Cloud Account?'), findsOneWidget);
     await tester.tap(find.text('WIPE & DEACTIVATE'));
     await tester.pumpAndSettle();
 
@@ -446,7 +468,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 1. Safety Dialog
-    expect(find.text('⚠️ Restoring from ZIP'), findsOneWidget);
+    expect(find.text('Restoring from ZIP'), findsOneWidget);
     await tester.tap(find.text('Yes, Restore'));
     // Use pump instead of pumpAndSettle because a progress spinner might be animating
     await tester.pump();
@@ -718,10 +740,10 @@ void main() {
     await tester.tap(restoreTile);
     await tester.pumpAndSettle();
 
-    expect(find.text('⚠️ Restoring from ZIP'), findsOneWidget);
+    expect(find.text('Restoring from ZIP'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    expect(find.text('⚠️ Restoring from ZIP'), findsNothing);
+    expect(find.text('Restoring from ZIP'), findsNothing);
   });
 }

@@ -6,6 +6,7 @@ import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
+import 'package:samriddhi_flow/services/taxes/insurance_tax_service.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:clock/clock.dart';
 
@@ -18,8 +19,9 @@ class TaxSyncResult {
 class TaxDataFetcher {
   final StorageService _storage;
   final TaxConfigService _config;
+  final InsuranceTaxService _insuranceTax;
 
-  TaxDataFetcher(this._storage, this._config);
+  TaxDataFetcher(this._storage, this._config, this._insuranceTax);
 
   /// Fetches transactions for the given year and aggregates them into TaxYearData.
   /// Returns warnings for unmapped Income transactions.
@@ -249,41 +251,20 @@ class TaxDataFetcher {
 
   void _aggregateInsuranceMaturity(
       DateTime start, DateTime end, _AggregationResult agg) {
+    // FY Year (anchored to FY start year)
+    final fyYear = start.month >= 4 ? start.year : start.year - 1;
     final policies = _storage.getInsurancePolicies();
+
     for (final policy in policies) {
-      if (policy.isTaxExempt != false) continue;
-      if (policy.maturityDate
-              .isBefore(start.subtract(const Duration(seconds: 1))) ||
-          policy.maturityDate.isAfter(end.add(const Duration(seconds: 1)))) {
-        continue;
-      }
+      if (policy.isIncomeAddedByYear[fyYear] == true) continue;
 
-      final years = policy.maturityDate.year - policy.startDate.year;
-      final cost = policy.annualPremium * years.clamp(1, 100);
+      final entry = _insuranceTax.getTaxableIncomeEntry(policy, fyYear);
+      if (entry == null) continue;
 
-      if (policy.isUnitLinked) {
-        agg.cgEntries.add(CapitalGainEntry(
-          description: 'Insurance Maturity: ${policy.policyName}',
-          matchAssetType: AssetType.other,
-          isLTCG: true,
-          saleAmount: policy.sumAssured,
-          costOfAcquisition: cost,
-          gainDate: policy.maturityDate,
-          isManualEntry: false,
-          lastUpdated: clock.now(),
-          transactionDate: policy.maturityDate,
-        ));
-      } else {
-        final gain = (policy.sumAssured - cost).clamp(0.0, policy.sumAssured);
-        agg.otherIncomes.add(OtherIncome(
-          name: 'Insurance Maturity: ${policy.policyName}',
-          amount: gain,
-          type: 'Other',
-          subtype: 'other',
-          isManualEntry: false,
-          lastUpdated: clock.now(),
-          transactionDate: policy.maturityDate,
-        ));
+      if (entry is CapitalGainEntry) {
+        agg.cgEntries.add(entry);
+      } else if (entry is OtherIncome) {
+        agg.otherIncomes.add(entry);
       }
     }
   }
@@ -390,6 +371,7 @@ final taxDataFetcherProvider = Provider<TaxDataFetcher>((ref) {
   // coverage:ignore-start
   final storage = ref.watch(storageServiceProvider);
   final config = ref.watch(taxConfigServiceProvider);
-  return TaxDataFetcher(storage, config);
+  final insuranceTax = ref.watch(insuranceTaxServiceProvider);
+  return TaxDataFetcher(storage, config, insuranceTax);
   // coverage:ignore-end
 });

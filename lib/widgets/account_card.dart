@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/account.dart';
 import '../theme/app_theme.dart';
+import '../utils/billing_helper.dart';
 import '../utils/currency_utils.dart';
 import 'pure_icons.dart';
 
@@ -11,6 +12,7 @@ class AccountCard extends ConsumerWidget {
   final VoidCallback? onTap;
   final double unbilledAmount;
   final double billedAmount;
+  final double totalPaymentsSinceRollover;
   final bool compactView;
 
   const AccountCard({
@@ -19,6 +21,7 @@ class AccountCard extends ConsumerWidget {
     this.onTap,
     this.unbilledAmount = 0,
     this.billedAmount = 0,
+    this.totalPaymentsSinceRollover = 0,
     this.compactView = true,
   });
 
@@ -32,7 +35,8 @@ class AccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (cardColor, iconWidget) = _getCardStyle();
-    final (displayBalance, displayBilled) = _getAdjustedCCData();
+    final (displayBalance, displayBilled, displayUnbilled) =
+        _getAdjustedCCData();
 
     return Card(
       color: cardColor,
@@ -54,7 +58,8 @@ class AccountCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _buildAccountName(),
                 const SizedBox(height: 2),
-                _buildBalanceDisplay(displayBalance, displayBilled),
+                _buildBalanceDisplay(
+                    displayBalance, displayBilled, displayUnbilled),
                 _buildExtraInfo(),
               ],
             ),
@@ -84,25 +89,17 @@ class AccountCard extends ConsumerWidget {
     }
   }
 
-  (double, double) _getAdjustedCCData() {
-    double displayBalance = account.balance;
-    double displayBilled = billedAmount;
-
-    if (account.type == AccountType.creditCard && displayBalance < 0) {
-      double credit = -displayBalance; // coverage:ignore-line
-      displayBalance = 0;
-
-      if (credit <= displayBilled) {
-        // coverage:ignore-line
-        displayBilled -= credit; // coverage:ignore-line
-        credit = 0;
-      } else {
-        credit -= displayBilled; // coverage:ignore-line
-        displayBilled = 0;
-        displayBalance = -credit; // coverage:ignore-line
-      }
+  (double, double, double) _getAdjustedCCData() {
+    if (account.type != AccountType.creditCard) {
+      return (account.balance, 0, 0);
     }
-    return (displayBalance, displayBilled);
+
+    return BillingHelper.getAdjustedCCData(
+      accountBalance: account.balance,
+      billedAmount: billedAmount,
+      unbilledAmount: unbilledAmount,
+      totalPaymentsSinceRollover: totalPaymentsSinceRollover,
+    );
   }
 
   Widget _buildHeader(Widget iconWidget) {
@@ -125,13 +122,14 @@ class AccountCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildBalanceDisplay(double displayBalance, double displayBilled) {
+  Widget _buildBalanceDisplay(
+      double displayBalance, double displayBilled, double displayUnbilled) {
     if (account.type == AccountType.creditCard) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _format(displayBalance + displayBilled + unbilledAmount),
+            _format(displayBalance + displayBilled + displayUnbilled),
             style: const TextStyle(
                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
@@ -141,9 +139,9 @@ class AccountCard extends ConsumerWidget {
             runSpacing: 4,
             children: [
               if (displayBilled > 0)
-                _buildMiniInfo('Billed', displayBilled,
-                    account.currency), // coverage:ignore-line
-              _buildMiniInfo('Unbilled', unbilledAmount, account.currency),
+                _buildMiniInfo('Billed', displayBilled, account.currency),
+              if (displayUnbilled > 0)
+                _buildMiniInfo('Unbilled', displayUnbilled, account.currency),
               if (displayBalance != 0)
                 _buildMiniInfo('Balance', displayBalance, account.currency),
             ],

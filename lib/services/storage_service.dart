@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:clock/clock.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
@@ -353,9 +355,27 @@ class StorageService {
         final oldRolloverDate =
             DateTime.fromMillisecondsSinceEpoch(oldRolloverMillis);
 
-        // Tolerance for milliseconds diff? Using moment equality.
         if (oldRolloverDate.isAtSameMomentAs(newRolloverDate)) {
           return; // Already correct.
+        }
+
+        // If we are advancing the pointer (moving forward in time),
+        // we must "catch up" the balance by applying all skipped spends
+        // between the old rollover and the new one.
+        if (newRolloverDate.isAfter(oldRolloverDate)) {
+          final adhocAmount =
+              // coverage:ignore-start
+              _computeRolloverTxnAmount(acc, oldRolloverDate, newRolloverDate);
+          if (adhocAmount != 0) {
+            acc.balance =
+                CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
+            // coverage:ignore-end
+            // Save immediately to ensure the balance update is persisted
+            // before the setting update, though both should happen.
+            await _hive
+                .box<Account>(boxAccounts)
+                .put(acc.id, acc); // coverage:ignore-line
+          }
         }
       }
 
@@ -520,7 +540,8 @@ class StorageService {
     double adhocAmount = 0;
     for (var t in txns) {
       if (t.type == TransactionType.expense) adhocAmount += t.amount;
-      if (t.type == TransactionType.income) adhocAmount -= t.amount;
+      // Note: TransactionType.income (payments) are NEVER skipped in _shouldSkipCreditCardBalance,
+      // so they should NOT be subtracted here. Subtracting them here would double-count them.
       if (t.type == TransactionType.transfer && t.accountId == acc.id) {
         adhocAmount += t.amount; // coverage:ignore-line
       }
@@ -1274,6 +1295,9 @@ class StorageService {
     await box.put('appLockEnabled', enabled);
   }
 
+  static const int maxPinAttempts = 3;
+  static const Duration pinLockDuration = Duration(minutes: 5);
+
   int _failedPinAttempts = 0;
 
   String _hashPin(String pin) {
@@ -1290,27 +1314,106 @@ class StorageService {
   Future<void> setAppPin(String pin) async {
     final box = _hive.box(boxSettings);
     await box.put('appPin', _hashPin(pin));
+    resetFailedPinAttempts();
   }
 
   bool verifyAppPin(String input) {
-    // coverage:ignore-line
-    final storedHash = getAppPin(); // coverage:ignore-line
+    final storedHash = getAppPin();
     if (storedHash == null) return true; // No PIN set
-    final inputHash = _hashPin(input); // coverage:ignore-line
-    final isValid = storedHash == inputHash; // coverage:ignore-line
+    if (isPinLocked()) return false; // Locked out
+    final inputHash = _hashPin(input);
+    final isValid = storedHash == inputHash;
     if (!isValid) {
-      _failedPinAttempts++; // coverage:ignore-line
+      final attempts = getFailedPinAttempts() + 1;
+      _setFailedPinAttempts(attempts);
+      if (attempts >= maxPinAttempts) {
+        _setPinLockUntil(clock.now().add(pinLockDuration));
+      }
     } else {
-      _failedPinAttempts = 0; // coverage:ignore-line
+      resetFailedPinAttempts(); // coverage:ignore-line
     }
     return isValid;
   }
 
-  int getFailedPinAttempts() => _failedPinAttempts; // coverage:ignore-line
+  int getFailedPinAttempts() {
+    try {
+      final box = _hive.box(boxSettings);
+      final stored = box.get('pinFailedAttempts');
+      if (stored is int) {
+        _failedPinAttempts = stored;
+      }
+    } catch (_) {}
+    return _failedPinAttempts;
+  }
+
+  // coverage:ignore-start
+  int getRemainingPinAttempts() {
+    final remaining = maxPinAttempts - getFailedPinAttempts();
+    return remaining < 0 ? 0 : remaining;
+    // coverage:ignore-end
+  }
+
+  DateTime? _getPinLockUntil() {
+    try {
+      final box = _hive.box(boxSettings);
+      final stored = box.get('pinLockUntil');
+      if (stored is int) {
+        return DateTime.fromMillisecondsSinceEpoch(stored);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _setPinLockUntil(DateTime? until) {
+    try {
+      final box = _hive.box(boxSettings);
+      if (until == null) {
+        box.delete('pinLockUntil'); // coverage:ignore-line
+      } else {
+        box.put('pinLockUntil', until.millisecondsSinceEpoch);
+      }
+    } catch (_) {}
+  }
+
+  void _setFailedPinAttempts(int attempts) {
+    _failedPinAttempts = attempts;
+    try {
+      final box = _hive.box(boxSettings);
+      box.put('pinFailedAttempts', attempts);
+    } catch (_) {}
+  }
+
+  bool isPinLocked() {
+    final until = _getPinLockUntil();
+    if (until == null) return false;
+    if (clock.now().isAfter(until)) {
+      resetFailedPinAttempts(); // coverage:ignore-line
+      return false;
+    }
+    return true;
+  }
+
+  Duration? getPinLockRemaining() {
+    // coverage:ignore-line
+    final until = _getPinLockUntil(); // coverage:ignore-line
+    if (until == null) return null;
+    // coverage:ignore-start
+    final remaining = until.difference(clock.now());
+    if (remaining.isNegative || remaining == Duration.zero) {
+      resetFailedPinAttempts();
+      // coverage:ignore-end
+      return null;
+    }
+    return remaining;
+  }
 
   void resetFailedPinAttempts() {
-    // coverage:ignore-line
-    _failedPinAttempts = 0; // coverage:ignore-line
+    _failedPinAttempts = 0;
+    try {
+      final box = _hive.box(boxSettings);
+      box.put('pinFailedAttempts', 0);
+      box.delete('pinLockUntil');
+    } catch (_) {}
   }
 
   bool getPinResetRequested() {
@@ -1392,6 +1495,13 @@ class StorageService {
 
   Box<InsurancePolicy> getInsurancePoliciesBox() {
     return _hive.box<InsurancePolicy>(boxInsurancePolicies);
+  }
+
+  ValueListenable<Box<InsurancePolicy>> getInsurancePoliciesListenable() {
+    // coverage:ignore-line
+    return _hive
+        .box<InsurancePolicy>(boxInsurancePolicies)
+        .listenable(); // coverage:ignore-line
   }
 
   Future<void> saveInsurancePolicies(List<InsurancePolicy> policies) async {
