@@ -926,12 +926,17 @@ class IndianTaxService implements TaxStrategy {
         rules,
       );
 
-      double annualTaxableFull =
-          max(0, projected.full - exemptionPools.retirementExemptions);
-      double annualTaxableStable =
-          max(0, projected.stable - exemptionPools.retirementExemptions);
-      double annualTaxableWithPlanning =
-          max(0, annualTaxableFull - exemptionPools.plannedExemptions);
+      double annualTaxableFull = max(
+          0,
+          projected.full -
+              exemptionPools.retirementExemptions -
+              exemptionPools.plannedExemptions);
+      double annualTaxableStable = max(
+          0,
+          projected.stable -
+              exemptionPools.retirementExemptions -
+              exemptionPools.plannedExemptions);
+      double annualTaxableWithPlanning = annualTaxableFull;
 
       double totalTaxFull = _calculateCoreLiability(salaryOnlyData, rules,
           salaryIncomeOverride: annualTaxableFull)['totalTax']!;
@@ -1043,28 +1048,28 @@ class IndianTaxService implements TaxStrategy {
     double projFull = accumulatedTaxable;
     double projStable = accumulatedTaxable - currentIrregular;
 
+    int projectionBaseMonth = fyMonths[currentIndex];
     for (int j = currentIndex + 1; j < fyMonths.length; j++) {
       int futureMonth = fyMonths[j];
+      final futureStructure = currentStructure; // Reverted to Blind Projection
+
       _addFutureMonthProjection(
-          data, currentStructure, futureMonth, rules, projFull, projStable);
-      if (currentStructure != null) {
-        double reg = currentStructure.calculateRegularContribution(
-            futureMonth, rules.financialYearStartMonth,
+          data, futureStructure, futureMonth, rules, projFull, projStable);
+
+      if (futureStructure != null) {
+        double reg = futureStructure.calculateRegularContribution(
+            projectionBaseMonth, rules.financialYearStartMonth,
             taxableOnly: true);
-        projFull += currentStructure.calculateContribution(
-            futureMonth, rules.financialYearStartMonth,
-            taxableOnly: true);
+        projFull += reg; // Only project current regular rate for future
         projStable += reg;
       }
 
       for (final a in data.salary.independentAllowances) {
-        if (!SalaryStructure.isPayoutMonth(
-            futureMonth, a.frequency, a.startMonth, a.customMonths)) {
-          continue;
-        }
-        final amt = _getAllowancePayoutAmount(a, futureMonth);
-        projFull += amt;
-        if (a.frequency == PayoutFrequency.monthly) {
+        if (a.frequency == PayoutFrequency.monthly &&
+            SalaryStructure.isPayoutMonth(projectionBaseMonth, a.frequency,
+                a.startMonth, a.customMonths)) {
+          final amt = _getAllowancePayoutAmount(a, projectionBaseMonth);
+          projFull += amt;
           projStable += amt;
         }
       }

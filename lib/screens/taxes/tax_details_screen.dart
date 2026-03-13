@@ -977,7 +977,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         salaryIncomeOverride: plannedSalaryIncome);
     double newTaxAfterAdhocExemptions = resultsWithPlanning['totalTax'] ?? 0;
 
-    final totalTds = _tdsEntries.fold(0.0, (sum, e) => sum + e.amount);
+    final generatedTds =
+        taxService.getGeneratedSalaryTds(salaryOnlyData, rules);
+    final totalTds = _tdsEntries.fold(0.0, (sum, e) => sum + e.amount) +
+        generatedTds.fold(0.0, (sum, e) => sum + e.amount);
 
     double refundForecast = 0;
     if (totalTds > newTaxAfterAdhocExemptions &&
@@ -992,6 +995,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           dense: true,
           contentPadding: EdgeInsets.zero,
           title: const Text('Total TDS tracked'),
+          subtitle: generatedTds.isNotEmpty
+              ? const Text('Includes projected monthly salary TDS')
+              : null,
           trailing: Text(
               CurrencyUtils.formatCurrency(
                   totalTds, ref.watch(currencyProvider)),
@@ -1034,40 +1040,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 label: const Text('View/Edit All TDS'),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: _copyLiabilityToTds,
-                icon: const Icon(Icons.sync),
-                label: const Text('Copy Calc. Tax to TDS'),
-              ),
-            ),
           ],
         ),
       ],
-    );
-  }
-
-  void _copyLiabilityToTds() {
-    final taxService = ref.read(indianTaxServiceProvider);
-    double estimatedTax = taxService.calculateSalaryOnlyLiability(_currentData);
-
-    final now = DateTime.now();
-    final newEntry = TaxPaymentEntry(
-      id: const Uuid().v4(),
-      amount: estimatedTax,
-      date: now,
-      source: employerPaidText,
-      description: 'Auto-sync from salary/tax estimation',
-    );
-
-    setState(() {
-      _tdsEntries.removeWhere((e) => e.source == employerPaidText);
-      _tdsEntries.add(newEntry.copyWith(source: employerPaidText));
-    });
-    _updateSummary();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Estimated tax liability copied to TDS!')),
     );
   }
 
@@ -2853,7 +2828,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           key: ValueKey(subtype),
-          initialValue: subtype,
+          initialValue: validKeys.contains(subtype) ? subtype : 'others',
           items: validKeys
               .map((s) => DropdownMenuItem(
                   value: s, child: Text(s.toOtherSourceDisplay())))

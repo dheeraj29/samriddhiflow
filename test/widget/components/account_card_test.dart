@@ -174,4 +174,158 @@ void main() {
         .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
     expect(indicator.value, 0.0);
   });
+
+  group('AccountCard Negative Balance Fix', () {
+    testWidgets(
+        'AccountCard offsets negative balance against billed AND unbilled',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final account = Account(
+        id: 'cc1',
+        name: 'Test CC',
+        type: AccountType.creditCard,
+        balance: -2000,
+        currency: 'INR',
+        billingCycleDay: 15,
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 350,
+                height: 250,
+                child: AccountCard(
+                  account: account,
+                  billedAmount: 1200,
+                  unbilledAmount: 500,
+                  compactView: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.pump();
+
+      expect(find.textContaining('Billed'), findsNothing);
+      expect(find.textContaining('Unbilled'), findsNothing);
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Text &&
+            widget.data != null &&
+            widget.data!.contains('Balance:') &&
+            widget.data!.contains('300')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('AccountCard offsets negative balance partially',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final account = Account(
+        id: 'cc1',
+        name: 'Test CC',
+        type: AccountType.creditCard,
+        balance: -500, // Excess payment of 500
+        currency: 'INR',
+        billingCycleDay: 15,
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 350,
+                height: 250,
+                child: AccountCard(
+                  account: account,
+                  billedAmount: 1200,
+                  unbilledAmount: 500,
+                  compactView: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.pump();
+
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Text &&
+            widget.data != null &&
+            widget.data!.contains('Billed:') &&
+            widget.data!.contains('700')),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Text &&
+            widget.data != null &&
+            widget.data!.contains('Unbilled:') &&
+            widget.data!.contains('500')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Balance'), findsNothing);
+    });
+
+    testWidgets('AccountCard zeros everything when exactly paid',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final account = Account(
+        id: 'cc1',
+        name: 'Test CC',
+        type: AccountType.creditCard,
+        balance: -1700, // Pays off 1200 billed + 500 unbilled
+        currency: 'INR',
+        billingCycleDay: 15,
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 350,
+                height: 250,
+                child: AccountCard(
+                  account: account,
+                  billedAmount: 1200,
+                  unbilledAmount: 500,
+                  compactView: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.pump();
+
+      expect(find.textContaining('Billed'), findsNothing);
+      expect(find.textContaining('Unbilled'), findsNothing);
+      expect(find.textContaining('Balance'), findsNothing);
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Text &&
+            widget.data != null &&
+            widget.data!.contains('0.00')),
+        findsOneWidget,
+      );
+    });
+  });
 }

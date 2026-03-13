@@ -333,36 +333,7 @@ class TaxRulesAdapter extends TypeAdapter<TaxRules> {
       limit44ADA: fields[48] == null ? 5000000 : (fields[48] as num).toDouble(),
       rate44ADA: fields[49] == null ? 50.0 : (fields[49] as num).toDouble(),
       advanceTaxRules: fields[50] == null
-          ? const [
-              AdvanceTaxInstallmentRule(
-                  startMonth: 4,
-                  startDay: 1,
-                  endMonth: 6,
-                  endDay: 15,
-                  requiredPercentage: 15.0,
-                  interestRate: 1.0),
-              AdvanceTaxInstallmentRule(
-                  startMonth: 6,
-                  startDay: 16,
-                  endMonth: 9,
-                  endDay: 15,
-                  requiredPercentage: 45.0,
-                  interestRate: 1.0),
-              AdvanceTaxInstallmentRule(
-                  startMonth: 9,
-                  startDay: 16,
-                  endMonth: 12,
-                  endDay: 15,
-                  requiredPercentage: 75.0,
-                  interestRate: 1.0),
-              AdvanceTaxInstallmentRule(
-                  startMonth: 12,
-                  startDay: 16,
-                  endMonth: 3,
-                  endDay: 15,
-                  requiredPercentage: 100.0,
-                  interestRate: 1.0)
-            ]
+          ? TaxRules.defaultAdvanceTaxRules
           : (fields[50] as List).cast<AdvanceTaxInstallmentRule>(),
       enableAdvanceTaxInterest: fields[51] == null ? true : fields[51] as bool,
       taxableGiftKeys: fields[52] == null

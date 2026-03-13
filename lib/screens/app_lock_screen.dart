@@ -14,11 +14,14 @@ class AppLockScreen extends ConsumerStatefulWidget {
 }
 
 class _AppLockScreenState extends ConsumerState<AppLockScreen> {
+  static const int _minPinLength = 4;
+  static const int _maxPinLength = 6;
+
   String _pin = "";
   String? _error;
 
   void _onDigit(String d) {
-    if (_pin.length < 4) {
+    if (_pin.length < _maxPinLength) {
       setState(() {
         _pin += d;
         _error = null;
@@ -37,18 +40,26 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   void _verify() {
     final storage = ref.read(storageServiceProvider);
 
+    if (storage.isPinLocked()) {
+      setState(() {
+        _pin = "";
+        _error = "Too many attempts. Try again later.";
+      });
+      return;
+    }
+
     if (storage.verifyAppPin(_pin)) {
       widget.onUnlocked();
     } else {
-      final attempts = storage.getFailedPinAttempts();
-      if (attempts >= 3) {
+      if (storage.isPinLocked()) {
         // Log user out after 3 failed attempts
         ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
         // AuthWrapper will handle redirect to login
       } else {
+        final attemptsLeft = storage.getRemainingPinAttempts();
         setState(() {
           _pin = "";
-          _error = "Incorrect PIN (${3 - attempts} attempts left)";
+          _error = "Incorrect PIN ($attemptsLeft attempts left)";
         });
       }
     }
@@ -75,11 +86,16 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                       style:
                           TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '4-6 digits',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                     const SizedBox(height: 32),
                     // PIN Dots
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(4, (index) {
+                      children: List.generate(_maxPinLength, (index) {
                         bool filled = index < _pin.length;
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -152,12 +168,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       onTap = _onBackspace;
       child = PureIcons.backspace(size: 28);
     } else if (value == 'submit') {
-      onTap = _pin.length == 4 ? _verify : null;
+      final canSubmit =
+          _pin.length >= _minPinLength && _pin.length <= _maxPinLength;
+      onTap = canSubmit ? _verify : null;
       child = Icon(
         Icons.check_circle,
         size: 40,
-        color:
-            _pin.length == 4 ? Colors.teal : Colors.grey.withValues(alpha: 0.3),
+        color: canSubmit ? Colors.teal : Colors.grey.withValues(alpha: 0.3),
       );
     } else {
       onTap = () => _onDigit(value);

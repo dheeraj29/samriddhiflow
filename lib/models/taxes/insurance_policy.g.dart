@@ -28,13 +28,17 @@ class InsurancePolicyAdapter extends TypeAdapter<InsurancePolicy> {
       isHandicapDependent: fields[8] == null ? false : fields[8] as bool,
       isTaxExempt: fields[9] as bool?,
       profileId: fields[10] == null ? 'default' : fields[10] as String,
+      isInstallmentEnabled: fields[11] == null ? false : fields[11] as bool,
+      installmentStartDate: fields[12] as DateTime?,
+      isIncomeAddedByYear:
+          fields[13] == null ? const {} : (fields[13] as Map).cast<int, bool>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, InsurancePolicy obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +60,13 @@ class InsurancePolicyAdapter extends TypeAdapter<InsurancePolicy> {
       ..writeByte(9)
       ..write(obj.isTaxExempt)
       ..writeByte(10)
-      ..write(obj.profileId);
+      ..write(obj.profileId)
+      ..writeByte(11)
+      ..write(obj.isInstallmentEnabled)
+      ..writeByte(12)
+      ..write(obj.installmentStartDate)
+      ..writeByte(13)
+      ..write(obj.isIncomeAddedByYear);
   }
 
   @override
