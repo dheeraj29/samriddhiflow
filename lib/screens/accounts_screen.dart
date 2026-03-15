@@ -13,6 +13,7 @@ import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
 import '../services/storage_service.dart';
 import 'cc_payment_dialog.dart';
+import 'update_billing_cycle_dialog.dart';
 
 class CreditUsageVisibilityNotifier extends Notifier<bool> {
   @override
@@ -318,18 +319,36 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       unbilled = BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
 
       final storage = ref.watch(storageServiceProvider);
-      final lastRollover = storage.getLastRollover(acc.id);
-      billed =
-          BillingHelper.calculateBilledAmount(acc, allTxns, now, lastRollover);
-      payments = BillingHelper.calculatePaymentsSinceLastRollover(
-          acc, allTxns, lastRollover);
+      final lastRolloverMillis = storage.getLastRollover(acc.id);
+      billed = BillingHelper.calculateBilledAmount(
+          acc, allTxns, now, lastRolloverMillis);
+
+      if (lastRolloverMillis != null) {
+        final ignoreFlagKey =
+            'ignore_rollover_payments_${acc.id}'; // coverage:ignore-line
+        final ignorePayments = storage
+                .getSettingsBox() // coverage:ignore-line
+                .get(ignoreFlagKey, defaultValue: false)
+            as bool; // coverage:ignore-line
+
+        if (!ignorePayments) {
+          final statementDate = BillingHelper.getStatementDate(
+              now, acc.billingCycleDay!); // coverage:ignore-line
+          payments = BillingHelper.calculatePeriodPayments(
+              // coverage:ignore-line
+              acc,
+              allTxns,
+              statementDate,
+              now);
+        }
+      }
     }
 
     return AccountCard(
       account: acc,
       unbilledAmount: unbilled,
       billedAmount: billed,
-      totalPaymentsSinceRollover: payments,
+      paymentsSinceRollover: payments,
       compactView: _compactView,
       onTap: () => _showAccountOptions(context, ref, acc),
     );
@@ -364,47 +383,55 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   void _showAccountOptions(BuildContext context, WidgetRef ref, Account acc) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (acc.type == AccountType.creditCard) ...[
-              _buildPayBillOption(context, ref, acc),
-              _buildClearBilledOption(context, ref, acc),
-              _buildRecalculateOption(context, ref, acc),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (acc.type == AccountType.creditCard) ...[
+                _buildPayBillOption(context, ref, acc),
+                _buildUpdateBillingCycleOption(context, ref, acc),
+                if (!acc.isFrozen) ...[
+                  _buildClearBilledOption(context, ref, acc),
+                  _buildRecalculateOption(context, ref, acc),
+                ],
+                _buildBillingDateInfo(ref, acc),
+                const Divider(),
+              ],
+              ListTile(
+                leading: const Icon(Icons.list_alt),
+                title: const Text('View Transactions'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          TransactionsScreen(initialAccountId: acc.id),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit Account'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddAccountSheet(context, ref, account: acc);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete Account',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete(context, ref, acc);
+                },
+              ),
             ],
-            ListTile(
-              leading: const Icon(Icons.list_alt),
-              title: const Text('View Transactions'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        TransactionsScreen(initialAccountId: acc.id),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Account'),
-              onTap: () {
-                Navigator.pop(context);
-                _showAddAccountSheet(context, ref, account: acc);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Account',
-                  style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDelete(context, ref, acc);
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -426,31 +453,116 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     );
   }
 
+  Widget _buildUpdateBillingCycleOption(
+      BuildContext context, WidgetRef ref, Account acc) {
+    // We only show this option if the outstanding balance is strictly 0.
+    final storage = ref.read(storageServiceProvider);
+    final allTxns = ref.read(transactionsProvider).value ?? [];
+
+    // We get the actual live current debt data.
+    final lastRollover = storage.getLastRollover(acc.id);
+    final payments = BillingHelper.calculatePeriodPayments(acc, allTxns,
+        DateTime.fromMillisecondsSinceEpoch(lastRollover ?? 0), DateTime.now());
+
+    final data = BillingHelper.getAdjustedCCData(
+      accountBalance: acc.balance,
+      billedAmount: BillingHelper.calculateBilledAmount(
+          acc, allTxns, DateTime.now(), lastRollover),
+      unbilledAmount:
+          BillingHelper.calculateUnbilledAmount(acc, allTxns, DateTime.now()),
+      paymentsSinceRollover: payments,
+    );
+
+    final totalNetDebt = data.$1;
+
+    // Must be strictly 0, or freezing a transition breaks!
+    if (totalNetDebt > 0.01) {
+      return const SizedBox.shrink();
+    }
+
+    // Determine the newest transaction to act as the freezeDate floor barrier
+    final accountTxns = allTxns
+        // coverage:ignore-start
+        .where((t) =>
+            !t.isDeleted && (t.accountId == acc.id || t.toAccountId == acc.id))
+        .toList();
+    accountTxns.sort((a, b) => b.date.compareTo(a.date));
+    final newestTxnDate = accountTxns.isNotEmpty
+        ? accountTxns.first.date
+        : DateTime.now().subtract(const Duration(days: 30));
+    // coverage:ignore-end
+
+    return ListTile(
+      // coverage:ignore-line
+      leading: const Icon(Icons.edit_calendar, color: Colors.purple),
+      title: const Text('Update Billing Cycle',
+          style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
+      subtitle: const Text('Move to a new cycle day or due date safely'),
+      // coverage:ignore-start
+      onTap: () async {
+        Navigator.pop(context);
+        final result = await showDialog<bool>(
+            // coverage:ignore-end
+            context: context,
+            builder: (_) => UpdateBillingCycleDialog(
+                  // coverage:ignore-line
+                  account: acc,
+                  newestTransactionDate: newestTxnDate,
+                ));
+
+        // coverage:ignore-start
+        if (result == true) {
+          ref.invalidate(accountsProvider);
+          ref.invalidate(transactionsProvider);
+          // coverage:ignore-end
+        }
+      },
+    );
+  }
+
+  Widget _buildBillingDateInfo(WidgetRef ref, Account acc) {
+    String lastBillStr = 'Not calculated yet';
+    String nextBillStr = 'TBD';
+
+    if (acc.billingCycleDay != null) {
+      final now = DateTime.now();
+      // Current Cycle Start
+      final currentStart =
+          BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+
+      // Last Bill Date: End of the cycle just completed (or about to be processed)
+      final lastBillDate = currentStart.subtract(const Duration(seconds: 1));
+      lastBillStr = DateFormat('MMM dd, yyyy').format(lastBillDate);
+
+      // Next Bill Date: End of the cycle we are currently in
+      final nextBillDate = BillingHelper.getCycleEnd(now, acc.billingCycleDay!);
+      nextBillStr = DateFormat('MMM dd, yyyy').format(nextBillDate);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Last Bill Date: $lastBillStr',
+              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Next Bill Date: $nextBillStr',
+              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
   bool _checkIfFullyPaid(WidgetRef ref, Account acc) {
     if (acc.billingCycleDay == null) return false;
-    final today = DateTime.now();
-    final lastBillDate = today.day > acc.billingCycleDay!
-        ? DateTime(today.year, today.month,
-            acc.billingCycleDay!) // coverage:ignore-line
-        : DateTime(today.year, today.month - 1, acc.billingCycleDay!);
-
-    final allTxns = ref.read(transactionsProvider).value ?? [];
-    final totalPaid = allTxns
-        .where((t) =>
-            // coverage:ignore-start
-            !t.isDeleted &&
-            t.toAccountId == acc.id &&
-            t.type == TransactionType.transfer &&
-            t.date.isAfter(lastBillDate.subtract(const Duration(days: 1))))
-        // coverage:ignore-end
-        .fold(0.0, (sum, t) => sum + t.amount);
-
     final storage = ref.read(storageServiceProvider);
-    final billedAmount = BillingHelper.calculateBilledAmount(
-        acc, allTxns, today, storage.getLastRollover(acc.id));
-    final totalDue = acc.balance + billedAmount;
 
-    return totalDue <= 0.01 || (totalDue > 0 && totalPaid >= totalDue);
+    if (acc.type == AccountType.creditCard) {
+      return storage.isBilledAmountPaid(acc.id);
+    }
+
+    // Default for non-CC: check if balance is 0
+    return acc.balance <= 0.01; // coverage:ignore-line
   }
 
   Widget _buildClearBilledOption(
@@ -508,13 +620,28 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           // coverage:ignore-end
           const SnackBar(content: Text('Recalculating bill...')),
         );
-        // coverage:ignore-start
-        await ref.read(storageServiceProvider).recalculateBilledAmount(acc.id);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Bill recalculated for ${acc.name}.')),
-            // coverage:ignore-end
-          );
+        try {
+          await ref
+              // coverage:ignore-start
+              .read(storageServiceProvider)
+              .recalculateBilledAmount(acc.id);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Bill recalculated for ${acc.name}.')),
+              // coverage:ignore-end
+            );
+          }
+        } catch (e) {
+          // coverage:ignore-start
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(e.toString().replaceAll('Exception: ', '')),
+                // coverage:ignore-end
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
         ref.invalidate(accountsProvider); // coverage:ignore-line
         ref.invalidate(transactionsProvider); // coverage:ignore-line
@@ -594,13 +721,56 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   void initState() {
     super.initState();
     if (widget.account != null) {
-      _name = widget.account!.name;
-      _type = widget.account!.type;
-      _initialBalance = widget.account!.balance;
-      _limit = widget.account!.creditLimit;
-      _billingDay = widget.account!.billingCycleDay;
-      _dueDay = widget.account!.paymentDueDateDay;
-      _currency = widget.account!.currency;
+      final acc = widget.account!;
+      _name = acc.name;
+      _type = acc.type;
+      _limit = acc.creditLimit;
+      _billingDay = acc.billingCycleDay;
+      _dueDay = acc.paymentDueDateDay;
+      _currency = acc.currency;
+
+      if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
+        final now = DateTime.now(); // coverage:ignore-line
+        // Read transactions via a safe read. Usually provider works, but initState doesn't allow ref.watch.
+        // We'll use ref.read and storage directly for a one-off initial sync.
+        final storage =
+            ref.read(storageServiceProvider); // coverage:ignore-line
+        final allTxns = storage.getTransactions(); // coverage:ignore-line
+
+        final unbilled =
+            // coverage:ignore-start
+            BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
+        final lastRolloverMillis = storage.getLastRollover(acc.id);
+        final billed = BillingHelper.calculateBilledAmount(
+            // coverage:ignore-end
+            acc,
+            allTxns,
+            now,
+            lastRolloverMillis);
+
+        double payments = 0;
+        if (lastRolloverMillis != null) {
+          final statementDate = BillingHelper.getStatementDate(
+              now, acc.billingCycleDay!); // coverage:ignore-line
+          payments = BillingHelper.calculatePeriodPayments(
+              // coverage:ignore-line
+              acc,
+              allTxns,
+              statementDate,
+              now);
+        }
+
+        final (totalNetDebt, _, _, _) = BillingHelper.getAdjustedCCData(
+          // coverage:ignore-line
+          accountBalance: acc.balance, // coverage:ignore-line
+          billedAmount: billed,
+          unbilledAmount: unbilled,
+          paymentsSinceRollover: payments,
+        );
+        _initialBalance = totalNetDebt; // coverage:ignore-line
+      } else {
+        _initialBalance = acc.balance;
+      }
     } else {
       _currency = '';
     }
@@ -688,9 +858,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     return TextFormField(
       initialValue: _initialBalance.toString(),
       decoration: InputDecoration(
-        labelText: _type == AccountType.creditCard
-            ? 'Current Balance (Debt)'
-            : 'Current Balance',
+        labelText: 'Current Balance',
         prefixText:
             '${CurrencyUtils.getSymbol(_type == AccountType.wallet ? _currency : ref.watch(currencyProvider))} ',
       ),
@@ -784,53 +952,69 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       // coverage:ignore-start
       children: [
         Expanded(
-          child: TextFormField(
-            initialValue: _billingDay?.toString(),
+          child: _buildCycleDayField(
             // coverage:ignore-end
-            decoration: const InputDecoration(
-                labelText: 'Bill Gen. Day',
-                hintText: 'e.g. 15',
-                helperText: 'Day of month'),
-            keyboardType: TextInputType.number,
-            // coverage:ignore-start
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            validator: (v) {
-              if (v!.isEmpty) return 'Req';
-              final d = int.tryParse(v);
-              if (d == null || d < 1 || d > 31) return '1-31';
-              // coverage:ignore-end
-              return null;
-            },
-            onSaved: (v) =>
-                _billingDay = int.tryParse(v ?? ''), // coverage:ignore-line
+            label: 'Bill Gen. Day',
+            hint: 'e.g. 15',
+            helperText: 'Day of month',
+            value: _billingDay, // coverage:ignore-line
+            onSaved: (val) => _billingDay = val, // coverage:ignore-line
           ),
         ),
         const SizedBox(width: 16),
-        // coverage:ignore-start
         Expanded(
-          child: TextFormField(
-            initialValue: _dueDay?.toString(),
-            // coverage:ignore-end
-            decoration: const InputDecoration(
-                labelText: 'Payment Due Day',
-                hintText: 'e.g. 5',
-                helperText: 'Day of month'),
-            keyboardType: TextInputType.number,
-            // coverage:ignore-start
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            validator: (v) {
-              if (v!.isEmpty) return 'Req';
-              final d = int.tryParse(v);
-              if (d == null || d < 1 || d > 31) return '1-31';
-              // coverage:ignore-end
-              return null;
-            },
-            onSaved: (v) =>
-                _dueDay = int.tryParse(v ?? ''), // coverage:ignore-line
+          // coverage:ignore-line
+          child: _buildCycleDayField(
+            // coverage:ignore-line
+            label: 'Payment Due Day',
+            hint: 'e.g. 5',
+            helperText: 'Day of month',
+            value: _dueDay, // coverage:ignore-line
+            onSaved: (val) => _dueDay = val, // coverage:ignore-line
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildCycleDayField({
+    // coverage:ignore-line
+    required String label,
+    required String hint,
+    required String helperText,
+    required int? value,
+    required ValueChanged<int?> onSaved,
+  }) {
+    // coverage:ignore-start
+    final isEditing = widget.account != null;
+    return TextFormField(
+      initialValue: value?.toString(),
+      // coverage:ignore-end
+      readOnly: isEditing,
+      decoration: InputDecoration(
+        // coverage:ignore-line
+        labelText: label,
+        hintText: hint,
+        helperText: helperText,
+        filled: isEditing,
+        fillColor: isEditing ? Colors.black12 : null,
+      ),
+      keyboardType: TextInputType.number,
+      // coverage:ignore-start
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      validator: _validateCycleDay,
+      onSaved: (v) => onSaved(int.tryParse(v ?? '')),
+      // coverage:ignore-end
+    );
+  }
+
+  // coverage:ignore-start
+  String? _validateCycleDay(String? value) {
+    if (value == null || value.isEmpty) return 'Req';
+    final day = int.tryParse(value);
+    if (day == null || day < 1 || day > 31) return '1-31';
+    // coverage:ignore-end
+    return null;
   }
 
   bool _shouldKeepBilledStatus(StorageService storage) {

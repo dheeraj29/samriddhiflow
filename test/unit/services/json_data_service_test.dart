@@ -164,6 +164,8 @@ void main() {
     when(() => mockStorageService.addCategory(any(),
         isRestore: any(named: 'isRestore'))).thenAnswer((_) async {});
     when(() => mockStorageService.saveAccount(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.saveAccountRaw(any()))
+        .thenAnswer((_) async {});
     when(() => mockStorageService.saveTransaction(any(),
         applyImpact: any(named: 'applyImpact'))).thenAnswer((_) async {});
     when(() => mockStorageService.saveLoan(any())).thenAnswer((_) async {});
@@ -185,10 +187,9 @@ void main() {
     // Verify
     verify(() => mockStorageService.clearAllData()).called(1);
     verify(() => mockStorageService.saveProfile(any())).called(1);
-    verify(() => mockStorageService.addCategory(any(),
-        isRestore: any(named: 'isRestore'))).called(1);
-    verify(() => mockStorageService.saveAccount(any(),
-        keepBilledStatus: any(named: 'keepBilledStatus'))).called(1);
+    verify(() => mockStorageService.addCategory(any(), isRestore: true))
+        .called(1);
+    verify(() => mockStorageService.saveAccountRaw(any())).called(1);
     verify(() => mockStorageService.saveTransaction(any(),
         applyImpact: false, now: any(named: 'now'))).called(1);
     verify(() => mockStorageService.saveSettings(any())).called(1);

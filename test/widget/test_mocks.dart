@@ -113,6 +113,7 @@ void setupStorageDefaults(MockStorageService mock) {
       .thenAnswer((_) async {});
   when(() => mock.saveAccount(any())).thenAnswer((_) async {});
   when(() => mock.saveProfile(any())).thenAnswer((_) async {});
+  when(() => mock.isBilledAmountPaid(any())).thenReturn(false);
 }
 
 // --- Notifier Mocks ---

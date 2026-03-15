@@ -45,6 +45,16 @@ class Account extends HiveObject {
   @HiveField(8)
   String? profileId;
 
+  // Billing Cycle Freeze Fields
+  @HiveField(9)
+  DateTime? freezeDate;
+
+  @HiveField(10)
+  bool isFrozen;
+
+  @HiveField(11)
+  bool isFrozenCalculated;
+
   Account({
     required this.id,
     required this.name,
@@ -55,6 +65,9 @@ class Account extends HiveObject {
     this.billingCycleDay,
     this.paymentDueDateDay,
     this.profileId,
+    this.freezeDate,
+    this.isFrozen = false,
+    this.isFrozenCalculated = false,
   });
 
   factory Account.create({
@@ -77,6 +90,9 @@ class Account extends HiveObject {
       billingCycleDay: billingCycleDay,
       paymentDueDateDay: paymentDueDateDay,
       profileId: profileId,
+      freezeDate: null,
+      isFrozen: false,
+      isFrozenCalculated: false,
     );
   }
 
@@ -111,6 +127,9 @@ class Account extends HiveObject {
       'paymentDueDateDay': paymentDueDateDay,
       'creditLimit': creditLimit,
       'currency': currency,
+      'freezeDate': freezeDate?.millisecondsSinceEpoch,
+      'isFrozen': isFrozen,
+      'isFrozenCalculated': isFrozenCalculated,
     };
   }
 
@@ -124,6 +143,9 @@ class Account extends HiveObject {
     int? billingCycleDay,
     int? paymentDueDateDay,
     String? profileId,
+    DateTime? freezeDate,
+    bool? isFrozen,
+    bool? isFrozenCalculated,
   }) {
     return Account(
       id: id ?? this.id,
@@ -135,6 +157,9 @@ class Account extends HiveObject {
       billingCycleDay: billingCycleDay ?? this.billingCycleDay,
       paymentDueDateDay: paymentDueDateDay ?? this.paymentDueDateDay,
       profileId: profileId ?? this.profileId,
+      freezeDate: freezeDate ?? this.freezeDate,
+      isFrozen: isFrozen ?? this.isFrozen,
+      isFrozenCalculated: isFrozenCalculated ?? this.isFrozenCalculated,
     );
   }
 
@@ -152,11 +177,16 @@ class Account extends HiveObject {
       name: map['name'],
       balance: balance,
       type: AccountType.values[map['type']],
-      profileId: map['profileId'],
-      billingCycleDay: map['billingCycleDay'],
-      paymentDueDateDay: map['paymentDueDateDay'],
+      profileId: map['profileId'] as String?,
+      billingCycleDay: map['billingCycleDay'] as int?,
+      paymentDueDateDay: map['paymentDueDateDay'] as int?,
       creditLimit: creditLimit,
       currency: map['currency'] ?? '',
+      freezeDate: map['freezeDate'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['freezeDate'] as int)
+          : null,
+      isFrozen: map['isFrozen'] as bool? ?? false,
+      isFrozenCalculated: map['isFrozenCalculated'] as bool? ?? false,
     );
   }
 }

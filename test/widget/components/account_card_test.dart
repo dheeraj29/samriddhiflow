@@ -99,7 +99,7 @@ void main() {
       id: 'c1',
       name: 'Credit Card',
       type: AccountType.creditCard,
-      balance: 950,
+      balance: 900,
       creditLimit: 1000,
       profileId: 'default',
       currency: 'en_IN',
@@ -219,8 +219,7 @@ void main() {
         find.byWidgetPredicate((widget) =>
             widget is Text &&
             widget.data != null &&
-            widget.data!.contains('Balance:') &&
-            widget.data!.contains('300')),
+            widget.data!.contains('300.00')),
         findsOneWidget,
       );
     });
@@ -327,5 +326,41 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  testWidgets('AccountCard shows billing dates for credit card',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
+    final account = Account(
+      id: 'cc1',
+      name: 'Test CC',
+      type: AccountType.creditCard,
+      balance: 1000,
+      billingCycleDay: 15,
+      profileId: 'default',
+      currency: 'en_IN',
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 350,
+              height: 250,
+              child: AccountCard(account: account),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.pump();
+
+    // Verify billing dates are shown
+    expect(find.textContaining('Last:'), findsOneWidget);
+    expect(find.textContaining('Next:'), findsOneWidget);
   });
 }

@@ -174,13 +174,17 @@ class IndianTaxService implements TaxStrategy {
         (incomeOther - _getCustomExemptionForHead('Gift', incomeOther, rules))
             .clamp(0.0, double.infinity);
 
+    double totalAgri =
+        data.agriIncomeHistory.fold(0.0, (sum, a) => sum + a.amount);
+
     double grossTotalIncome = salaryGross +
         hpGross +
         incomeBusiness +
         incomeLTCGEquity +
         incomeLTCGOther +
         incomeSTCG +
-        incomeOther;
+        incomeOther +
+        totalAgri;
 
     // 2. Deductions
     double deductions = data.salary.npsEmployer;
@@ -200,8 +204,6 @@ class IndianTaxService implements TaxStrategy {
     double netTaxableNormalIncome =
         (taxableHeadsSum - deductions).clamp(0.0, double.infinity);
 
-    double totalAgri =
-        data.agriIncomeHistory.fold(0.0, (sum, a) => sum + a.amount);
     double netAgri = (totalAgri -
             _getCustomExemptionForHead('Agriculture', totalAgri, rules))
         .clamp(0.0, double.infinity);

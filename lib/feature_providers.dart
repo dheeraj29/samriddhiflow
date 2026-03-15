@@ -12,11 +12,11 @@ import 'services/notification_service.dart';
 import 'services/taxes/tax_config_service.dart';
 import 'services/taxes/indian_tax_service.dart';
 import 'models/taxes/tax_data.dart';
-import 'utils/billing_helper.dart';
 import 'models/account.dart';
 import 'models/transaction.dart';
 import 'models/loan.dart';
 import 'models/recurring_transaction.dart';
+import 'utils/billing_helper.dart';
 
 // --- Heavy Service Providers (Moved for Bundle Optimization) ---
 
@@ -129,21 +129,40 @@ int _countPendingLoans(List<Loan> loans, DateTime today) {
 
 int _countPendingCreditCards(List<Account> accounts, List<Transaction> txns,
     DateTime now, DateTime today, dynamic storage) {
-  int count = 0;
-  for (final acc in accounts.where((a) => a.type == AccountType.creditCard)) {
-    if (acc.billingCycleDay == null) continue;
+  return accounts
+      .where((a) => a.type == AccountType.creditCard)
+      .where((a) => _isCreditCardPending(a, txns, now, storage))
+      .length;
+}
 
-    final billed = BillingHelper.calculateBilledAmount(
-        acc, txns, now, storage.getLastRollover(acc.id));
-    final totalDue = acc.balance + billed;
+bool _isCreditCardPending(
+    Account acc, List<Transaction> txns, DateTime now, dynamic storage) {
+  if (acc.billingCycleDay == null) return false;
 
-    final isFullyPaid = totalDue <= 0.01;
+  // AND the current total due is still positive (not paid early)
+  if (storage.isBilledAmountPaid(acc.id)) return false;
 
-    if (!isFullyPaid) {
-      count++;
-    }
+  final lastRolloverMillis = storage.getLastRollover(acc.id);
+  final billedAmount =
+      BillingHelper.calculateBilledAmount(acc, txns, now, lastRolloverMillis);
+
+  double payments = 0;
+  if (lastRolloverMillis != null) {
+    final statementDate = BillingHelper.getStatementDate(
+        now, acc.billingCycleDay!); // coverage:ignore-line
+    payments = BillingHelper.calculatePeriodPayments(
+        acc, txns, statementDate, now); // coverage:ignore-line
   }
-  return count;
+
+  final adjustedData = BillingHelper.getAdjustedCCData(
+    accountBalance: acc.balance,
+    billedAmount: billedAmount,
+    unbilledAmount: 0,
+    paymentsSinceRollover: payments,
+  );
+
+  final debtDue = adjustedData.$2 + adjustedData.$3;
+  return debtDue > 0.01;
 }
 
 int _countPendingRecurring(

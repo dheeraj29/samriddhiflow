@@ -7,6 +7,8 @@ import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
@@ -22,6 +24,8 @@ void main() {
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
         taxConfigServiceProvider.overrideWithValue(mockTaxConfig),
+        indianTaxServiceProvider
+            .overrideWithValue(IndianTaxService(mockTaxConfig)),
         taxYearDataProvider.overrideWith((ref, year) => Stream.value(null)),
         accountsProvider.overrideWithValue(AsyncData(accounts ??
             [
@@ -31,6 +35,7 @@ void main() {
                 type: AccountType.creditCard,
                 balance: 5000,
                 billingCycleDay: 15,
+                profileId: 'default',
               ),
             ])),
         transactionsProvider.overrideWithValue(const AsyncData([])),
@@ -45,8 +50,11 @@ void main() {
     mockTaxConfig = MockTaxConfigService();
 
     when(() => mockTaxConfig.getCurrentFinancialYear()).thenReturn(2025);
+    when(() => mockTaxConfig.getRulesForYear(any()))
+        .thenReturn(TaxRules(jurisdiction: 'India'));
     when(() => mockStorage.getTaxYearData(any())).thenReturn(null);
     when(() => mockStorage.getLastRollover(any())).thenReturn(null);
+    when(() => mockStorage.isBilledAmountPaid(any())).thenReturn(false);
 
     container = createContainer();
   });
@@ -66,6 +74,7 @@ void main() {
             type: AccountType.creditCard,
             balance: 3000,
             billingCycleDay: 15,
+            profileId: 'default',
           ),
         ],
       );
@@ -83,9 +92,11 @@ void main() {
             type: AccountType.creditCard,
             balance: 0,
             billingCycleDay: 15,
+            profileId: 'default',
           ),
         ],
       );
+      when(() => mockStorage.isBilledAmountPaid('cc1')).thenReturn(true);
 
       final count = container.read(pendingRemindersProvider);
       expect(count, 0);

@@ -12,7 +12,7 @@ class AccountCard extends ConsumerWidget {
   final VoidCallback? onTap;
   final double unbilledAmount;
   final double billedAmount;
-  final double totalPaymentsSinceRollover;
+  final double paymentsSinceRollover;
   final bool compactView;
 
   const AccountCard({
@@ -21,7 +21,7 @@ class AccountCard extends ConsumerWidget {
     this.onTap,
     this.unbilledAmount = 0,
     this.billedAmount = 0,
-    this.totalPaymentsSinceRollover = 0,
+    this.paymentsSinceRollover = 0,
     this.compactView = true,
   });
 
@@ -35,7 +35,7 @@ class AccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (cardColor, iconWidget) = _getCardStyle();
-    final (displayBalance, displayBilled, displayUnbilled) =
+    final (displayBalance, displayBilled, displayHistBalance, displayUnbilled) =
         _getAdjustedCCData();
 
     return Card(
@@ -58,8 +58,8 @@ class AccountCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _buildAccountName(),
                 const SizedBox(height: 2),
-                _buildBalanceDisplay(
-                    displayBalance, displayBilled, displayUnbilled),
+                _buildBalanceDisplay(displayBalance, displayBilled,
+                    displayHistBalance, displayUnbilled),
                 _buildExtraInfo(),
               ],
             ),
@@ -89,16 +89,16 @@ class AccountCard extends ConsumerWidget {
     }
   }
 
-  (double, double, double) _getAdjustedCCData() {
+  (double, double, double, double) _getAdjustedCCData() {
     if (account.type != AccountType.creditCard) {
-      return (account.balance, 0, 0);
+      return (account.balance, 0, 0, 0);
     }
 
     return BillingHelper.getAdjustedCCData(
       accountBalance: account.balance,
       billedAmount: billedAmount,
       unbilledAmount: unbilledAmount,
-      totalPaymentsSinceRollover: totalPaymentsSinceRollover,
+      paymentsSinceRollover: paymentsSinceRollover,
     );
   }
 
@@ -107,8 +107,33 @@ class AccountCard extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         iconWidget,
-        if (account.type == AccountType.creditCard)
-          PureIcons.contactless(color: Colors.white54, size: 20),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (account.isFrozen)
+              Container(
+                // coverage:ignore-line
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  // coverage:ignore-line
+                  color: Colors.redAccent,
+                  borderRadius:
+                      BorderRadius.circular(4), // coverage:ignore-line
+                ),
+                child: const Text(
+                  'FROZEN',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
+            if (account.type == AccountType.creditCard)
+              PureIcons.contactless(color: Colors.white54, size: 20),
+          ],
+        ),
       ],
     );
   }
@@ -122,14 +147,17 @@ class AccountCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildBalanceDisplay(
-      double displayBalance, double displayBilled, double displayUnbilled) {
+  Widget _buildBalanceDisplay(double displayBalance, double displayBilled,
+      double displayHistBalance, double displayUnbilled) {
     if (account.type == AccountType.creditCard) {
+      // displayBalance is now return (totalNetDebt, billedAmount, histBalance, unbilledAmount) from BillingHelper
+      final totalNetDebt = displayBalance;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _format(displayBalance + displayBilled + displayUnbilled),
+            _format(totalNetDebt),
             style: const TextStyle(
                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
@@ -140,10 +168,11 @@ class AccountCard extends ConsumerWidget {
             children: [
               if (displayBilled > 0)
                 _buildMiniInfo('Billed', displayBilled, account.currency),
+              if (displayHistBalance > 0.01)
+                _buildMiniInfo('Balance', displayHistBalance, account.currency),
               if (displayUnbilled > 0)
                 _buildMiniInfo('Unbilled', displayUnbilled, account.currency),
-              if (displayBalance != 0)
-                _buildMiniInfo('Balance', displayBalance, account.currency),
+              // User Request: No separate balance label
             ],
           ),
         ],
@@ -158,21 +187,62 @@ class AccountCard extends ConsumerWidget {
   }
 
   Widget _buildExtraInfo() {
-    if (account.type == AccountType.creditCard && account.creditLimit != null) {
+    if (account.type == AccountType.creditCard) {
       return Column(
         children: [
           const SizedBox(height: 8),
-          _buildCreditUtilization(account),
+          _buildBillingDates(account),
+          if (account.creditLimit != null) ...[
+            const SizedBox(height: 8),
+            _buildCreditUtilization(account),
+          ],
         ],
       );
     }
     return const SizedBox.shrink();
   }
 
+  Widget _buildBillingDates(Account account) {
+    if (account.billingCycleDay == null) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final currentCycleStart =
+        BillingHelper.getCycleStart(now, account.billingCycleDay!);
+    final lastBillDate = currentCycleStart.subtract(const Duration(days: 1));
+    final nextBillDate =
+        BillingHelper.getCycleEnd(now, account.billingCycleDay!);
+
+    final df = DateFormat('dd MMM');
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            'Last: ${df.format(lastBillDate)}',
+            style: const TextStyle(color: Colors.white60, fontSize: 9),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            'Next: ${df.format(nextBillDate)}',
+            style: const TextStyle(color: Colors.white60, fontSize: 9),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCreditUtilization(Account account) {
     double limit = account.creditLimit!;
-    double used = account.balance;
-    double percent = (limit == 0) ? 0.0 : (used / limit).clamp(0.0, 1.0);
+    // Calculate total net debt for accurate utilization
+    final adjustedData = _getAdjustedCCData();
+    double used = adjustedData.$1; // totalNetDebt
+    double percent = (limit <= 0) ? 0.0 : (used / limit).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
