@@ -11,6 +11,7 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import 'package:samriddhi_flow/utils/billing_helper.dart';
 
 class MockHive extends Mock implements HiveInterface {}
 
@@ -25,6 +26,7 @@ class MockProfileBox extends Mock implements Box<Profile> {}
 class ProfileFake extends Fake implements Profile {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storageService;
   late MockHive mockHive;
   late MockBox<dynamic> mockSettingsBox;
@@ -59,6 +61,34 @@ void main() {
       reason: 'f',
       date: DateTime.now(),
       type: LendingType.lent,
+    ));
+    registerFallbackValue(Loan(
+      id: 'f',
+      name: 'f',
+      totalPrincipal: 0,
+      remainingPrincipal: 0,
+      interestRate: 0,
+      tenureMonths: 0,
+      startDate: DateTime.now(),
+      emiAmount: 0,
+      firstEmiDate: DateTime.now(),
+    ));
+    registerFallbackValue(RecurringTransaction(
+      id: 'f',
+      title: 'f',
+      amount: 0,
+      category: 'c',
+      frequency: Frequency.monthly,
+      nextExecutionDate: DateTime.now(),
+    ));
+    registerFallbackValue(InsurancePolicy(
+      id: 'f',
+      policyName: 'f',
+      policyNumber: 'f',
+      annualPremium: 0,
+      sumAssured: 0,
+      startDate: DateTime.now(),
+      maturityDate: DateTime.now(),
     ));
   });
 
@@ -104,6 +134,22 @@ void main() {
     // Default mock for profile ID
     when(() => mockSettingsBox.get('activeProfileId',
         defaultValue: any(named: 'defaultValue'))).thenReturn('default');
+
+    // Global mocks for put/delete to avoid TypeErrors in async calls
+    when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockAccountBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockTransactionBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockLoanBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockRecurringBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockCategoryBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockInsuranceBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockTaxBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockLendingBox.put(any(), any())).thenAnswer((_) async {});
+
+    when(() => mockSettingsBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});
+    when(() => mockProfileBox.delete(any())).thenAnswer((_) async {});
   });
 
   group('StorageService - Profile Operations', () {
@@ -172,8 +218,7 @@ void main() {
       );
 
       when(() => mockAccountBox.get('cc1')).thenReturn(null);
-      when(() => mockAccountBox.put('cc1', any())).thenAnswer((_) async {});
-      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+      // Removed local put mocks as they are now global in setUp
 
       await storageService.saveAccount(acc);
 
@@ -188,22 +233,137 @@ void main() {
           id: 'cc1',
           name: 'CC',
           type: AccountType.creditCard,
+          billingCycleDay: 5,
+          balance: 0);
+      final newAcc = Account(
+          id: 'cc1',
+          name: 'CC',
+          type: AccountType.creditCard,
+          billingCycleDay: 10, // Forward move (both in past relative to 14th)
+          balance: 0);
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(oldAcc);
+      when(() => mockTransactionBox.toMap()).thenReturn({});
+      // Mock isBilledAmountPaid to return false to allow reset
+      when(() => mockSettingsBox.get(startsWith('last_rollover_cc1'),
+          defaultValue: any(named: 'defaultValue'))).thenReturn(null);
+
+      await storageService.saveAccount(newAcc);
+      verify(() => mockSettingsBox.put(startsWith('last_rollover_cc1'), any()))
+          .called(1);
+    });
+
+    test(
+        'saveAccount triggers repair if cycle changed while balance is pending',
+        () async {
+      final oldAcc = Account(
+          id: 'cc1',
+          name: 'CC',
+          type: AccountType.creditCard,
+          billingCycleDay: 5,
+          balance: 100.0 // Pending balance
+          );
+      final newAcc = Account(
+          id: 'cc1',
+          name: 'CC',
+          type: AccountType.creditCard,
+          billingCycleDay: 10,
+          balance: 100.0);
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(oldAcc);
+      when(() => mockTransactionBox.toMap()).thenReturn({});
+      // Sync check mock
+      when(() => mockSettingsBox.get('last_rollover_cc1'))
+          .thenReturn(null); // Force sync check to fail if needed
+
+      await storageService.saveAccount(newAcc);
+
+      // Should NOT throw. Should call rollover reset
+      verify(() => mockSettingsBox.put(startsWith('last_rollover_cc1'), any()))
+          .called(1);
+    });
+
+    test('saveAccount handles backward cycle move with repair', () async {
+      final oldAcc = Account(
+          id: 'cc1',
+          name: 'CC',
+          type: AccountType.creditCard,
           billingCycleDay: 10,
           balance: 0);
       final newAcc = Account(
           id: 'cc1',
           name: 'CC',
           type: AccountType.creditCard,
-          billingCycleDay: 15,
+          billingCycleDay: 5, // Backward move
           balance: 0);
 
       when(() => mockAccountBox.get('cc1')).thenReturn(oldAcc);
-      when(() => mockAccountBox.put('cc1', any())).thenAnswer((_) async {});
-      when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+      when(() => mockTransactionBox.toMap()).thenReturn({});
+      when(() => mockSettingsBox.get('last_rollover_cc1')).thenReturn(null);
 
       await storageService.saveAccount(newAcc);
+      // Should succeed and trigger reset
       verify(() => mockSettingsBox.put(startsWith('last_rollover_cc1'), any()))
           .called(1);
+    });
+
+    test('isBilledAmountPaid returns true if rollover is caught up', () {
+      final acc = Account(
+          id: 'cc1',
+          name: 'CC',
+          type: AccountType.creditCard,
+          billingCycleDay: 15,
+          balance: 0);
+      when(() => mockAccountBox.get('cc1')).thenReturn(acc);
+
+      final now = DateTime.now();
+      final currentCycleStart = BillingHelper.getCycleStart(now, 15);
+      final paidRollover =
+          currentCycleStart.subtract(const Duration(seconds: 1));
+
+      when(() => mockSettingsBox.get('last_rollover_cc1'))
+          .thenReturn(paidRollover.millisecondsSinceEpoch);
+
+      expect(storageService.isBilledAmountPaid('cc1'), true);
+    });
+
+    test('getTransactionsByAccount filters by account and profile', () {
+      final t1 = Transaction(
+          id: 't1',
+          title: 'T1',
+          amount: 100,
+          date: DateTime.now(),
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'acc1',
+          profileId: 'p1');
+      final t2 = Transaction(
+          id: 't2',
+          title: 'T2',
+          amount: 200,
+          date: DateTime.now(),
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'acc2',
+          profileId: 'p1');
+      final t3 = Transaction(
+          id: 't3',
+          title: 'T3',
+          amount: 300,
+          date: DateTime.now(),
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'acc1',
+          profileId: 'p2');
+
+      when(() => mockTransactionBox.toMap())
+          .thenReturn({'t1': t1, 't2': t2, 't3': t3});
+      when(() => mockSettingsBox.get('activeProfileId',
+          defaultValue: any(named: 'defaultValue'))).thenReturn('p1');
+
+      final result = storageService.getTransactionsByAccount('acc1');
+      expect(result.length, 1);
+      expect(result.first.id, 't1');
     });
   });
 
@@ -265,6 +425,74 @@ void main() {
       await storageService.saveTransaction(txn);
 
       expect(acc.balance, 1500);
+    });
+  });
+
+  group('StorageService - CC Billing Locks', () {
+    test('recalculateBilledAmount succeeds even if cycle is paid (Reset Lock)',
+        () async {
+      final acc = Account(
+          id: 'paid_cc',
+          name: 'Paid Card',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 20);
+      when(() => mockAccountBox.get('paid_cc')).thenReturn(acc);
+      when(() => mockTransactionBox.toMap()).thenReturn({});
+
+      // Setup rollover as "Paid"
+      final now = DateTime.now();
+      final currentCycleStart = BillingHelper.getCycleStart(now, 20);
+      final paidRollover =
+          currentCycleStart.subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_paid_cc'))
+          .thenReturn(paidRollover.millisecondsSinceEpoch);
+
+      await storageService.recalculateBilledAmount('paid_cc');
+      // Should advance pointer back (trigger reset)
+      verify(() => mockSettingsBox.put('last_rollover_paid_cc', any()))
+          .called(1);
+    });
+
+    test('saveTransaction throws Exception if adding to a closed/paid cycle',
+        () async {
+      final acc = Account(
+          id: 'paid_cc',
+          name: 'Paid Card',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 20);
+      when(() => mockAccountBox.get('paid_cc')).thenReturn(acc);
+
+      // Cycle Start is say 21st of previous month.
+      // If today is 25th, current cycle started on 21st.
+      // "Billed" cycle is before 21st.
+      final now = DateTime.now();
+      final currentCycleStart = BillingHelper.getCycleStart(now, 20);
+      final paidRollover =
+          currentCycleStart.subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_paid_cc'))
+          .thenReturn(paidRollover.millisecondsSinceEpoch);
+
+      // Try to add txn to the "Billed" cycle (e.g. 5 days ago)
+      final billedDate = currentCycleStart.subtract(const Duration(days: 2));
+      final txn = Transaction(
+          id: 't_old',
+          title: 'Late Entry',
+          amount: 100,
+          date: billedDate,
+          type: TransactionType.expense,
+          category: 'Food',
+          accountId: 'paid_cc');
+
+      when(() => mockTransactionBox.get('t_old')).thenReturn(null);
+
+      // Note: If lastRollover is caught up, it might throw "closed" or "paid".
+      // Both are correct forms of the lock.
+      await expectLater(
+          () => storageService.saveTransaction(txn),
+          throwsA(isA<Exception>().having((e) => e.toString(), 'message',
+              anyOf(contains('already marked as paid'), contains('closed')))));
     });
   });
 

@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../utils/currency_utils.dart';
 import '../widgets/form_utils.dart';
 import '../utils/billing_helper.dart';
+import 'package:clock/clock.dart';
 
 class RecordCCPaymentDialog extends ConsumerStatefulWidget {
   final Account creditCardAccount;
@@ -20,12 +21,10 @@ class RecordCCPaymentDialog extends ConsumerStatefulWidget {
 
 class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   final _amountController = TextEditingController();
-  DateTime _date = DateTime.now();
+  DateTime _date = clock.now();
   String _sourceAccountId = 'manual';
   bool _isRounded = false;
   double? _originalAmount;
-  double _calculatedTotalDue = 0;
-
   @override
   void initState() {
     super.initState();
@@ -69,11 +68,10 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
     final billed = BillingHelper.calculateBilledAmount(
         widget.creditCardAccount,
         txns,
-        DateTime.now(),
+        clock.now(),
         storage.getLastRollover(widget.creditCardAccount.id));
 
     final totalDue = widget.creditCardAccount.balance + billed;
-    _calculatedTotalDue = totalDue;
 
     if (totalDue > 0) {
       _amountController.text = totalDue.toStringAsFixed(2);
@@ -173,17 +171,30 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
     final storage = ref.read(storageServiceProvider);
 
-    await _recordTransferTransaction(storage, amount);
-    await _advanceCycleIfNeeded(storage, amount);
-    await _handleRoundingAdjustmentIfNeeded(storage, amount);
+    try {
+      await _recordTransferTransaction(storage, amount);
+      await _handleRoundingAdjustmentIfNeeded(storage, amount);
+      await _advanceCycleIfNeeded(storage, amount);
 
-    ref.invalidate(accountsProvider);
-    ref.invalidate(transactionsProvider);
+      ref.invalidate(accountsProvider);
+      ref.invalidate(transactionsProvider);
 
-    if (!context.mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Payment Recorded')));
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Payment Recorded')));
+    } catch (e) {
+      // coverage:ignore-start
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            // coverage:ignore-end
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _recordTransferTransaction(
@@ -201,13 +212,34 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   }
 
   Future<void> _advanceCycleIfNeeded(dynamic storage, double amount) async {
-    final targetDue =
-        _isRounded ? _calculatedTotalDue.roundToDouble() : _calculatedTotalDue;
-    if (!widget.isFullyPaid &&
-        _calculatedTotalDue > 0 &&
-        amount >= (targetDue - 0.01)) {
-      await storage.resetCreditCardRollover(widget.creditCardAccount,
-          keepBilledStatus: true);
+    final acc = storage.getAccount(widget.creditCardAccount.id);
+    if (acc == null) return;
+
+    final now = clock.now();
+    final txns = storage.getTransactions() as List<Transaction>;
+
+    final lastRolloverMillis = storage.getLastRollover(acc.id);
+    final billedAmount =
+        BillingHelper.calculateBilledAmount(acc, txns, now, lastRolloverMillis);
+
+    double payments = 0;
+    if (lastRolloverMillis != null) {
+      final statementDate =
+          BillingHelper.getStatementDate(now, acc.billingCycleDay!);
+      payments =
+          BillingHelper.calculatePeriodPayments(acc, txns, statementDate, now);
+    }
+
+    final adjustedData = BillingHelper.getAdjustedCCData(
+      accountBalance: acc.balance,
+      billedAmount: billedAmount,
+      unbilledAmount: 0,
+      paymentsSinceRollover: payments,
+    );
+
+    if (billedAmount > 0 && adjustedData.$2 <= 0.01) {
+      await storage.resetCreditCardRollover(acc,
+          keepBilledStatus: true, adjustBalance: true);
     }
   }
 

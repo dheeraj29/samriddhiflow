@@ -28,14 +28,16 @@ class TaxDataFetcher {
   Future<TaxSyncResult> fetchAndAggregate(int year,
       {DateTime? customStart,
       DateTime? customEnd,
-      bool forceResync = false}) async {
+      bool forceResync = false,
+      String? profileId}) async {
     final rules = _config.getRulesForYear(year);
     final dateRange = _computeDateRange(year, rules, customStart, customEnd);
     final start = dateRange.start;
     final end = dateRange.end;
 
-    final categoryTagMap = _buildCategoryTagMap();
-    final incomeTxns = _filterIncomeTransactions(start, end, forceResync);
+    final categoryTagMap = _buildCategoryTagMap(profileId: profileId);
+    final incomeTxns = _filterIncomeTransactions(start, end, forceResync,
+        profileId: profileId);
 
     // Aggregate income by tax heads
     final aggregation = _AggregationResult();
@@ -54,7 +56,7 @@ class TaxDataFetcher {
     }
 
     // Integrate insurance maturity
-    _aggregateInsuranceMaturity(start, end, aggregation);
+    _aggregateInsuranceMaturity(start, end, aggregation, profileId: profileId);
 
     // Update taxSync flag for transactions
     if (syncedTransactionIds.isNotEmpty) {
@@ -62,7 +64,8 @@ class TaxDataFetcher {
     }
 
     return TaxSyncResult(
-        _buildTaxYearData(year, aggregation), aggregation.warnings);
+        _buildTaxYearData(year, aggregation, profileId: profileId),
+        aggregation.warnings);
   }
 
   // --- Date Range ---
@@ -87,7 +90,7 @@ class TaxDataFetcher {
 
   // --- Category Lookup ---
 
-  Map<String, CategoryTag> _buildCategoryTagMap() {
+  Map<String, CategoryTag> _buildCategoryTagMap({String? profileId}) {
     final categories = _storage.getCategories();
     return {for (var c in categories) c.name: c.tag};
   }
@@ -95,7 +98,8 @@ class TaxDataFetcher {
   // --- Transaction Filtering ---
 
   List<Transaction> _filterIncomeTransactions(
-      DateTime start, DateTime end, bool forceResync) {
+      DateTime start, DateTime end, bool forceResync,
+      {String? profileId}) {
     return _storage.getAllTransactions().where((t) {
       if (t.type != TransactionType.income) return false;
       if (t.date.isBefore(start) || t.date.isAfter(end)) return false;
@@ -250,7 +254,8 @@ class TaxDataFetcher {
   // --- Insurance Maturity ---
 
   void _aggregateInsuranceMaturity(
-      DateTime start, DateTime end, _AggregationResult agg) {
+      DateTime start, DateTime end, _AggregationResult agg,
+      {String? profileId}) {
     // FY Year (anchored to FY start year)
     final fyYear = start.month >= 4 ? start.year : start.year - 1;
     final policies = _storage.getInsurancePolicies();
@@ -271,7 +276,8 @@ class TaxDataFetcher {
 
   // --- Result Building ---
 
-  TaxYearData _buildTaxYearData(int year, _AggregationResult agg) {
+  TaxYearData _buildTaxYearData(int year, _AggregationResult agg,
+      {String? profileId}) {
     final now = clock.now();
     const salaryDetails = SalaryDetails(
       history: [],
@@ -309,6 +315,7 @@ class TaxDataFetcher {
 
     return TaxYearData(
       year: year,
+      profileId: profileId ?? 'default',
       salary: salaryDetails,
       houseProperties: houseProps,
       businessIncomes: businesses,
@@ -334,7 +341,8 @@ class TaxDataFetcher {
   /// Helper to fetch sum of transactions matching a Category Name (acting as tag) and type within range.
   /// This is used for "Loan Tag" matching - where the loanTag is expected to be the Category Name.
   double fetchTagSum(
-      String categoryName, TransactionType type, DateTime start, DateTime end) {
+      String categoryName, TransactionType type, DateTime start, DateTime end,
+      {String? profileId}) {
     final txns = _storage.getAllTransactions();
     final targetCat = categoryName.trim().toLowerCase();
 

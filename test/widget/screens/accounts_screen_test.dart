@@ -71,6 +71,7 @@ void main() {
     when(() => mockStorageService.getCategories()).thenReturn([]);
     when(() => mockStorageService.getActiveProfileId()).thenReturn('default');
     when(() => mockStorageService.getCurrencyLocale()).thenReturn('en_IN');
+    when(() => mockStorageService.isBilledAmountPaid(any())).thenReturn(false);
   });
 
   Widget createTestWidget(WidgetTester tester, {List<Account>? accounts}) {

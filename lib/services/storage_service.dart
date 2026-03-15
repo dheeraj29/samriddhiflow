@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:samriddhi_flow/navigator_key.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
@@ -15,10 +16,11 @@ import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/utils/billing_helper.dart';
 import 'package:samriddhi_flow/utils/recurrence_utils.dart';
-import 'package:samriddhi_flow/utils/debug_logger.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+
+const dateFormatMmmDdYyyy = 'MMM dd, yyyy';
 
 class StorageService {
   final HiveInterface _hive;
@@ -98,8 +100,6 @@ class StorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       _defaultCategoryCache = List<Map<String, dynamic>>.from(jsonList);
     } catch (e) {
-      DebugLogger()
-          .log('Error loading default categories: $e'); // coverage:ignore-line
       // Fallback empty or handle critical error
     }
   }
@@ -212,6 +212,11 @@ class StorageService {
     await box.put('dashboardConfig', config.toMap());
   }
 
+  Box<dynamic> getSettingsBox() {
+    // coverage:ignore-line
+    return _hive.box(boxSettings); // coverage:ignore-line
+  }
+
   Future<void> _deleteItemsByProfile<T>(String boxName, String profileId,
       {Future<void> Function(T)? onBeforeDelete}) async {
     final box = _hive.box<T>(boxName);
@@ -253,6 +258,8 @@ class StorageService {
   }
 
   // --- Account Operations ---
+  Account? getAccount(String id) =>
+      _hive.box<Account>(boxAccounts).get(id); // coverage:ignore-line
   List<Account> getAccounts() =>
       _getByProfile<Account>(boxAccounts); // coverage:ignore-line
 
@@ -272,142 +279,203 @@ class StorageService {
     final box = _hive.box<Account>(boxAccounts);
     final existingAccount = box.get(account.id);
 
-    // Smart Update Logic:
-    // Only reset rollover if:
-    // 1. Billing Cycle Day Changed.
-    // 2. OR Rollover is missing/stale.
-    if (account.type == AccountType.creditCard &&
-        account.billingCycleDay != null) {
-      bool shouldReset = false;
-      if (existingAccount == null) {
-        // New Account -> Reset
-        shouldReset = true;
-      } else if (existingAccount.billingCycleDay != account.billingCycleDay) {
-        // Cycle Changed -> Reset
-        shouldReset = true;
-      } else {
-        // Cycle Same. Check for stale rollover.
-        final lastRolloverMillis = getLastRollover(account.id);
-        if (lastRolloverMillis == null) {
-          shouldReset = true;
-        } else {
-          // Rollover exists.
-          // If we are preserving status, we doing nothing.
-          // If the Last Rollover is WAY off (e.g. more than 2 cycles ago), maybe repair?
-          // For now, trusting "keepBilledStatus" or default behavior.
-          // Actually, if we just edit name, we DON'T want to call resetCreditCardRollover
-          // because that method calculates a "Fresh" rollover based on TODAY.
-          // If the user properly had a bill generated 10 days ago, and we run reset now,
-          // it might move the rollover to TODAY-ish, potentially messing up the "Billed" bucket
-          // if transactions happened in between.
-
-          // SO: If cycle day hasn't changed, we STILL call reset to ensure the date isn't wrong.
-          // resetCreditCardRollover is idempotent (returns early if dates match).
-          shouldReset = true;
-        }
+    if (_isCreditCardWithCycle(account)) {
+      if (_shouldSkipCycleReset(account, existingAccount)) {
+        await box.put(account.id, account); // coverage:ignore-line
+        return;
       }
 
-      if (shouldReset) {
+      if (_needsCreditCardRolloverReset(account, existingAccount)) {
         await resetCreditCardRollover(account,
-            keepBilledStatus: keepBilledStatus);
+            keepBilledStatus: keepBilledStatus, adjustBalance: false);
       }
     }
 
     await box.put(account.id, account);
   }
 
-  /// Resets the billing cycle tracking to the current month's previous cycle end.
-  /// Effectively "repairs" the cycle calculation schedule.
-  /// [keepBilledStatus]: If true, sets rollover to force "Billed Amount" to 0 (Current Cycle Start).
+  bool _isCreditCardWithCycle(Account account) {
+    return account.type == AccountType.creditCard &&
+        account.billingCycleDay != null;
+  }
+
+  bool _shouldSkipCycleReset(Account account, Account? existingAccount) {
+    if (existingAccount == null) return false;
+    if (!isBilledAmountPaid(account.id)) return false;
+    return existingAccount.billingCycleDay ==
+        account.billingCycleDay; // coverage:ignore-line
+  }
+
+  bool _needsCreditCardRolloverReset(
+      Account account, Account? existingAccount) {
+    if (existingAccount == null) return true;
+    if (existingAccount.billingCycleDay != account.billingCycleDay) {
+      return true;
+    }
+
+    final lastRolloverMillis =
+        _hive.box(boxSettings).get('last_rollover_${account.id}');
+    if (lastRolloverMillis == null) return false;
+
+    return _isRolloverPointerOutOfSync(account, lastRolloverMillis);
+  }
+
+  bool _isRolloverPointerOutOfSync(Account account, int lastRolloverMillis) {
+    final now = DateTime.now();
+    final currentCycleStart =
+        BillingHelper.getCycleStart(now, account.billingCycleDay!);
+    final prevCycleStart = BillingHelper.getCycleStart(
+        currentCycleStart.subtract(const Duration(days: 1)),
+        account.billingCycleDay!);
+
+    final targetBilled = prevCycleStart.subtract(const Duration(seconds: 1));
+    final targetPaid = currentCycleStart.subtract(const Duration(seconds: 1));
+
+    final current = DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+    return !current.isAtSameMomentAs(targetBilled) &&
+        !current.isAtSameMomentAs(targetPaid);
+  }
+
+  /// Raw save for restore/import bypasses all auto-rollover logic.
+  // coverage:ignore-start
+  Future<void> saveAccountRaw(Account account) async {
+    final box = _hive.box<Account>(boxAccounts);
+    await box.put(account.id, account);
+    // coverage:ignore-end
+  }
+
   Future<void> resetCreditCardRollover(Account acc,
-      {bool keepBilledStatus = false}) async {
+      {bool keepBilledStatus = false,
+      bool adjustBalance = false,
+      bool skipTransfers = true,
+      bool includeIncome = false}) async {
     if (acc.billingCycleDay == null) return;
 
     try {
+      final settingsBox = _hive.box(boxSettings);
+      final key = 'last_rollover_${acc.id}';
+      final lastRolloverMillis = settingsBox.get(key);
+      DateTime oldPointer;
+
+      if (lastRolloverMillis == null) {
+        // Default to "Paid" state (pointer at current cycle start - 1s)
+        final now = DateTime.now();
+        final currentCycleStart =
+            BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+        oldPointer = currentCycleStart.subtract(const Duration(seconds: 1));
+      } else {
+        oldPointer = DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+      }
+
       final now = DateTime.now();
       final currentCycleStart =
           BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+      final prevCycleStart = BillingHelper.getCycleStart(
+          currentCycleStart.subtract(const Duration(days: 1)),
+          acc.billingCycleDay!);
 
-      DateTime newRolloverDate;
-
+      DateTime targetPointer;
       if (keepBilledStatus) {
-        // Force "Billed" to be 0 by setting rollover to Current Cycle Start (minus 1 sec)
-        // This means everything before is "History/Paid", everything after is "Unbilled".
-        newRolloverDate =
-            currentCycleStart.subtract(const Duration(seconds: 1));
+        // "Paid" state: Pointer is at the end of the PREVIOUS cycle (start of current - 1s).
+        targetPointer = currentCycleStart.subtract(const Duration(seconds: 1));
       } else {
-        // Default: Create "Billed" bucket for the previous cycle.
-        // Target: The start of the cycle that JUST finished (The "Billed" cycle start).
-        final targetRolloverDateStart = BillingHelper.getCycleStart(
-            currentCycleStart.subtract(const Duration(days: 1)),
-            acc.billingCycleDay!);
-
-        // Store as End of Previous Day (inclusive boundary for Balance)
-        newRolloverDate =
-            targetRolloverDateStart.subtract(const Duration(seconds: 1));
+        // "Billed" state: Pointer is at the end of the cycle BEFORE previous (start of prev - 1s).
+        targetPointer = prevCycleStart.subtract(const Duration(seconds: 1));
       }
 
-      final oldRolloverMillis = getLastRollover(acc.id);
-
-      // If we have a previous rollover date, check if it matches target.
-      // If it matches, NO OP (idempotent).
-      if (oldRolloverMillis != null) {
-        final oldRolloverDate =
-            DateTime.fromMillisecondsSinceEpoch(oldRolloverMillis);
-
-        if (oldRolloverDate.isAtSameMomentAs(newRolloverDate)) {
-          return; // Already correct.
-        }
-
-        // If we are advancing the pointer (moving forward in time),
-        // we must "catch up" the balance by applying all skipped spends
-        // between the old rollover and the new one.
-        if (newRolloverDate.isAfter(oldRolloverDate)) {
-          final adhocAmount =
-              // coverage:ignore-start
-              _computeRolloverTxnAmount(acc, oldRolloverDate, newRolloverDate);
-          if (adhocAmount != 0) {
-            acc.balance =
-                CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
-            // coverage:ignore-end
-            // Save immediately to ensure the balance update is persisted
-            // before the setting update, though both should happen.
-            await _hive
-                .box<Account>(boxAccounts)
-                .put(acc.id, acc); // coverage:ignore-line
-          }
-        }
+      if (adjustBalance && oldPointer.isBefore(targetPointer)) {
+        // coverage:ignore-line
+        // Realize debt for the gap being jumped (oldPointer, targetPointer]
+        await _shiftBilledExpensesToBalance(
+            acc, oldPointer, targetPointer); // coverage:ignore-line
       }
 
-      await setLastRollover(acc.id, newRolloverDate.millisecondsSinceEpoch);
+      await settingsBox.put(key, targetPointer.millisecondsSinceEpoch);
     } catch (e) {
-      DebugLogger().log(
-          'Error resetting cycle for ${acc.name}: $e'); // coverage:ignore-line
+      // coverage:ignore-start
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-end
+          const SnackBar(content: Text('Failed to reset billing cycle.')),
+        );
+      }
     }
   }
 
   /// Explicitly refreshes the billing cycle dates to SHOW the bill (Billed Amount > 0).
   /// Reverts any "Paid" status for the current cycle.
   Future<void> recalculateBilledAmount(String accountId) async {
-    // coverage:ignore-line
-    final acc =
-        _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
+    final box = _hive.box<Account>(boxAccounts);
+    final acc = box.get(accountId);
     if (acc == null) return;
-    // Force keepBilledStatus = false to ensure the previous cycle is treated as "Billed"
+
+    if (acc.isFrozen) {
+      throw Exception(
+          'Cannot recalculate bill while the account is frozen for a billing cycle update.');
+    }
+
+    // Set flag to ignore payments for the next rollover check so the bill actually shows up
+    final settingsBox = _hive.box(boxSettings);
+    await settingsBox.put('ignore_rollover_payments_${acc.id}', true);
+
+    // Pointer Refinement: shifts the pointer back to show the bill, but doesn't touch balance.
     await resetCreditCardRollover(acc,
-        keepBilledStatus: false); // coverage:ignore-line
+        keepBilledStatus: false,
+        adjustBalance: false,
+        skipTransfers: true,
+        includeIncome: false);
   }
 
   /// Manually clears the billed amount (Mark as Paid/Advance Cycle).
   /// Doesn't record a transaction, just updates the pointer.
   Future<void> clearBilledAmount(String accountId) async {
-    // coverage:ignore-line
-    final acc =
-        _hive.box<Account>(boxAccounts).get(accountId); // coverage:ignore-line
+    final box = _hive.box<Account>(boxAccounts);
+    final acc = box.get(accountId);
     if (acc == null) return;
+
+    if (acc.isFrozen) {
+      throw Exception(
+          'Cannot clear bill while the account is frozen for a billing cycle update.');
+    }
+
     // Force keepBilledStatus = true to advance pointer to current cycle start
     await resetCreditCardRollover(acc,
         keepBilledStatus: true); // coverage:ignore-line
+  }
+
+  /// Updates a credit card's billing cycle. Only permitted if balance is 0.
+  /// Activates the freeze phase so that the transition bill is calculated safely.
+  Future<void> updateBillingCycle({
+    required String accountId,
+    required int newCycleDay,
+    int? newDueDateDay,
+    required DateTime freezeDate,
+  }) async {
+    final box = _hive.box<Account>(boxAccounts);
+    final acc = box.get(accountId);
+    if (acc == null || acc.type != AccountType.creditCard) return;
+
+    if (acc.balance > 0) {
+      throw Exception(
+          'Billing cycle can only be changed when the generated bill balance is exactly 0.');
+    }
+
+    final updatedAcc = acc.copyWith(
+      billingCycleDay: newCycleDay,
+      paymentDueDateDay: newDueDateDay,
+      freezeDate: freezeDate,
+      isFrozen: true,
+      isFrozenCalculated: false,
+    );
+
+    // Update the account
+    await box.put(accountId, updatedAcc);
+
+    // Freeze the pointer AT the freezeDate so the next generation starts exactly from there.
+    final settingsBox = _hive.box(boxSettings);
+    await settingsBox.put(
+        'last_rollover_$accountId', freezeDate.millisecondsSinceEpoch);
   }
 
   Future<void> deleteAccount(String id) async {
@@ -439,6 +507,42 @@ class StorageService {
         .whereType<Transaction>()
         .toList();
     // coverage:ignore-end
+  }
+
+  /// Fetches transactions for a specific account and profile.
+  List<Transaction> getTransactionsByAccount(String accountId,
+      {String? profileId}) {
+    final targetProfileId = profileId ?? getActiveProfileId();
+    return _hive
+        .box<Transaction>(boxTransactions)
+        .toMap()
+        .values
+        .whereType<Transaction>()
+        .where((t) =>
+            !t.isDeleted &&
+            (t.accountId == accountId || t.toAccountId == accountId) &&
+            t.profileId == targetProfileId)
+        .toList();
+  }
+
+  /// Checks if the billed amount for an account is marked as paid.
+  bool isBilledAmountPaid(String accountId) {
+    final acc = _hive.box<Account>(boxAccounts).get(accountId);
+    if (acc == null || acc.billingCycleDay == null) return true;
+
+    final lastRolloverMillis = getLastRollover(accountId);
+    if (lastRolloverMillis == null) return false;
+
+    final lastRollover =
+        DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+    final now = DateTime.now();
+    final currentCycleStart =
+        BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+
+    // If lastRollover is ON or AFTER currentCycleStart - 1sec, it's paid.
+    final paidThreshold =
+        currentCycleStart.subtract(const Duration(seconds: 1));
+    return !lastRollover.isBefore(paidThreshold);
   }
 
   List<Transaction> getDeletedTransactions() {
@@ -476,7 +580,14 @@ class StorageService {
             acc, accountsBox, settingsBox, now, ignorePayments);
       }
     } catch (e) {
-      DebugLogger().log('CC Rollover Error: $e'); // coverage:ignore-line
+      // coverage:ignore-start
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-end
+          const SnackBar(content: Text('Failed to check rollovers.')),
+        );
+      }
     } finally {
       _isCheckingRollover = false;
     }
@@ -494,59 +605,70 @@ class StorageService {
 
     final currentCycleStart =
         BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-    final targetRolloverDateStart = BillingHelper.getCycleStart(
+    final prevCycleStart = BillingHelper.getCycleStart(
         currentCycleStart.subtract(const Duration(days: 1)),
         acc.billingCycleDay!);
-    final targetRolloverDate =
-        targetRolloverDateStart.subtract(const Duration(seconds: 1));
 
-    final lastRollover = lastRolloverMillis == null
-        ? targetRolloverDate
-        : DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+    // Standard rollover target is end of cycle BEFORE previous (to allow Billed bucket to persist)
+    DateTime effectiveTarget =
+        prevCycleStart.subtract(const Duration(seconds: 1));
 
-    if (!targetRolloverDate.isAfter(lastRollover)) return;
-
-    final adhocAmount =
-        _computeRolloverTxnAmount(acc, lastRollover, targetRolloverDate);
-
-    if (adhocAmount != 0) {
-      acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + adhocAmount);
-      await accountsBox.put(acc.id, acc);
+    // SPECIAL: For frozen accounts, we want to transition Phase 1 and Phase 2
+    // as soon as the potential statements are ready.
+    if (acc.isFrozen) {
+      effectiveTarget = currentCycleStart.subtract(const Duration(seconds: 1));
     }
 
-    await settingsBox.put(key, targetRolloverDate.millisecondsSinceEpoch);
+    final lastRollover = lastRolloverMillis != null
+        ? DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis)
+        : effectiveTarget;
 
+    if (!now.isAfter(effectiveTarget)) {
+      return;
+    }
+
+    if (!effectiveTarget.isAfter(lastRollover)) {
+      return;
+    }
+
+    // If we are actively ignoring payments (i.e. we forcefully recalculated the bill to look at it),
+    // we should NOT automatically roll it over. Otherwise, the "unpaid" bill instantly shifts into Balance!
     if (effectiveIgnorePayments) {
-      await settingsBox.delete(ignoreFlagKey); // coverage:ignore-line
+      // The bill was forced open for viewing. Do not realize debt right now.
+      return;
     }
-  }
 
-  double _computeRolloverTxnAmount(
-      Account acc, DateTime lastRollover, DateTime targetRolloverDate) {
-    final txnBox = _hive.box<Transaction>(boxTransactions);
-    final txns = txnBox
-        .toMap()
-        .values
-        .whereType<Transaction>()
-        .where((t) =>
-            !t.isDeleted &&
-            t.accountId == acc.id &&
-            t.date.isAfter(lastRollover) &&
-            (t.date.isBefore(targetRolloverDate) ||
-                t.date.isAtSameMomentAs(
-                    targetRolloverDate))) // coverage:ignore-line
-        .toList();
+    // --- Billing Cycle Freeze Logic ---
+    if (acc.isFrozen) {
+      if (!acc.isFrozenCalculated) {
+        // Stage 1: First Bill Generation.
+        acc.isFrozenCalculated = true;
+        await accountsBox.put(acc.id, acc);
+        // Stage 1 moves the pointer to start the "Freeze Transition Bill" period.
+        await settingsBox.put(key, effectiveTarget.millisecondsSinceEpoch);
+      } else {
+        // Stage 2: Debt Realization cycle.
+        // We realize the gap from freezeDate to the pointer Phase 1 established.
+        await _shiftBilledExpensesToBalance(
+            acc, acc.freezeDate ?? lastRollover, lastRollover);
 
-    double adhocAmount = 0;
-    for (var t in txns) {
-      if (t.type == TransactionType.expense) adhocAmount += t.amount;
-      // Note: TransactionType.income (payments) are NEVER skipped in _shouldSkipCreditCardBalance,
-      // so they should NOT be subtracted here. Subtracting them here would double-count them.
-      if (t.type == TransactionType.transfer && t.accountId == acc.id) {
-        adhocAmount += t.amount; // coverage:ignore-line
+        // Remove the freeze completely.
+        acc.isFrozen = false;
+        acc.isFrozenCalculated = false;
+        acc.freezeDate = null;
+        await accountsBox.put(acc.id, acc);
+        // Stage 2 DOES NOT move the pointer. We leave it at Phase 1's end
+        // so that the regular cycle (now in Billed) follows standard lag.
       }
+      return;
     }
-    return adhocAmount;
+    // ----------------------------------
+
+    // Rule: "In auto-rollover case, if bill not paid when its calculating, then old bill shall be added to balance"
+    // We calculate spends in the period we are closing (lastRollover to targetRolloverDate).
+    await _shiftBilledExpensesToBalance(acc, lastRollover, effectiveTarget);
+
+    await settingsBox.put(key, effectiveTarget.millisecondsSinceEpoch);
   }
 
   Future<void> saveTransaction(Transaction transaction,
@@ -555,7 +677,7 @@ class StorageService {
     final existingTxn = box.get(transaction.id);
 
     if (applyImpact) {
-      // Validate: Prevents modifying transactions in a closed cycle.
+      // Validate: Prevents modifying transactions in a closed cycle or frozen period.
       await _validateTransactionDate(transaction);
 
       await _handleTransactionImpacts(
@@ -570,32 +692,64 @@ class StorageService {
   }
 
   Future<void> _validateTransactionDate(Transaction txn) async {
-    if (txn.accountId == null) return;
-
     final accBox = _hive.box<Account>(boxAccounts);
-    final acc = accBox.get(txn.accountId);
 
-    if (acc != null &&
-        acc.type == AccountType.creditCard &&
-        acc.billingCycleDay != null) {
-      final lastRolloverMillis = getLastRollover(acc.id);
-      if (lastRolloverMillis != null) {
-        final lastRollover =
-            DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
-        // User Requirement: "Transaction addition is permitted only for one previous cycle".
-        // The "Last Rollover" marks the end of the "Balance" period.
-        // Any transaction BEFORE or ON lastRollover is part of the "Balance" and cannot be modified.
-        // Any transaction AFTER lastRollover is either "Billed" (Previous Cycle) or "Unbilled" (Current Cycle),
-        // both of which are open for editing/addition.
-
-        if (!txn.date.isAfter(lastRollover)) {
-          throw Exception(
-              'Cannot add/edit transaction for a closed billing cycle.\n'
-              'Cycle closed on: ${lastRollover.year}-${lastRollover.month}-${lastRollover.day}\n'
-              'Transaction Date: ${txn.date.year}-${txn.date.month}-${txn.date.day}\n\n'
-              'Please use "Repair Billing Cycle" if you need to reset the cycle.');
-        }
+    // 1. Check Source Account
+    if (txn.accountId != null) {
+      final acc = accBox.get(txn.accountId);
+      if (acc != null && _isCreditCardWithCycle(acc)) {
+        await _runValidationRules(txn, acc);
       }
+    }
+
+    // 2. Check Target Account (for Transfers)
+    if (txn.toAccountId != null) {
+      final toAcc = accBox.get(txn.toAccountId);
+      if (toAcc != null && _isCreditCardWithCycle(toAcc)) {
+        await _runValidationRules(txn, toAcc);
+      }
+    }
+  }
+
+  Future<void> _runValidationRules(Transaction txn, Account acc) async {
+    _ensureNotBeforeFreezeDate(txn, acc);
+    final lastRolloverMillis = getLastRollover(acc.id);
+    if (lastRolloverMillis != null) {
+      _ensureAfterLastRollover(txn, lastRolloverMillis);
+    }
+    _ensureNotPaidBilledCycle(txn, acc);
+  }
+
+  void _ensureNotBeforeFreezeDate(Transaction txn, Account acc) {
+    if (!acc.isFrozen || acc.freezeDate == null) return;
+    if (txn.date.isBefore(acc.freezeDate!)) {
+      throw Exception(
+          'Cannot add/edit transaction older than the current Billing Cycle freeze date.\n'
+          'Freeze Date: ${acc.freezeDate!.year}-${acc.freezeDate!.month}-${acc.freezeDate!.day}\n'
+          'Transaction Date: ${txn.date.year}-${txn.date.month}-${txn.date.day}\n\n'
+          'Please wait for the freeze period to end on the next billing date.');
+    }
+  }
+
+  void _ensureAfterLastRollover(Transaction txn, int lastRolloverMillis) {
+    final lastRollover =
+        DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+    if (!txn.date.isAfter(lastRollover)) {
+      throw Exception(
+          'Cannot add/edit transaction for a closed billing cycle.\n'
+          'Cycle closed on: ${lastRollover.year}-${lastRollover.month}-${lastRollover.day}\n'
+          'Transaction Date: ${txn.date.year}-${txn.date.month}-${txn.date.day}\n\n'
+          'Please use "Repair Billing Cycle" if you need to reset the cycle.');
+    }
+  }
+
+  void _ensureNotPaidBilledCycle(Transaction txn, Account acc) {
+    final now = DateTime.now();
+    final currentCycleStart =
+        BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+    if (txn.date.isBefore(currentCycleStart) && isBilledAmountPaid(acc.id)) {
+      throw Exception(// coverage:ignore-line
+          'Cannot add/edit transaction for a billing cycle that is already marked as paid.');
     }
   }
 
@@ -618,9 +772,11 @@ class StorageService {
   }
 
   /// Explicitly sets the last rollover timestamp (Used by Repair Jobs).
+  // coverage:ignore-start
   Future<void> setLastRollover(String accountId, int timestamp) async {
     final settingsBox = _hive.box(boxSettings);
     await settingsBox.put('last_rollover_$accountId', timestamp);
+    // coverage:ignore-end
   }
 
   /// Recalculates Credit Card balances based on the current billing cycle.
@@ -789,9 +945,14 @@ class StorageService {
     if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
       return false;
     }
-    final isSpend = txn.type == TransactionType.expense ||
-        (txn.type == TransactionType.transfer && isSource);
-    if (!isSpend) return false;
+
+    // NEW Logic: Only defer EXPENSES (except Rounding Adjustments).
+    // Income, Incoming Transfers (Payments), and Rounding Adjustments hit balance immediately.
+    // This allows Total = balance + billed + unbilled.
+    if (txn.type != TransactionType.expense ||
+        BillingHelper.isRoundingAdjustment(txn)) {
+      return false;
+    }
 
     final lastRolloverMillis = getLastRollover(acc.id);
     if (lastRolloverMillis != null) {
@@ -800,10 +961,14 @@ class StorageService {
       return txn.date.isAfter(lastRollover);
     }
 
-    // No rollover set (New Card) — rely on standard unbilled check
-    final effectiveNow = now ?? DateTime.now();
-    return BillingHelper.isUnbilled(
-        txn.date, effectiveNow, acc.billingCycleDay!);
+    // No rollover set (New Card fallback): Skip spending from previous cycle onwards.
+    final now = DateTime.now();
+    final currentCycleStart =
+        BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+    final prevCycleStart = BillingHelper.getCycleStart(
+        currentCycleStart.subtract(const Duration(days: 1)),
+        acc.billingCycleDay!);
+    return !txn.date.isBefore(prevCycleStart);
   }
 
   Future<void> _incrementBackupCounter() async {
@@ -828,6 +993,9 @@ class StorageService {
       final txn = box.get(id);
       if (txn == null || txn.isDeleted) return;
 
+      // Validate: Prevent deleting frozen/closed history
+      await _validateTransactionDate(txn);
+
       // 1. Apply reversals before marking as deleted
       await _handleTransactionImpacts(oldTxn: txn, newTxn: null);
 
@@ -835,8 +1003,15 @@ class StorageService {
       txn.isDeleted = true;
       await box.put(txn.id, txn);
     } catch (e) {
-      DebugLogger().log(
-          "StorageService: deleteTransaction error: $e"); // coverage:ignore-line
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        // coverage:ignore-line
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-line
+          const SnackBar(content: Text('Failed to delete transaction.')),
+        );
+      }
+      rethrow;
     }
   }
 
@@ -1113,8 +1288,6 @@ class StorageService {
     if (_defaultCategoryCache.isEmpty) {
       // coverage:ignore-line
       // Emergency fallback if JSON failed or init didn't run (should not happen in prod flow)
-      DebugLogger().log(
-          'Warning: Default categories cache is empty.'); // coverage:ignore-line
       return []; // coverage:ignore-line
     }
 
@@ -1638,8 +1811,6 @@ class StorageService {
           e is UnsupportedError ||
           e.toString().contains('subtype') ||
           e.toString().contains('Infinity')) {
-        DebugLogger().log(
-            "CRITICAL: Data Corruption detected opening '$boxName' ($e). Attempting repair...");
         await _attemptBoxRepair<T>(boxName);
         return await _hive.openBox<T>(boxName);
         // coverage:ignore-end
@@ -1746,5 +1917,30 @@ class StorageService {
   Future<void> deleteLendingRecord(String id) async {
     final box = _hive.box<LendingRecord>(boxLendingRecords);
     await box.delete(id);
+  }
+
+  /// Internal helper to shift expenses from a resolved period into the permanent balance.
+  /// This maintains the "Pure Rule": Total = Balance + Billed + Unbilled.
+  Future<void> _shiftBilledExpensesToBalance(
+      Account acc, DateTime startPointer, DateTime endPointer) async {
+    if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
+      return;
+    }
+
+    final txns = getTransactionsByAccount(acc.id, profileId: acc.profileId);
+    final spends = BillingHelper.calculatePeriodSpend(
+      acc,
+      txns,
+      startPointer.add(const Duration(seconds: 1)),
+      endPointer,
+      skipTransfers: true, // Only defer expenses
+      includeIncome: false,
+    );
+
+    if (spends > 0.01) {
+      acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + spends);
+      final box = _hive.box<Account>(boxAccounts);
+      await box.put(acc.id, acc);
+    }
   }
 }

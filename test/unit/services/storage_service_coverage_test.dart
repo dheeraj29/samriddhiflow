@@ -28,6 +28,7 @@ class ProfileFake extends Fake implements Profile {}
 class InsurancePolicyFake extends Fake implements InsurancePolicy {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storageService;
   late MockHive mockHive;
   late MockBox<Account> mockAccountBox;
@@ -42,20 +43,21 @@ void main() {
   late MockBox<TaxYearData> mockTaxBox;
 
   setUpAll(() {
+    final testDate = DateTime(2040, 1, 1);
     registerFallbackValue(
         Account(id: 'f', name: 'f', type: AccountType.savings, balance: 0));
     registerFallbackValue(Transaction(
         id: 'f',
         title: 'f',
         amount: 0,
-        date: DateTime.now(),
+        date: testDate,
         type: TransactionType.expense,
         category: 'c'));
     registerFallbackValue(LendingRecord.create(
         personName: 'f',
         amount: 0,
         reason: 'f',
-        date: DateTime.now(),
+        date: testDate,
         type: LendingType.lent));
     registerFallbackValue(
         Category(id: 'f', name: 'f', usage: CategoryUsage.expense));
@@ -65,7 +67,7 @@ void main() {
     registerFallbackValue(LoanFake());
     registerFallbackValue(RecurringTransactionFake());
     registerFallbackValue(InsurancePolicyFake());
-    registerFallbackValue(DateTime.now());
+    registerFallbackValue(testDate);
   });
 
   setUp(() {
@@ -246,11 +248,12 @@ void main() {
     });
 
     test('getTransactions filters deleted', () {
+      final testDate = DateTime(2040, 1, 1);
       final t1 = Transaction(
           id: 't1',
           title: 'T',
           amount: 0,
-          date: DateTime.now(),
+          date: testDate,
           type: TransactionType.expense,
           category: 'C',
           profileId: 'default');
@@ -258,7 +261,7 @@ void main() {
           id: 't2',
           title: 'Td',
           amount: 0,
-          date: DateTime.now(),
+          date: testDate,
           type: TransactionType.expense,
           category: 'C',
           profileId: 'default',
@@ -272,6 +275,7 @@ void main() {
     });
 
     test('getLoans/saveLoan/deleteLoan', () async {
+      final testDate = DateTime(2040, 1, 1);
       final loan = Loan(
         id: 'l1',
         name: 'L',
@@ -279,10 +283,10 @@ void main() {
         profileId: 'default',
         remainingPrincipal: 1000,
         interestRate: 10.0,
-        startDate: DateTime.now(),
+        startDate: testDate,
         tenureMonths: 12,
         emiAmount: 100,
-        firstEmiDate: DateTime.now(),
+        firstEmiDate: testDate,
       );
       when(() => mockLoanBox.toMap()).thenReturn({'l1': loan});
       expect(storageService.getLoans().length, 1);
@@ -302,7 +306,7 @@ void main() {
           category: 'C',
           profileId: 'default',
           frequency: Frequency.monthly,
-          nextExecutionDate: DateTime.now());
+          nextExecutionDate: DateTime(2040, 1, 1));
       when(() => mockRecurringBox.toMap()).thenReturn({'rt1': rt});
       expect(storageService.getAllRecurring().length, 1);
     });
@@ -324,8 +328,8 @@ void main() {
         policyNumber: 'N',
         annualPremium: 100,
         sumAssured: 1000,
-        startDate: DateTime.now(),
-        maturityDate: DateTime.now().add(const Duration(days: 365)),
+        startDate: DateTime(2040, 1, 1),
+        maturityDate: DateTime(2040, 1, 1).add(const Duration(days: 365)),
         profileId: 'default',
       );
       when(() => mockInsuranceBox.values).thenReturn([policy]);
@@ -421,7 +425,8 @@ void main() {
           date: DateTime(2040, 5, 1),
           type: TransactionType.expense,
           category: 'C',
-          accountId: 'cc2');
+          accountId: 'cc2',
+          profileId: 'default');
       when(() => mockTransactionBox.toMap()).thenReturn({'t1': txn});
 
       await storageService.checkCreditCardRollovers(nowOverride: now);
@@ -429,6 +434,114 @@ void main() {
       // Balance should be 1000 + 500 = 1500
       expect(card.balance, 1500);
       verify(() => mockSettingsBox.put('last_rollover_cc2', any())).called(1);
+    });
+
+    test('recalculateBilledAmount throws when frozen', () async {
+      final card = Account(
+        id: 'cc_frozen_recalc',
+        name: 'Frozen CC',
+        type: AccountType.creditCard,
+        balance: 0,
+        billingCycleDay: 15,
+        isFrozen: true,
+      );
+      when(() => mockAccountBox.get('cc_frozen_recalc')).thenReturn(card);
+
+      expect(() => storageService.recalculateBilledAmount('cc_frozen_recalc'),
+          throwsException);
+    });
+
+    test('clearBilledAmount throws when frozen', () async {
+      final card = Account(
+        id: 'cc_frozen_clear',
+        name: 'Frozen CC',
+        type: AccountType.creditCard,
+        balance: 0,
+        billingCycleDay: 15,
+        isFrozen: true,
+      );
+      when(() => mockAccountBox.get('cc_frozen_clear')).thenReturn(card);
+
+      expect(() => storageService.clearBilledAmount('cc_frozen_clear'),
+          throwsException);
+    });
+
+    test('checkCreditCardRollovers phase 1 freeze logic', () async {
+      final now = DateTime(2040, 6, 20);
+      final freezeDate = DateTime(2040, 6, 1);
+      final card = Account(
+        id: 'cc_freeze1',
+        name: 'CCFreeze1',
+        type: AccountType.creditCard,
+        balance: 1000,
+        billingCycleDay: 15,
+        isFrozen: true,
+        isFrozenCalculated: false,
+        freezeDate: freezeDate,
+      );
+
+      final lastRollover =
+          DateTime(2040, 4, 15).subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_cc_freeze1'))
+          .thenReturn(lastRollover.millisecondsSinceEpoch);
+      when(() => mockAccountBox.toMap()).thenReturn({'cc_freeze1': card});
+
+      await storageService.checkCreditCardRollovers(nowOverride: now);
+
+      // In phase 1, balance should not shift! (even if unpaid txn exists). It just marks calculated.
+      final captured =
+          verify(() => mockAccountBox.put('cc_freeze1', captureAny()))
+              .captured
+              .first as Account;
+      expect(captured.isFrozenCalculated, true);
+      expect(captured.isFrozen, true); // Still frozen
+      expect(captured.balance, 1000); // Unchanged!
+    });
+
+    test('checkCreditCardRollovers phase 2 freeze logic (unlock)', () async {
+      final now = DateTime(2040, 6, 20);
+      final freezeDate = DateTime(2040, 5, 1);
+      final card = Account(
+        id: 'cc_freeze2',
+        name: 'CCFreeze2',
+        type: AccountType.creditCard,
+        balance: 1000,
+        billingCycleDay: 15,
+        isFrozen: true,
+        isFrozenCalculated: true,
+        freezeDate: freezeDate,
+      );
+
+      final lastRollover =
+          DateTime(2040, 5, 15).subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_cc_freeze2'))
+          .thenReturn(lastRollover.millisecondsSinceEpoch);
+      when(() => mockAccountBox.toMap()).thenReturn({'cc_freeze2': card});
+
+      // Spends during freeze transition
+      final txn = Transaction(
+          id: 't_freeze',
+          title: 'Spend',
+          amount: 500,
+          date: DateTime(2040, 5, 2),
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'cc_freeze2',
+          profileId: 'default');
+      when(() => mockTransactionBox.toMap()).thenReturn({'t_freeze': txn});
+      when(() => mockTransactionBox.values).thenReturn([txn]);
+
+      await storageService.checkCreditCardRollovers(nowOverride: now);
+
+      // Phase 2 unlocks the freeze and realizes debt
+      final captured =
+          verify(() => mockAccountBox.put('cc_freeze2', captureAny()))
+              .captured
+              .first as Account;
+      expect(captured.isFrozenCalculated, false);
+      expect(captured.isFrozen, false);
+      expect(captured.freezeDate, null);
+      expect(captured.balance, 1500); // 1000 + 500 from the transition period
     });
 
     test('_applyTransactionImpact logic for CC spends', () async {
@@ -456,7 +569,8 @@ void main() {
           date: now,
           type: TransactionType.expense,
           category: 'C',
-          accountId: 'cc3');
+          accountId: 'cc3',
+          profileId: 'default');
 
       await storageService.saveTransaction(txn, now: now);
       expect(card.balance, 1000); // Unchanged
@@ -481,7 +595,7 @@ void main() {
           id: 't1',
           title: 'Uber',
           amount: 10,
-          date: DateTime.now(),
+          date: DateTime(2040, 1, 1),
           type: TransactionType.expense,
           category: 'Old',
           profileId: 'default');
@@ -550,7 +664,8 @@ void main() {
           date: rollover,
           type: TransactionType.expense,
           category: 'C',
-          accountId: 'cc_val');
+          accountId: 'cc_val',
+          profileId: 'default');
 
       expect(() => storageService.saveTransaction(oldTxn), throwsException);
 
@@ -562,10 +677,91 @@ void main() {
           date: rollover.add(const Duration(seconds: 1)),
           type: TransactionType.expense,
           category: 'C',
-          accountId: 'cc_val');
+          accountId: 'cc_val',
+          profileId: 'default');
 
       await storageService.saveTransaction(newTxn);
       verify(() => mockTransactionBox.put(newTxn.id, newTxn)).called(1);
+    });
+
+    test('saveTransaction blocks transactions before freezeDate', () async {
+      final card = Account(
+          id: 'cc_val_freeze',
+          name: 'CC',
+          type: AccountType.creditCard,
+          balance: 1000,
+          billingCycleDay: 15,
+          isFrozen: true,
+          freezeDate: DateTime(2040, 7, 1));
+
+      when(() => mockAccountBox.get('cc_val_freeze')).thenReturn(card);
+
+      final oldTxn = Transaction(
+          id: 't_old_f',
+          title: 'Old',
+          amount: 100,
+          date: DateTime(2040, 6, 15), // Before freeze date!
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'cc_val_freeze',
+          profileId: 'default');
+
+      expect(() => storageService.saveTransaction(oldTxn), throwsException);
+    });
+
+    test('saveTransaction blocks targets before freezeDate (Transfer)',
+        () async {
+      final toCard = Account(
+          id: 'cc_to_freeze',
+          name: 'To CC',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 15,
+          isFrozen: true,
+          freezeDate: DateTime(2040, 7, 1));
+
+      when(() => mockAccountBox.get('cc_to_freeze')).thenReturn(toCard);
+
+      final transferTxn = Transaction(
+          id: 't_transfer_f',
+          title: 'Transfer',
+          amount: 100,
+          date: DateTime(2040, 6, 15), // Before freeze date!
+          type: TransactionType.transfer,
+          category: 'Payment',
+          accountId: 'bank1',
+          toAccountId: 'cc_to_freeze',
+          profileId: 'default');
+
+      expect(
+          () => storageService.saveTransaction(transferTxn), throwsException);
+    });
+
+    test('deleteTransaction blocks deletion before freezeDate', () async {
+      final card = Account(
+          id: 'cc_del_freeze',
+          name: 'CC',
+          type: AccountType.creditCard,
+          balance: 1000,
+          billingCycleDay: 15,
+          isFrozen: true,
+          freezeDate: DateTime(2040, 7, 1));
+
+      final txn = Transaction(
+          id: 't_to_del',
+          title: 'To Delete',
+          amount: 100,
+          date: DateTime(2040, 6, 20), // Before freeze!
+          type: TransactionType.expense,
+          category: 'C',
+          accountId: 'cc_del_freeze',
+          profileId: 'default');
+
+      when(() => mockAccountBox.get('cc_del_freeze')).thenReturn(card);
+      when(() => mockTransactionBox.get('t_to_del')).thenReturn(txn);
+
+      expect(
+          () => storageService.deleteTransaction('t_to_del'), throwsException);
     });
   });
 }

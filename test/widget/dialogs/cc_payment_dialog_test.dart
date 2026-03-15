@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/providers.dart';
+import 'package:clock/clock.dart';
 import 'package:samriddhi_flow/screens/cc_payment_dialog.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 
@@ -18,6 +19,7 @@ class MockCurrencyNotifier extends CurrencyNotifier {
 
 void main() {
   late LocalMockStorageService mockStorage;
+  late List<Transaction> mockTxns;
 
   setUpAll(() {
     registerFallbackValue(Transaction(
@@ -38,12 +40,60 @@ void main() {
   });
 
   setUp(() {
+    mockTxns = [];
     mockStorage = LocalMockStorageService();
-    when(() => mockStorage.saveTransaction(any())).thenAnswer((_) async {});
-    when(() => mockStorage.getLastRollover(any())).thenReturn(null);
-    when(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .thenAnswer((_) async {});
+    when(() => mockStorage.getTransactions()).thenAnswer((_) => mockTxns);
+    when(() => mockStorage.saveTransaction(any())).thenAnswer((inv) async {
+      mockTxns.add(inv.positionalArguments[0] as Transaction);
+    });
+    when(() => mockStorage.getLastRollover(any())).thenReturn(DateTime.now()
+        .subtract(const Duration(days: 45))
+        .millisecondsSinceEpoch);
+    when(() => mockStorage.resetCreditCardRollover(any(),
+        keepBilledStatus: any(named: 'keepBilledStatus'),
+        adjustBalance: any(named: 'adjustBalance'),
+        includeIncome: any(named: 'includeIncome'),
+        skipTransfers: any(named: 'skipTransfers'))).thenAnswer((_) async {});
+    when(() => mockStorage.getAccount(any())).thenAnswer((invocation) {
+      final id = invocation.positionalArguments[0] as String;
+      if (id == 'cc_1') {
+        return Account(
+            id: 'cc_1',
+            name: 'Test CC',
+            type: AccountType.creditCard,
+            balance: 1000,
+            profileId: 'p1',
+            billingCycleDay: 1);
+      }
+      if (id == 'cc_2') {
+        return Account(
+            id: 'cc_2',
+            name: 'Test CC 2',
+            type: AccountType.creditCard,
+            balance: -50.0, // After payment of 150.20 on 100.20 balance
+            profileId: 'p1',
+            billingCycleDay: 1);
+      }
+      if (id == 'cc_3') {
+        return Account(
+            id: 'cc_3',
+            name: 'Test CC 3',
+            type: AccountType.creditCard,
+            balance: 1000.0, // Before payment of 500
+            profileId: 'p1',
+            billingCycleDay: 1);
+      }
+      if (id == 'cc_4') {
+        return Account(
+            id: 'cc_4',
+            name: 'Test CC 4',
+            type: AccountType.creditCard,
+            balance: -999.99, // After payment of 999.99 on 0 balance
+            profileId: 'p1',
+            billingCycleDay: 1);
+      }
+      return null;
+    });
   });
 
   testWidgets('RecordCCPaymentDialog renders and submits payment',
@@ -147,9 +197,9 @@ void main() {
         .millisecondsSinceEpoch);
 
     // Mock reset call
-    when(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .thenAnswer((_) async {});
+    when(() => mockStorage.resetCreditCardRollover(any(),
+        keepBilledStatus: any(named: 'keepBilledStatus'),
+        adjustBalance: any(named: 'adjustBalance'))).thenAnswer((_) async {});
 
     // Mock transactions to return some billable txns
     final txn = Transaction(
@@ -160,6 +210,7 @@ void main() {
         type: TransactionType.expense,
         category: 'Food',
         accountId: 'cc_2');
+    mockTxns.add(txn);
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -204,9 +255,8 @@ void main() {
     verify(() => mockStorage.saveTransaction(any())).called(1);
 
     // Verify auto-advance cycle (reset Rollover) called!
-    verify(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .called(1);
+    verify(() => mockStorage.resetCreditCardRollover(any(),
+        keepBilledStatus: true, adjustBalance: true)).called(1);
   });
 
   testWidgets('RecordCCPaymentDialog does NOT advance cycle on partial payment',
@@ -261,69 +311,78 @@ void main() {
     // Verify transaction saved
     verify(() => mockStorage.saveTransaction(any())).called(1);
 
-    // Verify reset Rollover NOT called
-    verifyNever(() =>
-        mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true));
+    verifyNever(() => mockStorage.resetCreditCardRollover(any(),
+        keepBilledStatus: any(named: 'keepBilledStatus')));
   });
 
   testWidgets('RecordCCPaymentDialog advances cycle within 0.01 threshold',
       (tester) async {
-    final ccAccount = Account(
-      id: 'cc_4',
-      name: 'Test CC 4',
-      type: AccountType.creditCard,
-      balance: 1000.00,
-      profileId: 'p1',
-      billingCycleDay: 1,
-      paymentDueDateDay: 20,
-    );
+    final now = DateTime(2026, 3, 10);
+    await withClock(Clock.fixed(now), () async {
+      final ccAccount = Account(
+        id: 'cc_4',
+        name: 'Test CC 4',
+        type: AccountType.creditCard,
+        balance: 0.00,
+        profileId: 'p1',
+        billingCycleDay: 1,
+        paymentDueDateDay: 20,
+      );
 
-    when(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .thenAnswer((_) async {});
+      when(() => mockStorage.getLastRollover('cc_4')).thenReturn(
+          DateTime(2026, 1, 20).millisecondsSinceEpoch); // 50 days ago
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        storageServiceProvider.overrideWithValue(mockStorage),
-        storageInitializerProvider.overrideWith((ref) => Future.value()),
-        accountsProvider.overrideWith((ref) => Stream.value([ccAccount])),
-        transactionsProvider.overrideWith((ref) => Stream.value([])),
-        currencyProvider.overrideWith(MockCurrencyNotifier.new),
-      ],
-      child: MaterialApp(
-        home: Scaffold(
-          body: Builder(builder: (context) {
-            return ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => RecordCCPaymentDialog(
-                      creditCardAccount: ccAccount,
-                      isFullyPaid: false,
-                    ),
-                  );
-                },
-                child: const Text('Open Dialog'));
-          }),
+      final tBilled = Transaction(
+          id: 't_billed',
+          title: 'Billed Txn',
+          amount: 1000.0,
+          date: DateTime(2026, 2, 15), // In Feb cycle
+          type: TransactionType.expense,
+          category: 'Other',
+          accountId: 'cc_4');
+      mockTxns.add(tBilled);
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          storageServiceProvider.overrideWithValue(mockStorage),
+          storageInitializerProvider.overrideWith((ref) => Future.value()),
+          accountsProvider.overrideWith((ref) => Stream.value([ccAccount])),
+          transactionsProvider.overrideWith((ref) => Stream.value([tBilled])),
+          currencyProvider.overrideWith(MockCurrencyNotifier.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(builder: (context) {
+              return ElevatedButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => RecordCCPaymentDialog(
+                        creditCardAccount: ccAccount,
+                        isFullyPaid: false,
+                      ),
+                    );
+                  },
+                  child: const Text('Open Dialog'));
+            }),
+          ),
         ),
-      ),
-    ));
+      ));
 
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Dialog'));
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
 
-    // Pay 999.99 (matches 1000.0 - 0.01 threshold exactly)
-    await tester.enterText(find.byType(TextField), '999.99');
-    await tester.tap(find.text('Confirm'));
-    await tester.pumpAndSettle();
+      // Pay 999.99 (matches 1000.0 - 0.01 threshold exactly)
+      await tester.enterText(find.byType(TextField), '999.99');
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
 
-    // Verify main transaction was saved
-    verify(() => mockStorage.saveTransaction(any())).called(1);
+      verify(() => mockStorage.saveTransaction(any())).called(1);
 
-    verify(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .called(1);
+      verify(() => mockStorage.resetCreditCardRollover(any(),
+          keepBilledStatus: true, adjustBalance: true)).called(1);
+    });
   });
 
   testWidgets('RecordCCPaymentDialog creates adjustment when Round Off is used',
@@ -365,9 +424,9 @@ void main() {
       ),
     ));
 
-    when(() =>
-            mockStorage.resetCreditCardRollover(any(), keepBilledStatus: true))
-        .thenAnswer((_) async {});
+    when(() => mockStorage.resetCreditCardRollover(any(),
+        keepBilledStatus: any(named: 'keepBilledStatus'),
+        adjustBalance: any(named: 'adjustBalance'))).thenAnswer((_) async {});
 
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open Dialog'));

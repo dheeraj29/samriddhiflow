@@ -2,8 +2,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/models/account.dart';
 
 void main() {
+  group('Account Model', () {
+    test('Account toMap and fromMap with freeze fields', () {
+      final acc = Account(
+        id: 'acc1',
+        name: 'Test',
+        type: AccountType.creditCard,
+        balance: 0,
+        currency: 'USD',
+        freezeDate: DateTime(2025, 1, 1),
+        isFrozen: true,
+        isFrozenCalculated: true,
+      );
+      final map = acc.toMap();
+      final fromMap = Account.fromMap(map);
+
+      expect(fromMap.id, acc.id);
+      expect(fromMap.freezeDate, acc.freezeDate);
+      expect(fromMap.isFrozen, true);
+      expect(fromMap.isFrozenCalculated, true);
+    });
+  });
+
   group('Loan Model', () {
     test('Loan toMap and fromMap', () {
       final loan = Loan(

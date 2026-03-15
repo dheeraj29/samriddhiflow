@@ -16,6 +16,7 @@ class MockAccountBox extends Mock implements Box<Account> {}
 class MockTransactionBox extends Mock implements Box<Transaction> {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storageService;
   late MockHive mockHive;
   late MockAccountBox mockAccountBox;
@@ -28,15 +29,20 @@ void main() {
     mockTxnBox = MockTransactionBox();
     mockSettingsBox = MockBox();
 
-    registerFallbackValue(
-        Account(id: 'fb', name: 'f', type: AccountType.creditCard, balance: 0));
+    registerFallbackValue(Account(
+        id: 'fb',
+        name: 'f',
+        type: AccountType.creditCard,
+        balance: 0,
+        profileId: 'default'));
     registerFallbackValue(Transaction(
         id: 'tx',
         title: 't',
         amount: 0,
         date: DateTime.now(),
         type: TransactionType.expense,
-        category: 'General'));
+        category: 'General',
+        profileId: 'default'));
 
     when(() => mockHive.box<Account>(any())).thenReturn(mockAccountBox);
     when(() => mockHive.box<Transaction>(any())).thenReturn(mockTxnBox);
@@ -62,7 +68,8 @@ void main() {
           name: 'Card',
           type: AccountType.creditCard,
           balance: 1000,
-          billingCycleDay: 20);
+          billingCycleDay: 20,
+          profileId: 'default');
       // Expect Rollover Update to Target (Jan 21).
       // Logic Update: lastRollover is stored as (CycleStart - 1 second).
       // So if prev cycle start was Jan 21. Rollover date is Jan 20 23:59:59.
@@ -112,7 +119,8 @@ void main() {
             date: DateTime(2025, 2, 10),
             type: TransactionType.expense,
             accountId: 'c1',
-            category: 'General'), // Range (Jan 21, Feb 21]
+            category: 'General',
+            profileId: 'default'), // Range (Jan 21, Feb 21]
         Transaction(
             id: 't2',
             title: 'New Unbilled',
@@ -120,7 +128,8 @@ void main() {
             date: DateTime(2025, 2, 22),
             type: TransactionType.expense,
             accountId: 'c1',
-            category: 'General'), // Range (Feb 21, Mar 21]
+            category: 'General',
+            profileId: 'default'), // Range (Feb 21, Mar 21]
       ];
 
       final billed = BillingHelper.calculateBilledAmount(
@@ -143,7 +152,8 @@ void main() {
           name: 'Card',
           type: AccountType.creditCard,
           balance: 1000,
-          billingCycleDay: 20);
+          billingCycleDay: 20,
+          profileId: 'default');
       final lastRollover = DateTime(2024, 12, 21);
 
       when(() => mockSettingsBox.get('last_rollover_c1'))
@@ -163,7 +173,8 @@ void main() {
           date: DateTime(2025, 1, 10),
           type: TransactionType.expense,
           accountId: 'c1',
-          category: 'General');
+          category: 'General',
+          profileId: 'default');
       final txns = {'t1': txn};
       when(() => mockTxnBox.toMap())
           .thenReturn(Map<dynamic, Transaction>.from(txns));
@@ -232,7 +243,8 @@ void main() {
             name: 'Card',
             type: AccountType.creditCard,
             balance: 0,
-            billingCycleDay: 20);
+            billingCycleDay: 20,
+            profileId: 'default');
         final lastRollover = DateTime(2025, 2, 21); // Cycle Closed Feb 21.
 
         when(() => mockAccountBox.get('c1')).thenReturn(acc);
@@ -247,7 +259,8 @@ void main() {
             date: DateTime(2025, 2, 20), // Before Feb 21
             type: TransactionType.expense,
             accountId: 'c1',
-            category: 'General');
+            category: 'General',
+            profileId: 'default');
 
         expect(
             () async => await storageService.saveTransaction(oldTxn),
@@ -261,7 +274,8 @@ void main() {
             name: 'Card',
             type: AccountType.creditCard,
             balance: 0,
-            billingCycleDay: 20);
+            billingCycleDay: 20,
+            profileId: 'default');
         final lastRollover = DateTime(2025, 1,
             21); // Cycle Closed Jan 21. Billed: Jan 21-Feb 21. Open: Feb 21-Mar 21.
         // Current Date: Feb 25.
@@ -280,7 +294,8 @@ void main() {
                 2025, 2, 10), // Inside Billed Cycle (After Jan 21) => OK
             type: TransactionType.expense,
             accountId: 'c1',
-            category: 'General');
+            category: 'General',
+            profileId: 'default');
 
         await storageService.saveTransaction(billedTxn);
         verify(() => mockTxnBox.put('billed', billedTxn)).called(1);

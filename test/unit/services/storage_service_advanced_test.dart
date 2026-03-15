@@ -164,6 +164,7 @@ void main() {
         type: AccountType.creditCard,
         balance: 1000,
         billingCycleDay: 15,
+        profileId: 'default',
       );
 
       final now = DateTime(2024, 3, 16);
@@ -177,6 +178,8 @@ void main() {
         type: TransactionType.expense,
         category: 'Food',
         accountId: 'cc1',
+        profileId: 'default',
+        isDeleted: false,
       );
 
       when(() => mockAccountBox.toMap()).thenReturn({'cc1': acc});
@@ -184,7 +187,10 @@ void main() {
           .thenReturn(lastRollover.millisecondsSinceEpoch);
       when(() => mockSettingsBox.get('ignore_rollover_payments_cc1',
           defaultValue: false)).thenReturn(false);
+      when(() => mockSettingsBox.get('activeProfileId',
+          defaultValue: any(named: 'defaultValue'))).thenReturn('default');
       when(() => mockTransactionBox.toMap()).thenReturn({'t1': txn});
+      when(() => mockTransactionBox.values).thenReturn([txn]);
       when(() => mockAccountBox.put('cc1', any())).thenAnswer((_) async {});
       when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
 
@@ -192,6 +198,66 @@ void main() {
 
       expect(acc.balance, 1500);
       verify(() => mockAccountBox.put('cc1', any())).called(1);
+    });
+  });
+
+  group('StorageService Advanced - Update Billing Cycle', () {
+    test('updateBillingCycle throws if balance is > 0', () async {
+      final acc = Account(
+        id: 'cc1',
+        name: 'Credit Card',
+        type: AccountType.creditCard,
+        balance: 500, // Non-zero balance
+        billingCycleDay: 15,
+      );
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(acc);
+
+      expect(
+        () => storageService.updateBillingCycle(
+          accountId: 'cc1',
+          newCycleDay: 20,
+          freezeDate: DateTime.now(),
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('updateBillingCycle sets freeze state successfully on 0 balance',
+        () async {
+      final acc = Account(
+        id: 'cc2',
+        name: 'Credit Card',
+        type: AccountType.creditCard,
+        balance: 0, // Valid balance
+        billingCycleDay: 15,
+      );
+
+      final freezeDate = DateTime(2024, 6, 1);
+
+      when(() => mockAccountBox.get('cc2')).thenReturn(acc);
+      when(() => mockAccountBox.put('cc2', any())).thenAnswer((_) async {});
+      when(() => mockSettingsBox.put('last_rollover_cc2', any()))
+          .thenAnswer((_) async {});
+
+      await storageService.updateBillingCycle(
+        accountId: 'cc2',
+        newCycleDay: 20,
+        newDueDateDay: 5,
+        freezeDate: freezeDate,
+      );
+
+      final capturedAccount =
+          verify(() => mockAccountBox.put('cc2', captureAny())).captured.first
+              as Account;
+      expect(capturedAccount.billingCycleDay, 20);
+      expect(capturedAccount.paymentDueDateDay, 5);
+      expect(capturedAccount.isFrozen, true);
+      expect(capturedAccount.isFrozenCalculated, false);
+      expect(capturedAccount.freezeDate, freezeDate);
+
+      verify(() => mockSettingsBox.put(
+          'last_rollover_cc2', freezeDate.millisecondsSinceEpoch)).called(1);
     });
   });
 

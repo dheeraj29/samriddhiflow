@@ -146,9 +146,13 @@ class JsonDataService {
       return jsonDecode(content);
     }
 
-    // A-F, J-K: Restore list-based entities
+    // A-C: Restore metadata and settings first
     await _restoreEntityList(getJson, 'profiles.json', stats, 'profiles',
         (p) async => await _storageService.saveProfile(Profile.fromMap(p)));
+
+    await _restoreSettings(getJson, stats); // Restore settings early!
+
+    // D-F: Restore core data
     await _restoreEntityList(
         getJson,
         'categories.json',
@@ -157,7 +161,7 @@ class JsonDataService {
         (c) async => await _storageService.addCategory(Category.fromMap(c),
             isRestore: true));
     await _restoreEntityList(getJson, 'accounts.json', stats, 'accounts',
-        (a) async => await _storageService.saveAccount(Account.fromMap(a)));
+        (a) async => await _storageService.saveAccountRaw(Account.fromMap(a)));
     await _restoreEntityList(
         getJson,
         'transactions.json',
@@ -197,8 +201,7 @@ class JsonDataService {
             await _storageService.saveLendingRecord(
                 LendingRecord.fromMap(l))); // coverage:ignore-line
 
-    // G. Settings
-    await _restoreSettings(getJson, stats);
+    // G. Settings already restored above
 
     // H. Insurance Policies (bulk save)
     await _restoreInsurancePolicies(getJson, stats);

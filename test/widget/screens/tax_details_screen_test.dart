@@ -93,9 +93,10 @@ void main() {
         salaryIncomeOverride: any(named: 'salaryIncomeOverride'),
         includeGeneratedTds: any(named: 'includeGeneratedTds'))).thenReturn({
       'totalTax': 0.0,
+      'grossIncome': 0.0,
       'tds': 0.0,
       'netTaxPayable': 0.0,
-      'baseForAdvanceTax': 0.0, // Important for reminder hints
+      'baseForAdvanceTax': 0.0,
     });
   });
 
@@ -513,7 +514,12 @@ void main() {
     when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
     when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
         .thenReturn([]);
-    when(() => mockTaxService.calculateLiability(any())).thenReturn(5432.0);
+    when(() => mockTaxService.calculateDetailedLiability(any(), any(),
+        salaryIncomeOverride: any(named: 'salaryIncomeOverride'),
+        includeGeneratedTds: any(named: 'includeGeneratedTds'))).thenReturn({
+      'totalTax': 5432.0,
+      'grossIncome': 0.0,
+    });
 
     await pumpScreen(tester, data);
 
@@ -534,6 +540,12 @@ void main() {
 
     await tester.enterText(find.byType(TextField).at(0), 'Shop 1');
     await tester.enterText(find.byType(TextField).at(2), '50000');
+    when(() => mockTaxService.calculateDetailedLiability(any(), any(),
+        salaryIncomeOverride: any(named: 'salaryIncomeOverride'),
+        includeGeneratedTds: any(named: 'includeGeneratedTds'))).thenReturn({
+      'totalTax': 5432.0,
+      'grossIncome': 50000.0,
+    });
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 

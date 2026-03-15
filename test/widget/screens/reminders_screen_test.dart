@@ -108,10 +108,10 @@ void main() {
     expect(find.text('Upcoming Loan EMIs'), findsOneWidget);
 
     await expandSection(tester, 'Upcoming Loan EMIs');
-    expect(find.text('No active loans.'), findsOneWidget);
+    expect(find.text('No EMIs due within 7 days.'), findsOneWidget);
 
     await expandSection(tester, 'Credit Card Bills');
-    expect(find.text('No credit cards.'), findsOneWidget);
+    expect(find.text('No pending credit card bills.'), findsOneWidget);
 
     await expandSection(tester, 'Recurring Payments');
     expect(find.text('No due recurring payments.'), findsOneWidget);
@@ -220,10 +220,10 @@ void main() {
           principal: 100000,
           rate: 8.0,
           tenureMonths: 120,
-          startDate: DateTime(2026, 4, 1),
+          startDate: DateTime(2026, 3, 13),
           emiAmount: 2000,
-          emiDay: 10,
-          firstEmiDate: DateTime(2026, 4, 1),
+          emiDay: 13,
+          firstEmiDate: DateTime(2026, 3, 13),
         );
 
         await tester.pumpWidget(createWidgetUnderTest(loans: [loan]));
@@ -262,7 +262,9 @@ void main() {
 
         await expandSection(tester, 'Upcoming Loan EMIs');
 
-        expect(find.text('Paid'), findsOneWidget);
+        // Now filtered out if fully paid or outside 7-day window
+        expect(find.text('Closed EMI Loan'), findsNothing);
+        expect(find.text('No EMIs due within 7 days.'), findsOneWidget);
       });
     });
   });
@@ -337,7 +339,9 @@ void main() {
 
         await expandSection(tester, 'Credit Card Bills');
 
-        expect(find.text('Paid'), findsWidgets);
+        // Now filtered out if totalDue <= 0.01
+        expect(find.text('OneCard'), findsNothing);
+        expect(find.text('No pending credit card bills.'), findsOneWidget);
       });
     });
   });

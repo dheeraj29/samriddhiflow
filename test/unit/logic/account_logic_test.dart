@@ -27,13 +27,13 @@ void main() {
 
     test('getNextCycleStart', () {
       final start = DateTime(2023, 12, 16);
-      final next = BillingHelper.getNextCycleStart(start);
+      final next = BillingHelper.getNextCycleStart(start, 15);
       expect(next, DateTime(2024, 1, 16));
     });
 
     test('getNextCycleStart - Year boundary', () {
       final start = DateTime(2023, 12, 16);
-      final next = BillingHelper.getNextCycleStart(start);
+      final next = BillingHelper.getNextCycleStart(start, 15);
       expect(next, DateTime(2024, 1, 16)); // December + 1 -> January
     });
   });

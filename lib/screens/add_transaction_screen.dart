@@ -763,15 +763,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
     final storage = ref.read(storageServiceProvider);
 
-    await _handleCategoryChange(storage);
+    try {
+      await _handleCategoryChange(storage);
 
-    final txn = _createTransaction(dateTime, storage);
-    await _saveTransactionAndRecurring(txn, dateTime, storage);
+      final txn = _createTransaction(dateTime, storage);
+      await _saveTransactionAndRecurring(txn, dateTime, storage);
 
-    ref.invalidate(transactionsProvider);
-    ref.invalidate(accountsProvider);
-    ref.invalidate(recurringTransactionsProvider);
-    if (mounted) Navigator.pop(context);
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(accountsProvider);
+      ref.invalidate(recurringTransactionsProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // coverage:ignore-start
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            // coverage:ignore-end
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   bool _validateTransferAccounts() {

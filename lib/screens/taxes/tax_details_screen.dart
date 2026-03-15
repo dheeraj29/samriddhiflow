@@ -430,17 +430,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildLiveSummary() {
-    // Rough estimation similar to Dashboard
-    double totalIncome = _currentData.totalSalary +
-        _currentData.totalHP +
-        _currentData.totalBusiness +
-        _currentData.totalLTCG +
-        _currentData.totalSTCG +
-        _currentData.totalOther;
-
-    // Calculate Live Tax
     final taxService = ref.read(indianTaxServiceProvider);
-    double estimatedTax = taxService.calculateLiability(_currentData);
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final details = taxService.calculateDetailedLiability(_currentData, rules);
+
+    double totalIncome = details['grossIncome'] ?? 0;
+    double estimatedTax = details['totalTax'] ?? 0;
 
     return Container(
       color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
@@ -2675,7 +2671,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           onAdd: () => _addOtherIncomeDialog(),
           children: [
             _buildSummaryRow('Dividends', totalDividend),
-            _buildSummaryRow('Other Income from Table', totalOtherList),
+            ..._buildOtherIncomeBreakup(filteredForTotals),
             if (otherRuleExemptions > 0)
               _buildSummaryRow(_adhocExemptionsLabel,
                   otherRuleExemptions, // coverage:ignore-line
@@ -2701,6 +2697,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           ..._buildOtherIncomeList(filteredForDisplay),
       ],
     );
+  }
+
+  Iterable<Widget> _buildOtherIncomeBreakup(List<OtherIncome> incomes) {
+    final Map<String, double> grouped = {};
+    for (var o in incomes) {
+      final key = o.subtype.toOtherSourceDisplay();
+      grouped[key] = (grouped[key] ?? 0) + o.amount;
+    }
+
+    return grouped.entries.map((e) => _buildSummaryRow(e.key, e.value));
   }
 
   List<OtherIncome> _getFilteredOther({required bool includeEntryFilter}) {
