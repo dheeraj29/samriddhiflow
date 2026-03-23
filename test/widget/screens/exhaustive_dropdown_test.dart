@@ -52,18 +52,10 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Add Transaction'), findsOneWidget); // AppBar title
 
-    // 1. Verify Category Dropdown
-    // Key: category_dropdown
-    // Tap it
-    try {
-      await tester.tap(find.byKey(const Key('category_dropdown')));
-    } catch (_) {
-      // Fallback if key not found, look for DropdownButtonFormField with generic logic?
-      // Or by text. Default is often 'Food' or 'Select'.
-      // MockCategories has 'Food'.
-      // If default is selected, it shows 'Food'.
-      await tester.tap(find.text('Food'));
-    }
+    // Category dropdown uses dynamic keys: ValueKey('category_dropdown_$_type')
+    // Enum toString() includes the class name, e.g. TransactionType.expense
+    const expenseKey = ValueKey('category_dropdown_TransactionType.expense');
+    await tester.tap(find.byKey(expenseKey));
     await tester.pumpAndSettle();
 
     // Verify items exist
@@ -79,8 +71,9 @@ void main() {
     await tester.tap(find.text('Income'));
     await tester.pumpAndSettle();
 
-    // Open Category Dropdown again
-    await tester.tap(find.byKey(const Key('category_dropdown')));
+    // Open Category Dropdown again (Income type)
+    await tester.tap(
+        find.byKey(const ValueKey('category_dropdown_TransactionType.income')));
     await tester.pumpAndSettle();
 
     // Now Salary should be visible

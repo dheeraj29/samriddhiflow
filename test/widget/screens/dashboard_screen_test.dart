@@ -11,6 +11,9 @@ import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/models/profile.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
+
+class MockStorageService extends Mock implements StorageService {}
 
 class MockNotificationService extends Mock implements NotificationService {}
 
@@ -25,6 +28,11 @@ class MockIsOfflineNotifier extends IsOfflineNotifier {
 }
 
 class MockLocalModeNotifier extends LocalModeNotifier {
+  @override
+  bool build() => false;
+}
+
+class MockCurrencyFormatNotifier extends CurrencyFormatNotifier {
   @override
   bool build() => false;
 }
@@ -93,9 +101,12 @@ class MockDashboardConfigNotifier extends DashboardConfigNotifier {
 
 void main() {
   late MockNotificationService mockNotificationService;
-
+  late MockStorageService mockStorage;
   setUp(() {
     mockNotificationService = MockNotificationService();
+    mockStorage = MockStorageService();
+
+    when(() => mockStorage.getLastRollover(any())).thenReturn(null);
     when(() => mockNotificationService.init()).thenAnswer((_) async {});
     when(() => mockNotificationService.checkNudges())
         .thenAnswer((_) async => []);
@@ -131,6 +142,8 @@ void main() {
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
         pendingRemindersProvider.overrideWithValue(0),
         localModeProvider.overrideWith(MockLocalModeNotifier.new),
+        storageServiceProvider.overrideWithValue(mockStorage),
+        currencyFormatProvider.overrideWith(MockCurrencyFormatNotifier.new),
       ],
       child: const MaterialApp(
         home: DashboardScreen(),
@@ -149,7 +162,7 @@ void main() {
     ]));
     await tester.pumpAndSettle();
 
-    expect(find.text('My Samriddh'), findsOneWidget);
+    expect(find.text('My Samriddhi'), findsOneWidget);
     expect(find.text('Total Net Worth'), findsOneWidget);
     expect(find.text('Quick Actions'), findsOneWidget);
     expect(find.text('Recent Transactions'), findsOneWidget);
@@ -168,6 +181,7 @@ void main() {
           name: 'CC',
           balance: 200,
           type: AccountType.creditCard,
+          billingCycleDay: 15,
           currency: 'USD'),
     ];
 
@@ -204,7 +218,7 @@ void main() {
             name: 'Cash',
             balance: 100,
             type: AccountType.wallet,
-            profileId: 'default')
+            profileId: 'default'),
       ],
       transactions: [t1],
     ));
@@ -359,5 +373,96 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Profile: Work Profile'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen displays Credit Card info when debt exists',
+      (tester) async {
+    final accounts = [
+      Account(
+        id: 'cc1',
+        name: 'My Card',
+        type: AccountType.creditCard,
+        balance: -1000, // Spent 1000
+        creditLimit: 5000,
+        billingCycleDay: 15,
+      ),
+    ];
+
+    // Mock rollover to 30 days ago to ensure "billed" logic triggers
+    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+    final rolloverDate = DateTime(thirtyDaysAgo.year, thirtyDaysAgo.month, 15);
+    when(() => mockStorage.getLastRollover('cc1'))
+        .thenReturn(rolloverDate.millisecondsSinceEpoch);
+
+    // mock transactions to ensure unbilled/billed calculation
+    final txns = [
+      Transaction.create(
+        title: 'Billed Spend',
+        amount: 2000,
+        type: TransactionType.expense,
+        accountId: 'cc1',
+        category: 'Leisure',
+        // In the billed cycle window (e.g. 20 days ago)
+        date: DateTime.now().subtract(const Duration(days: 20)),
+      ),
+    ];
+
+    await tester.pumpWidget(createWidgetUnderTest(
+      accounts: accounts,
+      transactions: txns,
+    ));
+    await tester.pumpAndSettle();
+
+    // Reveal privacy mode to see numbers
+    await tester.tap(find.byIcon(Icons.visibility));
+    await tester.pumpAndSettle();
+
+    // Verify CC Bill (Unpaid), Unbilled, and Usage are shown
+    expect(find.text('CC Bill (Unpaid)'), findsOneWidget);
+    expect(find.text('CC Unbilled'), findsOneWidget);
+    expect(find.text('CC Usage'), findsOneWidget);
+
+    // With balance -1000 and billedGross 2000, totalDue = 1000
+    expect(find.textContaining('1,000'), findsWidgets);
+
+    // Usage: 1000 / 5000 = 20%
+    expect(find.textContaining('20.0%'), findsOneWidget);
+  });
+
+  testWidgets(
+      'DashboardScreen excludes wallet accounts from Current Savings and Net Worth',
+      (tester) async {
+    final accounts = [
+      Account(
+        id: '1',
+        name: 'Savings',
+        balance: 1000,
+        type: AccountType.savings,
+        currency: 'USD',
+      ),
+      Account(
+        id: '2',
+        name: 'Wallet',
+        balance: 500,
+        type: AccountType.wallet,
+        currency: 'USD',
+      ),
+    ];
+
+    await tester.pumpWidget(createWidgetUnderTest(accounts: accounts));
+    await tester.pumpAndSettle();
+
+    // Tap to reveal
+    await tester.tap(find.byIcon(Icons.visibility));
+    await tester.pumpAndSettle();
+
+    // Verify label is "Current Savings"
+    expect(find.textContaining('Current Savings'), findsOneWidget);
+
+    // Net Worth should be 1000 (Wallet 500 excluded)
+    // Current Savings should be 1000 (Wallet 500 excluded)
+    // Assets should be 1000 (Wallet 500 excluded from assets too)
+    // Search for widgets containing '1,000'
+    expect(find.textContaining('1,000'), findsNWidgets(3));
   });
 }

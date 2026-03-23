@@ -35,10 +35,25 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Cloud State
+  // App State
   bool _isUploading = false;
   bool _isDownloading = false;
   bool _isAppLockEnabled = false;
+  final Map<String, bool> _expandedSections = {};
+
+  // List of section titles for consistency
+  final List<String> _sectionTitles = [
+    'Appearance',
+    'Dashboard Customization',
+    'Cloud & Sync',
+    'Data Management',
+    'Feature Management',
+    'Profile Management',
+    'Preferences',
+    'Authentication',
+    'Security',
+    'App Info',
+  ];
 
   // PWA Install Prompt
   Object? _installPrompt;
@@ -48,6 +63,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     final storage = ref.read(storageServiceProvider);
     _isAppLockEnabled = storage.isAppLockEnabled();
+
+    // Default all sections to expanded
+    for (var title in _sectionTitles) {
+      _expandedSections[title] = true;
+    }
 
     // Listen for PWA Install Prompt (Web Only)
     if (kIsWeb) {
@@ -70,23 +90,124 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          _buildAppearanceSection(),
-          _buildDashboardSection(),
-          _buildCloudSectionHeader(context, user),
-          _buildDataManagementSection(context),
-          _buildFeatureManagementSection(context),
-          _buildProfileManagementSection(context),
-          _buildPreferencesSection(context),
-          if (user != null && !ref.watch(isOfflineProvider)) ...[
-            _buildAuthSection(context),
-          ],
-          _buildSecuritySection(context),
-          _buildAppInfoSection(context),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        actions: [
+          IconButton(
+            tooltip: 'Expand/Collapse All',
+            icon: Icon(
+              _expandedSections.values.every((v) => v)
+                  ? Icons.unfold_less
+                  : Icons.unfold_more,
+            ),
+            onPressed: () {
+              final newValue = !_expandedSections.values.every((v) => v);
+              setState(() {
+                for (var key in _expandedSections.keys) {
+                  _expandedSections[key] = newValue;
+                }
+              });
+            },
+          ),
         ],
       ),
+      body: ListView(
+        children: [
+          _buildCollapsibleSection(
+            'Appearance',
+            _buildAppearanceSection(),
+          ),
+          _buildCollapsibleSection(
+            'Dashboard Customization',
+            _buildDashboardSection(),
+          ),
+          _buildCollapsibleSection(
+            'Cloud & Sync',
+            _buildCloudSectionContent(context, user),
+          ),
+          _buildCollapsibleSection(
+            'Data Management',
+            _buildDataManagementSection(context),
+          ),
+          _buildCollapsibleSection(
+            'Feature Management',
+            _buildFeatureManagementSection(context),
+          ),
+          _buildCollapsibleSection(
+            'Profile Management',
+            _buildProfileManagementSection(context),
+          ),
+          _buildCollapsibleSection(
+            'Preferences',
+            _buildPreferencesSection(context),
+          ),
+          if (user != null && !ref.watch(isOfflineProvider))
+            _buildCollapsibleSection(
+              'Authentication',
+              _buildAuthSection(context),
+            ),
+          _buildCollapsibleSection(
+            'Security',
+            _buildSecuritySection(context),
+          ),
+          _buildCollapsibleSection(
+            'App Info',
+            _buildAppInfoSection(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollapsibleSection(String title, Widget content) {
+    final isExpanded = _expandedSections[title] ?? true;
+    final showDivider = title != _sectionTitles.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showDivider) const Divider(height: 32, thickness: 0.5),
+        InkWell(
+          onTap: () {
+            setState(() {
+              _expandedSections[title] = !isExpanded;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary.withAlpha(180),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: Visibility(
+            visible: isExpanded,
+            child: content,
+          ),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState:
+              isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 200),
+        ),
+      ],
     );
   }
 
@@ -94,7 +215,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Appearance', showDivider: false),
         ListTile(
           title: const Text('Theme Mode'),
           subtitle: Text(ref.watch(themeModeProvider).name.toUpperCase()),
@@ -110,6 +230,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           trailing: DropdownButton<ThemeMode>(
             value: ref.watch(themeModeProvider),
             onChanged: (ThemeMode? newValue) {
+              FocusScope.of(context).unfocus();
               if (newValue != null) {
                 ref.read(themeModeProvider.notifier).setThemeMode(newValue);
               }
@@ -132,31 +253,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Dashboard Customization'),
         SwitchListTile(
           title: const Text('Show Income & Expense'),
           subtitle: const Text('Display monthly summary cards'),
           value: config.showIncomeExpense,
-          onChanged: (val) => notifier.updateConfig(showIncomeExpense: val),
+          onChanged: (val) {
+            FocusScope.of(context).unfocus();
+            notifier.updateConfig(showIncomeExpense: val);
+          },
           secondary: const Icon(Icons.analytics_outlined, color: Colors.blue),
         ),
         SwitchListTile(
           title: const Text('Show Budget Indicator'),
           subtitle: const Text('Display monthly budget progress bar'),
           value: config.showBudget,
-          onChanged: (val) =>
-              notifier.updateConfig(showBudget: val), // coverage:ignore-line
+          // coverage:ignore-start
+          onChanged: (val) {
+            FocusScope.of(context).unfocus();
+            notifier.updateConfig(showBudget: val);
+            // coverage:ignore-end
+          },
           secondary: const Icon(Icons.pie_chart_outline, color: Colors.green),
         ),
       ],
     );
   }
 
-  Widget _buildCloudSectionHeader(BuildContext context, dynamic user) {
+  Widget _buildCloudSectionContent(BuildContext context, dynamic user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Cloud & Sync'),
         _buildCloudSection(context, user),
       ],
     );
@@ -275,8 +401,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'Keep your data synchronized across devices securely.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(height: 12),
           ElevatedButton(
@@ -369,22 +494,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Data Management'),
         ListTile(
           title: const Text('Recycle Bin'),
           subtitle: const Text('Restore deleted transactions'),
           leading: PureIcons.recycleBin(color: Colors.red),
-          onTap: () => Navigator.push(
-              context, // coverage:ignore-line
-              MaterialPageRoute(
-                  builder: (_) =>
-                      const RecycleBinScreen())), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const RecycleBinScreen()));
+            // coverage:ignore-end
+          },
         ),
         ListTile(
           title: const Text('Backup Data (ZIP)'),
           subtitle: const Text('Export all data to a ZIP file'),
           leading: const Icon(Icons.archive, color: Colors.purple),
-          onTap: _isUploading ? null : _backupToZip,
+          onTap: _isUploading
+              ? null
+              : () {
+                  FocusScope.of(context).unfocus();
+                  _backupToZip();
+                },
           trailing: _isUploading
               ? const SizedBox(
                   width: 20,
@@ -396,7 +527,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Restore Data (ZIP)'),
           subtitle: const Text('Import data from a ZIP file'),
           leading: const Icon(Icons.unarchive, color: Colors.teal),
-          onTap: _isDownloading ? null : _restoreFromZip,
+          onTap: _isDownloading
+              ? null
+              : () {
+                  FocusScope.of(context).unfocus();
+                  _restoreFromZip();
+                },
           trailing: _isDownloading
               ? const SizedBox(
                   width: 20,
@@ -408,7 +544,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Repair Data'),
           subtitle: const Text('Fix data consistency issues'),
           leading: const Icon(Icons.build_circle, color: Colors.amber),
-          onTap: () => _showRepairDialog(context),
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _showRepairDialog(context);
+          },
         ),
       ],
     );
@@ -433,6 +572,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(job.description),
                 trailing: const Icon(Icons.play_arrow, color: Colors.blue),
                 onTap: () {
+                  FocusScope.of(context).unfocus();
                   Navigator.pop(dialogContext);
                   _handleRepairJobTap(parentContext, job);
                 },
@@ -536,49 +676,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Feature Management'),
         ListTile(
           title: const Text('Manage Recurring Payments'),
           subtitle: const Text('View or delete automated payments'),
           leading: PureIcons.refresh(color: Colors.orange),
-          onTap: () => Navigator.push(
-              // coverage:ignore-line
-              context,
-              MaterialPageRoute(
-                  // coverage:ignore-line
-                  builder: (_) =>
-                      const RecurringManagerScreen())), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            Navigator.push(
+                // coverage:ignore-end
+                context,
+                MaterialPageRoute(
+                    // coverage:ignore-line
+                    builder: (_) =>
+                        const RecurringManagerScreen())); // coverage:ignore-line
+          },
         ),
         ListTile(
           title: const Text('Holiday Manager'),
           subtitle: const Text('Configure non-working days'),
           leading: PureIcons.calendar(color: Colors.red),
-          onTap: () => Navigator.push(
-              context, // coverage:ignore-line
-              MaterialPageRoute(
-                  builder: (_) =>
-                      const HolidayManagerScreen())), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            Navigator.push(
+                // coverage:ignore-end
+                context,
+                MaterialPageRoute(
+                    // coverage:ignore-line
+                    builder: (_) =>
+                        const HolidayManagerScreen())); // coverage:ignore-line
+          },
         ),
         ListTile(
           title: const Text('Manage Categories'),
           subtitle: const Text('Add, edit, or delete categories'),
           leading: PureIcons.icon(Icons.category, color: Colors.blue),
-          onTap: () => showDialog(
-            // coverage:ignore-line
-            context: context,
-            builder: (context) =>
-                const CategoryManagerDialog(), // coverage:ignore-line
-          ),
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            showDialog(
+              // coverage:ignore-end
+              context: context,
+              builder: (context) =>
+                  const CategoryManagerDialog(), // coverage:ignore-line
+            );
+          },
         ),
         SwitchListTile(
           title: const Text('Smart Calculator'),
           subtitle: const Text('Enable Quick Sum Tracker on transactions'),
           secondary: PureIcons.calculate(color: Colors.teal),
           value: ref.watch(smartCalculatorEnabledProvider),
-          onChanged: (_) => // coverage:ignore-line
-              ref
-                  .read(smartCalculatorEnabledProvider.notifier)
-                  .toggle(), // coverage:ignore-line
+          // coverage:ignore-start
+          onChanged: (_) {
+            FocusScope.of(context).unfocus();
+            ref.read(smartCalculatorEnabledProvider.notifier).toggle();
+            // coverage:ignore-end
+          },
         ),
       ],
     );
@@ -588,7 +743,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Profile Management'),
         ref.watch(profilesProvider).when(
               data: (profiles) => Column(
                 children: profiles
@@ -633,6 +787,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       onTap: isActive
           ? null
           : () {
+              FocusScope.of(context).unfocus();
               ref.read(activeProfileIdProvider.notifier).setProfile(p.id);
               ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Switched to ${p.name}")));
@@ -644,23 +799,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListTile(
       title: const Text('Add New Profile'),
       leading: PureIcons.addCircle(color: Colors.blue),
-      onTap: () => CommonDialogs.showTextFieldDialog(
-        context: context,
-        title: "Create Profile",
-        labelText: "Profile Name",
-        hintText: "Enter name (e.g. Business)",
-        initialValue: "",
-        saveLabel: "CREATE",
-        onSave: (val) async {
-          if (val.trim().isEmpty) return;
-          final newProfile = Profile(
-            id: const Uuid().v4(),
-            name: val.trim(),
-          );
-          await ref.read(storageServiceProvider).saveProfile(newProfile);
-          ref.invalidate(profilesProvider);
-        },
-      ),
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        CommonDialogs.showTextFieldDialog(
+          context: context,
+          title: "Create Profile",
+          labelText: "Profile Name",
+          hintText: "Enter name (e.g. Business)",
+          initialValue: "",
+          saveLabel: "CREATE",
+          onSave: (val) async {
+            if (val.trim().isEmpty) return;
+            final newProfile = Profile(
+              id: const Uuid().v4(),
+              name: val.trim(),
+            );
+            await ref.read(storageServiceProvider).saveProfile(newProfile);
+            ref.invalidate(profilesProvider);
+          },
+        );
+      },
     );
   }
 
@@ -668,7 +826,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Preferences'),
         ListTile(
           title: const Text('Currency'),
           subtitle: Text('Current: ${() {
@@ -679,50 +836,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             return 'US Dollar (\$)';
           }()}'),
           leading: PureIcons.money(color: Colors.green),
-          onTap: _showCurrencyDialog,
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _showCurrencyDialog();
+          },
         ),
         ListTile(
           title: const Text('Monthly Budget'),
           subtitle: Text(
               'Limit: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(ref.watch(monthlyBudgetProvider))}'),
           leading: PureIcons.reports(color: Colors.blue),
-          onTap: () => CommonDialogs.showTextFieldDialog(
-            context: context,
-            title: "Set Monthly Budget",
-            labelText: "Amount",
-            prefixText:
-                '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
-            initialValue: ref.read(monthlyBudgetProvider).toString(),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-            ],
-            onSave: (val) {
-              final amount = double.tryParse(val) ?? 0;
-              ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
-            },
-          ),
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            CommonDialogs.showTextFieldDialog(
+              context: context,
+              title: "Set Monthly Budget",
+              labelText: "Amount",
+              prefixText:
+                  '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ',
+              initialValue: ref.read(monthlyBudgetProvider).toString(),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+              ],
+              onSave: (val) {
+                final amount = double.tryParse(val) ?? 0;
+                ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+              },
+            );
+          },
         ),
         ListTile(
           title: const Text('Backup Reminder'),
           subtitle: Text(
               'Remind after every ${ref.watch(backupThresholdProvider)} transactions'),
           leading: PureIcons.sync(color: Colors.purple),
-          onTap: () => CommonDialogs.showTextFieldDialog(
-            context: context,
-            title: "Backup Interval",
-            labelText: "Number of transactions",
-            helperText: "Default: 20",
-            initialValue: ref.read(backupThresholdProvider).toString(),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onSave: (val) {
-              final threshold = int.tryParse(val) ?? 20;
-              ref
-                  .read(backupThresholdProvider.notifier)
-                  .setThreshold(threshold);
-            },
-          ),
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            CommonDialogs.showTextFieldDialog(
+              context: context,
+              title: "Backup Interval",
+              labelText: "Number of transactions",
+              helperText: "Default: 20",
+              initialValue: ref.read(backupThresholdProvider).toString(),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onSave: (val) {
+                final threshold = int.tryParse(val) ?? 20;
+                ref
+                    .read(backupThresholdProvider.notifier)
+                    .setThreshold(threshold);
+              },
+            );
+          },
         ),
       ],
     );
@@ -732,11 +899,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Authentication'),
         ListTile(
           title: const Text('Logout'),
           leading: PureIcons.logout(color: Colors.red),
-          onTap: () => UIUtils.handleLogout(context, ref),
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            UIUtils.handleLogout(context, ref);
+          },
         ),
       ],
     );
@@ -746,13 +915,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('Security'),
         SwitchListTile(
           title: const Text('App Lock (PIN)'),
           subtitle: const Text('Require PIN on startup/resume'),
           secondary: PureIcons.lock(color: Colors.grey),
           value: _isAppLockEnabled,
           onChanged: (val) async {
+            FocusScope.of(context).unfocus();
             if (val) {
               _showSetPinDialog(context);
             } else {
@@ -771,7 +940,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             title: const Text('Change PIN'),
             leading: PureIcons.security(size: 20),
-            onTap: () => _showSetPinDialog(context), // coverage:ignore-line
+            // coverage:ignore-start
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              _showSetPinDialog(context);
+              // coverage:ignore-end
+            },
           ),
       ],
     );
@@ -782,21 +956,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UIUtils.buildSectionHeader('App Information'),
         ListTile(
           title: const Text('Update Application'),
           subtitle: const Text('Clear cache and reload latest version'),
           leading:
               const Icon(Icons.system_update_rounded, color: Colors.blueAccent),
-          onTap: _updateApplication,
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _updateApplication();
+            // coverage:ignore-end
+          },
         ),
         ListTile(
           title: const Text('About'),
           subtitle: const Text(AppConstants.appVersion),
           leading: PureIcons.info(size: 20),
-          onTap: () => // coverage:ignore-line
-              UIUtils.showCommonAboutDialog(
-                  context, AppConstants.appVersion), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            UIUtils.showCommonAboutDialog(context, AppConstants.appVersion);
+            // coverage:ignore-end
+          },
         ),
         if (_installPrompt != null) ...[
           const Divider(),
@@ -1143,6 +1324,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(loansProvider);
         ref.invalidate(recurringTransactionsProvider);
         ref.invalidate(profilesProvider);
+        ref.invalidate(monthlyBudgetProvider);
+        ref.invalidate(currencyProvider);
+        ref.invalidate(categoriesProvider);
+        ref.invalidate(dashboardConfigProvider);
 
         final summaryItems =
             stats.entries.map((e) => "${e.key}: ${e.value}").toList();
@@ -1297,6 +1482,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(transactionsProvider);
         ref.invalidate(loansProvider);
         ref.invalidate(recurringTransactionsProvider);
+        ref.invalidate(monthlyBudgetProvider);
+        ref.invalidate(currencyProvider);
+        ref.invalidate(categoriesProvider);
+        ref.invalidate(dashboardConfigProvider);
         // coverage:ignore-end
 
         ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line
@@ -1797,7 +1986,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text("Delete Profile?"),
         content: Text(
-            "This will PERMANENTLY delete the profile '${profile.name}' and ALL its associated data (accounts, transactions, loans). This cannot be undone."),
+            "This will PERMANENTLY delete the profile '${profile.name}' and ALL its associated data (Accounts, Transactions, Loans, Taxes, Lending, Categories). This cannot be undone."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), // coverage:ignore-line

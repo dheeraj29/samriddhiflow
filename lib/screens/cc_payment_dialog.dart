@@ -239,7 +239,7 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
     if (billedAmount > 0 && adjustedData.$2 <= 0.01) {
       await storage.resetCreditCardRollover(acc,
-          keepBilledStatus: true, adjustBalance: true);
+          keepBilledStatus: true, adjustBalance: false);
     }
   }
 

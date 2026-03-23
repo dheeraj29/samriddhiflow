@@ -229,30 +229,28 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                PureIcons.icon(icon, color: theme.primaryColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(title,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                if (!isExpanded && pendingCount > 0)
-                  _buildPendingCountBadge(pendingCount),
-                AnimatedRotation(
-                  turns: isExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(Icons.expand_more,
-                      color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ),
+        ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          onTap: () {
+            onToggle();
+          },
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          leading: PureIcons.icon(icon, color: theme.colorScheme.primary),
+          title: Text(title,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isExpanded && pendingCount > 0)
+                _buildPendingCountBadge(pendingCount),
+              AnimatedRotation(
+                turns: isExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 200),
+                child:
+                    Icon(Icons.expand_more, color: theme.colorScheme.onSurface),
+              ),
+            ],
           ),
         ),
         AnimatedCrossFade(
@@ -384,6 +382,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   Widget _buildWaitStartCard(Loan loan) {
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
       child: ListTile(
         leading: PureIcons.timer(color: Colors.blueGrey),
         title: Text(loan.name),
@@ -511,14 +517,18 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   icon: PureIcons.payment(size: 16),
                   label: const Text(payNowText),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
-                  onPressed: () => showDialog(
-                      // coverage:ignore-line
-                      context: context,
-                      builder: (_) => RecordLoanPaymentDialog(
-                          loan: loan)), // coverage:ignore-line
+                  // coverage:ignore-start
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    showDialog(
+                        // coverage:ignore-end
+                        context: context,
+                        builder: (_) => RecordLoanPaymentDialog(
+                            loan: loan)); // coverage:ignore-line
+                  },
                 ),
               )
             ]
@@ -711,8 +721,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   icon: PureIcons.payment(size: 16),
                   label: const Text(payNowText),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   onPressed: () => showDialog(
                       // coverage:ignore-line

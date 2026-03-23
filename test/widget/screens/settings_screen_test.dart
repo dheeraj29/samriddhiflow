@@ -174,20 +174,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Appearance'), findsOneWidget);
-    expect(find.text('Dashboard Customization'), findsOneWidget);
+    expect(find.text('APPEARANCE'), findsOneWidget);
+    expect(find.text('DASHBOARD CUSTOMIZATION'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Data Management'), 200);
-    expect(find.text('Data Management'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('DATA MANAGEMENT'), 200);
+    expect(find.text('DATA MANAGEMENT'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Feature Management'), 200);
-    expect(find.text('Feature Management'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('FEATURE MANAGEMENT'), 200);
+    expect(find.text('FEATURE MANAGEMENT'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Profile Management'), 200);
-    expect(find.text('Profile Management'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('PROFILE MANAGEMENT'), 200);
+    expect(find.text('PROFILE MANAGEMENT'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Preferences'), 200);
-    expect(find.text('Preferences'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('PREFERENCES'), 200);
+    expect(find.text('PREFERENCES'), findsOneWidget);
   });
 
   testWidgets('Theme mode can be changed', (WidgetTester tester) async {
@@ -745,5 +745,57 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Restoring from ZIP'), findsNothing);
+  });
+
+  testWidgets('Sections are expanded by default', (WidgetTester tester) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    // Check if 'Theme Mode' is visible (it's inside 'Appearance')
+    expect(find.text('Theme Mode'), findsOneWidget);
+  });
+
+  testWidgets('Clicking a section header toggles visibility',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    final appearanceHeader = find.text('APPEARANCE');
+    await tester.tap(appearanceHeader);
+    await tester.pumpAndSettle();
+
+    // After collapsing, 'Theme Mode' should not be visible
+    expect(find.text('Theme Mode', skipOffstage: true), findsNothing);
+
+    await tester.tap(appearanceHeader);
+    await tester.pumpAndSettle();
+
+    // After expanding, it should be visible again
+    expect(find.text('Theme Mode', skipOffstage: true), findsOneWidget);
+  });
+
+  testWidgets('Global expand/collapse button works',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    final globalToggleButton =
+        find.byIcon(Icons.unfold_less); // Initial state is all expanded
+    await tester.tap(globalToggleButton);
+    await tester.pumpAndSettle();
+
+    // All should be collapsed
+    expect(find.text('Theme Mode', skipOffstage: true), findsNothing);
+    expect(
+        find.text('Show Income & Expense', skipOffstage: true), findsNothing);
+
+    final expandAllButton = find.byIcon(Icons.unfold_more);
+    await tester.tap(expandAllButton);
+    await tester.pumpAndSettle();
+
+    // All should be expanded
+    expect(find.text('Theme Mode', skipOffstage: true), findsOneWidget);
+    expect(
+        find.text('Show Income & Expense', skipOffstage: true), findsOneWidget);
   });
 }

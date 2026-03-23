@@ -150,9 +150,12 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           IconButton(
             icon: PureIcons.addCircle(),
             tooltip: 'Top-up Loan',
-            onPressed: () => showDialog(
-                context: context,
-                builder: (_) => LoanTopupDialog(loan: currentLoan)),
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              showDialog(
+                  context: context,
+                  builder: (_) => LoanTopupDialog(loan: currentLoan));
+            },
           ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
@@ -203,6 +206,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
   Widget _buildPayButton(Loan currentLoan) {
     return InkWell(
       onTap: () {
+        FocusScope.of(context).unfocus();
         showDialog(
             context: context,
             builder: (_) => RecordLoanPaymentDialog(loan: currentLoan));
@@ -293,9 +297,12 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
   Widget _buildNavIcon(
       IconData icon, String label, LoanDetailView view, ThemeData theme) {
     final isSelected = _currentView == view;
-    return InkWell(
-      onTap: () => setState(() => _currentView = view),
-      borderRadius: BorderRadius.circular(8),
+    return InkResponse(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        setState(() => _currentView = view);
+      },
+      radius: 32,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isSelected
@@ -307,13 +314,17 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             PureIcons.icon(icon,
-                color: isSelected ? theme.colorScheme.primary : Colors.grey),
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected ? theme.colorScheme.primary : Colors.grey,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -335,7 +346,10 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ElevatedButton(
-            onPressed: onPressed,
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              onPressed();
+            },
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.zero,
               backgroundColor: color,

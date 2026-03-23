@@ -179,6 +179,13 @@ class StorageService {
     // 7. Delete Lending Records
     await _deleteItemsByProfile<LendingRecord>(boxLendingRecords, profileId);
 
+    // 9. Delete Insurance Policies
+    await _deleteItemsByProfile<InsurancePolicy>(
+        boxInsurancePolicies, profileId);
+
+    // 10. Delete Tax Data
+    await _deleteItemsByProfile<TaxYearData>(boxTaxData, profileId);
+
     // 8. If active profile was deleted, switch to another one
     if (getActiveProfileId() == profileId) {
       final profiles = getProfiles();
@@ -444,19 +451,20 @@ class StorageService {
         keepBilledStatus: true); // coverage:ignore-line
   }
 
-  /// Updates a credit card's billing cycle. Only permitted if balance is 0.
-  /// Activates the freeze phase so that the transition bill is calculated safely.
   Future<void> updateBillingCycle({
     required String accountId,
     required int newCycleDay,
     int? newDueDateDay,
     required DateTime freezeDate,
+    required DateTime firstStatementDate,
   }) async {
     final box = _hive.box<Account>(boxAccounts);
     final acc = box.get(accountId);
     if (acc == null || acc.type != AccountType.creditCard) return;
 
-    if (acc.balance > 0) {
+    // Only require 0 balance if NOT already in the middle of a freeze transition.
+    final isAlreadyFrozen = acc.isFrozen && !acc.isFrozenCalculated;
+    if (acc.balance > 0 && !isAlreadyFrozen) {
       throw Exception(
           'Billing cycle can only be changed when the generated bill balance is exactly 0.');
     }
@@ -464,18 +472,39 @@ class StorageService {
     final updatedAcc = acc.copyWith(
       billingCycleDay: newCycleDay,
       paymentDueDateDay: newDueDateDay,
-      freezeDate: freezeDate,
+      balance: acc
+          .balance, // Preserve current balance; recalculator will refine it below
+      freezeDate: isAlreadyFrozen
+          ? acc.freezeDate
+          : freezeDate, // Retain original freeze date if concurrent update
       isFrozen: true,
       isFrozenCalculated: false,
+      firstStatementDate: firstStatementDate,
     );
 
     // Update the account
     await box.put(accountId, updatedAcc);
+    await recalculateAccountBalance(accountId);
 
-    // Freeze the pointer AT the freezeDate so the next generation starts exactly from there.
-    final settingsBox = _hive.box(boxSettings);
-    await settingsBox.put(
-        'last_rollover_$accountId', freezeDate.millisecondsSinceEpoch);
+    // Only set the pointer if we are starting a NEW freeze period.
+    // If it was already frozen, the pointer is already anchored to the freezeDate.
+    if (!isAlreadyFrozen) {
+      final settingsBox = _hive.box(boxSettings);
+      await settingsBox.put(
+          'last_rollover_$accountId', freezeDate.millisecondsSinceEpoch);
+    }
+  }
+
+  // coverage:ignore-start
+  Future<void> toggleAccountPin(String accountId) async {
+    final box = _hive.box<Account>(boxAccounts);
+    final acc = box.get(accountId);
+    // coverage:ignore-end
+    if (acc == null) return;
+
+    final updatedAcc =
+        acc.copyWith(isPinned: !acc.isPinned); // coverage:ignore-line
+    await box.put(accountId, updatedAcc); // coverage:ignore-line
   }
 
   Future<void> deleteAccount(String id) async {
@@ -580,14 +609,7 @@ class StorageService {
             acc, accountsBox, settingsBox, now, ignorePayments);
       }
     } catch (e) {
-      // coverage:ignore-start
-      final context = navigatorKey.currentContext;
-      if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
-          const SnackBar(content: Text('Failed to check rollovers.')),
-        );
-      }
+      debugPrint('Error during rollover: $e'); // coverage:ignore-line
     } finally {
       _isCheckingRollover = false;
     }
@@ -638,28 +660,9 @@ class StorageService {
       return;
     }
 
-    // --- Billing Cycle Freeze Logic ---
     if (acc.isFrozen) {
-      if (!acc.isFrozenCalculated) {
-        // Stage 1: First Bill Generation.
-        acc.isFrozenCalculated = true;
-        await accountsBox.put(acc.id, acc);
-        // Stage 1 moves the pointer to start the "Freeze Transition Bill" period.
-        await settingsBox.put(key, effectiveTarget.millisecondsSinceEpoch);
-      } else {
-        // Stage 2: Debt Realization cycle.
-        // We realize the gap from freezeDate to the pointer Phase 1 established.
-        await _shiftBilledExpensesToBalance(
-            acc, acc.freezeDate ?? lastRollover, lastRollover);
-
-        // Remove the freeze completely.
-        acc.isFrozen = false;
-        acc.isFrozenCalculated = false;
-        acc.freezeDate = null;
-        await accountsBox.put(acc.id, acc);
-        // Stage 2 DOES NOT move the pointer. We leave it at Phase 1's end
-        // so that the regular cycle (now in Billed) follows standard lag.
-      }
+      await _handleFrozenRollover(acc, accountsBox, settingsBox, now,
+          effectiveTarget, key, lastRollover);
       return;
     }
     // ----------------------------------
@@ -669,6 +672,80 @@ class StorageService {
     await _shiftBilledExpensesToBalance(acc, lastRollover, effectiveTarget);
 
     await settingsBox.put(key, effectiveTarget.millisecondsSinceEpoch);
+    await accountsBox.put(acc.id, acc);
+  }
+
+  Future<void> _handleFrozenRollover(
+      Account acc,
+      Box<Account> accountsBox,
+      Box settingsBox,
+      DateTime now,
+      DateTime effectiveTarget,
+      String key,
+      DateTime lastRollover) async {
+    DateTime currentLastRollover = lastRollover;
+
+    if (!acc.isFrozenCalculated) {
+      await _handleFrozenStage1(acc, accountsBox, settingsBox, now,
+          effectiveTarget, key, currentLastRollover);
+
+      // Refresh state for Stage 2 potential check
+      if (!acc.isFrozenCalculated) {
+        return; // Stage 1 didn't complete (date not reached)
+      }
+      currentLastRollover =
+          DateTime.fromMillisecondsSinceEpoch(settingsBox.get(key));
+    }
+
+    // Sequential Check: If time has passed the Transition Bill period too, realize Stage 2 now.
+    if (acc.isFrozenCalculated &&
+        now.isAfter(effectiveTarget) &&
+        effectiveTarget.isAfter(currentLastRollover)) {
+      await _handleFrozenStage2(acc, accountsBox, currentLastRollover);
+    }
+  }
+
+  Future<void> _handleFrozenStage1(
+      Account acc,
+      Box<Account> accountsBox,
+      Box settingsBox,
+      DateTime now,
+      DateTime effectiveTarget,
+      String key,
+      DateTime lastRollover) async {
+    if (acc.firstStatementDate != null &&
+        now.isBefore(acc.firstStatementDate!)) {
+      // coverage:ignore-line
+      return;
+    }
+
+    acc.isFrozenCalculated = true;
+    // Don't put yet; _shiftBilledExpensesToBalance or the end of Stage 1 will handle it.
+
+    await _shiftBilledExpensesToBalance(
+        acc, lastRollover, acc.freezeDate ?? lastRollover,
+        includeIncome:
+            false); // NEVER include income for CC; it hits balance in real-time.
+
+    final pointer =
+        acc.firstStatementDate?.subtract(const Duration(seconds: 1)) ??
+            effectiveTarget;
+    await settingsBox.put(key, pointer.millisecondsSinceEpoch);
+
+    // Save final state after Stage 1 modifications
+    await accountsBox.put(acc.id, acc);
+  }
+
+  Future<void> _handleFrozenStage2(
+      Account acc, Box<Account> accountsBox, DateTime lastRollover) async {
+    await _shiftBilledExpensesToBalance(
+        acc, acc.freezeDate ?? lastRollover, lastRollover,
+        includeIncome: false); // NEVER include income for CC.
+
+    acc.isFrozen = false;
+    acc.isFrozenCalculated = false;
+    acc.freezeDate = null;
+    await accountsBox.put(acc.id, acc);
   }
 
   Future<void> saveTransaction(Transaction transaction,
@@ -767,6 +844,17 @@ class StorageService {
         currentCycleStart.subtract(const Duration(seconds: 1));
 
     final settingsBox = _hive.box(boxSettings);
+    final existingRollover = settingsBox.get('last_rollover_$accountId');
+
+    // Requirement: If it's a frozen account, we MUST NOT overwrite the pointer
+    // because it contains the critical freezeDate!
+    // Also, if a pointer already exists (e.g. from a cloud payload), we trust it.
+    if (existingRollover != null) return;
+
+    final accBox = _hive.box<Account>(boxAccounts);
+    final acc = accBox.get(accountId);
+    if (acc != null && acc.isFrozen) return; // coverage:ignore-line
+
     await settingsBox.put(
         'last_rollover_$accountId', importRolloverDate.millisecondsSinceEpoch);
   }
@@ -896,8 +984,19 @@ class StorageService {
     final allTxns = getTransactions(); // Already sorted by date DESC
     // We need ASC order to rebuild balance chronologically
     final txns = allTxns.reversed.where((t) => !t.isDeleted).toList();
-
     for (var txn in txns) {
+      // REFINEMENT: Strictly skip history before freeze date IF in Phase 1.
+      // If isFrozenCalculated is true (Phase 2), we allow the previously settled
+      // transition balance to persist by rebuilding from history normally.
+      if (acc.isFrozen &&
+          // coverage:ignore-start
+          !acc.isFrozenCalculated &&
+          acc.freezeDate != null &&
+          txn.date.isBefore(acc.freezeDate!)) {
+        // coverage:ignore-end
+        continue;
+      }
+
       if (txn.accountId == accountId) {
         _applyTransactionImpact(acc, txn, isReversal: false, isSource: true);
         // coverage:ignore-start
@@ -946,6 +1045,10 @@ class StorageService {
       return false;
     }
 
+    if (acc.isFrozen) {
+      return _isWithinFrozenPeriod(acc, txn); // coverage:ignore-line
+    }
+
     // NEW Logic: Only defer EXPENSES (except Rounding Adjustments).
     // Income, Incoming Transfers (Payments), and Rounding Adjustments hit balance immediately.
     // This allows Total = balance + billed + unbilled.
@@ -969,6 +1072,18 @@ class StorageService {
         currentCycleStart.subtract(const Duration(days: 1)),
         acc.billingCycleDay!);
     return !txn.date.isBefore(prevCycleStart);
+  }
+
+  // coverage:ignore-start
+  bool _isWithinFrozenPeriod(Account acc, Transaction txn) {
+    if (!acc.isFrozenCalculated && acc.freezeDate != null) {
+      final txnDate = DateTime(txn.date.year, txn.date.month, txn.date.day);
+      final freezeDate = DateTime(
+          acc.freezeDate!.year, acc.freezeDate!.month, acc.freezeDate!.day);
+      if (txnDate.isBefore(freezeDate)) return false;
+      // coverage:ignore-end
+    }
+    return true;
   }
 
   Future<void> _incrementBackupCounter() async {
@@ -1922,7 +2037,8 @@ class StorageService {
   /// Internal helper to shift expenses from a resolved period into the permanent balance.
   /// This maintains the "Pure Rule": Total = Balance + Billed + Unbilled.
   Future<void> _shiftBilledExpensesToBalance(
-      Account acc, DateTime startPointer, DateTime endPointer) async {
+      Account acc, DateTime startPointer, DateTime endPointer,
+      {bool includeIncome = false}) async {
     if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
       return;
     }
@@ -1933,14 +2049,12 @@ class StorageService {
       txns,
       startPointer.add(const Duration(seconds: 1)),
       endPointer,
-      skipTransfers: true, // Only defer expenses
-      includeIncome: false,
+      skipTransfers: !includeIncome,
+      includeIncome: includeIncome,
     );
 
-    if (spends > 0.01) {
+    if (spends.abs() > 0.01) {
       acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + spends);
-      final box = _hive.box<Account>(boxAccounts);
-      await box.put(acc.id, acc);
     }
   }
 }

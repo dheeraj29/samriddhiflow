@@ -5,9 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
 import '../services/auth_service.dart';
 import '../providers.dart';
-import '../feature_providers.dart';
 import '../widgets/pure_icons.dart';
-import '../utils/ui_utils.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +16,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
-  bool _isRestoring = false;
   Timer? _safetyTimer;
 
   @override
@@ -141,8 +138,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         await ref.read(isLoggedInProvider.notifier).setLoggedIn(true);
         // FORCE RE-EVALUATION of AuthWrapper immediately after flag is set
+        // AuthWrapper will handle the auto-restore once the session is stable.
         ref.invalidate(isLoggedInProvider);
-        await _autoRestore();
       }
     } else {
       if (mounted) {
@@ -169,72 +166,5 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false); // coverage:ignore-line
       }
     });
-  }
-
-  Future<void> _autoRestore() async {
-    if (_isRestoring) return;
-    try {
-      if (ref.read(authServiceProvider).currentUser != null) {
-        // SAFETY CHECK: Only auto-restore if local data is empty
-        final storage = ref.read(storageServiceProvider);
-        final hasData = storage.getAllAccounts().isNotEmpty ||
-            storage.getAllTransactions().isNotEmpty;
-
-        if (hasData) return;
-
-        setState(() => _isLoading = true);
-        await _performCloudRestoreOperation();
-      }
-    } catch (e) {
-      // Auto-restore skipped or failed (offline or no cloud data)
-    } finally {
-      _invalidateProviders();
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _invalidateProviders() {
-    ref.invalidate(authStreamProvider);
-    ref.invalidate(firebaseInitializerProvider);
-    ref.invalidate(isLoggedInProvider);
-  }
-
-  Future<void> _performCloudRestoreOperation([String? passcode]) async {
-    if (_isRestoring && passcode == null) return;
-    setState(() => _isRestoring = true);
-    final syncService = ref.read(cloudSyncServiceProvider);
-    try {
-      await syncService
-          .restoreFromCloud(passcode: passcode)
-          .timeout(const Duration(seconds: 15));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cloud Data Restored!')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      await _handleAutoRestoreError(e);
-    } finally {
-      if (mounted) setState(() => _isRestoring = false);
-    }
-  }
-
-  Future<void> _handleAutoRestoreError(dynamic e) async {
-    final errorStr = e.toString();
-    if (errorStr.contains("Passcode required") ||
-        errorStr.contains("Incorrect passcode")) {
-      // coverage:ignore-line
-      setState(() => _isLoading = false);
-      final p = await UIUtils.showPasscodePrompt(
-          context, errorStr.contains("Incorrect"));
-      if (!mounted) return;
-      if (p != null && p.isNotEmpty) {
-        await _performCloudRestoreOperation(p);
-      }
-    } else if (!errorStr.contains("No cloud data")) {
-      // coverage:ignore-line
-      throw e;
-    }
   }
 }

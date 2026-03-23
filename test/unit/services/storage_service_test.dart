@@ -131,9 +131,11 @@ void main() {
 
     storageService = StorageService(mockHive);
 
-    // Default mock for profile ID
+    // Default mock for profile ID and backup counter
     when(() => mockSettingsBox.get('activeProfileId',
         defaultValue: any(named: 'defaultValue'))).thenReturn('default');
+    when(() => mockSettingsBox.get('txnsSinceBackup',
+        defaultValue: any(named: 'defaultValue'))).thenReturn(0);
 
     // Global mocks for put/delete to avoid TypeErrors in async calls
     when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
@@ -428,6 +430,322 @@ void main() {
     });
   });
 
+  group('StorageService - Transfer Edit Verification', () {
+    test('Scenario 1: Saving -> Saving (Edit From and To accounts)', () async {
+      final acc1 = Account(
+          id: 'acc1', name: 'Save1', type: AccountType.savings, balance: 1000);
+      final acc2 = Account(
+          id: 'acc2', name: 'Save2', type: AccountType.savings, balance: 500);
+      final acc3 = Account(
+          id: 'acc3', name: 'Save3', type: AccountType.savings, balance: 200);
+      final acc4 = Account(
+          id: 'acc4', name: 'Save4', type: AccountType.savings, balance: 2000);
+
+      final txn = Transaction(
+        id: 't1',
+        title: 'Transfer',
+        amount: 100,
+        date: DateTime.now(),
+        type: TransactionType.transfer,
+        category: 'Transfer',
+        accountId: 'acc1',
+        toAccountId: 'acc2',
+      );
+
+      when(() => mockAccountBox.get('acc1')).thenReturn(acc1);
+      when(() => mockAccountBox.get('acc2')).thenReturn(acc2);
+      when(() => mockAccountBox.get('acc3')).thenReturn(acc3);
+      when(() => mockAccountBox.get('acc4')).thenReturn(acc4);
+      when(() => mockTransactionBox.get('t1')).thenReturn(txn);
+
+      final editedTxn =
+          txn.copyWith(accountId: 'acc3', toAccountId: 'acc4', amount: 150);
+      await storageService.saveTransaction(editedTxn);
+
+      expect(acc1.balance, 1100);
+      expect(acc2.balance, 400);
+      expect(acc3.balance, 50);
+      expect(acc4.balance, 2150);
+    });
+
+    test('Scenario 2: Saving -> Credit Card (Debt Decrease)', () async {
+      final accSave = Account(
+          id: 'save1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 1000);
+      final accCC = Account(
+          id: 'cc1', name: 'CC', type: AccountType.creditCard, balance: 500);
+
+      final txn = Transaction(
+        id: 't2',
+        title: 'CC Payment',
+        amount: 100,
+        date: DateTime.now(),
+        type: TransactionType.transfer,
+        category: 'Transfer',
+        accountId: 'save1',
+        toAccountId: 'cc1',
+      );
+
+      when(() => mockAccountBox.get('save1')).thenReturn(accSave);
+      when(() => mockAccountBox.get('cc1')).thenReturn(accCC);
+      when(() => mockTransactionBox.get('t2')).thenReturn(null);
+
+      await storageService.saveTransaction(txn);
+      expect(accSave.balance, 900);
+      expect(accCC.balance, 400);
+
+      final editedTxn = txn.copyWith(amount: 200);
+      when(() => mockTransactionBox.get('t2')).thenReturn(txn);
+      await storageService.saveTransaction(editedTxn);
+
+      expect(accSave.balance, 800);
+      expect(accCC.balance, 300);
+    });
+
+    test('Scenario 3: Credit Card -> Saving (Cash Advance/Debt Increase)',
+        () async {
+      final accCC = Account(
+          id: 'cc1', name: 'CC', type: AccountType.creditCard, balance: 0);
+      final accSave = Account(
+          id: 'save1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 100);
+
+      final txn = Transaction(
+        id: 't3',
+        title: 'Cash Advance',
+        amount: 50,
+        date: DateTime.now(),
+        type: TransactionType.transfer,
+        category: 'Transfer',
+        accountId: 'cc1',
+        toAccountId: 'save1',
+      );
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(accCC);
+      when(() => mockAccountBox.get('save1')).thenReturn(accSave);
+      when(() => mockTransactionBox.get('t3')).thenReturn(null);
+
+      await storageService.saveTransaction(txn);
+      expect(accCC.balance, 50);
+      expect(accSave.balance, 150);
+
+      final accSave2 = Account(
+          id: 'save2',
+          name: 'Savings 2',
+          type: AccountType.savings,
+          balance: 0);
+      when(() => mockAccountBox.get('save2')).thenReturn(accSave2);
+      final editedTxn = txn.copyWith(toAccountId: 'save2');
+      when(() => mockTransactionBox.get('t3')).thenReturn(txn);
+
+      await storageService.saveTransaction(editedTxn);
+      expect(accCC.balance, 50);
+      expect(accSave.balance, 100);
+      expect(accSave2.balance, 50);
+    });
+
+    test('Scenario 4: Credit Card -> Credit Card (Balance Transfer)', () async {
+      final cc1 = Account(
+          id: 'cc1', name: 'CC1', type: AccountType.creditCard, balance: 1000);
+      final cc2 = Account(
+          id: 'cc2', name: 'CC2', type: AccountType.creditCard, balance: 0);
+
+      final txn = Transaction(
+        id: 't4',
+        title: 'Balance Transfer',
+        amount: 200,
+        date: DateTime.now(),
+        type: TransactionType.transfer,
+        category: 'Transfer',
+        accountId: 'cc1',
+        toAccountId: 'cc2',
+      );
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(cc1);
+      when(() => mockAccountBox.get('cc2')).thenReturn(cc2);
+      when(() => mockTransactionBox.get('t4')).thenReturn(null);
+
+      await storageService.saveTransaction(txn);
+      expect(cc1.balance, 1200);
+      expect(cc2.balance, -200);
+
+      final editedTxn = txn.copyWith(amount: 300);
+      when(() => mockTransactionBox.get('t4')).thenReturn(txn);
+      await storageService.saveTransaction(editedTxn);
+
+      expect(cc1.balance, 1300);
+      expect(cc2.balance, -300);
+    });
+
+    test('Scenario 5: CC -> Saving swap roles to Saving -> CC', () async {
+      final accCC = Account(
+          id: 'cc1', name: 'CC1', type: AccountType.creditCard, balance: 0);
+      final accSave = Account(
+          id: 'save1', name: 'Save1', type: AccountType.savings, balance: 1000);
+
+      final txn = Transaction(
+        id: 't5',
+        title: 'Initial Transfer',
+        amount: 100,
+        date: DateTime.now(),
+        type: TransactionType.transfer,
+        category: 'Transfer',
+        accountId: 'cc1',
+        toAccountId: 'save1',
+      );
+
+      when(() => mockAccountBox.get('cc1')).thenReturn(accCC);
+      when(() => mockAccountBox.get('save1')).thenReturn(accSave);
+      when(() => mockTransactionBox.get('t5')).thenReturn(null);
+
+      // Save initial: CC debt 0->100, Save balance 1000->1100
+      await storageService.saveTransaction(txn);
+      expect(accCC.balance, 100);
+      expect(accSave.balance, 1100);
+
+      // Edit: Swap roles to Save -> CC
+      final editedTxn = txn.copyWith(
+        accountId: 'save1',
+        toAccountId: 'cc1',
+        amount: 100,
+      );
+      when(() => mockTransactionBox.get('t5')).thenReturn(txn);
+
+      await storageService.saveTransaction(editedTxn);
+
+      // 1. Reverse initial (CC -> Save, 100):
+      //    CC source reversed (debt 100->0)
+      //    Save target reversed (balance 1100->1000)
+      // 2. Apply new (Save -> CC, 100):
+      //    Save source applied (balance 1000->900)
+      //    CC target applied (debt 0-> -100)
+
+      expect(accCC.balance, -100);
+      expect(accSave.balance, 900);
+    });
+  });
+
+  group('StorageService - Transaction Type Change Verification', () {
+    test('Scenario 1: Income -> Expense', () async {
+      final acc = Account(
+          id: 'acc1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 1000);
+      final oldTxn = Transaction(
+        id: 'ty1',
+        title: 'Refund',
+        amount: 200,
+        date: DateTime.now(),
+        type: TransactionType.income,
+        category: 'Refund',
+        accountId: 'acc1',
+      );
+
+      when(() => mockAccountBox.get('acc1')).thenReturn(acc);
+      when(() => mockTransactionBox.get('ty1')).thenReturn(oldTxn);
+
+      final newTxn = oldTxn.copyWith(
+          type: TransactionType.expense, amount: 100, category: 'Food');
+      await storageService.saveTransaction(newTxn);
+
+      expect(acc.balance, 700);
+    });
+
+    test('Scenario 2: Income -> Transfer', () async {
+      final acc1 = Account(
+          id: 'acc1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 1000);
+      final acc2 = Account(
+          id: 'acc2', name: 'Wallet', type: AccountType.savings, balance: 500);
+      final oldTxn = Transaction(
+        id: 'ty2',
+        title: 'Gift',
+        amount: 100,
+        date: DateTime.now(),
+        type: TransactionType.income,
+        category: 'Gift',
+        accountId: 'acc1',
+      );
+
+      when(() => mockAccountBox.get('acc1')).thenReturn(acc1);
+      when(() => mockAccountBox.get('acc2')).thenReturn(acc2);
+      when(() => mockTransactionBox.get('ty2')).thenReturn(oldTxn);
+
+      final newTxn = oldTxn.copyWith(
+          type: TransactionType.transfer, toAccountId: 'acc2', amount: 150);
+      await storageService.saveTransaction(newTxn);
+
+      expect(acc1.balance, 750);
+      expect(acc2.balance, 650);
+    });
+
+    test('Scenario 3: Expense -> Transfer', () async {
+      final acc1 = Account(
+          id: 'acc1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 1000);
+      final acc2 = Account(
+          id: 'acc2',
+          name: 'Credit Card',
+          type: AccountType.creditCard,
+          balance: 0);
+      final oldTxn = Transaction(
+        id: 'ty3',
+        title: 'Bill Pay',
+        amount: 200,
+        date: DateTime.now(),
+        type: TransactionType.expense,
+        category: 'Bills',
+        accountId: 'acc1',
+      );
+
+      when(() => mockAccountBox.get('acc1')).thenReturn(acc1);
+      when(() => mockAccountBox.get('acc2')).thenReturn(acc2);
+      when(() => mockTransactionBox.get('ty3')).thenReturn(oldTxn);
+
+      final newTxn = oldTxn.copyWith(
+          type: TransactionType.transfer, toAccountId: 'acc2', amount: 200);
+      await storageService.saveTransaction(newTxn);
+
+      expect(acc1.balance, 1000);
+      expect(acc2.balance, -200);
+    });
+
+    test('Scenario 4: Expense -> Income', () async {
+      final acc = Account(
+          id: 'acc1',
+          name: 'Savings',
+          type: AccountType.savings,
+          balance: 1000);
+      final oldTxn = Transaction(
+        id: 'ty4',
+        title: 'Error Entry',
+        amount: 50,
+        date: DateTime.now(),
+        type: TransactionType.expense,
+        category: 'Food',
+        accountId: 'acc1',
+      );
+
+      when(() => mockAccountBox.get('acc1')).thenReturn(acc);
+      when(() => mockTransactionBox.get('ty4')).thenReturn(oldTxn);
+
+      final newTxn = oldTxn.copyWith(
+          type: TransactionType.income, amount: 100, category: 'Refund');
+      await storageService.saveTransaction(newTxn);
+
+      expect(acc.balance, 1150);
+    });
+  });
+
   group('StorageService - CC Billing Locks', () {
     test('recalculateBilledAmount succeeds even if cycle is paid (Reset Lock)',
         () async {
@@ -491,6 +809,79 @@ void main() {
       // Both are correct forms of the lock.
       await expectLater(
           () => storageService.saveTransaction(txn),
+          throwsA(isA<Exception>().having((e) => e.toString(), 'message',
+              anyOf(contains('already marked as paid'), contains('closed')))));
+    });
+
+    test(
+        'saveTransaction throws Exception if blocking old bill payment (transfer to CC)',
+        () async {
+      final acc = Account(
+          id: 'paid_cc',
+          name: 'Paid Card',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 20);
+      when(() => mockAccountBox.get('paid_cc')).thenReturn(acc);
+
+      final now = DateTime.now();
+      final currentCycleStart = BillingHelper.getCycleStart(now, 20);
+      final paidRollover =
+          currentCycleStart.subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_paid_cc'))
+          .thenReturn(paidRollover.millisecondsSinceEpoch);
+
+      // Try to add a Transfer (Payment) to the "Billed" cycle
+      final billedDate = currentCycleStart.subtract(const Duration(days: 2));
+      final txn = Transaction(
+          id: 't_pay',
+          title: 'Bill Payment',
+          amount: 500,
+          date: billedDate,
+          type: TransactionType.transfer,
+          category: 'Credit Card Bill',
+          toAccountId: 'paid_cc');
+
+      when(() => mockTransactionBox.get('t_pay')).thenReturn(null);
+
+      await expectLater(
+          () => storageService.saveTransaction(txn),
+          throwsA(isA<Exception>().having((e) => e.toString(), 'message',
+              anyOf(contains('already marked as paid'), contains('closed')))));
+    });
+
+    test(
+        'deleteTransaction throws Exception if deleting from a closed/paid cycle',
+        () async {
+      final acc = Account(
+          id: 'paid_cc',
+          name: 'Paid Card',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 20);
+      when(() => mockAccountBox.get('paid_cc')).thenReturn(acc);
+
+      final now = DateTime.now();
+      final currentCycleStart = BillingHelper.getCycleStart(now, 20);
+      final paidRollover =
+          currentCycleStart.subtract(const Duration(seconds: 1));
+      when(() => mockSettingsBox.get('last_rollover_paid_cc'))
+          .thenReturn(paidRollover.millisecondsSinceEpoch);
+
+      final billedDate = currentCycleStart.subtract(const Duration(days: 2));
+      final txn = Transaction(
+          id: 't_to_delete',
+          title: 'Old Expense',
+          amount: 100,
+          date: billedDate,
+          type: TransactionType.expense,
+          category: 'Food',
+          accountId: 'paid_cc');
+
+      when(() => mockTransactionBox.get('t_to_delete')).thenReturn(txn);
+
+      await expectLater(
+          () => storageService.deleteTransaction('t_to_delete'),
           throwsA(isA<Exception>().having((e) => e.toString(), 'message',
               anyOf(contains('already marked as paid'), contains('closed')))));
     });

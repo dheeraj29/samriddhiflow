@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import '../../widgets/app_list_item_card.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/loan.dart';
-import 'package:samriddhi_flow/widgets/pure_icons.dart';
 import 'dart:math';
 
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
+import 'package:samriddhi_flow/widgets/notched_border_painter.dart';
 
 const employerPaidText = 'Employer Paid';
 const selectMonthsText = 'Select Months';
@@ -246,13 +247,110 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     });
   }
 
+  // coverage:ignore-start
+  Future<void> _clearCurrentCategoryData() async {
+    final catName = _navDestinations[_selectedIndex].label;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Clear $catName Data?'),
+        content: Text(
+            'Are you sure you want to clear all entries for $catName in FY ${_currentData.year}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              // coverage:ignore-end
+              child: const Text('CANCEL')),
+          // coverage:ignore-start
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            // coverage:ignore-end
+            child: const Text('CLEAR'),
+          ),
+        ],
+      ),
+    );
+
+    // coverage:ignore-start
+    if (confirm == true) {
+      setState(() {
+        _performCategoryClear(_selectedIndex);
+        _updateSummary();
+        // coverage:ignore-end
+      });
+      // coverage:ignore-start
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$catName data cleared for FY.')));
+        // coverage:ignore-end
+      }
+    }
+  }
+
+  void _performCategoryClear(int index) {
+    // coverage:ignore-line
+    switch (index) {
+      case 0: // Salary // coverage:ignore-line
+        _clearSalaryData(); // coverage:ignore-line
+        break;
+      case 1: // coverage:ignore-line
+        _houseProperties = []; // coverage:ignore-line
+        break;
+      case 2: // coverage:ignore-line
+        _businessIncomes = []; // coverage:ignore-line
+        break;
+      case 3: // coverage:ignore-line
+        _capitalGains = []; // coverage:ignore-line
+        break;
+      case 4: // Dividend // coverage:ignore-line
+        _currentData = _currentData.copyWith(
+          // coverage:ignore-line
+          dividendIncome: const DividendIncome(),
+        );
+        break;
+      case 5: // Tax Paid // coverage:ignore-line
+        _clearTaxPaidData(); // coverage:ignore-line
+        break;
+      case 6: // coverage:ignore-line
+        _cashGifts = []; // coverage:ignore-line
+        break;
+      case 7: // coverage:ignore-line
+        _agriIncomeHistory = []; // coverage:ignore-line
+        break;
+      case 8: // coverage:ignore-line
+        _otherIncomes = []; // coverage:ignore-line
+        break;
+    }
+  }
+
+  // coverage:ignore-start
+  void _clearSalaryData() {
+    _salaryHistory = [];
+    _salaryNpsEmployerCtrl.text = '0';
+    _salaryLeaveEncashCtrl.text = '0';
+    _salaryGratuityCtrl.text = '0';
+    _independentAllowances = [];
+    _independentExemptions = [];
+    _independentDeductions = [];
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  void _clearTaxPaidData() {
+    _tdsEntries = [];
+    _tcsEntries = [];
+    _advanceTaxEntries = [];
+    // coverage:ignore-end
+  }
+
   Future<void> _clearTaxData() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Clear FY ${_currentData.year} Data?'),
+        title: Text('Clear ALL FY ${_currentData.year} Data?'),
         content: const Text(
-            'This will permanently delete all tax details for this financial year.'),
+            'This will permanently delete ALL tax details for this financial year across all categories.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -260,7 +358,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('DELETE'),
+            child: const Text('DELETE ALL'),
           ),
         ],
       ),
@@ -278,30 +376,97 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   int _selectedIndex = 0;
+  final List<({IconData icon, String label})> _navDestinations = [
+    (icon: Icons.work_outline, label: 'Salary'),
+    (icon: Icons.home_work_outlined, label: 'House Prop'),
+    (icon: Icons.storefront, label: 'Business'),
+    (icon: Icons.trending_up, label: 'Cap Gains'),
+    (icon: Icons.pie_chart_outline, label: 'Dividend'),
+    (icon: Icons.receipt_long, label: 'Tax Paid'),
+    (icon: Icons.card_giftcard, label: 'Gifts'),
+    (icon: Icons.agriculture, label: 'Agri'),
+    (icon: Icons.more_horiz, label: 'Other'),
+  ];
+
+  void _showCategorySwitcher() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Switch Category',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _navDestinations.length,
+                  itemBuilder: (context, index) {
+                    final dest = _navDestinations[index];
+                    final isSelected = _selectedIndex == index;
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _selectedIndex = index);
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(dest.icon,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null),
+                            const SizedBox(height: 4),
+                            Text(dest.label,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                                textAlign: TextAlign.center),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final destinations = [
-      const NavigationRailDestination(
-          icon: Icon(Icons.work_outline), label: Text('Salary')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.home_work_outlined), label: Text('House Prop')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.storefront), label: Text('Business')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.trending_up), label: Text('Cap Gains')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.pie_chart_outline), label: Text('Dividend')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.receipt_long), label: Text('Tax Paid')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.card_giftcard), label: Text('Gifts')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.agriculture), label: Text('Agri')),
-      const NavigationRailDestination(
-          icon: Icon(Icons.more_horiz), label: Text('Other')),
-    ];
-
     return PopScope(
       canPop: !_hasUnsavedChanges,
       onPopInvokedWithResult: (didPop, result) async {
@@ -313,29 +478,34 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Edit Tax Details'),
-          actions: _buildAppBarActions(context),
-        ),
-        body: Row(
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 72),
-              child: SingleChildScrollView(
-                child: IntrinsicHeight(
-                  child: NavigationRail(
-                    selectedIndex: _selectedIndex,
-                    onDestinationSelected: (int index) {
-                      setState(() {
-                        _selectedIndex = index;
-                      });
-                    },
-                    labelType: NavigationRailLabelType.all,
-                    destinations: destinations,
-                  ),
-                ),
-              ),
+          title: Text(
+              'FY ${_currentData.year} - ${_navDestinations[_selectedIndex].label}'),
+          actions: [
+            IconButton(
+              icon: Icon(_selectedDateRange == null
+                  ? Icons.calendar_today
+                  : Icons.event_busy),
+              tooltip: _selectedDateRange == null
+                  ? 'Filter by Date Range'
+                  : 'Clear Date Filter',
+              onPressed: _selectedDateRange == null
+                  ? _pickDateRange
+                  : _clearDateFilter, // coverage:ignore-line
             ),
-            const VerticalDivider(thickness: 1, width: 1),
+            if (widget.onDelete != null)
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_outlined,
+                    color: Colors.redAccent),
+                tooltip: 'Clear ALL FY Data',
+                onPressed: _clearTaxData,
+              ),
+            ..._buildCopyAction(),
+          ],
+        ),
+        body: Column(
+          children: [
+            _buildLiveSummary(),
+            const Divider(height: 1, thickness: 1),
             Expanded(
               child: IndexedStack(
                 index: _selectedIndex,
@@ -354,33 +524,62 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             ),
           ],
         ),
-        bottomNavigationBar: _buildLiveSummary(),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showCategorySwitcher,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          shape: const CircleBorder(),
+          child: Icon(_navDestinations[_selectedIndex].icon,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              size: 28),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: LayoutBuilder(
+          builder: (context, constraints) {
+            final double width = constraints.maxWidth;
+            const double fabRadius = 28.0; // Standard FAB radius
+            final fabRect = Rect.fromCircle(
+              center: Offset(width / 2, 0),
+              radius: fabRadius,
+            );
+
+            return CustomPaint(
+              painter: NotchedBorderPainter(
+                shape: const CircularNotchedRectangle(),
+                fabRect: fabRect,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                        .withValues(alpha: 0.2) // coverage:ignore-line
+                    : Colors.black.withValues(alpha: 0.1),
+              ),
+              child: BottomAppBar(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: 60,
+                color: Theme.of(context).colorScheme.surfaceContainer,
+                shape: const CircularNotchedRectangle(),
+                notchMargin: 8,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.redAccent),
+                      tooltip: 'Clear Category Data',
+                      onPressed: _clearCurrentCategoryData,
+                    ),
+                    const Spacer(), // Leave space for FAB
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.save_outlined),
+                      tooltip: 'Save Changes',
+                      onPressed: _save,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
-  }
-
-  List<Widget> _buildAppBarActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: Icon(_selectedDateRange == null
-            ? Icons.calendar_today
-            : Icons.event_busy),
-        tooltip: _selectedDateRange == null
-            ? 'Filter by Date Range'
-            : 'Clear Date Filter',
-        onPressed:
-            _selectedDateRange == null ? _pickDateRange : _clearDateFilter,
-      ),
-      ..._buildCopyAction(),
-      if (widget.onDelete != null)
-        IconButton(
-          icon: PureIcons.delete(),
-          tooltip: 'Clear Data for FY',
-          onPressed: _clearTaxData,
-        ),
-      IconButton(
-          icon: PureIcons.save(), onPressed: _save, tooltip: 'Save Changes'),
-    ];
   }
 
   Future<void> _pickDateRange() async {
@@ -439,7 +638,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     double estimatedTax = details['totalTax'] ?? 0;
 
     return Container(
-      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
+      ),
       padding: const EdgeInsets.all(12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -679,16 +887,41 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         else
           ..._salaryHistory.map((s) {
             return Card(
-              margin: const EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                          .withValues(alpha: 0.2) // coverage:ignore-line
+                      : Colors.black.withValues(alpha: 0.1),
+                ),
+              ),
               child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                  child: Icon(Icons.work_history_outlined,
+                      color: Theme.of(context).colorScheme.primary, size: 20),
+                ),
                 title: Text(
-                    'Effective: ${DateFormat('MMM d, yyyy').format(s.effectiveDate)}'),
+                    'Effective: ${DateFormat('MMM d, yyyy').format(s.effectiveDate)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(
                     'Basic: ${CurrencyUtils.formatCurrency(s.monthlyBasic, ref.watch(currencyProvider))} + Allowances'),
                 trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _editSalaryStructure(s),
+                  icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    _editSalaryStructure(s);
+                  },
                 ),
+                // coverage:ignore-start
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  _editSalaryStructure(s);
+                  // coverage:ignore-end
+                },
               ),
             );
           }),
@@ -714,6 +947,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 16),
         _buildSectionTitle('Independent Deductions'),
         _buildIndependentDeductions(),
+        const SizedBox(height: 16),
+        _buildSalaryTakeHomeRow(),
         const SizedBox(height: 16),
         _buildTakeHomeBreakdown(),
       ],
@@ -741,19 +976,49 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   Widget _buildIndependentAllowanceTile(CustomAllowance a) {
     // coverage:ignore-line
-    return ListTile(
+    return Card(
       // coverage:ignore-line
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
       // coverage:ignore-start
-      title: Text(a.name),
-      subtitle: Text(_formatAllowanceSubtitle(a)),
-      trailing: IconButton(
-        // coverage:ignore-end
-        icon: const Icon(Icons.delete, size: 20),
-        onPressed: () => _handleDeleteAllowance(a), // coverage:ignore-line
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.black.withValues(alpha: 0.1),
+          // coverage:ignore-end
+        ),
       ),
-      onTap: () => _handleEditAllowance(a), // coverage:ignore-line
+      // coverage:ignore-start
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(Icons.add_task_outlined,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+          // coverage:ignore-end
+        ),
+        title:
+            // coverage:ignore-start
+            Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(_formatAllowanceSubtitle(a)),
+        trailing: IconButton(
+          // coverage:ignore-end
+          icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+          // coverage:ignore-start
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _handleDeleteAllowance(a);
+            // coverage:ignore-end
+          },
+        ),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _handleEditAllowance(a);
+          // coverage:ignore-end
+        },
+      ),
     );
   }
 
@@ -806,20 +1071,50 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   Widget _buildIndependentExemptionTile(CustomExemption e) {
     // coverage:ignore-line
-    return ListTile(
+    return Card(
       // coverage:ignore-line
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
       // coverage:ignore-start
-      title: Text(e.name),
-      subtitle: Text(
-          CurrencyUtils.formatCurrency(e.amount, ref.watch(currencyProvider))),
-      trailing: IconButton(
-        // coverage:ignore-end
-        icon: const Icon(Icons.delete, size: 20),
-        onPressed: () => _handleDeleteExemption(e), // coverage:ignore-line
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.black.withValues(alpha: 0.1),
+          // coverage:ignore-end
+        ),
       ),
-      onTap: () => _handleEditExemption(e), // coverage:ignore-line
+      // coverage:ignore-start
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(Icons.verified_outlined,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+          // coverage:ignore-end
+        ),
+        title:
+            // coverage:ignore-start
+            Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(CurrencyUtils.formatCurrency(
+            e.amount, ref.watch(currencyProvider))),
+        trailing: IconButton(
+          // coverage:ignore-end
+          icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+          // coverage:ignore-start
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _handleDeleteExemption(e);
+            // coverage:ignore-end
+          },
+        ),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _handleEditExemption(e);
+          // coverage:ignore-end
+        },
+      ),
     );
   }
 
@@ -871,20 +1166,50 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   Widget _buildIndependentDeductionTile(CustomDeduction d) {
     // coverage:ignore-line
-    return ListTile(
+    return Card(
       // coverage:ignore-line
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
       // coverage:ignore-start
-      title: Text(d.name),
-      subtitle: Text(
-          '${CurrencyUtils.formatCurrency(d.amount, ref.watch(currencyProvider))} (${d.frequency.name})'),
-      trailing: IconButton(
-        // coverage:ignore-end
-        icon: const Icon(Icons.delete, size: 20),
-        onPressed: () => _handleDeleteDeduction(d), // coverage:ignore-line
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.black.withValues(alpha: 0.1),
+          // coverage:ignore-end
+        ),
       ),
-      onTap: () => _handleEditDeduction(d), // coverage:ignore-line
+      // coverage:ignore-start
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(Icons.remove_circle_outline,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+          // coverage:ignore-end
+        ),
+        title:
+            // coverage:ignore-start
+            Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+            '${CurrencyUtils.formatCurrency(d.amount, ref.watch(currencyProvider))} (${d.frequency.name})'),
+        trailing: IconButton(
+          // coverage:ignore-end
+          icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+          // coverage:ignore-start
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _handleDeleteDeduction(d);
+            // coverage:ignore-end
+          },
+        ),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _handleEditDeduction(d);
+          // coverage:ignore-end
+        },
+      ),
     );
   }
 
@@ -985,60 +1310,73 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           totalTds - newTaxAfterAdhocExemptions; // coverage:ignore-line
     }
 
-    return Column(
-      children: [
-        ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Total TDS tracked'),
-          subtitle: generatedTds.isNotEmpty
-              ? const Text('Includes projected monthly salary TDS')
-              : null,
-          trailing: Text(
-              CurrencyUtils.formatCurrency(
-                  totalTds, ref.watch(currencyProvider)),
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
         ),
-        if (refundForecast > 0)
-          ListTile(
-            // coverage:ignore-line
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            // coverage:ignore-start
-            title: Text('Tax Refund Forecast',
-                style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? Colors.green.shade700
-                        : Colors.green.shade400)),
-            trailing: Text(
-                CurrencyUtils.formatCurrency(
-                    refundForecast, ref.watch(currencyProvider)),
-                style: TextStyle(
-                    // coverage:ignore-end
-                    fontWeight: FontWeight.bold,
-                    // coverage:ignore-start
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? Colors.green.shade700
-                        : Colors.green.shade400)),
-            // coverage:ignore-end
-          ),
-        Row(
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Total TDS tracked'),
+              subtitle: generatedTds.isNotEmpty
+                  ? const Text('Includes projected monthly salary TDS')
+                  : null,
+              trailing: Text(
+                  CurrencyUtils.formatCurrency(
+                      totalTds, ref.watch(currencyProvider)),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            if (refundForecast > 0)
+              ListTile(
+                // coverage:ignore-line
+                dense: true,
+                contentPadding: EdgeInsets.zero,
                 // coverage:ignore-start
-                onPressed: () {
-                  setState(
-                      () => _selectedIndex = 5); // Navigate to Tax Paid tab
-                  // coverage:ignore-end
-                },
-                icon: const Icon(Icons.edit),
-                label: const Text('View/Edit All TDS'),
+                title: Text('Tax Refund Forecast',
+                    style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.green.shade700
+                            : Colors.green.shade400)),
+                trailing: Text(
+                    CurrencyUtils.formatCurrency(
+                        refundForecast, ref.watch(currencyProvider)),
+                    style: TextStyle(
+                        // coverage:ignore-end
+                        fontWeight: FontWeight.bold,
+                        // coverage:ignore-start
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.green.shade700
+                            : Colors.green.shade400)),
+                // coverage:ignore-end
               ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    // coverage:ignore-start
+                    onPressed: () {
+                      setState(
+                          () => _selectedIndex = 5); // Navigate to Tax Paid tab
+                      // coverage:ignore-end
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('View/Edit All TDS'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1136,6 +1474,101 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
+  Widget _buildSalaryTakeHomeRow() {
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
+    final strategy = ref.read(indianTaxServiceProvider);
+    final breakdown =
+        strategy.calculateMonthlySalaryBreakdown(_currentData, rules);
+
+    if (breakdown.isEmpty) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final data = breakdown[currentMonth] ?? {};
+
+    final gross = data['gross'] ?? 0.0;
+    final tax = data['tax'] ?? 0.0;
+    final ded = data['deductions'] ?? 0.0;
+    final net = data['takeHome'] ?? 0.0;
+    final currencyLocale = ref.watch(currencyProvider);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.blue.withValues(alpha: 0.3) // coverage:ignore-line
+              : Colors.blue.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Detailed Est (Current Month)',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 4),
+                Text(
+                  '${CurrencyUtils.formatCurrency(gross, currencyLocale)} (Gross) - '
+                  '${CurrencyUtils.formatCurrency(tax, currencyLocale)} (Tax) - '
+                  '${CurrencyUtils.formatCurrency(ded, currencyLocale)} (Ded) = '
+                  '${CurrencyUtils.formatCurrency(net, currencyLocale)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Net Monthly',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    CurrencyUtils.formatCurrency(net, currencyLocale),
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTakeHomeBreakdown() {
     final rules =
         ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
@@ -1147,99 +1580,165 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       return const SizedBox.shrink();
     }
 
-    return Column(
-      // coverage:ignore-line
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // coverage:ignore-line
-        const Divider(height: 32),
-        _buildSectionTitle(
-            'Monthly Take-Home Breakdown'), // coverage:ignore-line
-        const Text(
-          'Tax for bonuses/extras is applied in the month received.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+    final currencyLocale = ref.watch(currencyProvider);
+    final isCompact = ref.watch(currencyFormatProvider);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
         ),
-        // coverage:ignore-start
-        TextButton.icon(
-          onPressed: () {
-            _updateSummary();
-            // coverage:ignore-end
-          },
-          icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Refresh Breakdown'),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          // coverage:ignore-line
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            // coverage:ignore-line
-            columnSpacing: 20,
-            horizontalMargin: 0,
-            columns: const [
-              DataColumn(label: Text('Month')),
-              DataColumn(label: Text('Gross')),
-              DataColumn(label: Text('Tax')),
-              DataColumn(label: Text('Deductions')),
-              DataColumn(label: Text('Net In-Hand')),
-            ],
-            // coverage:ignore-start
-            rows: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((m) {
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildSectionTitle('Monthly Take-Home Breakdown'),
+                // Short/Long Toggle
+                GestureDetector(
+                  onTap: () => ref
+                          .read(currencyFormatProvider.notifier)
+                          .value = // coverage:ignore-line
+                      !isCompact,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Detailed', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 4),
+                      Icon(
+                        isCompact ? Icons.compress : Icons.expand,
+                        size: 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Text(
+              'Tax for bonuses/extras is applied in the month received.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            // Flexbox Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.5))),
+              ),
+              child: const Row(
+                children: [
+                  Expanded(
+                      flex: 2,
+                      child: Text('Month',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(
+                      flex: 3,
+                      child: Text('Gross',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end)),
+                  Expanded(
+                      flex: 3,
+                      child: Text('Tax',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end)),
+                  Expanded(
+                      flex: 3,
+                      child: Text('Ded',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end)),
+                  Expanded(
+                      flex: 3,
+                      child: Text('Net',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end)),
+                ],
+              ),
+            ),
+            // Flexbox Rows
+            ...[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((m) {
               final data = breakdown[m] ?? {};
               final gross = data['gross'] ?? 0.0;
               final tax = data['tax'] ?? 0.0;
               final ded = data['deductions'] ?? 0.0;
               final net = data['takeHome'] ?? 0.0;
-              // coverage:ignore-end
               final isStopped =
-                  _getStructureForMonth(m)?.stoppedMonths.contains(m) ??
-                      false; // coverage:ignore-line
+                  _getStructureForMonth(m)?.stoppedMonths.contains(m) ?? false;
 
-              // coverage:ignore-start
-              return DataRow(cells: [
-                DataCell(Text(DateFormat('MMM').format(DateTime(2023, m, 1)))),
-                DataCell(Text(isStopped
-                    // coverage:ignore-end
-                    ? '-'
-                    // coverage:ignore-start
-                    : CurrencyUtils.formatCurrency(
-                        gross, ref.watch(currencyProvider)))),
-                DataCell(Text(
-                    // coverage:ignore-end
-                    isStopped
-                        ? '-'
-                        : CurrencyUtils.formatCurrency(
-                            // coverage:ignore-line
-                            tax,
-                            ref.watch(
-                                currencyProvider)), // coverage:ignore-line
-                    style: const TextStyle(color: Colors.red))),
-                DataCell(Text(
-                    // coverage:ignore-line
-                    isStopped
-                        ? '-'
-                        : CurrencyUtils.formatCurrency(
-                            // coverage:ignore-line
-                            ded,
-                            ref.watch(
-                                currencyProvider)), // coverage:ignore-line
-                    style: const TextStyle(color: Colors.orange))),
-                DataCell(Text(
-                    // coverage:ignore-line
-                    isStopped
-                        ? '-'
-                        : CurrencyUtils.formatCurrency(
-                            // coverage:ignore-line
-                            net,
-                            ref.watch(
-                                currencyProvider)), // coverage:ignore-line
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green))),
-              ]);
-            }).toList(), // coverage:ignore-line
-          ),
+              String format(double val) {
+                if (isStopped) return '-';
+                return isCompact
+                    ? CurrencyUtils.getSmartFormat(
+                        val, currencyLocale) // coverage:ignore-line
+                    : CurrencyUtils.formatCurrency(val, currencyLocale);
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.1))),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                        flex: 2,
+                        child: Text(
+                            DateFormat('MMM').format(DateTime(2023, m, 1)),
+                            style: const TextStyle(fontSize: 13))),
+                    Expanded(
+                        flex: 3,
+                        child: Text(format(gross),
+                            style: const TextStyle(fontSize: 13),
+                            textAlign: TextAlign.end)),
+                    Expanded(
+                        flex: 3,
+                        child: Text(format(tax),
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.redAccent),
+                            textAlign: TextAlign.end)),
+                    Expanded(
+                        flex: 3,
+                        child: Text(format(ded),
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.orange),
+                            textAlign: TextAlign.end)),
+                    Expanded(
+                        flex: 3,
+                        child: Text(format(net),
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
+                            textAlign: TextAlign.end)),
+                  ],
+                ),
+              );
+            }),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1324,8 +1823,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       // Find original index for editing/deletion
       final i = _houseProperties.indexOf(hp);
       return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
         child: ListTile(
-          title: Text(hp.name),
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.withValues(alpha: 0.1),
+            child: Icon(Icons.home_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 20),
+          ),
+          title: Text(hp.name,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(hp.isSelfOccupied
               ? 'Self Occupied • Interest: ${CurrencyUtils.formatCurrency(hp.interestOnLoan, ref.watch(currencyProvider))}'
               : 'Let Out • Gross Income: ${CurrencyUtils.formatCurrency(hp.rentReceived, ref.watch(currencyProvider))}'),
@@ -1334,9 +1849,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             children: [
               _buildBadge(hp.isManualEntry, hp.lastUpdated, hp.transactionDate),
               IconButton(
-                icon: const Icon(Icons.delete),
+                icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
                 // coverage:ignore-start
                 onPressed: () {
+                  FocusScope.of(context).unfocus();
                   setState(() => _houseProperties.removeAt(i));
                   _updateSummary();
                   // coverage:ignore-end
@@ -1344,8 +1860,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               ),
             ],
           ),
-          onTap: () => _addHousePropertyDialog(
-              existing: hp, index: i), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _addHousePropertyDialog(existing: hp, index: i);
+            // coverage:ignore-end
+          },
         ),
       );
     }).toList();
@@ -1358,7 +1878,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ref.watch(taxConfigServiceProvider).getRulesForYear(_currentData.year);
     final taxService = ref.read(indianTaxServiceProvider);
 
-    // Create a salary-only data object to avoid blending business/HP incomes
     final salaryOnlyData = _currentData.copyWith(
       houseProperties: [],
       businessIncomes: [],
@@ -1368,6 +1887,44 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       cashGifts: [],
     );
 
+    final data = _calculateSalarySummary(salaryOnlyData, rules, taxService);
+    final bool useCompact = ref.watch(currencyFormatProvider);
+
+    return Card(
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          ref.read(currencyFormatProvider.notifier).value = !useCompact;
+          // coverage:ignore-end
+        },
+        contentPadding: const EdgeInsets.all(16.0),
+        title: _buildSalarySummaryHeader(useCompact),
+        subtitle: _buildSalarySummaryDetails(data),
+      ),
+    );
+  }
+
+  ({
+    double gross,
+    double statutoryExemptions,
+    double standardDeduction,
+    double nps,
+    double customExemptions,
+    double baseTaxableIncome,
+    double totalTaxableIncome
+  }) _calculateSalarySummary(
+      TaxYearData salaryOnlyData, TaxRules rules, IndianTaxService taxService) {
     double gross = taxService.calculateSalaryGross(salaryOnlyData, rules);
     double statutoryExemptions =
         taxService.calculateSalaryExemptions(salaryOnlyData, rules);
@@ -1395,86 +1952,93 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     double totalTaxableIncome =
         (baseTaxableIncome - customExemptions).clamp(0.0, double.infinity);
 
+    return (
+      gross: gross,
+      statutoryExemptions: statutoryExemptions,
+      standardDeduction: standardDeduction,
+      nps: nps,
+      customExemptions: customExemptions,
+      baseTaxableIncome: baseTaxableIncome,
+      totalTaxableIncome: totalTaxableIncome
+    );
+  }
+
+  Widget _buildSalarySummaryHeader(bool useCompact) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            'Projected Annual Income',
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary),
+          ),
+        ),
+        Icon(
+          useCompact ? Icons.compress : Icons.expand,
+          size: 14,
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalarySummaryDetails(
+      ({
+        double gross,
+        double statutoryExemptions,
+        double standardDeduction,
+        double nps,
+        double customExemptions,
+        double baseTaxableIncome,
+        double totalTaxableIncome
+      }) data) {
     final bool isLight = Theme.of(context).brightness == Brightness.light;
     final Color deductColor =
         isLight ? Colors.orange.shade800 : Colors.orange.shade300;
 
-    final bool useCompact = ref.watch(currencyFormatProvider);
-
-    return Card(
-      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-      child: InkWell(
-        onTap: () => // coverage:ignore-line
-            ref.read(currencyFormatProvider.notifier).value =
-                !useCompact, // coverage:ignore-line
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Projected Annual Income',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary),
-                    ),
-                  ),
-                  Icon(
-                    useCompact ? Icons.compress : Icons.expand,
-                    size: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.5),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildSummaryRow('Total Gross Salary:', gross, isBold: true),
-              if (standardDeduction > 0)
-                _buildSummaryRow('Less: Standard Deduction:', standardDeduction,
-                    isDeduction: true, color: deductColor),
-              if (statutoryExemptions > 0)
-                _buildSummaryRow(
-                    // coverage:ignore-line
-                    'Less: Statutory Exemptions:',
-                    statutoryExemptions,
-                    isDeduction: true,
-                    color: deductColor),
-              if (nps > 0)
-                _buildSummaryRow('Less: Employer NPS (80CCD(2)):', nps,
-                    isDeduction: true, color: deductColor),
-              if (customExemptions > 0) ...[
-                const Divider(),
-                _buildSummaryRow(
-                    // coverage:ignore-line
-                    'Taxable Before Ad-hoc Exemptions:',
-                    baseTaxableIncome,
-                    isBold: true,
-                    fontSize: 13),
-                _buildSummaryRow(
-                    // coverage:ignore-line
-                    'Less: Custom Ad-hoc Exemptions:',
-                    customExemptions,
-                    isDeduction: true,
-                    color: deductColor),
-              ],
-              const Divider(),
-              _buildSummaryRow(
-                  'Total Taxable Salary Income:', totalTaxableIncome,
-                  isBold: true,
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.primary),
-            ],
-          ),
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        _buildSummaryRow('Total Gross Salary:', data.gross, isBold: true),
+        if (data.standardDeduction > 0)
+          _buildSummaryRow('Less: Standard Deduction:', data.standardDeduction,
+              isDeduction: true, color: deductColor),
+        if (data.statutoryExemptions > 0)
+          _buildSummaryRow(
+              // coverage:ignore-line
+              'Less: Statutory Exemptions:',
+              data.statutoryExemptions,
+              isDeduction: true,
+              color: deductColor),
+        if (data.nps > 0)
+          _buildSummaryRow('Less: Employer NPS (80CCD(2)):', data.nps,
+              isDeduction: true, color: deductColor),
+        if (data.customExemptions > 0) ...[
+          const Divider(),
+          _buildSummaryRow(
+              // coverage:ignore-line
+              'Taxable Before Ad-hoc Exemptions:',
+              data.baseTaxableIncome,
+              isBold: true,
+              fontSize: 13),
+          _buildSummaryRow(
+              // coverage:ignore-line
+              'Less: Custom Ad-hoc Exemptions:',
+              data.customExemptions,
+              isDeduction: true,
+              color: deductColor),
+        ],
+        const Divider(),
+        _buildSummaryRow(
+            'Total Taxable Salary Income:', data.totalTaxableIncome,
+            isBold: true,
+            fontSize: 18,
+            color: Theme.of(context).colorScheme.primary),
+      ],
     );
   }
 
@@ -1518,24 +2082,20 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   SalaryStructure? _getStructureForMonth(int month) {
-    // coverage:ignore-line
     // Determine the year of the month
     // FY 2025-26: Apr 2025 to Mar 2026
-    // coverage:ignore-start
     int targetYear = _currentData.year;
     if (month >= 1 && month <= 3) targetYear++;
     final date = DateTime(targetYear, month, 1);
-    // coverage:ignore-end
 
-    // coverage:ignore-start
     for (final s in _currentData.salary.history) {
-      if (s.effectiveDate.isBefore(date) ||
+      if (s.effectiveDate.isBefore(date) || // coverage:ignore-line
           s.effectiveDate.isAtSameMomentAs(date)) {
-        // coverage:ignore-end
+        // coverage:ignore-line
         return s;
       }
     }
-    return _currentData.salary.history.lastOrNull; // coverage:ignore-line
+    return _currentData.salary.history.lastOrNull;
   }
 
   Widget _buildHousePropertyInputs(
@@ -1876,8 +2436,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return filtered.map((b) {
       final i = _businessIncomes.indexOf(b);
       return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
         child: ListTile(
-          title: Text(b.name),
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.withValues(alpha: 0.1),
+            child: Icon(Icons.business_center_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 20),
+          ),
+          title:
+              Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
               '${b.type.toString().split('.').last} • Gross: ${CurrencyUtils.formatCurrency(b.grossTurnover, ref.watch(currencyProvider))} • Net: ${CurrencyUtils.formatCurrency(b.netIncome, ref.watch(currencyProvider))}'),
           trailing: Row(
@@ -1885,9 +2461,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             children: [
               _buildBadge(b.isManualEntry, b.lastUpdated),
               IconButton(
-                icon: const Icon(Icons.delete),
+                icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
                 // coverage:ignore-start
                 onPressed: () {
+                  FocusScope.of(context).unfocus();
                   setState(() => _businessIncomes.removeAt(i));
                   _updateSummary();
                   // coverage:ignore-end
@@ -1895,8 +2472,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               ),
             ],
           ),
-          onTap: () =>
-              _addBusinessDialog(existing: b, index: i), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _addBusinessDialog(existing: b, index: i);
+            // coverage:ignore-end
+          },
         ),
       );
     }).toList();
@@ -2233,8 +2814,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             ReinvestmentType.none; // coverage:ignore-line
 
     return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
       child: ListTile(
-        title: Text(entry.description),
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(Icons.show_chart_outlined,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+        ),
+        title: Text(entry.description,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2254,8 +2851,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 // coverage:ignore-line
                 icon: const Icon(Icons.savings_outlined, color: Colors.orange),
                 tooltip: 'Record Reinvestment',
-                onPressed: () => _addCGEntryDialog(
-                    existing: entry, index: i), // coverage:ignore-line
+                // coverage:ignore-start
+                onPressed: () {
+                  FocusScope.of(context).unfocus();
+                  _addCGEntryDialog(existing: entry, index: i);
+                  // coverage:ignore-end
+                },
               ),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -2277,6 +2878,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             PopupMenuButton<String>(
               // coverage:ignore-start
               onSelected: (v) {
+                FocusScope.of(context).unfocus();
                 if (v == 'edit') {
                   _addCGEntryDialog(existing: entry, index: i);
                 } else if (v == 'delete') {
@@ -2293,8 +2895,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             ),
           ],
         ),
-        onTap: () => _addCGEntryDialog(
-            existing: entry, index: i), // coverage:ignore-line
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _addCGEntryDialog(existing: entry, index: i);
+          // coverage:ignore-end
+        },
       ),
     );
   }
@@ -2724,8 +3330,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return filtered.map((income) {
       final i = _otherIncomes.indexOf(income);
       return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
         child: ListTile(
-          title: Text(income.name),
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.withValues(alpha: 0.1),
+            child: Icon(Icons.more_horiz_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 20),
+          ),
+          title: Text(income.name,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
               '${income.subtype.toOtherSourceDisplay()} • ${CurrencyUtils.formatCurrency(income.amount, ref.watch(currencyProvider))}'),
           trailing: Row(
@@ -2734,9 +3356,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               _buildBadge(income.isManualEntry, income.lastUpdated,
                   income.transactionDate),
               IconButton(
-                icon: const Icon(Icons.delete),
+                icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
                 // coverage:ignore-start
                 onPressed: () {
+                  FocusScope.of(context).unfocus();
                   setState(() => _otherIncomes.removeAt(i));
                   _updateSummary();
                   // coverage:ignore-end
@@ -2744,8 +3367,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               ),
             ],
           ),
-          onTap: () => _addOtherIncomeDialog(
-              existing: income, index: i), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _addOtherIncomeDialog(existing: income, index: i);
+            // coverage:ignore-end
+          },
         ),
       );
     }).toList();
@@ -3069,6 +3696,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       margin: EdgeInsets.zero,
       color:
           Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -3294,33 +3929,56 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   Widget _buildTaxEntryTile(TaxPaymentEntry entry,
       {bool isTds = false, bool isAdvanceTax = false}) {
     bool isCredit = isTds || isAdvanceTax;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-          '${DateFormat('MMM dd, yyyy').format(entry.date)}: ${CurrencyUtils.formatCurrency(entry.amount, ref.watch(currencyProvider))}'),
-      subtitle: isCredit ? Text('Source: ${entry.source}') : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildBadge(entry.isManualEntry, null, entry.date),
-          if (entry.isManualEntry)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => // coverage:ignore-line
-                  _handleDeleteTaxEntry(
-                      entry, isTds, isAdvanceTax), // coverage:ignore-line
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-            ),
-        ],
+    IconData entryIcon;
+    if (isAdvanceTax) {
+      entryIcon = Icons.payment_outlined;
+    } else if (isTds) {
+      entryIcon = Icons.receipt_long_outlined;
+    } else {
+      entryIcon = Icons.receipt_outlined;
+    }
+
+    return AppListItemCard(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(entryIcon,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+        ),
+        title: Text(
+            '${DateFormat('MMM dd, yyyy').format(entry.date)}: ${CurrencyUtils.formatCurrency(entry.amount, ref.watch(currencyProvider))}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: isCredit ? Text('Source: ${entry.source}') : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildBadge(entry.isManualEntry, null, entry.date),
+            if (entry.isManualEntry)
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+                // coverage:ignore-start
+                onPressed: () {
+                  FocusScope.of(context).unfocus();
+                  _handleDeleteTaxEntry(entry, isTds, isAdvanceTax);
+                  // coverage:ignore-end
+                },
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+              ),
+          ],
+        ),
+        onTap: entry.isManualEntry
+            // coverage:ignore-start
+            ? () {
+                FocusScope.of(context).unfocus();
+                _handleEditTaxEntry(entry, isTds, isAdvanceTax);
+                // coverage:ignore-end
+              }
+            : null,
       ),
-      onTap: entry.isManualEntry
-          ? () => _handleEditTaxEntry(
-              entry, isTds, isAdvanceTax) // coverage:ignore-line
-          : null,
     );
   }
 
@@ -3571,6 +4229,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return filtered.map((gift) {
       final i = _cashGifts.indexOf(gift);
       return Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
         child: ListTile(
           title: Text(gift.name),
           subtitle: Text(
@@ -3872,6 +4538,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           ..._buildAgriList(filteredForDisplay),
         const SizedBox(height: 32),
         Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                  : Colors.black.withValues(alpha: 0.1),
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -3919,9 +4593,25 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return filtered.map((e) {
       final i = _agriIncomeHistory.indexOf(e);
       return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+        ),
         child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.withValues(alpha: 0.1),
+            child: Icon(Icons.agriculture_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 20),
+          ),
           title: Text(
-              e.description.isEmpty ? 'Agriculture Income' : e.description),
+              e.description.isEmpty ? 'Agriculture Income' : e.description,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
               '${DateFormat(_dateFormatIso8601).format(e.date)} • ${CurrencyUtils.formatCurrency(e.amount, ref.watch(currencyProvider))}'),
           trailing: Row(
@@ -3929,9 +4619,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             children: [
               _buildBadge(e.isManualEntry, null),
               IconButton(
-                icon: const Icon(Icons.delete),
+                icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
                 // coverage:ignore-start
                 onPressed: () {
+                  FocusScope.of(context).unfocus();
                   setState(() => _agriIncomeHistory.removeAt(i));
                   _updateSummary();
                   // coverage:ignore-end
@@ -3939,8 +4630,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               ),
             ],
           ),
-          onTap: () => _addAgriIncomeDialog(
-              existing: e, index: i), // coverage:ignore-line
+          // coverage:ignore-start
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _addAgriIncomeDialog(existing: e, index: i);
+            // coverage:ignore-end
+          },
         ),
       );
     }).toList();

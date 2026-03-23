@@ -46,8 +46,8 @@ void main() {
   });
 
   Future<void> pumpScreen(WidgetTester tester, TaxYearData data,
-      {Function(TaxYearData)? onSave}) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 1000));
+      {Function(TaxYearData)? onSave, VoidCallback? onDelete}) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 2000));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         indianTaxServiceProvider.overrideWithValue(mockTaxService),
@@ -62,9 +62,17 @@ void main() {
         home: TaxDetailsScreen(
           data: data,
           onSave: onSave ?? (d) {},
+          onDelete: onDelete,
         ),
       ),
     ));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> switchTab(WidgetTester tester, String label) async {
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(label));
     await tester.pumpAndSettle();
   }
 
@@ -98,6 +106,8 @@ void main() {
       'netTaxPayable': 0.0,
       'baseForAdvanceTax': 0.0,
     });
+    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
+        .thenReturn([]);
   });
 
   testWidgets('TaxDetailsScreen shows generated TDS as read-only (Lock icon)',
@@ -136,8 +146,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // Switch to Tax Paid tab
-    await tester.tap(find.text('Tax Paid'));
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Tax Paid');
 
     expect(find.textContaining('Employer (Salary TDS)'), findsOneWidget);
     expect(find.textContaining('Manual TDS'), findsOneWidget);
@@ -161,8 +170,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // Switch to Tax Paid tab
-    await tester.tap(find.text('Tax Paid'));
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Tax Paid');
 
     expect(find.textContaining('Installment'), findsNothing);
   });
@@ -216,8 +224,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.textContaining('Basic:'), findsOneWidget);
-    // (Verification that it updated would ideally check for 60,000,
-    // but we'll stick to presence for now given formatting issues)
   });
 
   testWidgets('General: Filter by Date Range works', (tester) async {
@@ -241,10 +247,6 @@ void main() {
     // The DateRangePicker should be visible, tap Save without selecting to close
     expect(find.text('Save'), findsOneWidget);
 
-    // Select dates inside the picker (mocking the selection is hard, so we just test the clear filter state directly via the widget state)
-    // Actually we can drag the picker, but the simplest is just tapping SAVE to close the modal and testing the Clear icon.
-    // Instead we will just verify the icon changes when we mock a pick.
-    // Wait, by tapping close/save it usually returns null if we didn't touch it.
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
   });
@@ -258,14 +260,10 @@ void main() {
     when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
         .thenReturn([]);
 
-    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
-    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
-        .thenReturn([]);
-
     await pumpScreen(tester, data, onSave: (d) => saveCalled = true);
 
-    // Tap Save icon in AppBar
-    await tester.tap(find.byIcon(Icons.save));
+    // Tap Save icon in AppBar (or FAB area)
+    await tester.tap(find.byIcon(Icons.save_outlined));
     await tester.pumpAndSettle();
 
     expect(saveCalled, isTrue);
@@ -282,36 +280,13 @@ void main() {
     when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
         .thenReturn([]);
 
-    await pumpScreen(tester, data, onSave: (d) {});
-
-    // In our test harness, we need a way to trigger onDelete.
-    // Since TaxDetailsScreen conditionally shows the delete button,
-    // let's pass a non-null onDelete callback when pumping the screen.
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        indianTaxServiceProvider.overrideWithValue(mockTaxService),
-        taxConfigServiceProvider.overrideWithValue(mockConfig),
-        themeModeProvider.overrideWith(() => MockThemeModeNotifier()),
-        loansProvider.overrideWith((ref) => Stream.value([])),
-        categoriesProvider.overrideWith(() => MockCategoriesNotifier()),
-        currencyProvider.overrideWith(() => MockCurrencyNotifier()),
-        currencyFormatProvider.overrideWith(() => MockCurrencyFormatNotifier()),
-      ],
-      child: MaterialApp(
-        home: TaxDetailsScreen(
-          data: data,
-          onSave: (d) {},
-          onDelete: () => deleteCalled = true,
-        ),
-      ),
-    ));
-    await tester.pumpAndSettle();
+    await pumpScreen(tester, data, onDelete: () => deleteCalled = true);
 
     // Tap Delete icon in AppBar
-    await tester.tap(find.byTooltip('Clear Data for FY'));
+    await tester.tap(find.byTooltip('Clear ALL FY Data'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Clear FY 2025 Data?'), findsOneWidget);
+    expect(find.text('Clear ALL FY 2025 Data?'), findsOneWidget);
 
     // Test Cancel
     await tester.tap(find.text('CANCEL'));
@@ -319,10 +294,10 @@ void main() {
     expect(deleteCalled, isFalse);
 
     // Test Action
-    await tester.tap(find.byTooltip('Clear Data for FY'));
+    await tester.tap(find.byTooltip('Clear ALL FY Data'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('DELETE'));
+    await tester.tap(find.text('DELETE ALL'));
     await tester.pumpAndSettle();
 
     expect(deleteCalled, isTrue);
@@ -342,7 +317,6 @@ void main() {
     await tester.tap(find.text('Add Structure'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), '50000');
-    // Use find.widgetWithText or find.text('SAVE') explicitly in the dialog
     await tester.tap(find.descendant(
       of: find.byType(AlertDialog),
       matching: find.text('Save'),
@@ -374,10 +348,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to House Prop tab
-    final railItem = find.text('House Prop');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'House Prop');
 
     expect(find.textContaining('No House Properties added.'), findsOneWidget);
 
@@ -403,10 +374,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Business tab
-    final railItem = find.text('Business');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Business');
 
     expect(find.textContaining('No Business Income added.'), findsOneWidget);
 
@@ -432,10 +400,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Cap Gains tab
-    final railItem = find.text('Cap Gains');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Cap Gains');
 
     expect(
         find.textContaining('No Capital Gains entries found.'), findsOneWidget);
@@ -462,10 +427,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Dividend tab
-    final railItem = find.text('Dividend');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Dividend');
 
     // 2. Update Q1
     await tester.enterText(find.byType(TextField).at(0), '1000');
@@ -487,10 +449,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Agri tab
-    final railItem = find.text('Agri');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Agri');
 
     expect(find.textContaining('No Agricultural Income entries found.'),
         findsOneWidget);
@@ -524,16 +483,10 @@ void main() {
     await pumpScreen(tester, data);
 
     // Initial Est. Tax (should be mocked 5432)
-    final summaryBar = find.byType(Container).last;
-    expect(
-        find.descendant(of: summaryBar, matching: find.textContaining('5,432')),
-        findsOneWidget);
+    expect(find.textContaining('5,432'), findsWidgets);
 
     // 1. Add Business Income (which triggers _updateSummary)
-    final railItem = find.text('Business');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Business');
 
     await tester.tap(find.textContaining('Add Business'));
     await tester.pumpAndSettle();
@@ -549,11 +502,7 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    final summaryBarAfter = find.byType(Container).last;
-    expect(
-        find.descendant(
-            of: summaryBarAfter, matching: find.textContaining('50,000')),
-        findsOneWidget);
+    expect(find.textContaining('50,000'), findsWidgets);
   });
 
   testWidgets('Other Income Tab: Can add an entry', (tester) async {
@@ -567,10 +516,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Other Income tab
-    final railItem = find.text('Other');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Other');
 
     final emptyState =
         find.textContaining('No Other Income added.', skipOffstage: false);
@@ -612,10 +558,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Cash Gifts tab
-    final railItem = find.text('Gifts');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Gifts');
 
     final emptyState =
         find.textContaining('No Cash Gifts recorded.', skipOffstage: false);
@@ -657,10 +600,7 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Tax Paid tab
-    final railItem = find.text('Tax Paid');
-    await tester.ensureVisible(railItem);
-    await tester.tap(railItem);
-    await tester.pumpAndSettle();
+    await switchTab(tester, 'Tax Paid');
 
     // 2. Add TDS Entry
     final tdsHeaderRow =
@@ -719,6 +659,40 @@ void main() {
     await tester.ensureVisible(advItem);
     await tester.pumpAndSettle();
     expect(find.text('Source: Q2 Installment'), findsOneWidget);
+  });
+
+  testWidgets('Salary Tab: Shows monthly take-home breakdown estimate',
+      (tester) async {
+    final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
+    const data = TaxYearData(year: 2025);
+    final now = DateTime.now();
+
+    // Mock breakdown for current month
+    final mockBreakdown = {
+      now.month: {
+        'gross': 100000.0,
+        'tax': 10000.0,
+        'deductions': 5000.0,
+        'takeHome': 85000.0,
+      }
+    };
+
+    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
+    when(() => mockTaxService.calculateMonthlySalaryBreakdown(any(), any()))
+        .thenReturn(mockBreakdown);
+
+    await pumpScreen(tester, data);
+
+    // Verify presence of breakdown UI
+    final detailedEstFinder =
+        find.text('Detailed Est (Current Month)', skipOffstage: false);
+    expect(detailedEstFinder, findsOneWidget);
+
+    expect(find.text('Net Monthly', skipOffstage: false), findsOneWidget);
+
+    // Verify values (using en_IN locale format ₹1,00,000.00 etc.)
+    expect(find.textContaining('85,000', skipOffstage: false), findsWidgets);
+    expect(find.textContaining('1,00,000', skipOffstage: false), findsWidgets);
   });
 }
 

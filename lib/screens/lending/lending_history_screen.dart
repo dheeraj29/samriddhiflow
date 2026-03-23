@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../widgets/pagination_bar.dart';
 import '../../widgets/smart_currency_text.dart';
 import '../../widgets/pure_icons.dart';
+import '../../widgets/app_list_item_card.dart';
 
 class LendingHistoryScreen extends ConsumerStatefulWidget {
   final String recordId;
@@ -139,37 +140,39 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
 
   Widget _buildPaymentTile(
       LendingPayment payment, String locale, LendingRecord record) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: record.type == LendingType.lent
-            ? Colors.green.withValues(alpha: 0.1)
-            : Colors.red.withValues(alpha: 0.1), // coverage:ignore-line
-        child: Icon(
-          record.type == LendingType.lent
-              ? Icons.arrow_downward
-              : Icons.arrow_upward,
-          color: record.type == LendingType.lent ? Colors.green : Colors.red,
-          size: 20,
+    return AppListItemCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      elevation: 0,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(
+            record.type == LendingType.lent
+                ? Icons.arrow_downward
+                : Icons.arrow_upward,
+            color: record.type == LendingType.lent ? Colors.green : Colors.red,
+            size: 20,
+          ),
         ),
-      ),
-      title: SmartCurrencyText(
-        value: payment.amount,
-        locale: locale,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(DateFormat('MMM dd, yyyy').format(payment.date)),
-          if (payment.note != null && payment.note!.isNotEmpty)
-            Text(payment.note!,
-                style:
-                    const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
-        ],
-      ),
-      trailing: IconButton(
-        icon: PureIcons.deleteOutlined(color: Colors.grey, size: 20),
-        onPressed: () => _confirmDelete(payment, record),
+        title: SmartCurrencyText(
+          value: payment.amount,
+          locale: locale,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(DateFormat('MMM dd, yyyy').format(payment.date)),
+            if (payment.note != null && payment.note!.isNotEmpty)
+              Text(payment.note!,
+                  style: const TextStyle(
+                      fontStyle: FontStyle.italic, fontSize: 12)),
+          ],
+        ),
+        trailing: IconButton(
+          icon: PureIcons.deleteOutlined(color: Colors.grey, size: 20),
+          onPressed: () => _confirmDelete(payment, record),
+        ),
       ),
     );
   }

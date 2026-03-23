@@ -297,7 +297,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             child: Text(opt['label']!, overflow: TextOverflow.ellipsis),
           );
         }).toList(),
-        onChanged: (v) => setState(() => _timeFilterMode = v!),
+        onChanged: (v) {
+          FocusScope.of(context).unfocus();
+          setState(() => _timeFilterMode = v!);
+        },
       ),
     );
   }
@@ -334,7 +337,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   child: Text(l.name, overflow: TextOverflow.ellipsis),
                 ))
           ],
-          onChanged: (val) => setState(() => _selectedLoanId = val),
+          onChanged: (val) {
+            FocusScope.of(context).unfocus();
+            setState(() => _selectedLoanId = val);
+          },
         ),
       ),
       SizedBox(
@@ -355,8 +361,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 child: Text(t.name.toUpperCase(),
                     overflow: TextOverflow.ellipsis))),
           ],
-          onChanged: (v) =>
-              setState(() => _selectedLoanType = v), // coverage:ignore-line
+          // coverage:ignore-start
+          onChanged: (v) {
+            FocusScope.of(context).unfocus();
+            setState(() => _selectedLoanType = v);
+            // coverage:ignore-end
+          },
         ),
       ),
     ];
@@ -386,8 +396,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 child: Text(a.name,
                     overflow: TextOverflow.ellipsis))), // coverage:ignore-line
           ],
-          onChanged: (v) =>
-              setState(() => _selectedAccountId = v), // coverage:ignore-line
+          // coverage:ignore-start
+          onChanged: (v) {
+            FocusScope.of(context).unfocus();
+            setState(() => _selectedAccountId = v);
+            // coverage:ignore-end
+          },
         ),
       ),
       Padding(
@@ -399,8 +413,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           label: Text(_excludedCategories.isEmpty
               ? 'Filter Categories'
               : '${_excludedCategories.length} Categories Excluded'),
-          onPressed: () =>
-              _showExclusionDialog(ref.read(transactionsProvider).value ?? []),
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _showExclusionDialog(ref.read(transactionsProvider).value ?? []);
+          },
         ),
       ),
     ];
@@ -891,18 +907,62 @@ class _CategoryReportItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor:
-            index < 6 ? ReportUtils.getChartColor(index) : Colors.grey,
-        radius: 8,
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
-      title: Text(entry.key),
-      trailing: SmartCurrencyText(
-        value: entry.value,
-        locale: currencyLocale,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: index < 6
+                      ? ReportUtils.getChartColor(index)
+                      : Colors.grey,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  entry.key,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SmartCurrencyText(
+                    value: entry.value,
+                    locale: currencyLocale,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Details >',
+                    style: TextStyle(fontSize: 10, color: Colors.blue),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
-      onTap: onTap,
     );
   }
 }

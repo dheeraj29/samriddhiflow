@@ -581,8 +581,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.description,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      size: 16, color: Theme.of(context).colorScheme.onSurface),
                   const SizedBox(width: 8),
                   Text('Suggested: ${service.suggestITR(data)}',
                       style: TextStyle(
@@ -622,24 +621,21 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 8),
-      child: InkWell(
-        onTap: () => _navigateToTaxPaidTab(data), // coverage:ignore-line
-        child: Card(
-          color: _getReminderCardColor(isOverdue, isNear),
-          shape: _getReminderCardShape(isOverdue, isNear),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                _buildReminderIcon(isOverdue, isNear),
-                const SizedBox(width: 12),
-                _buildReminderContent(isOverdue, isNear, amount, dueDate),
-                if (daysLeft != null)
-                  _buildDaysLeftBadge(isOverdue, isNear, daysLeft),
-              ],
-            ),
-          ),
-        ),
+      child: ListTile(
+        shape: _getReminderCardShape(isOverdue, isNear),
+        tileColor: _getReminderCardColor(isOverdue, isNear),
+        contentPadding: const EdgeInsets.all(12),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _navigateToTaxPaidTab(data);
+          // coverage:ignore-end
+        },
+        leading: _buildReminderIcon(isOverdue, isNear),
+        title: _buildReminderContent(isOverdue, isNear, amount, dueDate),
+        trailing: daysLeft != null
+            ? _buildDaysLeftBadge(isOverdue, isNear, daysLeft)
+            : null,
       ),
     );
   }
@@ -726,23 +722,21 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       titleColor = Colors.blue.shade900; // coverage:ignore-line
     }
 
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: titleColor,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: titleColor,
           ),
-          Text(
-            'Next: ${CurrencyUtils.formatCurrency(amount, currencyLocale)} due by ${dueDate.day}/${dueDate.month}/${dueDate.year}',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-          ),
-        ],
-      ),
+        ),
+        Text(
+          'Next: ${CurrencyUtils.formatCurrency(amount, currencyLocale)} due by ${dueDate.day}/${dueDate.month}/${dueDate.year}',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        ),
+      ],
     );
   }
 
