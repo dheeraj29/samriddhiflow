@@ -55,6 +55,12 @@ class Account extends HiveObject {
   @HiveField(11)
   bool isFrozenCalculated;
 
+  @HiveField(13)
+  DateTime? firstStatementDate;
+
+  @HiveField(12)
+  bool isPinned;
+
   Account({
     required this.id,
     required this.name,
@@ -68,6 +74,8 @@ class Account extends HiveObject {
     this.freezeDate,
     this.isFrozen = false,
     this.isFrozenCalculated = false,
+    this.isPinned = false,
+    this.firstStatementDate,
   });
 
   factory Account.create({
@@ -93,6 +101,8 @@ class Account extends HiveObject {
       freezeDate: null,
       isFrozen: false,
       isFrozenCalculated: false,
+      isPinned: false,
+      firstStatementDate: null,
     );
   }
 
@@ -130,6 +140,8 @@ class Account extends HiveObject {
       'freezeDate': freezeDate?.millisecondsSinceEpoch,
       'isFrozen': isFrozen,
       'isFrozenCalculated': isFrozenCalculated,
+      'isPinned': isPinned,
+      'firstStatementDate': firstStatementDate?.millisecondsSinceEpoch,
     };
   }
 
@@ -146,6 +158,8 @@ class Account extends HiveObject {
     DateTime? freezeDate,
     bool? isFrozen,
     bool? isFrozenCalculated,
+    bool? isPinned,
+    DateTime? firstStatementDate,
   }) {
     return Account(
       id: id ?? this.id,
@@ -160,6 +174,8 @@ class Account extends HiveObject {
       freezeDate: freezeDate ?? this.freezeDate,
       isFrozen: isFrozen ?? this.isFrozen,
       isFrozenCalculated: isFrozenCalculated ?? this.isFrozenCalculated,
+      isPinned: isPinned ?? this.isPinned,
+      firstStatementDate: firstStatementDate ?? this.firstStatementDate,
     );
   }
 
@@ -187,6 +203,11 @@ class Account extends HiveObject {
           : null,
       isFrozen: map['isFrozen'] as bool? ?? false,
       isFrozenCalculated: map['isFrozenCalculated'] as bool? ?? false,
+      isPinned: map['isPinned'] as bool? ?? false,
+      firstStatementDate: map['firstStatementDate'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(// coverage:ignore-line
+              map['firstStatementDate'] as int) // coverage:ignore-line
+          : null,
     );
   }
 }

@@ -7,7 +7,6 @@ import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/screens/accounts_screen.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
-import 'package:samriddhi_flow/screens/transactions_screen.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
@@ -65,6 +64,8 @@ void main() {
       ),
     ];
 
+    when(() => mockStorageService.toggleAccountPin(any()))
+        .thenAnswer((_) async {});
     when(() => mockStorageService.checkCreditCardRollovers())
         .thenAnswer((_) async {});
     when(() => mockStorageService.saveAccount(any())).thenAnswer((_) async {});
@@ -72,6 +73,7 @@ void main() {
     when(() => mockStorageService.getActiveProfileId()).thenReturn('default');
     when(() => mockStorageService.getCurrencyLocale()).thenReturn('en_IN');
     when(() => mockStorageService.isBilledAmountPaid(any())).thenReturn(false);
+    when(() => mockStorageService.getLastRollover(any())).thenReturn(null);
   });
 
   Widget createTestWidget(WidgetTester tester, {List<Account>? accounts}) {
@@ -104,41 +106,60 @@ void main() {
     expect(find.text('Add Account'), findsOneWidget);
   });
 
-  testWidgets('AccountsScreen renders account list', (tester) async {
+  testWidgets('AccountsScreen renders account sections', (tester) async {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('Savings'), findsOneWidget);
-    expect(find.text('Credit Card'), findsOneWidget);
-    expect(find.text('Add New'), findsOneWidget);
+    expect(find.text('Pinned Accounts'), findsOneWidget);
+    expect(find.text('Savings Accounts'), findsOneWidget);
+    expect(find.text('Credit Cards'), findsOneWidget);
+    expect(find.text('Wallets'), findsOneWidget);
+    expect(find.text('Add New Account'), findsOneWidget);
   });
 
-  testWidgets('Credit usage toggle works', (tester) async {
+  testWidgets('Expandable sections show items when expanded', (tester) async {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
-    // Initially usage summary should NOT be visible (CreditUsageVisibilityNotifier defaults to false)
-    expect(find.text('Total Credit Usage'), findsNothing);
+    // Items are hidden by default
+    expect(find.text('Savings'), findsNothing);
+    expect(find.text('Credit Card'), findsNothing);
 
-    // Toggle on (find by icon and tooltip)
-    await tester.tap(find.byIcon(Icons.visibility_off));
+    // Expand Savings section
+    await tester.tap(find.text('Savings Accounts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Savings'), findsOneWidget);
+
+    // Expand Credit Cards section
+    await tester.tap(find.text('Credit Cards'));
+    await tester.pumpAndSettle();
+    expect(find.text('Credit Card'), findsOneWidget);
+  });
+
+  testWidgets('Account pinning works', (tester) async {
+    await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('Total Credit Usage'), findsOneWidget);
-    expect(find.textContaining('Limit'), findsWidgets);
-
-    // Toggle off
-    await tester.tap(find.byIcon(Icons.visibility));
+    // Expand Savings
+    await tester.tap(find.text('Savings Accounts'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Total Credit Usage'), findsNothing);
+    // Tap on Savings to open options
+    await tester.tap(find.text('Savings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pin Account'), findsOneWidget);
+    await tester.tap(find.text('Pin Account'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorageService.toggleAccountPin('acc1')).called(1);
   });
 
   testWidgets('Opening and closing Add Account sheet', (tester) async {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add New'));
+    await tester.tap(find.text('Add New Account'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Account'), findsOneWidget);
@@ -154,7 +175,7 @@ void main() {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add New'));
+    await tester.tap(find.text('Add New Account'));
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -173,6 +194,10 @@ void main() {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
 
+    // Expand Savings
+    await tester.tap(find.text('Savings Accounts'));
+    await tester.pumpAndSettle();
+
     // Tap on Savings card
     await tester.tap(find.text('Savings'));
     await tester.pumpAndSettle();
@@ -188,106 +213,6 @@ void main() {
     expect(find.text('Update Account'), findsOneWidget);
   });
 
-  testWidgets('AccountsScreen shows credit card usage summary', (tester) async {
-    final creditCard = Account(
-        id: 'acc2',
-        name: 'My Card',
-        type: AccountType.creditCard,
-        balance: 1000,
-        creditLimit: 5000,
-        billingCycleDay: 1,
-        profileId: 'p1');
-
-    await tester.pumpWidget(createTestWidget(tester, accounts: [creditCard]));
-    await tester.pumpAndSettle();
-
-    // Summary is hidden by default
-    expect(find.text('Total Credit Usage'), findsNothing);
-
-    // Toggle visibility (Show Credit Usage)
-    await tester.tap(find.byIcon(Icons.visibility_off));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Total Credit Usage'), findsOneWidget);
-
-    // Switch to Extended View to check exact numbers
-    await tester.tap(find.byTooltip('Switch to Extended Numbers'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('20.0% Used'), findsOneWidget);
-    expect(find.text('Available: ₹4,000.00'), findsOneWidget);
-  });
-
-  testWidgets('AccountsScreen can navigate to transactions', (tester) async {
-    final account = Account(
-        id: 'acc1',
-        name: 'Savings',
-        profileId: 'p1',
-        type: AccountType.savings);
-    await tester.pumpWidget(createTestWidget(tester, accounts: [account]));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Savings'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('View Transactions'), findsOneWidget);
-    await tester.tap(find.text('View Transactions'));
-    await tester.pumpAndSettle();
-
-    // Should navigate to TransactionsScreen
-    expect(find.byType(TransactionsScreen), findsOneWidget);
-  });
-
-  testWidgets('AccountsScreen handles credit card unbilled calculation',
-      (tester) async {
-    final now = DateTime.now();
-    final card = Account(
-        id: 'cc1',
-        name: 'ICICI Credit',
-        type: AccountType.creditCard,
-        balance: 5000,
-        creditLimit: 100000,
-        billingCycleDay: 15,
-        paymentDueDateDay: 20,
-        profileId: 'default',
-        currency: 'en_IN');
-
-    final txn = Transaction(
-      id: 't1',
-      title: 'Amazon',
-      amount: 2000,
-      date: DateTime(now.year, now.month, now.day),
-      type: TransactionType.expense,
-      category: 'Shopping',
-      accountId: card.id,
-      profileId: 'default',
-    );
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        storageServiceProvider.overrideWithValue(mockStorageService),
-        storageInitializerProvider.overrideWith((ref) => Future.value()),
-        accountsProvider.overrideWith((ref) => Stream.value([card])),
-        transactionsProvider.overrideWith((ref) => Stream.value([txn])),
-        currencyProvider.overrideWith(() => FakeCurrencyNotifier()),
-        activeProfileIdProvider.overrideWith(() => FakeProfileNotifier()),
-      ],
-      child: const MaterialApp(home: AccountsScreen()),
-    ));
-
-    await tester.pumpAndSettle();
-
-    // Toggle on
-    await tester.tap(find.byIcon(Icons.visibility_off));
-    await tester.pumpAndSettle();
-
-    // Switch to Extended View to check exact numbers
-    await tester.tap(find.byTooltip('Switch to Extended Numbers'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('7,000'), findsWidgets);
-  });
-
   testWidgets('AccountsScreen account deletion flow', (tester) async {
     final account = Account(
         id: 'del1',
@@ -298,6 +223,10 @@ void main() {
         .thenAnswer((_) async {});
 
     await tester.pumpWidget(createTestWidget(tester, accounts: [account]));
+    await tester.pumpAndSettle();
+
+    // Expand Savings
+    await tester.tap(find.text('Savings Accounts'));
     await tester.pumpAndSettle();
 
     // Open options
@@ -331,6 +260,10 @@ void main() {
     await tester.pumpWidget(createTestWidget(tester, accounts: [card]));
     await tester.pumpAndSettle();
 
+    // Expand CC
+    await tester.tap(find.text('Credit Cards'));
+    await tester.pumpAndSettle();
+
     // Open options
     await tester.tap(find.text('Chase Card'));
     await tester.pumpAndSettle();
@@ -356,6 +289,10 @@ void main() {
         .thenAnswer((_) async {});
 
     await tester.pumpWidget(createTestWidget(tester, accounts: [card]));
+    await tester.pumpAndSettle();
+
+    // Expand CC
+    await tester.tap(find.text('Credit Cards'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Amex'));

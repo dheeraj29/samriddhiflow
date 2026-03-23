@@ -41,6 +41,7 @@ void main() {
   late MockBox<RecurringTransaction> mockRecurringBox;
   late MockBox<InsurancePolicy> mockInsuranceBox;
   late MockBox<TaxYearData> mockTaxBox;
+  late Map<String, dynamic> settingsMap;
 
   setUpAll(() {
     final testDate = DateTime(2040, 1, 1);
@@ -110,7 +111,7 @@ void main() {
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
 
     // State-backed mock for settings box
-    final settingsMap = <dynamic, dynamic>{};
+    settingsMap = {};
     when(() => mockSettingsBox.get(any()))
         .thenAnswer((inv) => settingsMap[inv.positionalArguments[0]]);
     when(() => mockSettingsBox.get(any(),
@@ -482,8 +483,8 @@ void main() {
 
       final lastRollover =
           DateTime(2040, 4, 15).subtract(const Duration(seconds: 1));
-      when(() => mockSettingsBox.get('last_rollover_cc_freeze1'))
-          .thenReturn(lastRollover.millisecondsSinceEpoch);
+      settingsMap['last_rollover_cc_freeze1'] =
+          lastRollover.millisecondsSinceEpoch;
       when(() => mockAccountBox.toMap()).thenReturn({'cc_freeze1': card});
 
       await storageService.checkCreditCardRollovers(nowOverride: now);

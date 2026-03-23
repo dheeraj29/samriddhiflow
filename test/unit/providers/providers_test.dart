@@ -6,6 +6,19 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
+class ProfileNotifierMock extends Notifier<String> implements ProfileNotifier {
+  @override
+  String build() => 'default';
+
+  @override
+  set state(String value) => super.state = value;
+
+  @override
+  Future<void> setProfile(String id) async {
+    state = id;
+  }
+}
+
 void main() {
   late MockStorageService mockStorageService;
   late ProviderContainer container;
@@ -17,6 +30,7 @@ void main() {
     when(() => mockStorageService.getCurrencyLocale()).thenReturn('en_US');
     when(() => mockStorageService.getBackupThreshold()).thenReturn(20);
     when(() => mockStorageService.getHolidays()).thenReturn([]);
+    when(() => mockStorageService.getActiveProfileId()).thenReturn('default');
 
     // storageInitializerProvider usually returns true/initialized
     container = ProviderContainer(
@@ -24,6 +38,7 @@ void main() {
         storageServiceProvider.overrideWithValue(mockStorageService),
         // Mock initializer to be ready
         storageInitializerProvider.overrideWith((ref) => const AsyncData(true)),
+        activeProfileIdProvider.overrideWith(() => ProfileNotifierMock()),
       ],
     );
   });

@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../widgets/pure_icons.dart';
 import '../../widgets/smart_currency_text.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../widgets/app_list_item_card.dart';
 
 class LoanLedgerView extends ConsumerStatefulWidget {
   final Loan loan;
@@ -189,56 +190,63 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
 
   Widget _buildLedgerItem(LoanTransaction txn, String currencyLocale) {
     final style = _getLedgerItemStyle(txn);
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: style.color.withValues(alpha: 0.1),
-        child: Icon(style.icon, color: style.color, size: 20),
-      ),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(style.title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          if (txn.type != LoanTransactionType.rateChange)
-            SmartCurrencyText(
-                value: txn.amount,
-                locale: currencyLocale,
-                initialCompact: _compactLedger,
+    return AppListItemCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(style.icon, color: style.color, size: 20),
+        ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(style.title,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-              '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${style.subtitle}',
-              style: const TextStyle(fontSize: 12)),
-          const Text('Balance: ',
-              style: TextStyle(fontSize: 11, color: Colors.grey)),
-          SmartCurrencyText(
-            value: txn.resultantPrincipal,
-            locale: currencyLocale,
-            initialCompact: _compactLedger,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
-          ),
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (v) async => _handleMenuSelection(v, txn),
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete, color: Colors.red, size: 20),
-                SizedBox(width: 8),
-                Text('Delete'),
-              ],
+            if (txn.type != LoanTransactionType.rateChange)
+              SmartCurrencyText(
+                  value: txn.amount,
+                  locale: currencyLocale,
+                  initialCompact: _compactLedger,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${style.subtitle}',
+                style: const TextStyle(fontSize: 12)),
+            const Text('Balance: ',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            SmartCurrencyText(
+              value: txn.resultantPrincipal,
+              locale: currencyLocale,
+              initialCompact: _compactLedger,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
-          )
-        ],
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (v) async {
+            FocusScope.of(context).unfocus();
+            await _handleMenuSelection(v, txn);
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Text('Delete'),
+                ],
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

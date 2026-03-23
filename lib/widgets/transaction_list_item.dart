@@ -57,26 +57,38 @@ class TransactionListItem extends StatelessWidget {
         txn.accountId != txn.toAccountId;
     // coverage:ignore-end
 
-    return ListTile(
-      selected: isSelected,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      leading: _buildLeading(isIncomingTransfer),
-      title: Text(txn.title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            decoration: showLineThrough ? TextDecoration.lineThrough : null,
-          )),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSubtitleLine(context),
-          if (isCapitalGain &&
-              (txn.gainAmount != null || txn.holdingTenureMonths != null))
-            _buildCapitalGainsLine(context),
-        ],
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
       ),
-      trailing: trailing ?? _buildTrailingAmount(isIncomingTransfer),
+      child: ListTile(
+        selected: isSelected,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        leading: _buildLeading(isIncomingTransfer),
+        title: Text(txn.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              decoration: showLineThrough ? TextDecoration.lineThrough : null,
+            )),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSubtitleLine(context),
+            if (isCapitalGain &&
+                (txn.gainAmount != null || txn.holdingTenureMonths != null))
+              _buildCapitalGainsLine(context),
+          ],
+        ),
+        trailing: trailing ?? _buildTrailingAmount(isIncomingTransfer),
+      ),
     );
   }
 
@@ -108,27 +120,32 @@ class TransactionListItem extends StatelessWidget {
       return Checkbox(value: isSelected, onChanged: onSelectionChanged);
     }
     return CircleAvatar(
-      backgroundColor: _getLeadingColor(isIncomingTransfer),
-      child: _getLeadingIcon(),
+      backgroundColor: Colors.grey.withValues(alpha: 0.1),
+      child: _getLeadingIcon(isIncomingTransfer),
     );
   }
 
-  Color _getLeadingColor(bool isIncomingTransfer) {
-    if (txn.type == TransactionType.income || isIncomingTransfer) {
-      return Colors.green.withValues(alpha: 0.1);
+  Widget _getLeadingIcon(bool isIncomingTransfer) {
+    final Color iconColor = _getIconColor(isIncomingTransfer);
+
+    if (txn.type == TransactionType.income) {
+      return PureIcons.income(size: 18, color: iconColor);
     }
     if (txn.type == TransactionType.transfer) {
-      return Colors.blue.withValues(alpha: 0.1); // coverage:ignore-line
+      return PureIcons.transfer(
+          size: 18, color: iconColor); // coverage:ignore-line
     }
-    return Colors.redAccent.withValues(alpha: 0.1);
+    return PureIcons.expense(size: 18, color: iconColor);
   }
 
-  Widget _getLeadingIcon() {
-    if (txn.type == TransactionType.income) return PureIcons.income(size: 18);
-    if (txn.type == TransactionType.transfer) {
-      return PureIcons.transfer(size: 18); // coverage:ignore-line
+  Color _getIconColor(bool isIncomingTransfer) {
+    if (txn.type == TransactionType.income || isIncomingTransfer) {
+      return Colors.green;
     }
-    return PureIcons.expense(size: 18);
+    if (txn.type == TransactionType.transfer) {
+      return Colors.blue;
+    }
+    return Colors.redAccent;
   }
 
   Widget _buildSubtitleLine(BuildContext context) {
@@ -156,7 +173,10 @@ class TransactionListItem extends StatelessWidget {
 
     return Text(
       '${DateFormat('MMM dd, yyyy • hh:mm a').format(txn.date)} • $metadata',
-      style: const TextStyle(fontSize: 12),
+      style: TextStyle(
+        fontSize: 12,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
     );
   }
 

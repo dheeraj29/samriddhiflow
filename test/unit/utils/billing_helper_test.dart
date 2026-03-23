@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:samriddhi_flow/utils/billing_helper.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/utils/currency_utils.dart';
 
 void main() {
   group('BillingHelper - Credit Card Logic', () {
@@ -189,6 +190,91 @@ void main() {
 
         // Should only count 'After Freeze' (50.0).
         expect(billed, 50.0);
+      });
+    });
+
+    group('Total Net Debt Algebraic Equivalence (New Logic)', () {
+      test(
+          'Total Net Debt strictly equals Billed + Unbilled + Balance (Negative Balance Scenario)',
+          () {
+        const double accountBalance =
+            -4641.48; // Negative explicitly (due to payment)
+        const double billedAmount = 4225.13;
+        const double unbilledAmount = 416.35;
+        const double paymentsSinceRollover = 4641.48;
+
+        final adjustedData = BillingHelper.getAdjustedCCData(
+          accountBalance: accountBalance,
+          billedAmount: billedAmount,
+          unbilledAmount: unbilledAmount,
+          paymentsSinceRollover: paymentsSinceRollover,
+        );
+
+        final totalNetDebt = adjustedData.$1;
+
+        // Formula Check:
+        const formulaExpected = billedAmount + unbilledAmount + accountBalance;
+        expect(totalNetDebt, CurrencyUtils.roundTo2Decimals(formulaExpected));
+      });
+
+      test(
+          'Total Net Debt strictly equals Billed + Unbilled + Balance (Partial Payment Scenario)',
+          () {
+        const double accountBalance = -2000.0;
+        const double billedAmount = 5000.0;
+        const double unbilledAmount = 2000.0;
+        const double paymentsSinceRollover = 2000.0;
+
+        final adjustedData = BillingHelper.getAdjustedCCData(
+          accountBalance: accountBalance,
+          billedAmount: billedAmount,
+          unbilledAmount: unbilledAmount,
+          paymentsSinceRollover: paymentsSinceRollover,
+        );
+
+        final totalNetDebt = adjustedData.$1;
+        const formulaExpected = billedAmount + unbilledAmount + accountBalance;
+        expect(totalNetDebt, CurrencyUtils.roundTo2Decimals(formulaExpected));
+      });
+
+      test(
+          'Total Net Debt strictly equals Billed + Unbilled + Balance (Overpayment Scenario)',
+          () {
+        const double accountBalance = -8000.0;
+        const double billedAmount = 5000.0;
+        const double unbilledAmount = 2000.0;
+        const double paymentsSinceRollover = 8000.0;
+
+        final adjustedData = BillingHelper.getAdjustedCCData(
+          accountBalance: accountBalance,
+          billedAmount: billedAmount,
+          unbilledAmount: unbilledAmount,
+          paymentsSinceRollover: paymentsSinceRollover,
+        );
+
+        final totalNetDebt = adjustedData.$1;
+        const formulaExpected = billedAmount + unbilledAmount + accountBalance;
+        expect(totalNetDebt, CurrencyUtils.roundTo2Decimals(formulaExpected));
+      });
+
+      test(
+          'Total Net Debt strictly equals Billed + Unbilled + Balance (Positive Historical Balance)',
+          () {
+        const double accountBalance = 1000.0; // Positive old debt
+        const double billedAmount = 5000.0;
+        const double unbilledAmount = 2000.0;
+        const double paymentsSinceRollover = 1000.0;
+
+        final adjustedData = BillingHelper.getAdjustedCCData(
+          accountBalance: accountBalance,
+          billedAmount: billedAmount,
+          unbilledAmount: unbilledAmount,
+          paymentsSinceRollover: paymentsSinceRollover,
+        );
+
+        final totalNetDebt = adjustedData.$1;
+        const formulaExpected = billedAmount + unbilledAmount + accountBalance;
+        expect(totalNetDebt, CurrencyUtils.roundTo2Decimals(formulaExpected));
       });
     });
   });

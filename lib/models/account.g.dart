@@ -29,13 +29,15 @@ class AccountAdapter extends TypeAdapter<Account> {
       freezeDate: fields[9] as DateTime?,
       isFrozen: fields[10] == null ? false : fields[10] as bool,
       isFrozenCalculated: fields[11] == null ? false : fields[11] as bool,
+      isPinned: fields[12] == null ? false : fields[12] as bool,
+      firstStatementDate: fields[13] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +61,11 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(10)
       ..write(obj.isFrozen)
       ..writeByte(11)
-      ..write(obj.isFrozenCalculated);
+      ..write(obj.isFrozenCalculated)
+      ..writeByte(12)
+      ..write(obj.isPinned)
+      ..writeByte(13)
+      ..write(obj.firstStatementDate);
   }
 
   @override

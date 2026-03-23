@@ -259,7 +259,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Widget _buildCategoryDropdown(List<Category> sortedCategories) {
     return DropdownButtonFormField<String?>(
-      key: const Key('category_dropdown'),
+      key: ValueKey('category_dropdown_$_type'),
       initialValue: _category,
       decoration: const InputDecoration(
           labelText: 'Category', border: OutlineInputBorder()),
@@ -295,7 +295,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ],
               )))
           .toList(),
-      onChanged: (v) => setState(() => _category = v!),
+      onChanged: (v) {
+        FocusScope.of(context).unfocus();
+        setState(() => _category = v!);
+      },
     );
   }
 
@@ -433,6 +436,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget _buildAccountDropdown(
       List<Account> sortedAccounts, List<Transaction> allTxns) {
     return DropdownButtonFormField<String?>(
+      key: ValueKey('account_dropdown_$_type'),
       isExpanded: true,
       initialValue: _selectedAccountId,
       decoration: InputDecoration(
@@ -449,6 +453,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             )),
       ],
       onChanged: (v) {
+        FocusScope.of(context).unfocus();
         setState(() {
           _selectedAccountId = v;
           if (_selectedAccountId == _toAccountId) {
@@ -462,6 +467,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget _buildToAccountDropdown(
       List<Account> sortedAccounts, List<Transaction> allTxns) {
     return DropdownButtonFormField<String?>(
+      key: ValueKey('to_account_dropdown_$_type-$_selectedAccountId'),
       isExpanded: true,
       initialValue: _toAccountId,
       decoration: const InputDecoration(
@@ -480,7 +486,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       Text('${a.name} (${_formatAccountBalance(a, allTxns)})'),
                 )),
       ],
-      onChanged: (v) => setState(() => _toAccountId = v),
+      onChanged: (v) {
+        FocusScope.of(context).unfocus();
+        setState(() => _toAccountId = v);
+      },
       validator: (v) => v == null ? 'Required' : null,
     );
   }
@@ -645,6 +654,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ))
                 .toList(),
             onChanged: (v) {
+              FocusScope.of(context).unfocus();
               setState(() {
                 _frequency = v!;
                 _adjustFrequencyScheduleType();
@@ -710,8 +720,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 child: Text(_getScheduleLabel(s)),
               ))
           .toList(),
-      onChanged: (v) =>
-          setState(() => _scheduleType = v!), // coverage:ignore-line
+      // coverage:ignore-start
+      onChanged: (v) {
+        FocusScope.of(context).unfocus();
+        setState(() => _scheduleType = v!);
+        // coverage:ignore-end
+      },
     );
   }
 
@@ -729,8 +743,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         DropdownMenuItem(value: 6, child: Text('Saturday')),
         DropdownMenuItem(value: 7, child: Text('Sunday')),
       ],
-      onChanged: (v) =>
-          setState(() => _selectedWeekday = v), // coverage:ignore-line
+      // coverage:ignore-start
+      onChanged: (v) {
+        FocusScope.of(context).unfocus();
+        setState(() => _selectedWeekday = v);
+        // coverage:ignore-end
+      },
     );
   }
 

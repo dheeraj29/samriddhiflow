@@ -53,26 +53,46 @@ class BillingHelper {
   /// Calculates the "Unbilled" amount (Spent in current cycle).
   /// Range: (Current Cycle Start, Now].
   static double calculateUnbilledAmount(
-      Account acc, List<Transaction> allTxns, DateTime now) {
+      Account acc, List<Transaction> allTxns, DateTime now,
+      {int? lastRolloverMillis}) {
     if (acc.type != AccountType.creditCard || acc.billingCycleDay == null) {
       return 0;
     }
     final currentCycleStart = getCycleStart(now, acc.billingCycleDay!);
 
-    // If frozen but not calculated, Unbilled starts exactly from freezeDate!
-    // Anything before it is frozen and un-editable.
+    // Start boundary defaults to currentCycleStart.
     DateTime startBound = currentCycleStart;
-    // everything since freezeDate is "Unbilled" (until the cycle rolls).
-    if (acc.isFrozen && !acc.isFrozenCalculated) {
-      if (acc.freezeDate != null &&
-          acc.freezeDate!.isAfter(currentCycleStart)) {
+
+    // Freeze Logic: While frozen, anything since the NEWEST pointer
+    // is "Unbilled" (until the next cycle rolls).
+    if (acc.isFrozen) {
+      if (!acc.isFrozenCalculated && acc.freezeDate != null) {
+        // Phase 1: Everything since the freeze started is "Unbilled".
         startBound = acc.freezeDate!;
+      } else if (acc.isFrozenCalculated) {
+        // coverage:ignore-line
+        // Phase 2: Transition Bill is generated. Billed covers [freezeDate, pointer].
+        // So Unbilled MUST start exactly where Billed ends (the pointer).
+        if (lastRolloverMillis != null) {
+          startBound = DateTime.fromMillisecondsSinceEpoch(
+              lastRolloverMillis); // coverage:ignore-line
+        } else {
+          // Fallback: This shouldn't happen if isFrozenCalculated is true, but safety first.
+          startBound = acc.freezeDate!; // coverage:ignore-line
+        }
       }
     }
 
-    // Requirement: Skip transfers for billing display as they are handled by waterfall.
-    return calculatePeriodSpend(acc, allTxns, startBound, now,
-        skipTransfers: true);
+    // STANDARD RULE: Bucket displays (Billed/Unbilled) show Gross Spend.
+    // The Waterfall logic (getAdjustedCCData) handles subtracting payments.
+    return calculatePeriodSpend(
+      acc,
+      allTxns,
+      startBound,
+      now,
+      skipTransfers: true,
+      includeIncome: false,
+    );
   }
 
   /// Calculates the "Billed" amount (Generated Statement) that hasn't been added to Balance yet.
@@ -80,34 +100,37 @@ class BillingHelper {
   static double calculateBilledAmount(Account acc, List<Transaction> allTxns,
       DateTime now, int? lastRolloverMillis,
       {bool skipTransfers = true, bool includeIncome = false}) {
-    if (_isFullyPaid(acc, lastRolloverMillis, now)) {
+    // REFINEMENT: Phase 1 Billed is ALWAYS 0.
+    if (acc.isFrozen && !acc.isFrozenCalculated) {
       return 0;
     }
 
+    if (acc.billingCycleDay == null) return 0.0;
     final currentCycleStart = getCycleStart(now, acc.billingCycleDay!);
     final startLimit = _getBilledStartBound(acc, currentCycleStart);
 
-    return calculatePeriodSpend(acc, allTxns, startLimit, currentCycleStart,
-        skipTransfers: skipTransfers, includeIncome: includeIncome);
-  }
-
-  /// Helper to check if the billed period is already settled.
-  static bool _isFullyPaid(Account acc, int? lastRolloverMillis, DateTime now) {
-    if (acc.type != AccountType.creditCard ||
-        acc.billingCycleDay == null ||
-        lastRolloverMillis == null) {
-      return true;
+    // Freeze Logic: In Phase 2, the "Billed" bucket is specifically the gap
+    // from freezeDate to the transition pointer (lastRollover).
+    DateTime endLimit = currentCycleStart;
+    if (acc.isFrozen && acc.isFrozenCalculated && lastRolloverMillis != null) {
+      final lastRollover =
+          DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
+      // In Phase 2, Billed specifically covers history until the transition was realized.
+      if (lastRollover.isAfter(startLimit)) {
+        endLimit = lastRollover;
+      }
     }
 
-    final lastRollover =
-        DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis);
-    final currentCycleStart = getCycleStart(now, acc.billingCycleDay!);
-
-    // If fully caught up, return 0 (Unless we are in a freeze transition,
-    // where we want the bill to persist until full realization).
-    final paidThreshold =
-        currentCycleStart.subtract(const Duration(seconds: 1));
-    return !acc.isFrozen && !lastRollover.isBefore(paidThreshold);
+    // STANDARD RULE: Bucket displays (Billed/Unbilled) show Gross Spend.
+    // The Waterfall logic (getAdjustedCCData) handles subtracting payments.
+    return calculatePeriodSpend(
+      acc,
+      allTxns,
+      startLimit,
+      endLimit,
+      skipTransfers: true,
+      includeIncome: false,
+    );
   }
 
   /// Helper to determine the start boundary of the billed period.
@@ -118,30 +141,20 @@ class BillingHelper {
         currentCycleStart.subtract(const Duration(days: 1)),
         acc.billingCycleDay!);
 
-    // If this is the "Frozen Transition Bill" generation, Billed actually starts
-    // exactly from freezeDate instead of the usual prevCycleStart!
-    if (acc.isFrozenCalculated && acc.freezeDate != null) {
-      startLimit = acc.freezeDate!;
-    }
-
-    // Freeze Logic: While frozen, we aggregate ALL spends since the freezeDate
-    // into the Billed bucket until they are officially realized into Balance.
-    if (acc.isFrozen && acc.freezeDate != null) {
-      if (acc.freezeDate!.isBefore(startLimit)) {
-        startLimit = acc.freezeDate!; // coverage:ignore-line
+    // Freeze Logic: While frozen, the "Billed" bucket logic changes.
+    if (acc.isFrozen) {
+      if (acc.isFrozenCalculated && acc.freezeDate != null) {
+        // Phase 2: Start precisely from freezeDate to capture the transition gap.
+        startLimit = acc.freezeDate!;
+      } else {
+        // Phase 1: Force Billed amount to 0 by matching end boundary (currentCycleStart).
+        startLimit = currentCycleStart;
       }
     }
 
     return startLimit;
   }
 
-  /// Optimized CC Data logic:
-  /// Uses a "Waterflow" distribution based on the user's priority:
-  /// Reduction Priority: Billed -> Balance -> Unbilled.
-  /// (Filling Priority: Unbilled -> Billed -> Balance)
-  ///
-  /// [paymentsSinceRollover]: Total funds received (Transfers, Income, Adjustments)
-  /// since the statement was generated.
   static (double total, double billed, double balance, double unbilled)
       getAdjustedCCData({
     required double accountBalance,
@@ -213,10 +226,9 @@ class BillingHelper {
       return t.amount;
     }
     if (_isDirectIncomeToAccount(t, accountId)) {
-      // coverage:ignore-line
       return t.amount; // coverage:ignore-line
     }
-    return _getRoundingPaymentImpact(t, accountId); // coverage:ignore-line
+    return _getRoundingPaymentImpact(t, accountId);
   }
 
   static bool _isIncomingTransfer(Transaction t, String accountId) {
@@ -224,15 +236,11 @@ class BillingHelper {
   }
 
   static bool _isDirectIncomeToAccount(Transaction t, String accountId) {
-    // coverage:ignore-line
-    return t.type == TransactionType.income &&
-        t.accountId == accountId; // coverage:ignore-line
+    return t.type == TransactionType.income && t.accountId == accountId;
   }
 
   static double _getRoundingPaymentImpact(Transaction t, String accountId) {
-    // coverage:ignore-line
     if (!isRoundingAdjustment(t) || t.accountId != accountId) {
-      // coverage:ignore-line
       return 0;
     }
     return t.type == TransactionType.income

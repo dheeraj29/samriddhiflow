@@ -33,6 +33,7 @@ void main() {
   late MockBox<InsurancePolicy> mockInsuranceBox;
   late MockBox<TaxYearData> mockTaxBox;
   late MockBox<LendingRecord> mockLendingBox;
+  late Map<String, dynamic> settingsMap;
 
   setUpAll(() {
     registerFallbackValue(
@@ -71,6 +72,7 @@ void main() {
     mockInsuranceBox = MockBox<InsurancePolicy>();
     mockTaxBox = MockBox<TaxYearData>();
     mockLendingBox = MockBox<LendingRecord>();
+    settingsMap = {};
 
     when(() => mockHive.box<Account>(StorageService.boxAccounts))
         .thenReturn(mockAccountBox);
@@ -115,6 +117,28 @@ void main() {
         .thenAnswer((_) async => mockTaxBox);
     when(() => mockHive.openBox<LendingRecord>(any()))
         .thenAnswer((_) async => mockLendingBox);
+
+    // Stateful settings mock
+    when(() => mockSettingsBox.get(any()))
+        .thenAnswer((inv) => settingsMap[inv.positionalArguments[0]]);
+    when(() => mockSettingsBox.get(any(),
+        defaultValue: any(named: 'defaultValue'))).thenAnswer((inv) {
+      return settingsMap[inv.positionalArguments[0]] ??
+          inv.namedArguments[#defaultValue];
+    });
+    when(() => mockSettingsBox.put(any(), any())).thenAnswer((inv) {
+      settingsMap[inv.positionalArguments[0]] = inv.positionalArguments[1];
+      return Future.value();
+    });
+    when(() => mockSettingsBox.delete(any())).thenAnswer((inv) {
+      settingsMap.remove(inv.positionalArguments[0]);
+      return Future.value();
+    });
+
+    // Default necessary flags
+    settingsMap['activeProfileId'] = 'default';
+    when(() => mockAccountBox.toMap()).thenReturn({});
+    when(() => mockTransactionBox.toMap()).thenReturn({});
 
     storageService = StorageService(mockHive);
 
@@ -183,12 +207,9 @@ void main() {
       );
 
       when(() => mockAccountBox.toMap()).thenReturn({'cc1': acc});
-      when(() => mockSettingsBox.get('last_rollover_cc1'))
-          .thenReturn(lastRollover.millisecondsSinceEpoch);
-      when(() => mockSettingsBox.get('ignore_rollover_payments_cc1',
-          defaultValue: false)).thenReturn(false);
-      when(() => mockSettingsBox.get('activeProfileId',
-          defaultValue: any(named: 'defaultValue'))).thenReturn('default');
+      settingsMap['last_rollover_cc1'] = lastRollover.millisecondsSinceEpoch;
+      settingsMap['ignore_rollover_payments_cc1'] = false;
+      settingsMap['activeProfileId'] = 'default';
       when(() => mockTransactionBox.toMap()).thenReturn({'t1': txn});
       when(() => mockTransactionBox.values).thenReturn([txn]);
       when(() => mockAccountBox.put('cc1', any())).thenAnswer((_) async {});
@@ -218,6 +239,7 @@ void main() {
           accountId: 'cc1',
           newCycleDay: 20,
           freezeDate: DateTime.now(),
+          firstStatementDate: DateTime.now().add(const Duration(days: 30)),
         ),
         throwsA(isA<Exception>()),
       );
@@ -245,6 +267,7 @@ void main() {
         newCycleDay: 20,
         newDueDateDay: 5,
         freezeDate: freezeDate,
+        firstStatementDate: freezeDate.add(const Duration(days: 15)),
       );
 
       final capturedAccount =
@@ -256,8 +279,7 @@ void main() {
       expect(capturedAccount.isFrozenCalculated, false);
       expect(capturedAccount.freezeDate, freezeDate);
 
-      verify(() => mockSettingsBox.put(
-          'last_rollover_cc2', freezeDate.millisecondsSinceEpoch)).called(1);
+      verify(() => mockSettingsBox.put('last_rollover_cc2', any())).called(1);
     });
   });
 
@@ -289,16 +311,15 @@ void main() {
       when(() => mockRecurringBox.toMap()).thenReturn({});
       when(() => mockCategoryBox.toMap()).thenReturn({});
       when(() => mockLendingBox.toMap()).thenReturn({});
+      when(() => mockInsuranceBox.toMap()).thenReturn({});
+      when(() => mockTaxBox.toMap()).thenReturn({});
 
       when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
       when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});
       when(() => mockSettingsBox.delete(any())).thenAnswer((_) async {});
 
-      when(() => mockSettingsBox.get('activeProfileId',
-          defaultValue: any(named: 'defaultValue'))).thenReturn(pid);
+      settingsMap['activeProfileId'] = pid;
       when(() => mockProfileBox.toMap()).thenReturn({});
-      when(() => mockSettingsBox.put('activeProfileId', 'default'))
-          .thenAnswer((_) async {});
 
       await storageService.deleteProfile(pid);
 

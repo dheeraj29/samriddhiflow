@@ -34,6 +34,7 @@ void main() {
               showIncomeExpense: true, showBudget: true));
       when(() => mockStorage.saveDashboardConfig(any()))
           .thenAnswer((_) async {});
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
 
       final container = ProviderContainer(overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -56,6 +57,7 @@ void main() {
       final mockStorage = MockStorageService();
       when(() => mockStorage.getMonthlyBudget()).thenReturn(50000.0);
       when(() => mockStorage.setMonthlyBudget(any())).thenAnswer((_) async {});
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
 
       final container = ProviderContainer(overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -78,6 +80,7 @@ void main() {
       final mockStorage = MockStorageService();
       when(() => mockStorage.getTxnsSinceBackup()).thenReturn(15);
       when(() => mockStorage.resetTxnsSinceBackup()).thenAnswer((_) async {});
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
 
       final container = ProviderContainer(overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -104,6 +107,7 @@ void main() {
       when(() => mockStorage.getHolidays()).thenReturn([dt]);
       when(() => mockStorage.addHoliday(any())).thenAnswer((_) async {});
       when(() => mockStorage.removeHoliday(any())).thenAnswer((_) async {});
+      when(() => mockStorage.getActiveProfileId()).thenReturn('default');
 
       final container = ProviderContainer(overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),

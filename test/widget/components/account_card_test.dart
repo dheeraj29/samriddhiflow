@@ -215,12 +215,14 @@ void main() {
 
       expect(find.textContaining('Billed'), findsNothing);
       expect(find.textContaining('Unbilled'), findsNothing);
+      expect(find.textContaining('Balance'),
+          findsOneWidget); // Shows excess credit
       expect(
         find.byWidgetPredicate((widget) =>
             widget is Text &&
             widget.data != null &&
             widget.data!.contains('300.00')),
-        findsOneWidget,
+        findsNWidgets(2), // Main title and mini-info chip
       );
     });
 
@@ -362,5 +364,90 @@ void main() {
     // Verify billing dates are shown
     expect(find.textContaining('Last:'), findsOneWidget);
     expect(find.textContaining('Next:'), findsOneWidget);
+  });
+
+  testWidgets('AccountCard shows Calculates on (unfreeze date) when isFrozen',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
+    final account = Account(
+      id: 'cc_frozen',
+      name: 'Frozen CC',
+      type: AccountType.creditCard,
+      balance: 100,
+      billingCycleDay: 25,
+      isFrozen: true,
+      isFrozenCalculated: false,
+      freezeDate: DateTime(2024, 1, 1),
+      firstStatementDate: DateTime(2024, 1, 25),
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 350,
+              height: 250,
+              child: AccountCard(account: account),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.pump();
+
+    // Verify "Calculates on" is shown instead of standard cycle info
+    expect(find.textContaining('Calculates on'), findsOneWidget);
+    expect(find.textContaining('25'), findsOneWidget);
+  });
+
+  testWidgets('AccountCard waterfall hides everything when offset by credit',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
+    final account = Account(
+      id: 'cc_credit',
+      name: 'Credit CC',
+      type: AccountType.creditCard,
+      balance: -500, // Credit available
+      billingCycleDay: 25,
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 350,
+              height: 250,
+              child: AccountCard(
+                account: account,
+                billedAmount: 200, // Fully offset
+                unbilledAmount: 200, // Fully offset
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.pump();
+
+    // With 500 credit, 200 billed and 200 unbilled are both offset to 0.
+    // The Adjusted balance is also 0.
+    // So the card should only show the available credit as a positive number or just 0.0.
+    expect(find.textContaining('Billed'), findsNothing);
+    expect(find.textContaining('Unbilled'), findsNothing);
+    expect(
+        find.textContaining('Balance'), findsOneWidget); // Shows excess credit
+
+    // Remaining credit = 500 - 200 - 200 = 100
+    expect(find.textContaining('100.00'), findsNWidgets(2));
   });
 }

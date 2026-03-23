@@ -7,6 +7,7 @@ import '../../utils/currency_utils.dart';
 import 'add_lending_screen.dart';
 import 'package:intl/intl.dart';
 import 'lending_history_screen.dart';
+import '../../widgets/app_list_item_card.dart';
 
 const dateFormatDdMmmYyyy = 'dd MMM yyyy';
 
@@ -149,13 +150,12 @@ class LendingDashboardScreen extends ConsumerWidget {
       onDismissed: (direction) {
         ref.read(lendingProvider.notifier).deleteRecord(record.id);
       },
-      child: Card(
+      child: AppListItemCard(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: color.withValues(alpha: 0.1),
+            backgroundColor: Colors.grey.withValues(alpha: 0.1),
             child: Icon(
               isLent ? Icons.arrow_upward : Icons.arrow_downward,
               color: color,

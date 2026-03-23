@@ -51,6 +51,15 @@ class LoansScreen extends ConsumerWidget {
               final remainingMonths = tenure.months.ceil();
 
               return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                            .withValues(alpha: 0.2) // coverage:ignore-line
+                        : Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
                 child: ListTile(
                   title: Text(loan.name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -64,6 +73,7 @@ class LoansScreen extends ConsumerWidget {
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   onTap: () {
+                    FocusScope.of(context).unfocus();
                     Navigator.push(
                         context,
                         MaterialPageRoute(

@@ -112,13 +112,10 @@ class AccountCard extends ConsumerWidget {
           children: [
             if (account.isFrozen)
               Container(
-                // coverage:ignore-line
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  // coverage:ignore-line
                   color: Colors.redAccent,
-                  borderRadius:
-                      BorderRadius.circular(4), // coverage:ignore-line
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
                   'FROZEN',
@@ -168,7 +165,7 @@ class AccountCard extends ConsumerWidget {
             children: [
               if (displayBilled > 0)
                 _buildMiniInfo('Billed', displayBilled, account.currency),
-              if (displayHistBalance > 0.01)
+              if (displayHistBalance.abs() > 0.01)
                 _buildMiniInfo('Balance', displayHistBalance, account.currency),
               if (displayUnbilled > 0)
                 _buildMiniInfo('Unbilled', displayUnbilled, account.currency),
@@ -205,14 +202,33 @@ class AccountCard extends ConsumerWidget {
   Widget _buildBillingDates(Account account) {
     if (account.billingCycleDay == null) return const SizedBox.shrink();
 
+    final df = DateFormat('dd MMM');
+
+    if (account.isFrozen && account.firstStatementDate != null) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              'Calculates on: ${df.format(account.firstStatementDate!)}',
+              style: const TextStyle(
+                color: Colors.orangeAccent,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
     final now = DateTime.now();
     final currentCycleStart =
         BillingHelper.getCycleStart(now, account.billingCycleDay!);
     final lastBillDate = currentCycleStart.subtract(const Duration(days: 1));
     final nextBillDate =
         BillingHelper.getCycleEnd(now, account.billingCycleDay!);
-
-    final df = DateFormat('dd MMM');
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

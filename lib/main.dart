@@ -62,6 +62,20 @@ void main() {
   );
 }
 
+class ClearFocusObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+}
+
 class BudgetApp extends ConsumerWidget {
   const BudgetApp({super.key});
 
@@ -76,6 +90,7 @@ class BudgetApp extends ConsumerWidget {
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: themeMode,
+      navigatorObservers: [ClearFocusObserver()],
       routes: {
         '/settings': (context) => const SettingsScreen(),
         '/taxes': (context) => const TaxDashboardScreen(),

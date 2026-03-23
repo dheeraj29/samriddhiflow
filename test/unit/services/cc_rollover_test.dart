@@ -21,12 +21,14 @@ void main() {
   late MockAccountBox mockAccountBox;
   late MockTransactionBox mockTxnBox;
   late MockBox mockSettingsBox;
+  late Map<String, dynamic> settingsMap;
 
   setUp(() {
     mockHive = MockHive();
     mockAccountBox = MockAccountBox();
     mockTxnBox = MockTransactionBox();
     mockSettingsBox = MockBox();
+    settingsMap = {};
 
     registerFallbackValue(Account(
         id: 'fallback', name: 'f', type: AccountType.creditCard, balance: 0));
@@ -54,15 +56,25 @@ void main() {
     when(() => mockSettingsBox.get('activeProfileId',
         defaultValue: any(named: 'defaultValue'))).thenReturn('default');
 
-    when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
-    when(() => mockAccountBox.put(any(), any())).thenAnswer((_) async {});
     when(() => mockTxnBox.put(any(), any())).thenAnswer((_) async {});
-    // Fix: Allow validation to pass by default (no last rollover set)
-    when(() => mockSettingsBox.get(any(that: startsWith('last_rollover_')),
-        defaultValue: any(named: 'defaultValue'))).thenReturn(null);
-    // Fix: txnsSinceBackup
-    when(() => mockSettingsBox.get('txnsSinceBackup',
-        defaultValue: any(named: 'defaultValue'))).thenReturn(0);
+    when(() => mockAccountBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockSettingsBox.put(any(), any())).thenAnswer((_) async {});
+
+    // Stateful settings mock
+    when(() => mockSettingsBox.get(any()))
+        .thenAnswer((inv) => settingsMap[inv.positionalArguments[0]]);
+    when(() => mockSettingsBox.get(any(),
+        defaultValue: any(named: 'defaultValue'))).thenAnswer((inv) {
+      return settingsMap[inv.positionalArguments[0]] ??
+          inv.namedArguments[#defaultValue];
+    });
+    when(() => mockSettingsBox.put(any(), any())).thenAnswer((inv) {
+      settingsMap[inv.positionalArguments[0]] = inv.positionalArguments[1];
+      return Future.value();
+    });
+    // Initial default settings
+    settingsMap['activeProfileId'] = 'default';
+    settingsMap['txnsSinceBackup'] = 0;
 
     storageService = StorageService(mockHive);
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
@@ -245,8 +257,7 @@ void main() {
           freezeDate: freezeDate,
           profileId: 'default');
 
-      when(() => mockSettingsBox.get('last_rollover_s1'))
-          .thenReturn(freezeDate.millisecondsSinceEpoch);
+      settingsMap['last_rollover_s1'] = freezeDate.millisecondsSinceEpoch;
       when(() => mockAccountBox.toMap()).thenReturn({'s1': acc});
       when(() => mockTxnBox.toMap()).thenReturn({});
 
@@ -281,8 +292,7 @@ void main() {
           freezeDate: freezeDate,
           profileId: 'default');
 
-      when(() => mockSettingsBox.get('last_rollover_s2'))
-          .thenReturn(freezeDate.millisecondsSinceEpoch);
+      settingsMap['last_rollover_s2'] = freezeDate.millisecondsSinceEpoch;
       when(() => mockAccountBox.toMap()).thenReturn({'s2': acc});
       when(() => mockTxnBox.toMap()).thenReturn({});
 
@@ -491,8 +501,7 @@ void main() {
           freezeDate: freezeDate,
           profileId: 'default');
 
-      when(() => mockSettingsBox.get('last_rollover_s6'))
-          .thenReturn(lastRollover.millisecondsSinceEpoch);
+      settingsMap['last_rollover_s6'] = lastRollover.millisecondsSinceEpoch;
       when(() => mockAccountBox.toMap()).thenReturn({'s6': acc});
 
       // No transactions in the window (Mar 23 - Mar 31)
@@ -501,7 +510,7 @@ void main() {
             id: 't1',
             title: 'Old Spend',
             amount: 100,
-            date: DateTime(2026, 3, 10), // Before freeze
+            date: DateTime(2026, 3, 30), // After freeze
             type: TransactionType.expense,
             accountId: 's6',
             category: 'T',
@@ -696,6 +705,56 @@ void main() {
       expect(finalAcc.balance, 0.0);
       expect(finalAcc.isFrozen, false);
       expect(finalAcc.freezeDate, null);
+    });
+
+    test(
+        'Scenario 10: Update Cycle Day during Phase 1 (isFrozenCalculated == false)',
+        () async {
+      final freezeDate = DateTime(2026, 3, 23);
+      final acc = Account(
+          id: 's10',
+          name: 'S10',
+          type: AccountType.creditCard,
+          balance: 0,
+          billingCycleDay: 22,
+          isFrozen: true,
+          isFrozenCalculated: false,
+          freezeDate: freezeDate,
+          profileId: 'default');
+
+      final accountsMap = {'s10': acc};
+      settingsMap['last_rollover_s10'] = freezeDate.millisecondsSinceEpoch;
+      when(() => mockAccountBox.toMap()).thenReturn(accountsMap);
+      when(() => mockAccountBox.get(any()))
+          .thenAnswer((inv) => accountsMap[inv.positionalArguments[0]]);
+      when(() => mockAccountBox.put(any(), any())).thenAnswer((inv) {
+        accountsMap[inv.positionalArguments[0] as String] =
+            inv.positionalArguments[1] as Account;
+        return Future.value();
+      });
+      when(() => mockTxnBox.toMap()).thenReturn({});
+
+      // Update billing cycle day from 22 -> 1 while frozen
+      await storageService.updateBillingCycle(
+        accountId: 's10',
+        newCycleDay: 1,
+        newDueDateDay: 15,
+        freezeDate: freezeDate, // Original freeze date
+        firstStatementDate: DateTime(2026, 4, 1),
+      );
+
+      final updatedAcc = verify(() => mockAccountBox.put('s10', captureAny()))
+          .captured
+          .last as Account;
+
+      expect(updatedAcc.billingCycleDay, 1);
+      expect(updatedAcc.isFrozen, true);
+      expect(updatedAcc.freezeDate, freezeDate); // Should be preserved
+      expect(updatedAcc.isFrozenCalculated, false);
+
+      // Verify pointer moved to freezeDate as per updateBillingCycle logic (or preserved if already frozen)
+      expect(
+          settingsMap['last_rollover_s10'], freezeDate.millisecondsSinceEpoch);
     });
   });
 }

@@ -148,7 +148,7 @@ void main() {
     // }
 
     // Verify Title (If found, good, else manually verify from log)
-    expect(find.text('My Samriddh'), findsOneWidget);
+    expect(find.text('My Samriddhi'), findsOneWidget);
 
     // Verify Tabs/Sections (assuming text presence)
     // "Net Worth" might be present.

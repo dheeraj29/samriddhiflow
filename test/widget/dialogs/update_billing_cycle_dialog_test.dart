@@ -70,70 +70,75 @@ void main() {
     expect(find.text('Update Billing Cycle'), findsOneWidget);
     expect(find.text('25'), findsOneWidget);
     expect(find.text('28'), findsOneWidget);
+    // Label is hidden by default because _cycleDay hasn't changed from original 25
+    expect(find.text('Select First Statement Month:'), findsNothing);
+    expect(find.text('Save Changes'), findsOneWidget);
   });
 
-  testWidgets('Successful submission flow with dropdown and datepicker',
+  testWidgets('Successful submission flow with radio selection',
       (tester) async {
     when(() => mockStorageService.updateBillingCycle(
           accountId: any(named: 'accountId'),
           newCycleDay: any(named: 'newCycleDay'),
           newDueDateDay: any(named: 'newDueDateDay'),
           freezeDate: any(named: 'freezeDate'),
+          firstStatementDate: any(named: 'firstStatementDate'),
         )).thenAnswer((_) async {});
 
     await tester.pumpWidget(createTestWidget(tester));
     await tester.tap(find.text('Open Dialog'));
     await tester.pumpAndSettle();
 
-    // 1. Select Freeze Date
-    await tester.tap(find.text('Select Freeze Date'));
+    // 1. Change Cycle Day FIRST
+    final cycleDayDropdown = find.byKey(const Key('cycleDayDropdown'));
+    await tester.tap(cycleDayDropdown);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-
-    // 2. Change Cycle Day
-    // Use the explicit label to find the right dropdown if possible
-    await tester.tap(find.text('25'));
-    await tester.pumpAndSettle();
-
-    // In many Flutter versions, dropdown items are offstage or in a separate stack
-    // until fully settled. We find '5' in the list.
     final item5 = find.text('5').last;
     await tester.tap(item5);
     await tester.pumpAndSettle();
 
-    // 3. Change Due Day
-    await tester.tap(find.text('28'));
+    // 2. NOW Select First Statement Month (Radio)
+    // After cycle day change, options are recalculated
+    await tester.tap(find.byType(RadioListTile<DateTime>).first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('10').last);
-    await tester.pumpAndSettle();
-
-    // 4. Submit
+    // 3. Submit
     await tester.tap(find.text('Initialize Update'));
     await tester.pumpAndSettle();
 
     verify(() => mockStorageService.updateBillingCycle(
           accountId: 'acc1',
           newCycleDay: 5,
-          newDueDateDay: 10,
-          freezeDate: any(named: 'freezeDate'),
+          newDueDateDay: any(named: 'newDueDateDay'),
+          freezeDate: newestTxnDate, // Verified: matches last transaction date
+          firstStatementDate:
+              DateTime(2024, 1, 5), // Verified: next cycle end after Jan 1
         )).called(1);
 
     expect(find.text('Billing cycle update initialized successfully!'),
         findsOneWidget);
   });
 
-  testWidgets('Shows validation error if freeze date is not selected',
+  testWidgets('Shows validation error if statement date is not selected',
       (tester) async {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.tap(find.text('Open Dialog'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Initialize Update'));
+    // 1. Change cycle day first (Original 25 -> 5)
+    final cycleDayDropdown = find.byKey(const Key('cycleDayDropdown'));
+    await tester.tap(cycleDayDropdown);
     await tester.pumpAndSettle();
 
-    expect(find.text('Please select a Freeze Date.'), findsOneWidget);
+    // Tap the '5' in the menu
+    await tester.tap(find.text('5').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Initialize Update'));
+    await tester.pump(); // Start animation
+    await tester.pump(const Duration(milliseconds: 500)); // Middle of animation
+
+    expect(find.textContaining('Please select'), findsOneWidget);
   });
 
   testWidgets('Shows error message when storageService throws', (tester) async {
@@ -142,15 +147,20 @@ void main() {
           newCycleDay: any(named: 'newCycleDay'),
           newDueDateDay: any(named: 'newDueDateDay'),
           freezeDate: any(named: 'freezeDate'),
+          firstStatementDate: any(named: 'firstStatementDate'),
         )).thenThrow(Exception('Update failed'));
 
     await tester.pumpWidget(createTestWidget(tester));
     await tester.tap(find.text('Open Dialog'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Select Freeze Date'));
+    // 1. Change cycle day first to show radio and "Initialize Update" button
+    final cycleDayDropdown = find.byKey(const Key('cycleDayDropdown'));
+    await tester.tap(cycleDayDropdown); // Billing Cycle Day
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
+    await tester.tap(find.text('5').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(RadioListTile<DateTime>).first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Initialize Update'));
@@ -168,5 +178,61 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(UpdateBillingCycleDialog), findsNothing);
+  });
+
+  testWidgets(
+      'Shows statement date options from two different months when frozen',
+      (tester) async {
+    // Setup frozen account
+    testAccount = testAccount.copyWith(
+      isFrozen: true,
+      isFrozenCalculated: false,
+      freezeDate: DateTime(2024, 1, 1),
+    );
+
+    await tester.pumpWidget(createTestWidget(tester));
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    // Change Cycle Day from 25 -> 5
+    final cycleDayDropdown = find.byKey(const Key('cycleDayDropdown'));
+    await tester.tap(cycleDayDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('5').last);
+    await tester.pumpAndSettle();
+
+    // Verify radio buttons show dates from Jan and Feb (since freeze was Jan 1)
+    // Note: We use find.descendant to avoid matching the "Freeze Transactions Until" subtitle
+    final radioParent = find.byType(RadioGroup<DateTime>);
+    expect(
+        find.descendant(of: radioParent, matching: find.textContaining('Jan')),
+        findsOneWidget);
+    expect(
+        find.descendant(of: radioParent, matching: find.textContaining('Feb')),
+        findsOneWidget);
+    expect(find.byType(RadioListTile<DateTime>), findsNWidgets(2));
+  });
+
+  testWidgets(
+      'Dynamic UI: Button text changes to Initialize Update on cycle change',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(tester));
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    // Initially says "Save Changes" (but might be disabled or just for payment due day)
+    expect(find.text('Save Changes'), findsOneWidget);
+    expect(find.text('Initialize Update'), findsNothing);
+
+    // Change Cycle Day
+    final cycleDayDropdown = find.byKey(const Key('cycleDayDropdown'));
+    await tester.tap(cycleDayDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('5').last);
+    await tester.pumpAndSettle();
+
+    // Should now show "Initialize Update"
+    expect(find.text('Initialize Update'), findsOneWidget);
+    expect(find.text('Save Changes'), findsNothing);
   });
 }

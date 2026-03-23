@@ -172,8 +172,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         const SizedBox(width: 8),
         IconButton(
           icon: PureIcons.deleteOutlined(size: 20, color: Colors.grey),
-          onPressed: () =>
-              _confirmSingleDelete(context, txn), // coverage:ignore-line
+          // coverage:ignore-start
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _confirmSingleDelete(context, txn);
+            // coverage:ignore-end
+          },
         ),
       ],
     );

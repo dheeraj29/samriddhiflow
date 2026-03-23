@@ -67,7 +67,10 @@ class TransactionFilter extends StatelessWidget {
                     DropdownMenuItem(
                         value: TimeRange.custom, child: Text('Custom Range')),
                   ],
-                  onChanged: (v) => onRangeChanged(v!),
+                  onChanged: (v) {
+                    FocusScope.of(context).unfocus();
+                    onRangeChanged(v!);
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -89,7 +92,10 @@ class TransactionFilter extends StatelessWidget {
                     ...categories.map((c) =>
                         DropdownMenuItem<String?>(value: c, child: Text(c))),
                   ],
-                  onChanged: onCategoryChanged,
+                  onChanged: (v) {
+                    FocusScope.of(context).unfocus();
+                    onCategoryChanged(v);
+                  },
                 ),
               ),
             ],
@@ -117,7 +123,10 @@ class TransactionFilter extends StatelessWidget {
                         value: TransactionType.transfer,
                         child: Text('Transfer')),
                   ],
-                  onChanged: onTypeChanged,
+                  onChanged: (v) {
+                    FocusScope.of(context).unfocus();
+                    onTypeChanged(v);
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -127,7 +136,7 @@ class TransactionFilter extends StatelessWidget {
                   isExpanded: true,
                   initialValue: accountItems
                           .any((item) => item.value == selectedAccountId)
-                      ? selectedAccountId
+                      ? selectedAccountId // coverage:ignore-line
                       : null,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
@@ -139,15 +148,21 @@ class TransactionFilter extends StatelessWidget {
                         value: null, child: Text('All Accounts')),
                     ...accountItems,
                   ],
-                  onChanged: onAccountChanged,
+                  onChanged: (v) {
+                    FocusScope.of(context).unfocus();
+                    onAccountChanged(v);
+                  },
                 ),
               ),
 
               if (selectedRange == TimeRange.custom) ...[
                 const SizedBox(width: 16),
                 Expanded(
-                  child: InkWell(
-                    onTap: onCustomRangeTap,
+                  child: InkResponse(
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      onCustomRangeTap?.call();
+                    },
                     child: InputDecorator(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),

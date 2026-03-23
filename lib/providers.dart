@@ -438,6 +438,7 @@ final transactionsProvider = StreamProvider<List<Transaction>>((ref) async* {
 
 final loansProvider = StreamProvider<List<Loan>>((ref) async* {
   await ref.watch(storageInitializerProvider.future);
+  ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
   final box = Hive.box<Loan>('loans');
 
@@ -448,6 +449,7 @@ final loansProvider = StreamProvider<List<Loan>>((ref) async* {
 final recurringTransactionsProvider =
     StreamProvider<List<RecurringTransaction>>((ref) async* {
   await ref.watch(storageInitializerProvider.future);
+  ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
   final box = Hive.box<RecurringTransaction>('recurring');
 
@@ -459,6 +461,7 @@ final insurancePoliciesProvider =
     StreamProvider<List<InsurancePolicy>>((ref) async* {
   // coverage:ignore-start
   await ref.watch(storageInitializerProvider.future);
+  ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
   final box = Hive.box<InsurancePolicy>('insurance_policies');
   // coverage:ignore-end
@@ -473,6 +476,7 @@ final taxYearDataProvider =
     StreamProvider.family<TaxYearData?, int>((ref, year) async* {
   // coverage:ignore-start
   await ref.watch(storageInitializerProvider.future);
+  ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
   final box = Hive.box<TaxYearData>('tax_data');
   // coverage:ignore-end
@@ -486,6 +490,7 @@ final taxYearDataProvider =
 final allTaxYearDataProvider = StreamProvider<List<TaxYearData>>((ref) async* {
   // coverage:ignore-start
   await ref.watch(storageInitializerProvider.future);
+  ref.watch(activeProfileIdProvider);
   final storage = ref.watch(storageServiceProvider);
   final box = Hive.box<TaxYearData>('tax_data');
   // coverage:ignore-end
@@ -571,6 +576,7 @@ final isLoggedInProvider =
 class BudgetNotifier extends Notifier<double> {
   @override
   double build() {
+    ref.watch(activeProfileIdProvider);
     final init = ref.watch(storageInitializerProvider);
     if (!init.hasValue) return 0;
 

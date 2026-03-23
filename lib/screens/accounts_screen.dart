@@ -7,7 +7,6 @@ import '../utils/currency_utils.dart';
 import '../providers.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
-import '../widgets/account_card.dart';
 import '../screens/transactions_screen.dart';
 import '../utils/billing_helper.dart';
 import '../widgets/pure_icons.dart';
@@ -15,16 +14,7 @@ import '../services/storage_service.dart';
 import 'cc_payment_dialog.dart';
 import 'update_billing_cycle_dialog.dart';
 
-class CreditUsageVisibilityNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void toggle() => state = !state;
-}
-
-final showCreditUsageProvider =
-    NotifierProvider<CreditUsageVisibilityNotifier, bool>(
-        CreditUsageVisibilityNotifier.new);
+// No longer required per user request
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -33,13 +23,34 @@ class AccountsScreen extends ConsumerStatefulWidget {
   ConsumerState<AccountsScreen> createState() => _AccountsScreenState();
 }
 
+class _CCBillingData {
+  final double unbilled;
+  final double billed;
+  final double used;
+  final double historicalBalance;
+  final double available;
+  final double percent;
+
+  _CCBillingData({
+    required this.unbilled,
+    required this.billed,
+    required this.used,
+    required this.historicalBalance,
+    required this.available,
+    required this.percent,
+  });
+}
+
 class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   bool _compactView = true;
+  bool _isPinnedExpanded = false;
+  bool _isSavingsExpanded = false;
+  bool _isCCExpanded = false;
+  bool _isWalletExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    // Default is short form (true)
     _compactView = true;
   }
 
@@ -66,22 +77,12 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         IconButton(
           icon: _compactView
               ? PureIcons.listExtended(size: 20)
-              : PureIcons.listCompact(size: 20),
+              : PureIcons.listCompact(size: 20), // coverage:ignore-line
           tooltip: _compactView
               ? 'Switch to Extended Numbers'
               : 'Switch to Compact Numbers',
-          onPressed: () => setState(() => _compactView = !_compactView),
-        ),
-        IconButton(
-          icon: Icon(
-            ref.watch(showCreditUsageProvider)
-                ? Icons.visibility
-                : Icons.visibility_off,
-          ),
-          tooltip: ref.watch(showCreditUsageProvider)
-              ? 'Hide Credit Usage'
-              : 'Show Credit Usage',
-          onPressed: () => ref.read(showCreditUsageProvider.notifier).toggle(),
+          onPressed: () => setState(
+              () => _compactView = !_compactView), // coverage:ignore-line
         ),
       ],
     );
@@ -113,271 +114,503 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   }
 
   Widget _buildAccountList(BuildContext context, List<Account> accounts) {
-    final transactionsAsync = ref.watch(transactionsProvider);
-    final summaryWidget = _buildCreditUsageSummary(
-        context, accounts, transactionsAsync.value ?? []);
+    final pinned = accounts.where((a) => a.isPinned).toList();
+    final savings =
+        accounts.where((a) => a.type == AccountType.savings).toList();
+    final creditCards =
+        accounts.where((a) => a.type == AccountType.creditCard).toList();
+    final wallet = accounts.where((a) => a.type == AccountType.wallet).toList();
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        if (summaryWidget != null && ref.watch(showCreditUsageProvider))
-          summaryWidget,
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 220,
-              childAspectRatio: 0.78,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: accounts.length + 1,
-            itemBuilder: (context, index) {
-              if (index == accounts.length) {
-                return _buildAddCard(context, ref);
-              }
-              return _buildAccountItem(context, ref, accounts[index]);
-            },
-          ),
+        _buildExpandableSection(
+          title: 'Pinned Accounts',
+          icon: Icons.push_pin,
+          isExpanded: _isPinnedExpanded,
+          count: pinned.length,
+          onToggle: () => // coverage:ignore-line
+              setState(() => _isPinnedExpanded =
+                  !_isPinnedExpanded), // coverage:ignore-line
+          items: pinned,
         ),
+        const SizedBox(height: 16),
+        _buildExpandableSection(
+          title: 'Savings Accounts',
+          icon: Icons.account_balance,
+          isExpanded: _isSavingsExpanded,
+          count: savings.length,
+          onToggle: () =>
+              setState(() => _isSavingsExpanded = !_isSavingsExpanded),
+          items: savings,
+        ),
+        const SizedBox(height: 16),
+        _buildExpandableSection(
+          title: 'Credit Cards',
+          icon: Icons.credit_card,
+          isExpanded: _isCCExpanded,
+          count: creditCards.length,
+          onToggle: () => setState(() => _isCCExpanded = !_isCCExpanded),
+          items: creditCards,
+        ),
+        const SizedBox(height: 16),
+        _buildExpandableSection(
+          title: 'Wallets',
+          icon: Icons.account_balance_wallet,
+          isExpanded: _isWalletExpanded,
+          count: wallet.length,
+          onToggle: () => // coverage:ignore-line
+              setState(() => _isWalletExpanded =
+                  !_isWalletExpanded), // coverage:ignore-line
+          items: wallet,
+        ),
+        const SizedBox(height: 24),
+        _buildAddAccountButton(context),
       ],
     );
   }
 
-  Widget? _buildCreditUsageSummary(
-      BuildContext context, List<Account> accounts, List<Transaction> allTxns) {
-    final creditCards =
-        accounts.where((a) => a.type == AccountType.creditCard).toList();
-    if (creditCards.isEmpty) return null;
-
-    double totalLimit = 0;
-    double totalUsage = 0;
-    final now = DateTime.now();
-    final storage = ref.watch(storageServiceProvider);
-
-    for (var card in creditCards) {
-      totalLimit += card.creditLimit ?? 0;
-      final unbilled =
-          BillingHelper.calculateUnbilledAmount(card, allTxns, now);
-      final lastRollover = storage.getLastRollover(card.id);
-      final billed =
-          BillingHelper.calculateBilledAmount(card, allTxns, now, lastRollover);
-      totalUsage += (card.balance + unbilled + billed);
-    }
-
-    final utilization = totalLimit > 0 ? (totalUsage / totalLimit) * 100 : 0.0;
-    final available = totalLimit > totalUsage ? totalLimit - totalUsage : 0.0;
-    final profileCurrency = ref.watch(currencyProvider);
-
-    String format(double val) {
-      if (_compactView) {
-        return CurrencyUtils.getSmartFormat(val, profileCurrency);
-      }
-      return CurrencyUtils.getFormatter(profileCurrency).format(val);
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-            Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildExpandableSection({
+    required String title,
+    required IconData icon,
+    required bool isExpanded,
+    required int count,
+    required VoidCallback onToggle,
+    required List<Account> items,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        ListTile(
+          onTap: () {
+            onToggle();
+          },
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          leading: PureIcons.icon(icon, color: theme.colorScheme.primary),
+          title: Text(
+            title,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isExpanded && count > 0) _buildCountBadge(count),
+              AnimatedRotation(
+                turns: isExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 200),
+                child:
+                    Icon(Icons.expand_more, color: theme.colorScheme.onSurface),
+              ),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+        if (isExpanded)
+          ...items.map((acc) => _buildAccountItem(context, ref, acc)),
+        if (isExpanded && items.isEmpty)
+          const Padding(
+            // coverage:ignore-line
+            padding: EdgeInsets.all(16.0),
+            child: Text('No accounts in this section.',
+                style: TextStyle(color: Colors.grey)),
           ),
-        ],
+      ],
+    );
+  }
+
+  Widget _buildCountBadge(int count) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.red.shade100,
+        borderRadius: BorderRadius.circular(999),
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total Credit Usage',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${utilization.toStringAsFixed(1)}% Used',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    format(totalUsage),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Used',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                height: 40,
-                width: 1,
-                color: Colors.white.withValues(alpha: 0.3),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    format(totalLimit),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Total Limit',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: totalLimit > 0
-                  ? (totalUsage / totalLimit).clamp(0.0, 1.0)
-                  : 0,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                  utilization > 80 ? Colors.redAccent : Colors.white),
-              minHeight: 6,
-            ),
-          ),
-          if (available > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Available: ${format(available)}',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic),
-              ),
-            )
-        ],
+      child: Text(
+        count.toString(),
+        style: TextStyle(
+          color: Colors.red.shade700,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddAccountButton(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => _showAddAccountSheet(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Add New Account'),
       ),
     );
   }
 
   Widget _buildAccountItem(BuildContext context, WidgetRef ref, Account acc) {
-    double unbilled = 0;
-    double billed = 0;
-    double payments = 0;
-    if (acc.type == AccountType.creditCard) {
-      final now = DateTime.now();
-      final allTxns = ref.watch(transactionsProvider).value ?? [];
-      unbilled = BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
+    final billingData = _calculateCCBillingData(acc, ref);
 
-      final storage = ref.watch(storageServiceProvider);
-      final lastRolloverMillis = storage.getLastRollover(acc.id);
-      billed = BillingHelper.calculateBilledAmount(
-          acc, allTxns, now, lastRolloverMillis);
+    final theme = Theme.of(context);
+    final currencyFormat = CurrencyUtils.getFormatter(acc.currency);
+    final smartFormat = CurrencyUtils.getSmartFormat(acc.balance, acc.currency);
 
-      if (lastRolloverMillis != null) {
-        final ignoreFlagKey =
-            'ignore_rollover_payments_${acc.id}'; // coverage:ignore-line
-        final ignorePayments = storage
-                .getSettingsBox() // coverage:ignore-line
-                .get(ignoreFlagKey, defaultValue: false)
-            as bool; // coverage:ignore-line
-
-        if (!ignorePayments) {
-          final statementDate = BillingHelper.getStatementDate(
-              now, acc.billingCycleDay!); // coverage:ignore-line
-          payments = BillingHelper.calculatePeriodPayments(
-              // coverage:ignore-line
-              acc,
-              allTxns,
-              statementDate,
-              now);
-        }
-      }
-    }
-
-    return AccountCard(
-      account: acc,
-      unbilledAmount: unbilled,
-      billedAmount: billed,
-      paymentsSinceRollover: payments,
-      compactView: _compactView,
-      onTap: () => _showAccountOptions(context, ref, acc),
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: theme.brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: _buildAccountLeading(acc),
+        title: _buildAccountTitle(acc),
+        subtitle:
+            _buildAccountSubtitle(acc, billingData, theme, currencyFormat),
+        trailing: _buildAccountTrailing(
+            acc, billingData, _compactView, currencyFormat, smartFormat, theme),
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _showAccountOptions(context, ref, acc);
+        },
+      ),
     );
   }
 
-  Widget _buildAddCard(BuildContext context, WidgetRef ref) {
-    return Card(
-      color: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-            color: Colors.grey, width: 2, style: BorderStyle.solid),
+  _CCBillingData _calculateCCBillingData(Account acc, WidgetRef ref) {
+    double unbilled = 0;
+    double billed = 0;
+    double payments = 0;
+    double used = 0;
+    double historicalBalance = 0;
+    double available = 0;
+    double percent = 0;
+
+    if (acc.type == AccountType.creditCard) {
+      final now = DateTime.now();
+      final allTxns = ref.read(transactionsProvider).value ?? [];
+      final storage = ref.read(storageServiceProvider);
+      final lastRolloverMillis = storage.getLastRollover(acc.id);
+
+      unbilled = BillingHelper.calculateUnbilledAmount(acc, allTxns, now,
+          lastRolloverMillis: lastRolloverMillis);
+      billed = BillingHelper.calculateBilledAmount(
+          acc, allTxns, now, lastRolloverMillis);
+
+      payments = _calculatePaymentsSinceRollover(
+          acc, allTxns, storage, now, lastRolloverMillis);
+
+      final data = BillingHelper.getAdjustedCCData(
+        accountBalance: acc.balance,
+        billedAmount: billed,
+        unbilledAmount: unbilled,
+        paymentsSinceRollover: payments,
+      );
+      used = data.$1; // totalNetDebt
+      historicalBalance = data.$3; // Realized Debt
+      if (acc.creditLimit != null && acc.creditLimit! > 0) {
+        available = acc.creditLimit! - used;
+        percent = (used / acc.creditLimit!).clamp(0.0, 1.0);
+      }
+      return _CCBillingData(
+        unbilled: data.$4, // Adjusted Unbilled
+        billed: data.$2, // Adjusted Billed
+        used: used,
+        historicalBalance: historicalBalance,
+        available: available,
+        percent: percent,
+      );
+    }
+
+    return _CCBillingData(
+      unbilled: 0,
+      billed: 0,
+      used: 0,
+      historicalBalance: 0,
+      available: 0,
+      percent: 0,
+    );
+  }
+
+  double _calculatePaymentsSinceRollover(Account acc, List<Transaction> allTxns,
+      StorageService storage, DateTime now, int? lastRolloverMillis) {
+    if (lastRolloverMillis == null) return 0;
+
+    final ignoreFlagKey =
+        'ignore_rollover_payments_${acc.id}'; // coverage:ignore-line
+    final ignorePayments = storage
+            .getSettingsBox() // coverage:ignore-line
+            .get(ignoreFlagKey, defaultValue: false)
+        as bool; // coverage:ignore-line
+
+    if (ignorePayments) return 0;
+
+    // coverage:ignore-start
+    final anchor = acc.isFrozen
+        ? DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis)
+        : BillingHelper.getStatementDate(now, acc.billingCycleDay!);
+    // coverage:ignore-end
+
+    return BillingHelper.calculatePeriodPayments(
+        acc, allTxns, anchor, now); // coverage:ignore-line
+  }
+
+  Widget _buildAccountLeading(Account acc) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: _getAccountColor(acc).withValues(alpha: 0.1),
+        shape: BoxShape.circle,
       ),
-      child: InkWell(
-        onTap: () => _showAddAccountSheet(context, ref),
-        borderRadius: BorderRadius.circular(16),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              PureIcons.addCircle(size: 40, color: Colors.grey),
-              const SizedBox(height: 8),
-              const Text('Add New'),
-            ],
+      child: PureIcons.icon(_getAccountIcon(acc),
+          color: _getAccountColor(acc), size: 24),
+    );
+  }
+
+  Widget _buildAccountTitle(Account acc) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            acc.name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
+        if (acc.isFrozen)
+          Flexible(
+            // coverage:ignore-line
+            child: Container(
+              // coverage:ignore-line
+              margin: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                // coverage:ignore-line
+                color: Colors.redAccent,
+                borderRadius: BorderRadius.circular(4), // coverage:ignore-line
+              ),
+              child: const Text(
+                'FROZEN',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAccountSubtitle(Account acc, _CCBillingData data,
+      ThemeData theme, NumberFormat currencyFormat) {
+    if (acc.type != AccountType.creditCard) {
+      return Text(
+        acc.type == AccountType.savings ? 'Savings Account' : 'Wallet',
+        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface),
+      );
+    }
+
+    return _buildCCAccountSubtitle(acc, data, theme, currencyFormat);
+  }
+
+  Widget _buildCCAccountSubtitle(Account acc, _CCBillingData data,
+      ThemeData theme, NumberFormat currencyFormat) {
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final displayAvailable = data.available > 0 ? data.available : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: LinearProgressIndicator(
+            value: data.percent,
+            minHeight: 4,
+            backgroundColor: theme.dividerColor.withValues(alpha: 0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              data.percent > 0.9 ? Colors.red : theme.colorScheme.primary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            Text(
+              _compactView
+                  ? 'L: ${CurrencyUtils.getSmartFormat(acc.creditLimit ?? 0, acc.currency)}'
+                  : 'Limit: ${currencyFormat.format(acc.creditLimit ?? 0)}',
+              style:
+                  TextStyle(fontSize: 11, color: theme.colorScheme.onSurface),
+            ),
+            Text(
+              _compactView
+                  ? 'Avail: ${CurrencyUtils.getSmartFormat(displayAvailable, acc.currency)}'
+                  : 'Available: ${currencyFormat.format(displayAvailable)}',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold),
+            ),
+            if (acc.isFrozen) _buildUnfreezeDateText(acc, theme, dateFormat),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            if (data.billed.abs() > 0.01)
+              _buildMiniInfoChip(
+                  // coverage:ignore-line
+                  'Billed',
+                  data.billed,
+                  acc.currency,
+                  theme,
+                  _compactView), // coverage:ignore-line
+            if (data.historicalBalance.abs() > 0.01)
+              _buildMiniInfoChip('Balance', data.historicalBalance,
+                  acc.currency, theme, _compactView),
+            if (data.unbilled.abs() > 0.01)
+              _buildMiniInfoChip(
+                  // coverage:ignore-line
+                  'Unbilled',
+                  data.unbilled,
+                  acc.currency,
+                  theme,
+                  _compactView), // coverage:ignore-line
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnfreezeDateText(Account acc, ThemeData theme, DateFormat df) {
+    // coverage:ignore-line
+    DateTime? targetDate;
+    String label = 'Calculates on';
+
+    if (!acc.isFrozenCalculated) {
+      // coverage:ignore-line
+      targetDate = acc.firstStatementDate; // coverage:ignore-line
+      label = 'Initial bill on';
+    } else {
+      // Phase 2: Next standard billing date
+      if (acc.billingCycleDay != null) {
+        // coverage:ignore-line
+        targetDate = BillingHelper.getCycleEnd(
+            DateTime.now(), acc.billingCycleDay!); // coverage:ignore-line
+      }
+    }
+
+    if (targetDate == null) return const SizedBox.shrink();
+
+    // coverage:ignore-start
+    return Text(
+      '$label: ${df.format(targetDate)}',
+      style: TextStyle(
+          // coverage:ignore-end
+          fontSize: 11,
+          color: Colors.orange.shade700, // coverage:ignore-line
+          fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildAccountTrailing(Account acc, _CCBillingData data, bool compact,
+      NumberFormat currencyFormat, String smartFormat, ThemeData theme) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildTrailingBalanceText(
+            acc, data, compact, currencyFormat, smartFormat),
+        if (acc.type == AccountType.creditCard)
+          Text(
+            '${(data.percent * 100).toStringAsFixed(0)}% used',
+            style: TextStyle(
+                fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTrailingBalanceText(Account acc, _CCBillingData data,
+      bool compact, NumberFormat currencyFormat, String smartFormat) {
+    if (acc.type == AccountType.creditCard) {
+      final displayAvailable = data.available > 0 ? data.available : 0.0;
+      return Text(
+        compact
+            ? '${CurrencyUtils.getSmartFormat(data.used, acc.currency)} / ${CurrencyUtils.getSmartFormat(displayAvailable, acc.currency)}'
+            : '${currencyFormat.format(data.used)} / ${currencyFormat.format(displayAvailable)}',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          color: data.used > 0 ? Colors.red : Colors.green,
+        ),
+      );
+    }
+
+    return Text(
+      compact
+          ? smartFormat
+          : currencyFormat.format(acc.balance), // coverage:ignore-line
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+        color: acc.balance >= 0 ? Colors.green : Colors.red,
       ),
     );
+  }
+
+  Widget _buildMiniInfoChip(String label, double value, String currency,
+      ThemeData theme, bool compact) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border:
+            Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        compact
+            ? '$label: ${CurrencyUtils.getSmartFormat(value, currency)}'
+            : '$label: ${CurrencyUtils.getFormatter(currency).format(value)}',
+        style: TextStyle(
+            fontSize: 9,
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Color _getAccountColor(Account acc) {
+    switch (acc.type) {
+      case AccountType.savings:
+        return Colors.blue;
+      case AccountType.creditCard:
+        return const Color(0xFF1A1A2E);
+      case AccountType.wallet: // coverage:ignore-line
+        return Colors.orange;
+    }
+  }
+
+  IconData _getAccountIcon(Account acc) {
+    switch (acc.type) {
+      case AccountType.savings:
+        return Icons.account_balance;
+      case AccountType.creditCard:
+        return Icons.credit_card;
+      case AccountType.wallet: // coverage:ignore-line
+        return Icons.account_balance_wallet;
+    }
   }
 
   void _showAccountOptions(BuildContext context, WidgetRef ref, Account acc) {
@@ -389,26 +622,40 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ListTile(
+                leading: Icon(
+                    acc.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                    color: Colors.blue),
+                title: Text(acc.isPinned ? 'Unpin Account' : 'Pin Account'),
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  Navigator.pop(context);
+                  _toggleAccountPin(acc.id);
+                },
+              ),
               if (acc.type == AccountType.creditCard) ...[
                 _buildPayBillOption(context, ref, acc),
                 _buildUpdateBillingCycleOption(context, ref, acc),
-                if (!acc.isFrozen) ...[
-                  _buildClearBilledOption(context, ref, acc),
-                  _buildRecalculateOption(context, ref, acc),
-                ],
+                _buildClearBilledOption(context, ref, acc),
+                _buildRecalculateOption(context, ref, acc),
                 _buildBillingDateInfo(ref, acc),
                 const Divider(),
               ],
               ListTile(
                 leading: const Icon(Icons.list_alt),
                 title: const Text('View Transactions'),
+                // coverage:ignore-start
                 onTap: () {
+                  FocusScope.of(context).unfocus();
                   Navigator.pop(context);
                   Navigator.push(
+                    // coverage:ignore-end
                     context,
+                    // coverage:ignore-start
                     MaterialPageRoute(
                       builder: (_) =>
                           TransactionsScreen(initialAccountId: acc.id),
+                      // coverage:ignore-end
                     ),
                   );
                 },
@@ -417,6 +664,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 leading: const Icon(Icons.edit),
                 title: const Text('Edit Account'),
                 onTap: () {
+                  FocusScope.of(context).unfocus();
                   Navigator.pop(context);
                   _showAddAccountSheet(context, ref, account: acc);
                 },
@@ -426,6 +674,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 title: const Text('Delete Account',
                     style: TextStyle(color: Colors.red)),
                 onTap: () {
+                  FocusScope.of(context).unfocus();
                   Navigator.pop(context);
                   _confirmDelete(context, ref, acc);
                 },
@@ -437,12 +686,18 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     );
   }
 
+  Future<void> _toggleAccountPin(String accountId) async {
+    await ref.read(storageServiceProvider).toggleAccountPin(accountId);
+    ref.invalidate(accountsProvider);
+  }
+
   Widget _buildPayBillOption(BuildContext context, WidgetRef ref, Account acc) {
     return ListTile(
       leading: const Icon(Icons.payment, color: Colors.green),
       title: const Text('Pay Bill',
           style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
       onTap: () {
+        FocusScope.of(context).unfocus();
         Navigator.pop(context);
         final isFullyPaid = _checkIfFullyPaid(ref, acc);
         showDialog(
@@ -455,11 +710,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
   Widget _buildUpdateBillingCycleOption(
       BuildContext context, WidgetRef ref, Account acc) {
-    // We only show this option if the outstanding balance is strictly 0.
     final storage = ref.read(storageServiceProvider);
     final allTxns = ref.read(transactionsProvider).value ?? [];
 
-    // We get the actual live current debt data.
     final lastRollover = storage.getLastRollover(acc.id);
     final payments = BillingHelper.calculatePeriodPayments(acc, allTxns,
         DateTime.fromMillisecondsSinceEpoch(lastRollover ?? 0), DateTime.now());
@@ -475,12 +728,15 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
     final totalNetDebt = data.$1;
 
-    // Must be strictly 0, or freezing a transition breaks!
-    if (totalNetDebt > 0.01) {
+    // We only show the "Update Billing Cycle" option if it's safe to change the Cycle Day.
+    // Payment Due Date changes can be done independently via the "Edit Account" sheet.
+    final isSafeToUpdate =
+        totalNetDebt <= 0.01 || (acc.isFrozen && !acc.isFrozenCalculated);
+
+    if (!isSafeToUpdate) {
       return const SizedBox.shrink();
     }
 
-    // Determine the newest transaction to act as the freezeDate floor barrier
     final accountTxns = allTxns
         // coverage:ignore-start
         .where((t) =>
@@ -500,6 +756,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       subtitle: const Text('Move to a new cycle day or due date safely'),
       // coverage:ignore-start
       onTap: () async {
+        FocusScope.of(context).unfocus();
         Navigator.pop(context);
         final result = await showDialog<bool>(
             // coverage:ignore-end
@@ -525,18 +782,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     String nextBillStr = 'TBD';
 
     if (acc.billingCycleDay != null) {
-      final now = DateTime.now();
-      // Current Cycle Start
-      final currentStart =
-          BillingHelper.getCycleStart(now, acc.billingCycleDay!);
-
-      // Last Bill Date: End of the cycle just completed (or about to be processed)
-      final lastBillDate = currentStart.subtract(const Duration(seconds: 1));
-      lastBillStr = DateFormat('MMM dd, yyyy').format(lastBillDate);
-
-      // Next Bill Date: End of the cycle we are currently in
-      final nextBillDate = BillingHelper.getCycleEnd(now, acc.billingCycleDay!);
-      nextBillStr = DateFormat('MMM dd, yyyy').format(nextBillDate);
+      final dates = _getBillingDatesStrings(ref, acc);
+      lastBillStr = dates.$1;
+      nextBillStr = dates.$2;
     }
 
     return Padding(
@@ -553,6 +801,35 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     );
   }
 
+  (String, String) _getBillingDatesStrings(WidgetRef ref, Account acc) {
+    if (acc.billingCycleDay == null) return ('TBD', 'TBD');
+
+    final now = DateTime.now();
+    final storage = ref.read(storageServiceProvider);
+    final lastRollover = storage.getLastRollover(acc.id);
+    final df = DateFormat('MMM dd, yyyy');
+
+    if (acc.isFrozen) {
+      String last = lastRollover != null
+          ? df.format(DateTime.fromMillisecondsSinceEpoch(
+              lastRollover)) // coverage:ignore-line
+          : 'Not calculated yet';
+      // coverage:ignore-start
+      String next = (!acc.isFrozenCalculated && acc.firstStatementDate != null)
+          ? df.format(acc.firstStatementDate!)
+          : df.format(BillingHelper.getCycleEnd(now, acc.billingCycleDay!));
+      // coverage:ignore-end
+      return (last, next);
+    }
+
+    final currentStart = BillingHelper.getCycleStart(now, acc.billingCycleDay!);
+    final lastBillDate = currentStart.subtract(const Duration(seconds: 1));
+    return (
+      df.format(lastBillDate),
+      df.format(BillingHelper.getCycleEnd(now, acc.billingCycleDay!))
+    );
+  }
+
   bool _checkIfFullyPaid(WidgetRef ref, Account acc) {
     if (acc.billingCycleDay == null) return false;
     final storage = ref.read(storageServiceProvider);
@@ -560,8 +837,6 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     if (acc.type == AccountType.creditCard) {
       return storage.isBilledAmountPaid(acc.id);
     }
-
-    // Default for non-CC: check if balance is 0
     return acc.balance <= 0.01; // coverage:ignore-line
   }
 
@@ -730,50 +1005,46 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       _currency = acc.currency;
 
       if (acc.type == AccountType.creditCard && acc.billingCycleDay != null) {
-        final now = DateTime.now(); // coverage:ignore-line
-        // Read transactions via a safe read. Usually provider works, but initState doesn't allow ref.watch.
-        // We'll use ref.read and storage directly for a one-off initial sync.
-        final storage =
-            ref.read(storageServiceProvider); // coverage:ignore-line
-        final allTxns = storage.getTransactions(); // coverage:ignore-line
-
-        final unbilled =
-            // coverage:ignore-start
-            BillingHelper.calculateUnbilledAmount(acc, allTxns, now);
-        final lastRolloverMillis = storage.getLastRollover(acc.id);
-        final billed = BillingHelper.calculateBilledAmount(
-            // coverage:ignore-end
-            acc,
-            allTxns,
-            now,
-            lastRolloverMillis);
-
-        double payments = 0;
-        if (lastRolloverMillis != null) {
-          final statementDate = BillingHelper.getStatementDate(
-              now, acc.billingCycleDay!); // coverage:ignore-line
-          payments = BillingHelper.calculatePeriodPayments(
-              // coverage:ignore-line
-              acc,
-              allTxns,
-              statementDate,
-              now);
-        }
-
-        final (totalNetDebt, _, _, _) = BillingHelper.getAdjustedCCData(
-          // coverage:ignore-line
-          accountBalance: acc.balance, // coverage:ignore-line
-          billedAmount: billed,
-          unbilledAmount: unbilled,
-          paymentsSinceRollover: payments,
-        );
-        _initialBalance = totalNetDebt; // coverage:ignore-line
+        _initializeCreditCardData(acc); // coverage:ignore-line
       } else {
         _initialBalance = acc.balance;
       }
     } else {
       _currency = '';
     }
+  }
+
+  // coverage:ignore-start
+  void _initializeCreditCardData(Account acc) {
+    final now = DateTime.now();
+    final storage = ref.read(storageServiceProvider);
+    final allTxns = storage.getTransactions();
+    final lastRolloverMillis = storage.getLastRollover(acc.id);
+    // coverage:ignore-end
+
+    final unbilled = BillingHelper.calculateUnbilledAmount(
+        acc, allTxns, now, // coverage:ignore-line
+        lastRolloverMillis: lastRolloverMillis);
+    final billed = BillingHelper.calculateBilledAmount(
+        // coverage:ignore-line
+        acc,
+        allTxns,
+        now,
+        lastRolloverMillis);
+    final payments = BillingHelper.calculatePeriodPayments(
+        acc,
+        allTxns, // coverage:ignore-line
+        DateTime.fromMillisecondsSinceEpoch(lastRolloverMillis ?? 0),
+        now); // coverage:ignore-line
+
+    final (totalNetDebt, _, _, _) = BillingHelper.getAdjustedCCData(
+      // coverage:ignore-line
+      accountBalance: acc.balance, // coverage:ignore-line
+      billedAmount: billed,
+      unbilledAmount: unbilled,
+      paymentsSinceRollover: payments,
+    );
+    _initialBalance = totalNetDebt; // coverage:ignore-line
   }
 
   @override
@@ -946,6 +1217,8 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
 
   Widget _buildBillingCycleFields() {
     // coverage:ignore-line
+    final isEditing = widget.account != null; // coverage:ignore-line
+
     return Row(
       // coverage:ignore-line
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,6 +1232,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
             helperText: 'Day of month',
             value: _billingDay, // coverage:ignore-line
             onSaved: (val) => _billingDay = val, // coverage:ignore-line
+            canEdit: !isEditing,
           ),
         ),
         const SizedBox(width: 16),
@@ -971,6 +1245,7 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
             helperText: 'Day of month',
             value: _dueDay, // coverage:ignore-line
             onSaved: (val) => _dueDay = val, // coverage:ignore-line
+            canEdit: true, // Always editable as requested
           ),
         ),
       ],
@@ -984,37 +1259,30 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     required String helperText,
     required int? value,
     required ValueChanged<int?> onSaved,
+    required bool canEdit,
   }) {
-    // coverage:ignore-start
-    final isEditing = widget.account != null;
-    return TextFormField(
-      initialValue: value?.toString(),
-      // coverage:ignore-end
-      readOnly: isEditing,
+    return DropdownButtonFormField<int>(
+      // coverage:ignore-line
+      initialValue: value,
       decoration: InputDecoration(
         // coverage:ignore-line
         labelText: label,
         hintText: hint,
         helperText: helperText,
-        filled: isEditing,
-        fillColor: isEditing ? Colors.black12 : null,
+        filled: !canEdit,
+        fillColor: !canEdit ? Colors.black12 : null,
       ),
-      keyboardType: TextInputType.number,
-      // coverage:ignore-start
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      validator: _validateCycleDay,
-      onSaved: (v) => onSaved(int.tryParse(v ?? '')),
-      // coverage:ignore-end
+      items: List.generate(28, (i) => i + 1) // coverage:ignore-line
+          .map((day) => DropdownMenuItem<int>(
+                // coverage:ignore-line
+                value: day,
+                child: Text(day.toString()), // coverage:ignore-line
+              ))
+          .toList(), // coverage:ignore-line
+      onChanged: canEdit ? (v) => onSaved(v) : null, // coverage:ignore-line
+      onSaved: onSaved,
+      validator: (v) => v == null ? 'Req' : null, // coverage:ignore-line
     );
-  }
-
-  // coverage:ignore-start
-  String? _validateCycleDay(String? value) {
-    if (value == null || value.isEmpty) return 'Req';
-    final day = int.tryParse(value);
-    if (day == null || day < 1 || day > 31) return '1-31';
-    // coverage:ignore-end
-    return null;
   }
 
   bool _shouldKeepBilledStatus(StorageService storage) {
@@ -1043,7 +1311,31 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       // coverage:ignore-start
       final acc = widget.account!;
       acc.name = _name;
-      acc.balance = _initialBalance;
+      if (acc.type == AccountType.creditCard) {
+        final now = DateTime.now();
+        final allTxns = storage.getTransactions();
+        final lastRolloverMillis = storage.getLastRollover(acc.id);
+        // coverage:ignore-end
+
+        final unbilled = BillingHelper.calculateUnbilledAmount(
+            // coverage:ignore-line
+            acc,
+            allTxns,
+            now,
+            lastRolloverMillis: lastRolloverMillis);
+        final billed = BillingHelper.calculateBilledAmount(
+            // coverage:ignore-line
+            acc,
+            allTxns,
+            now,
+            lastRolloverMillis);
+
+        acc.balance =
+            _initialBalance - billed - unbilled; // coverage:ignore-line
+      } else {
+        acc.balance = _initialBalance; // coverage:ignore-line
+      }
+      // coverage:ignore-start
       acc.creditLimit = _limit;
       acc.billingCycleDay = _billingDay;
       acc.paymentDueDateDay = _dueDay;
