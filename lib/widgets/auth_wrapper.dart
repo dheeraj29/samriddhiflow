@@ -43,6 +43,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _startBootGracePeriod();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSafeListeners();
+      ref.read(detectedCountryProvider); // Trigger GeoIP detection
     });
     _startVerificationSafetyTimeout();
     _startSlowConnectionDetector();
@@ -309,10 +310,19 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         if (!context.mounted) return;
         _handleGhostSession(
             context, next, user, isOffline, isLoggedIn, checkFn);
-        _handleAutoRestore(context, next);
       } catch (e) {
         // Background Listener suppressed error
       }
+    });
+
+    // Separate listener for auto-restore — NOT gated by firebaseInit state.
+    // On first login, the auth event fires while firebaseInitializerProvider
+    // is still loading. The main listener's _shouldSkipAuthProcessing guard
+    // blocks that event. By giving auto-restore its own listener, we ensure
+    // the passcode dialog appears immediately on first login.
+    ref.listen(authStreamProvider, (previous, next) {
+      if (!storageInit.hasValue || !_bootGracePeriodFinished) return;
+      _handleAutoRestore(context, next);
     });
   }
 
@@ -368,6 +378,25 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
     setState(() => _isRestoring = true);
     final cloudSync = ref.read(cloudSyncServiceProvider);
+
+    // Explicitly check for region restrictions before auto-restore
+    final country = await ref.read(detectedCountryProvider.future);
+    // coverage:ignore-start
+    if (country != null && country.toUpperCase() != 'IN') {
+      if (context.mounted) {
+        setState(() => _isRestoring = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          // coverage:ignore-end
+          const SnackBar(
+            content: Text(
+                "Auto-restore skipped: Cloud functions are only available in India."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       await cloudSync.restoreFromCloud(passcode: passcode);
       if (context.mounted) {
@@ -380,6 +409,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         );
         ref.invalidate(accountsProvider);
         ref.invalidate(transactionsProvider);
+        ref.read(txnsSinceBackupProvider.notifier).reset();
         _ensureOptimisticFlag();
       }
     } catch (e) {

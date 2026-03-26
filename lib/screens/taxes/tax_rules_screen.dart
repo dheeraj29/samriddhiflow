@@ -314,25 +314,19 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Future<void> _handleYearChange(int? val) async {
-    // coverage:ignore-line
     if (val == null) return;
-    // coverage:ignore-start
     if (_hasUnsavedChanges) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          // coverage:ignore-end
           title: const Text('Unsaved Changes'),
           content: const Text(
               'You have unsaved changes. Switching years will discard them. Continue?'),
-          // coverage:ignore-start
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                // coverage:ignore-end
                 child: const Text('Cancel')),
             TextButton(
-                // coverage:ignore-line
                 onPressed: () =>
                     Navigator.pop(ctx, true), // coverage:ignore-line
                 child: const Text('Continue')),
@@ -346,9 +340,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   void _handleJurisdictionChange(String? val) {
-    // coverage:ignore-line
     if (val == null) return;
-    // coverage:ignore-start
     setState(() {
       _jurisdiction = val;
       if (val != 'India') {
@@ -365,9 +357,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         _isCGReinvestmentEnabled = false;
         _isCGRatesEnabled = false;
         _isAgriIncomeEnabled = false;
-        // coverage:ignore-end
       }
-      _hasUnsavedChanges = true; // coverage:ignore-line
+      _hasUnsavedChanges = true;
     });
   }
 
@@ -449,6 +440,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       },
       child: Scaffold(
         appBar: AppBar(
+          titleSpacing: 24, // Shifts title slightly right
           title: const Text('Tax Configuration'),
           actions: [
             // Financial Year Dropdown
@@ -478,8 +470,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                           child: Text('FY $y-${y + 1}'),
                         ))
                     .toList(),
-                onChanged: (val) =>
-                    _handleYearChange(val), // coverage:ignore-line
+                onChanged: (val) => _handleYearChange(val),
               ),
             ),
             // Copy Previous Year
@@ -508,6 +499,9 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           bottom: TabBar(
             controller: _tabController,
             isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            padding:
+                const EdgeInsets.only(left: 8), // Shifts tabs slightly right
             tabs: const [
               Tab(text: 'General'),
               Tab(text: 'Salary'),
@@ -547,22 +541,19 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                                     .map((j) => DropdownMenuItem(
                                         value: j, child: Text(j)))
                                     .toList(),
-                                onChanged: (val) => // coverage:ignore-line
-                                    _handleJurisdictionChange(
-                                        val), // coverage:ignore-line
+                                onChanged: (val) =>
+                                    _handleJurisdictionChange(val),
                               ),
                             ),
                           ),
                         ),
                         if (_jurisdiction == 'Custom') ...[
                           const SizedBox(width: 12),
-                          // coverage:ignore-start
                           Expanded(
                             child: TextField(
                               controller: _customCountryCtrl,
                               onChanged: (v) =>
                                   setState(() => _hasUnsavedChanges = true),
-                              // coverage:ignore-end
                               decoration: const InputDecoration(
                                 labelText: 'Country Name',
                                 border: OutlineInputBorder(),

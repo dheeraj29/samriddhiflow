@@ -8,7 +8,7 @@ import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
-void main() {
+void registerTaxSlabFallbackTests() {
   late IndianTaxService service;
   late MockTaxConfigService mockConfig;
 

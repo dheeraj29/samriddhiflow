@@ -11,10 +11,13 @@ import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
 
 class MockIndianTaxService extends Mock implements IndianTaxService {}
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
+
+class MockStorageService extends Mock implements StorageService {}
 
 class MockThemeModeNotifier extends ThemeModeNotifier {
   @override
@@ -39,6 +42,7 @@ class MockCurrencyFormatNotifier extends CurrencyFormatNotifier {
 void main() {
   late MockIndianTaxService mockTaxService;
   late MockTaxConfigService mockConfig;
+  late MockStorageService mockStorage;
 
   setUpAll(() {
     registerFallbackValue(const TaxYearData(year: 2025));
@@ -52,6 +56,7 @@ void main() {
       overrides: [
         indianTaxServiceProvider.overrideWithValue(mockTaxService),
         taxConfigServiceProvider.overrideWithValue(mockConfig),
+        storageServiceProvider.overrideWithValue(mockStorage),
         themeModeProvider.overrideWith(() => MockThemeModeNotifier()),
         loansProvider.overrideWith((ref) => Stream.value([])),
         categoriesProvider.overrideWith(() => MockCategoriesNotifier()),
@@ -79,6 +84,7 @@ void main() {
   setUp(() {
     mockTaxService = MockIndianTaxService();
     mockConfig = MockTaxConfigService();
+    mockStorage = MockStorageService();
 
     // Default mocks for all methods called in TaxDetailsScreen build/init
     when(() => mockTaxService.calculateLiability(any())).thenReturn(0.0);
@@ -108,6 +114,7 @@ void main() {
     });
     when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
         .thenReturn([]);
+    when(() => mockStorage.getTaxYearData(any())).thenReturn(null);
   });
 
   testWidgets('TaxDetailsScreen shows generated TDS as read-only (Lock icon)',
@@ -337,6 +344,24 @@ void main() {
     expect(find.text('Unsaved Changes'), findsNothing);
   });
 
+  testWidgets('Salary Tab: Copy previous year shows message when empty',
+      (tester) async {
+    final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
+    const data = TaxYearData(year: 2025);
+
+    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
+    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
+        .thenReturn([]);
+    when(() => mockStorage.getTaxYearData(2024)).thenReturn(null);
+
+    await pumpScreen(tester, data);
+
+    await tester.tap(find.byTooltip('Copy Previous Year Data'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No salary data found in previous year'), findsOneWidget);
+  });
+
   testWidgets('House Property Tab: Can add a property', (tester) async {
     final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
     const data = TaxYearData(year: 2025);
@@ -361,6 +386,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Home 1'), findsOneWidget);
+  });
+
+  testWidgets('House Property Tab: Can copy previous year properties',
+      (tester) async {
+    final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
+    const data = TaxYearData(year: 2025);
+    const previousYearData = TaxYearData(
+      year: 2024,
+      houseProperties: [
+        HouseProperty(name: 'Old House', isSelfOccupied: true),
+      ],
+    );
+
+    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
+    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
+        .thenReturn([]);
+    when(() => mockStorage.getTaxYearData(2024)).thenReturn(previousYearData);
+
+    await pumpScreen(tester, data);
+    await switchTab(tester, 'House Prop');
+
+    await tester.tap(find.byTooltip('Copy Previous Year Data'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Old House'), findsOneWidget);
+    expect(find.text('Copied 1 properties'), findsOneWidget);
   });
 
   testWidgets('Business Tab: Can add a business entity', (tester) async {

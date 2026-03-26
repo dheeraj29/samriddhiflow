@@ -168,6 +168,14 @@ void main() {
     expect(find.text('Recent Transactions'), findsOneWidget);
   });
 
+  testWidgets('DashboardScreen renders empty-state shell', (tester) async {
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Samriddhi'), findsOneWidget);
+    expect(find.textContaining('Net Worth'), findsWidgets);
+  });
+
   testWidgets('DashboardScreen calculates net worth correctly', (tester) async {
     final accounts = [
       Account(
@@ -198,8 +206,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('800'), findsWidgets);
-    expect(find.textContaining('Assets:'), findsWidgets);
-    expect(find.textContaining('Debt:'), findsWidgets);
   });
 
   testWidgets('DashboardScreen shows recent transactions', (tester) async {
@@ -222,6 +228,14 @@ void main() {
       ],
       transactions: [t1],
     ));
+    await tester.pumpAndSettle();
+
+    // Scroll to the Recent Transactions list
+    await tester.ensureVisible(find.text('Recent Transactions'));
+    await tester.pumpAndSettle();
+
+    // Tap to expand Recent Transactions list
+    await tester.tap(find.text('Recent Transactions'));
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsOneWidget);
@@ -461,8 +475,46 @@ void main() {
 
     // Net Worth should be 1000 (Wallet 500 excluded)
     // Current Savings should be 1000 (Wallet 500 excluded)
-    // Assets should be 1000 (Wallet 500 excluded from assets too)
+    // Assets pill has been removed
     // Search for widgets containing '1,000'
-    expect(find.textContaining('1,000'), findsNWidgets(3));
+    expect(find.textContaining('1,000'), findsNWidgets(2));
+  });
+
+  testWidgets('Tapping My Samriddhi opens privacy policy bottom sheet',
+      (tester) async {
+    tester.view.physicalSize = const Size(2400, 4800);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(createWidgetUnderTest(accounts: [
+      Account(
+          id: '1',
+          name: 'Savings',
+          balance: 1000,
+          type: AccountType.savings,
+          currency: 'USD'),
+    ]));
+    await tester.pumpAndSettle();
+
+    // Tap the My Samriddhi title
+    await tester.tap(find.text('My Samriddhi'));
+    await tester.pumpAndSettle();
+
+    // Verify privacy policy content appears
+    expect(find.text('Samriddhi Flow — Privacy Policy'), findsOneWidget);
+    expect(find.text('Local-First Storage'), findsOneWidget);
+    expect(find.text('User-Initiated Cloud Backup'), findsOneWidget);
+    expect(find.text('Optional Encryption'), findsOneWidget);
+    expect(find.text('No Tracking or Analytics'), findsOneWidget);
+    expect(find.text('Your Data, Your Control'), findsOneWidget);
+
+    // Close it
+    final closeBtn = find.text('Close');
+    await tester.ensureVisible(closeBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(closeBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Samriddhi Flow — Privacy Policy'), findsNothing);
   });
 }

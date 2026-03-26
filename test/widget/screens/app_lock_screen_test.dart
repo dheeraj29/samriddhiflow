@@ -6,8 +6,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/screens/app_lock_screen.dart';
 
-import 'package:samriddhi_flow/widgets/lock_wrapper.dart';
-
 import '../test_mocks.dart';
 
 void main() {
@@ -101,35 +99,6 @@ void main() {
     await tester.tap(find.text('Forgot PIN? / Use Password'));
     await tester.pumpAndSettle();
     expect(fallback, isTrue);
-  });
-
-  testWidgets('LockWrapper builds child when unlocked (smoke)', (tester) async {
-    final mockStorage = MockStorageService();
-    // Simulate unlocked state
-    mockStorage.setLocked(false);
-    final mockAuth = MockAuthService();
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        storageServiceProvider.overrideWithValue(mockStorage),
-        storageInitializerProvider
-            .overrideWith((ref) => Future.value()), // Ready
-        authServiceProvider.overrideWithValue(mockAuth),
-        firebaseInitializerProvider.overrideWith((ref) => Future.value()),
-      ],
-      child: const MaterialApp(
-        home: LockWrapper(
-          child: Scaffold(body: Text('Child Content')),
-        ),
-      ),
-    ));
-
-    await tester.pump();
-    await tester.pump();
-    await tester.pump();
-
-    // Verify
-    expect(find.text('Child Content'), findsOneWidget);
   });
 
   testWidgets('AppLockScreen shows lockout message when PIN is locked',

@@ -127,6 +127,15 @@ void main() {
     verifyNever(() => mockUser.reload());
   });
 
+  test('reloadUser skips when logout was already requested', () async {
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockRef.read(logoutRequestedProvider)).thenReturn(true);
+
+    await authService.reloadUser(mockRef);
+
+    verifyNever(() => mockUser.reload());
+  });
+
   testWidgets('signInWithGoogle returns error if firebase auth is null',
       (WidgetTester tester) async {
     final authServiceNull = AuthService(null, mockStorage);
@@ -188,6 +197,15 @@ void main() {
 
     await authService.signOut(mockRef);
     verify(() => mockStorage.setAuthFlag(false)).called(1);
+  });
+
+  test('signOut returns early when already in progress', () async {
+    authService.isSignOutInProgress = true;
+
+    await authService.signOut(mockRef);
+
+    verifyNever(() => mockStorage.setAuthFlag(any()));
+    verifyNever(() => mockAuth.signOut());
   });
 
   test('deleteAccount calls user delete', () async {

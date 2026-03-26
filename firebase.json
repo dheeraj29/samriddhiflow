@@ -9,7 +9,14 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "i18n": {
+      "root": "/i18n"
+    },
     "rewrites": [
+      {
+        "source": "/api/v1/geocheck-8f2n1.json",
+        "destination": "/country.json"
+      },
       {
         "source": "**",
         "destination": "/index.html"

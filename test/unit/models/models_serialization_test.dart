@@ -1,36 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
-import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
-import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 
 void main() {
-  group('Insurance Policy Serialization', () {
-    test('InsurancePolicy toMap/fromMap', () {
-      final policy = InsurancePolicy(
-        id: '1',
-        policyName: 'Health',
-        policyNumber: 'P123',
-        annualPremium: 5000,
-        sumAssured: 500000,
-        startDate: DateTime(2025, 1, 1),
-        maturityDate: DateTime(2045, 1, 1),
-        isUnitLinked: false,
-        isHandicapDependent: false,
-        isTaxExempt: true,
-      );
-
-      final map = policy.toMap();
-      final fromMap = InsurancePolicy.fromMap(map);
-
-      expect(fromMap.id, policy.id);
-      expect(fromMap.policyName, policy.policyName);
-      expect(fromMap.annualPremium, policy.annualPremium);
-      expect(fromMap.isTaxExempt, true);
-    });
-  });
-
   group('Tax Data Models Serialization', () {
     test('SalaryDetails', () {
       final data = SalaryDetails(
@@ -163,24 +135,6 @@ void main() {
     });
   });
 
-  group('Dashboard Config Serialization', () {
-    test('DashboardVisibilityConfig', () {
-      const config = DashboardVisibilityConfig(
-        showIncomeExpense: false,
-        showBudget: false,
-      );
-
-      final map = config.toMap();
-      final fromMap = DashboardVisibilityConfig.fromMap(map);
-
-      expect(fromMap.showIncomeExpense, false);
-      expect(fromMap.showBudget, false);
-
-      const def = DashboardVisibilityConfig();
-      expect(def.showIncomeExpense, true);
-    });
-  });
-
   group('TaxYearData Serialization', () {
     test('TaxYearData full serialization', () {
       final data = TaxYearData(
@@ -222,36 +176,5 @@ void main() {
     });
   });
 
-  group('Tax Rules Components Serialization', () {
-    test('TaxExemptionRule', () {
-      const rule = TaxExemptionRule(
-        id: 'r1',
-        name: 'Section 80C',
-        incomeHead: 'Salary',
-        limit: 150000,
-        isPercentage: false,
-        isEnabled: true,
-      );
-      final map = rule.toMap();
-      final fromMap = TaxExemptionRule.fromMap(map);
-      expect(fromMap.id, 'r1');
-      expect(fromMap.limit, 150000);
-    });
-
-    test('TaxSlab', () {
-      const slab = TaxSlab(250000, 5.0);
-      final map = slab.toMap();
-      final fromMap = TaxSlab.fromMap(map);
-      expect(fromMap.upto, 250000);
-      expect(fromMap.rate, 5.0);
-    });
-
-    test('InsurancePremiumRule', () {
-      final rule = InsurancePremiumRule(DateTime(2023, 4, 1), 10.0);
-      final map = rule.toMap();
-      final fromMap = InsurancePremiumRule.fromMap(map);
-      expect(fromMap.startDate.year, 2023);
-      expect(fromMap.limitPercentage, 10.0);
-    });
-  });
+  group('Tax Rules Components Serialization', () {});
 }

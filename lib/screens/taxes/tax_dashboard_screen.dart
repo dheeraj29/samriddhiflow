@@ -661,7 +661,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Color _getReminderCardColor(bool isOverdue, bool isNear) {
-    if (isOverdue) return Colors.red.shade50; // coverage:ignore-line
+    if (isOverdue) return Colors.red.shade50;
     if (isNear) return Colors.orange.shade50;
     return Colors.blue.shade50; // coverage:ignore-line
   }
@@ -669,7 +669,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   ShapeBorder _getReminderCardShape(bool isOverdue, bool isNear) {
     final Color borderColor;
     if (isOverdue) {
-      borderColor = Colors.red.shade200; // coverage:ignore-line
+      borderColor = Colors.red.shade200;
     } else if (isNear) {
       borderColor = Colors.orange.shade200;
     } else {
@@ -751,7 +751,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     }
     final String text;
     if (isOverdue) {
-      text = '${daysLeft.abs()}d Late'; // coverage:ignore-line
+      text = '${daysLeft.abs()}d Late';
     } else if (daysLeft == 0) {
       text = 'Due Today';
     } else {

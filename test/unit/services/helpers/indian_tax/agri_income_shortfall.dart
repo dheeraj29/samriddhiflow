@@ -6,7 +6,7 @@ import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:clock/clock.dart';
 
-void main() {
+void registerAgriIncomeShortfallTests() {
   test('Advance Tax Shortfall for late-year Agricultural Income', () {
     final rules = TaxRules(
       slabs: const [TaxSlab(400000, 0), TaxSlab(double.infinity, 30.0)],

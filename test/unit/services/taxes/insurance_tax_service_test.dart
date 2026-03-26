@@ -1,166 +1,217 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/services/taxes/insurance_tax_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
+InsurancePolicy _policy({
+  required String id,
+  required double premium,
+  required double sumAssured,
+  required DateTime start,
+  DateTime? maturity,
+  bool isUlip = false,
+  bool? isTaxExempt,
+  bool installmentEnabled = false,
+  DateTime? installmentStartDate,
+  Map<int, bool> incomeAddedByYear = const {},
+}) {
+  return InsurancePolicy(
+    id: id,
+    policyName: id,
+    policyNumber: id,
+    annualPremium: premium,
+    sumAssured: sumAssured,
+    startDate: start,
+    maturityDate: maturity ?? start.add(const Duration(days: 365)),
+    isUnitLinked: isUlip,
+    isTaxExempt: isTaxExempt,
+    isInstallmentEnabled: installmentEnabled,
+    installmentStartDate: installmentStartDate,
+    isIncomeAddedByYear: incomeAddedByYear,
+  );
+}
+
+TaxRules _rules({
+  required List<InsurancePremiumRule> premiumRules,
+  DateTime? ulipEffective,
+  DateTime? nonUlipEffective,
+  double ulipLimit = 250000,
+  double nonUlipLimit = 500000,
+}) {
+  return TaxRules(
+    insurancePremiumRules: premiumRules,
+    dateEffectiveULIP: ulipEffective ?? DateTime(2021, 2, 1),
+    dateEffectiveNonULIP: nonUlipEffective ?? DateTime(2023, 4, 1),
+    limitInsuranceULIP: ulipLimit,
+    limitInsuranceNonULIP: nonUlipLimit,
+  );
+}
+
 void main() {
-  late InsuranceTaxService service;
   late MockTaxConfigService mockConfig;
+  late InsuranceTaxService service;
 
   setUp(() {
     mockConfig = MockTaxConfigService();
     service = InsuranceTaxService(mockConfig);
-
-    // Default rules
-    final rules = TaxRules();
-    when(() => mockConfig.rules).thenReturn(rules);
+    when(() => mockConfig.rules).thenReturn(_rules(premiumRules: []));
   });
 
   group('InsuranceTaxService - optimizeMaturityTax', () {
+    test('bypasses aggregate limit for non-ULIP policies before effective date',
+        () {
+      final rules = _rules(
+        premiumRules: [InsurancePremiumRule(DateTime(2012, 4, 1), 10.0)],
+        nonUlipLimit: 100000,
+      );
+      when(() => mockConfig.rules).thenReturn(rules);
+
+      final result = service.optimizeMaturityTax([
+        _policy(
+          id: 'legacy',
+          premium: 400000,
+          sumAssured: 5000000,
+          start: DateTime(2020, 1, 1),
+        ),
+      ]);
+
+      expect(result.single.isTaxExempt, isTrue);
+    });
+
     test('marks policy as taxable if premium exceeds 10% for post-2012 policy',
         () {
-      final policy = InsurancePolicy.create(
-        name: 'Taxable Policy',
-        number: '123',
-        premium: 15000,
-        sumAssured: 100000, // 15% > 10%
-        start: DateTime(2015, 4, 1),
-        maturity: DateTime(2025, 4, 1),
-      );
+      when(() => mockConfig.rules).thenReturn(_rules(premiumRules: [
+        InsurancePremiumRule(DateTime(2012, 4, 1), 10.0),
+      ]));
 
-      final results = service.optimizeMaturityTax([policy]);
-      expect(results.first.isTaxExempt, false);
+      final result = service.optimizeMaturityTax([
+        _policy(
+          id: 'high-premium',
+          premium: 150000,
+          sumAssured: 1000000,
+          start: DateTime(2015, 1, 1),
+        ),
+      ]);
+
+      expect(result.single.isTaxExempt, isFalse);
     });
 
     test('marks policy as exempt if premium is within 10% for post-2012 policy',
         () {
-      final policy = InsurancePolicy.create(
-        name: 'Exempt Policy',
-        number: '123',
-        premium: 8000,
-        sumAssured: 100000, // 8% < 10%
-        start: DateTime(2015, 4, 1),
-        maturity: DateTime(2025, 4, 1),
-      );
+      when(() => mockConfig.rules).thenReturn(_rules(premiumRules: [
+        InsurancePremiumRule(DateTime(2012, 4, 1), 10.0),
+      ]));
 
-      final results = service.optimizeMaturityTax([policy]);
-      expect(results.first.isTaxExempt, true);
+      final result = service.optimizeMaturityTax([
+        _policy(
+          id: 'exempt-premium',
+          premium: 8000,
+          sumAssured: 100000,
+          start: DateTime(2015, 4, 1),
+          maturity: DateTime(2025, 4, 1),
+        ),
+      ]);
+
+      expect(result.single.isTaxExempt, isTrue);
     });
 
-    test('Aggregate Limit Rule - ULIPs over 2.5L premium after 2021', () {
-      final policy1 = InsurancePolicy.create(
-        name: 'ULIP 1',
-        number: 'U1',
-        premium: 150000,
-        sumAssured: 2000000,
-        start: DateTime(2022, 4, 1),
-        maturity: DateTime(2032, 4, 1),
-        isUlip: true,
-      );
-      final policy2 = InsurancePolicy.create(
-        name: 'ULIP 2',
-        number: 'U2',
-        premium: 150000,
-        sumAssured: 2000000,
-        start: DateTime(2022, 4, 1),
-        maturity: DateTime(2032, 4, 1),
-        isUlip: true,
-      );
+    test('applies ULIP aggregate limit after effective date', () {
+      when(() => mockConfig.rules).thenReturn(_rules(
+        premiumRules: [InsurancePremiumRule(DateTime(2012, 4, 1), 10.0)],
+        ulipEffective: DateTime(2021, 2, 1),
+        ulipLimit: 50000,
+      ));
 
-      // Total 3L > 2.5L limit
-      final results = service.optimizeMaturityTax([policy1, policy2]);
+      final result = service.optimizeMaturityTax([
+        _policy(
+          id: 'ulip-1',
+          premium: 30000,
+          sumAssured: 1000000,
+          start: DateTime(2024, 1, 1),
+          isUlip: true,
+        ),
+        _policy(
+          id: 'ulip-2',
+          premium: 30000,
+          sumAssured: 900000,
+          start: DateTime(2024, 2, 1),
+          isUlip: true,
+        ),
+      ]);
 
-      // One should be exempt, one taxable (order depends on optimization which sorts by sumAssured)
-      // Since both have same sumAssured, it depends on list order.
-      final exemptCount = results.where((p) => p.isTaxExempt == true).length;
-      final taxableCount = results.where((p) => p.isTaxExempt == false).length;
-
-      expect(exemptCount, 1);
-      expect(taxableCount, 1);
+      expect(result[0].isTaxExempt, isTrue);
+      expect(result[1].isTaxExempt, isFalse);
     });
 
-    test('Aggregate Limit Rule - Non-ULIPs over 5L premium after 2023', () {
-      final policy1 = InsurancePolicy.create(
-        name: 'Non-ULIP 1',
-        number: 'N1',
-        premium: 300000,
-        sumAssured: 4000000,
-        start: DateTime(2024, 4, 1),
-        maturity: DateTime(2034, 4, 1),
-        isUlip: false,
-      );
-      final policy2 = InsurancePolicy.create(
-        name: 'Non-ULIP 2',
-        number: 'N2',
-        premium: 300000,
-        sumAssured: 4000000,
-        start: DateTime(2024, 4, 1),
-        maturity: DateTime(2034, 4, 1),
-        isUlip: false,
-      );
+    test('applies non-ULIP aggregate limit after effective date', () {
+      final result = service.optimizeMaturityTax([
+        _policy(
+          id: 'non-ulip-1',
+          premium: 300000,
+          sumAssured: 4000000,
+          start: DateTime(2024, 4, 1),
+        ),
+        _policy(
+          id: 'non-ulip-2',
+          premium: 300000,
+          sumAssured: 4000000,
+          start: DateTime(2024, 4, 1),
+        ),
+      ]);
 
-      // Total 6L > 5L limit
-      final results = service.optimizeMaturityTax([policy1, policy2]);
-
-      expect(results.where((p) => p.isTaxExempt == true).length, 1);
-      expect(results.where((p) => p.isTaxExempt == true).length, 1);
-      expect(results.where((p) => p.isTaxExempt == false).length, 1);
+      expect(result.where((policy) => policy.isTaxExempt == true).length, 1);
+      expect(result.where((policy) => policy.isTaxExempt == false).length, 1);
     });
   });
 
   group('InsuranceTaxService - calculateTaxableIncomeSplit', () {
-    test('Standard Policy - Single Payout', () {
-      final policy = InsurancePolicy.create(
-        name: 'Standard',
-        number: '1',
+    test('handles lump sum and installments', () {
+      final lumpSum = _policy(
+        id: 'lump',
         premium: 10000,
-        sumAssured: 150000,
+        sumAssured: 100000,
         start: DateTime(2020, 1, 1),
-        maturity: DateTime(2030, 1, 1), // 10 years
+        maturity: DateTime(2025, 1, 1),
+        isTaxExempt: false,
+      );
+      final installment = _policy(
+        id: 'installment',
+        premium: 10000,
+        sumAssured: 100000,
+        start: DateTime(2020, 1, 1),
+        maturity: DateTime(2025, 1, 1),
+        isTaxExempt: false,
+        installmentEnabled: true,
+        installmentStartDate: DateTime(2023, 1, 1),
       );
 
-      final split = service.calculateTaxableIncomeSplit(policy);
+      final lumpSplit = service.calculateTaxableIncomeSplit(lumpSum);
+      final installmentSplit = service.calculateTaxableIncomeSplit(installment);
 
-      expect(split['saleConsideration'], 150000);
-      expect(split['costOfAcquisition'], 100000);
-      expect(split['taxableGain'], 50000);
-      expect(split['totalGain'], 50000);
+      expect(lumpSplit['saleConsideration'], 100000);
+      expect(lumpSplit['costOfAcquisition'], 50000);
+      expect(lumpSplit['taxableGain'], 50000);
+      expect(lumpSplit['totalGain'], 50000);
+
+      expect(installmentSplit['saleConsideration'], 20000);
+      expect(installmentSplit['costOfAcquisition'], 10000);
+      expect(installmentSplit['taxableGain'], 10000);
     });
 
-    test('Installment Policy - Split Gain', () {
-      final policy = InsurancePolicy.create(
-        name: 'Installment',
-        number: '2',
-        premium: 10000,
-        sumAssured: 150000,
-        start: DateTime(2020, 1, 1),
-        maturity: DateTime(2030, 1, 1), // 10 years
-        isInstallmentEnabled: true,
-      );
-
-      final split = service.calculateTaxableIncomeSplit(policy);
-
-      expect(split['saleConsideration'], 15000);
-      expect(split['costOfAcquisition'], 10000);
-      expect(split['taxableGain'], 5000);
-      expect(split['totalGain'], 50000);
-    });
-
-    test('Negative Gain (Loss) - Clamp to 0', () {
-      final policy = InsurancePolicy.create(
-        name: 'Loss Policy',
-        number: '3',
+    test('clamps negative gains to zero', () {
+      final split = service.calculateTaxableIncomeSplit(_policy(
+        id: 'loss-policy',
         premium: 20000,
         sumAssured: 150000,
         start: DateTime(2020, 1, 1),
-        maturity: DateTime(2030, 1, 1), // 10 years, 200k premium
-      );
-
-      final split = service.calculateTaxableIncomeSplit(policy);
+        maturity: DateTime(2030, 1, 1),
+        isTaxExempt: false,
+      ));
 
       expect(split['saleConsideration'], 150000);
       expect(split['costOfAcquisition'], 150000);
@@ -169,71 +220,141 @@ void main() {
     });
   });
 
-  group('InsuranceTaxService - isApplicableForYear', () {
-    test('Standard Policy maturing in FY', () {
-      final policy = InsurancePolicy.create(
-        name: 'Maturity',
-        number: '1',
+  group('InsuranceTaxService - year applicability', () {
+    test('matches a standard policy maturing in the target year', () {
+      final policy = _policy(
+        id: 'maturity',
         premium: 10000,
         sumAssured: 150000,
         start: DateTime(2020, 1, 1),
         maturity: DateTime(2025, 6, 1),
       );
 
-      expect(service.isApplicableForYear(policy, 2025), true);
-      expect(service.isApplicableForYear(policy, 2024), false);
+      expect(service.isApplicableForYear(policy, 2025), isTrue);
+      expect(service.isApplicableForYear(policy, 2024), isFalse);
+      expect(service.getEventDateForYear(policy, 2025), DateTime(2025, 6, 1));
     });
 
-    test('Installment Policy with payout in FY', () {
-      final policy = InsurancePolicy.create(
-        name: 'Installment',
-        number: '2',
+    test('prefers installment events within the target year', () {
+      final policy = _policy(
+        id: 'event-policy',
+        premium: 10000,
+        sumAssured: 100000,
+        start: DateTime(2020, 1, 1),
+        maturity: DateTime(2027, 3, 31),
+        isTaxExempt: false,
+        installmentEnabled: true,
+        installmentStartDate: DateTime(2025, 5, 1),
+      );
+
+      expect(service.isApplicableForYear(policy, 2025), isTrue);
+      expect(service.getEventDateForYear(policy, 2025), DateTime(2025, 5, 1));
+      expect(service.getEventDateForYear(policy, 2024), isNull);
+    });
+
+    test('returns null for installment years outside the payout window', () {
+      final policy = _policy(
+        id: 'out-of-range',
         premium: 10000,
         sumAssured: 150000,
         start: DateTime(2020, 4, 1),
         maturity: DateTime(2030, 4, 1),
-        isInstallmentEnabled: true,
+        installmentEnabled: true,
         installmentStartDate: DateTime(2020, 4, 1),
       );
 
-      // FY 2031-32 is after maturity
-      expect(service.isApplicableForYear(policy, 2031), false);
+      expect(service.isApplicableForYear(policy, 2031), isFalse);
+      expect(service.getEventDateForYear(policy, 2018), isNull);
     });
   });
 
-  group('InsuranceTaxService - getEventDateForYear', () {
-    test('Standard Policy - returns maturity date', () {
-      final policy = InsurancePolicy.create(
-        name: 'Maturity',
-        number: '1',
+  group('InsuranceTaxService - summary and entries', () {
+    test('aggregates current and future gains in the insurance summary', () {
+      final currentYearPolicy = _policy(
+        id: 'current',
         premium: 10000,
-        sumAssured: 150000,
+        sumAssured: 100000,
         start: DateTime(2020, 1, 1),
         maturity: DateTime(2025, 6, 1),
+        isTaxExempt: false,
+      );
+      final futureInstallmentPolicy = _policy(
+        id: 'future-ulip',
+        premium: 10000,
+        sumAssured: 120000,
+        start: DateTime(2022, 4, 1),
+        maturity: DateTime(2028, 4, 1),
+        isUlip: true,
+        isTaxExempt: false,
+        installmentEnabled: true,
+        installmentStartDate: DateTime(2026, 4, 1),
+      );
+      final pendingPolicy = _policy(
+        id: 'pending',
+        premium: 5000,
+        sumAssured: 50000,
+        start: DateTime(2024, 1, 1),
       );
 
-      final date = service.getEventDateForYear(policy, 2025);
-      expect(date, DateTime(2025, 6, 1));
+      final summary = service.calculateInsuranceSummaryData(
+        [currentYearPolicy, futureInstallmentPolicy, pendingPolicy],
+        2025,
+      );
+
+      expect(summary.totalPremium, 25000);
+      expect(summary.currentTaxableGain, 50000);
+      expect(summary.futureTaxableGain, closeTo(30000, 0.001));
+      expect(summary.taxableUlipTotal, 60000);
+      expect(summary.taxableNonUlipTotal, 50000);
+      expect(summary.hasPendingCalculations, isTrue);
     });
 
-    test('Installment Policy - returns current year installment date', () {
-      final policy = InsurancePolicy.create(
-        name: 'Installment',
-        number: '2',
+    test('returns correct taxable income entry types and null when exempt', () {
+      final ulipPolicy = _policy(
+        id: 'ulip',
         premium: 10000,
-        sumAssured: 150000,
-        start: DateTime(2020, 4, 1),
-        maturity: DateTime(2030, 4, 1),
-        isInstallmentEnabled: true,
-        installmentStartDate: DateTime(2020, 4, 1),
+        sumAssured: 80000,
+        start: DateTime(2022, 4, 1),
+        maturity: DateTime(2028, 4, 1),
+        isUlip: true,
+        isTaxExempt: false,
+        installmentEnabled: true,
+        installmentStartDate: DateTime(2025, 5, 1),
+      );
+      final nonUlipPolicy = _policy(
+        id: 'non-ulip',
+        premium: 10000,
+        sumAssured: 100000,
+        start: DateTime(2020, 1, 1),
+        maturity: DateTime(2025, 6, 1),
+        isTaxExempt: false,
+      );
+      final exemptPolicy = _policy(
+        id: 'exempt',
+        premium: 10000,
+        sumAssured: 100000,
+        start: DateTime(2020, 1, 1),
+        maturity: DateTime(2025, 6, 1),
+        isTaxExempt: true,
       );
 
-      // April 2025 is in FY 2025-26
-      expect(service.getEventDateForYear(policy, 2025), DateTime(2025, 4, 1));
-      // April 2026 is in FY 2026-27
-      expect(service.getEventDateForYear(policy, 2026), DateTime(2026, 4, 1));
-      // Out of range
-      expect(service.getEventDateForYear(policy, 2018), null);
+      final ulipEntry = service.getTaxableIncomeEntry(ulipPolicy, 2025);
+      final nonUlipEntry = service.getTaxableIncomeEntry(nonUlipPolicy, 2025);
+
+      expect(ulipEntry, isA<CapitalGainEntry>());
+      expect(ulipEntry.description, contains('Insurance Payout: ulip'));
+      expect(nonUlipEntry, isA<OtherIncome>());
+      expect(nonUlipEntry.name, contains('Insurance Maturity: non-ulip'));
+      expect(service.getTaxableIncomeEntry(exemptPolicy, 2025), isNull);
+      expect(
+        service.hasUnaddedTaxableInsurance(
+          [
+            nonUlipPolicy.copyWith(isIncomeAddedByYear: {2025: false}),
+          ],
+          2025,
+        ),
+        isTrue,
+      );
     });
   });
 }

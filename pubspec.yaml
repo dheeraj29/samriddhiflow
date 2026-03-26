@@ -1,7 +1,7 @@
 name: samriddhi_flow
 description: Samriddhi Flow - Premium personal finance and smart budgeting PWA.
 publish_to: 'none'
-version: 3.13.0
+version: 3.14.0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -40,6 +40,7 @@ dependencies:
   
   
   # UI/Charts
+  http: ^1.6.0
   fl_chart: ^1.1.1
   hive_ce: ^2.17.0
   hive_ce_flutter: ^2.3.4
@@ -56,8 +57,6 @@ dev_dependencies:
   build_runner: ^2.4.8
   hive_ce_generator: ^1.10.0
 
-  http: ^1.6.0
-  shared_preferences: ^2.2.0
   mocktail: ^1.0.4
   mockito: ^5.4.4
   path: ^1.9.1

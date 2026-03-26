@@ -240,7 +240,7 @@ final authStreamProvider = StreamProvider<User?>((ref) {
     },
     // If we are still initializing (loading), return an empty stream
     // to prevent the UI from prematurely deciding there is no user.
-    loading: () => const Stream.empty(),
+    loading: () => const Stream.empty(), // coverage:ignore-line
     error: (e, __) => const Stream.empty(), // coverage:ignore-line
   );
 });

@@ -8,6 +8,7 @@ import 'package:samriddhi_flow/services/taxes/tax_data_fetcher.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/services/taxes/insurance_tax_service.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
+import 'helpers/tax_data_fetcher/profile_isolation.dart' as profile_isolation;
 
 class MockStorageService extends Mock implements StorageService {}
 
@@ -411,4 +412,6 @@ void main() {
           ['synced-1', 'new-1', 'null-1'], true)).called(1);
     });
   });
+
+  profile_isolation.registerTaxProfileIsolationTests();
 }

@@ -184,29 +184,22 @@ class InsuranceTaxService {
     final fyEnd = DateTime(selectedYear + 1, 3, 31, 23, 59, 59);
 
     for (var p in all.where((p) => p.isTaxExempt == false)) {
-      // coverage:ignore-start
       final split = calculateTaxableIncomeSplit(p);
       final totalGain = split['totalGain'] ?? 0;
       final annualGain = split['taxableGain'] ?? 0;
-      // coverage:ignore-end
 
       if (p.isUnitLinked) {
-        // coverage:ignore-line
-        taxableUlipTotal += totalGain; // coverage:ignore-line
+        taxableUlipTotal += totalGain;
       } else {
-        taxableNonUlipTotal += totalGain; // coverage:ignore-line
+        taxableNonUlipTotal += totalGain;
       }
 
       if (isApplicableForYear(p, selectedYear)) {
-        // coverage:ignore-line
-        currentTaxableGain += p.isInstallmentEnabled
-            ? annualGain
-            : totalGain; // coverage:ignore-line
+        currentTaxableGain += p.isInstallmentEnabled ? annualGain : totalGain;
       }
 
-      futureTaxableGain += // coverage:ignore-line
-          _calculateFutureGain(
-              p, totalGain, annualGain, fyEnd); // coverage:ignore-line
+      futureTaxableGain +=
+          _calculateFutureGain(p, totalGain, annualGain, fyEnd);
     }
 
     return InsuranceSummaryData(
@@ -219,29 +212,21 @@ class InsuranceTaxService {
     );
   }
 
-  double _calculateFutureGain(
-      InsurancePolicy p,
-      double totalGain, // coverage:ignore-line
-      double annualGain,
-      DateTime fyEndBoundary) {
+  double _calculateFutureGain(InsurancePolicy p, double totalGain,
+      double annualGain, DateTime fyEndBoundary) {
     if (!p.maturityDate.isAfter(fyEndBoundary)) {
-      // coverage:ignore-line
       return 0;
     }
 
     if (p.isInstallmentEnabled && p.installmentStartDate != null) {
-      // coverage:ignore-line
       double future = 0;
-      // coverage:ignore-start
       DateTime current = p.installmentStartDate!;
       while (current.isBefore(p.maturityDate) ||
           current.isAtSameMomentAs(p.maturityDate)) {
         if (current.isAfter(fyEndBoundary)) {
           future += annualGain;
-          // coverage:ignore-end
         }
-        current = DateTime(current.year + 1, current.month,
-            current.day); // coverage:ignore-line
+        current = DateTime(current.year + 1, current.month, current.day);
       }
       return future;
     }
@@ -264,50 +249,41 @@ class InsuranceTaxService {
   /// Returns the taxable income entry (either CapitalGainEntry or OtherIncome) for a policy in a given FY.
   /// Returns null if not applicable or exempt.
   dynamic getTaxableIncomeEntry(InsurancePolicy p, int fyStartYear) {
-    // coverage:ignore-line
     if (p.isTaxExempt != false || !isApplicableForYear(p, fyStartYear)) {
-      // coverage:ignore-line
       return null;
     }
 
-    final eventDate = getEventDateForYear(p, fyStartYear) ??
-        DateTime(fyStartYear, 4, 1); // coverage:ignore-line
-    final split = calculateTaxableIncomeSplit(p); // coverage:ignore-line
+    final eventDate =
+        getEventDateForYear(p, fyStartYear) ?? DateTime(fyStartYear, 4, 1);
+    final split = calculateTaxableIncomeSplit(p);
 
-    // coverage:ignore-start
     final isMaturityYear = (p.maturityDate.year == eventDate.year &&
         p.maturityDate.month == eventDate.month &&
         p.maturityDate.day == eventDate.day);
-    // coverage:ignore-end
     final descriptionPrefix =
         isMaturityYear ? 'Insurance Maturity' : 'Insurance Payout';
-    final description =
-        '$descriptionPrefix: ${p.policyName}'; // coverage:ignore-line
+    final description = '$descriptionPrefix: ${p.policyName}';
 
     if (p.isUnitLinked) {
-      // coverage:ignore-line
       return CapitalGainEntry(
-        // coverage:ignore-line
         description: description,
         matchAssetType: AssetType.other,
         isLTCG: true,
-        saleAmount: p.sumAssured, // coverage:ignore-line
-        costOfAcquisition:
-            split['costOfAcquisition'] ?? 0, // coverage:ignore-line
+        saleAmount: p.sumAssured,
+        costOfAcquisition: split['costOfAcquisition'] ?? 0,
         gainDate: eventDate,
         isManualEntry: false,
-        lastUpdated: DateTime.now(), // coverage:ignore-line
+        lastUpdated: DateTime.now(),
         transactionDate: eventDate,
       );
     } else {
       return OtherIncome(
-        // coverage:ignore-line
         name: description,
-        amount: split['taxableGain'] ?? 0, // coverage:ignore-line
+        amount: split['taxableGain'] ?? 0,
         type: 'Other',
         subtype: 'others',
         isManualEntry: false,
-        lastUpdated: DateTime.now(), // coverage:ignore-line
+        lastUpdated: DateTime.now(),
         transactionDate: eventDate,
       );
     }

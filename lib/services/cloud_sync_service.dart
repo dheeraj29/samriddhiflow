@@ -42,7 +42,17 @@ class CloudSyncService {
     return null;
   }
 
+  void _checkRegionLock() {
+    final country = _storageService.getDetectedCountry();
+    if (country != null && country.toUpperCase() != 'IN') {
+      // coverage:ignore-line
+      throw Exception(// coverage:ignore-line
+          'Cloud Synchronization is only available for users in India.');
+    }
+  }
+
   Future<void> syncToCloud({String? passcode, String? appPin}) async {
+    _checkRegionLock();
     final auth = _auth;
     if (auth == null) {
       throw Exception(errFirebaseNotInit); // coverage:ignore-line
@@ -165,6 +175,7 @@ class CloudSyncService {
   }
 
   Future<void> restoreFromCloud({String? passcode}) async {
+    _checkRegionLock();
     final rawData = await _validateAuthAndFetchData();
     if (rawData == null) {
       throw Exception("No cloud data found");

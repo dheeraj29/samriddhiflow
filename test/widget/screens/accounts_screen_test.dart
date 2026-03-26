@@ -117,6 +117,19 @@ void main() {
     expect(find.text('Add New Account'), findsOneWidget);
   });
 
+  testWidgets('AccountsScreen toggles compact and extended number modes',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Switch to Extended Numbers'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Switch to Extended Numbers'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Switch to Compact Numbers'), findsOneWidget);
+  });
+
   testWidgets('Expandable sections show items when expanded', (tester) async {
     await tester.pumpWidget(createTestWidget(tester));
     await tester.pumpAndSettle();
@@ -134,6 +147,25 @@ void main() {
     await tester.tap(find.text('Credit Cards'));
     await tester.pumpAndSettle();
     expect(find.text('Credit Card'), findsOneWidget);
+  });
+
+  testWidgets('Expanded empty section shows helper text', (tester) async {
+    await tester.pumpWidget(createTestWidget(tester, accounts: [
+      Account(
+        id: 'acc1',
+        name: 'Savings',
+        type: AccountType.savings,
+        balance: 1000,
+        currency: 'en_IN',
+        profileId: 'default',
+      ),
+    ]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Wallets'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No accounts in this section.'), findsOneWidget);
   });
 
   testWidgets('Account pinning works', (tester) async {

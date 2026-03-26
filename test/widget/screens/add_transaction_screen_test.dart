@@ -331,5 +331,88 @@ void main() {
 
       expect(find.text('Frequency'), findsOneWidget);
     });
+
+    testWidgets('supports category and recurring frequency dropdown flows',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final accounts = [
+        Account(
+          id: 'acc1',
+          name: 'Cash',
+          type: AccountType.wallet,
+          balance: 1000,
+          profileId: 'default',
+        ),
+      ];
+      final categories = [
+        Category(
+          id: 'exp-1',
+          name: 'Food',
+          usage: CategoryUsage.expense,
+          profileId: 'default',
+        ),
+        Category(
+          id: 'inc-1',
+          name: 'Salary',
+          usage: CategoryUsage.income,
+          profileId: 'default',
+        ),
+      ];
+
+      when(() => mockStorageService.getAccounts()).thenReturn(accounts);
+      when(() => mockStorageService.getCategories()).thenReturn(categories);
+
+      await tester.pumpWidget(createWidgetUnderTest(
+        accounts: accounts,
+        categories: categories,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add Transaction'), findsOneWidget);
+
+      await tester.tap(find
+          .byKey(const ValueKey('category_dropdown_TransactionType.expense')));
+      await tester.pumpAndSettle();
+      expect(find.text('Food').last, findsOneWidget);
+      await tester.tap(find.text('Food').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Income'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find
+          .byKey(const ValueKey('category_dropdown_TransactionType.income')));
+      await tester.pumpAndSettle();
+      expect(find.text('Salary').last, findsOneWidget);
+      await tester.tap(find.text('Salary').last);
+      await tester.pumpAndSettle();
+
+      final recurringSwitch = find.text('Make Recurring');
+      await tester.dragUntilVisible(
+        recurringSwitch,
+        find.byType(ListView),
+        const Offset(0, -500),
+      );
+      await tester.tap(recurringSwitch);
+      await tester.pumpAndSettle();
+
+      expect(find.text('MONTHLY'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('MONTHLY'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('MONTHLY').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('WEEKLY').last, findsOneWidget);
+      expect(find.text('DAILY').last, findsOneWidget);
+      await tester.tap(find.text('WEEKLY').last);
+      await tester.pumpAndSettle();
+    });
   });
 }

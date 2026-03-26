@@ -136,6 +136,8 @@ void main() {
     when(() => mockStorageService.getActiveProfileId()).thenReturn('default');
     when(() => mockStorageService.getAuthFlag()).thenReturn(true);
     when(() => mockStorageService.setAuthFlag(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.resetTxnsSinceBackup())
+        .thenAnswer((_) async {});
     when(() => mockStorageService.isAppLockEnabled()).thenReturn(false);
     when(() => mockStorageService.getAppPin()).thenReturn(null);
     when(() => mockStorageService.setLastLogin(any())).thenAnswer((_) async {});

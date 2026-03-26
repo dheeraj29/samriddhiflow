@@ -114,6 +114,7 @@ void setupStorageDefaults(MockStorageService mock) {
   when(() => mock.saveAccount(any())).thenAnswer((_) async {});
   when(() => mock.saveProfile(any())).thenAnswer((_) async {});
   when(() => mock.isBilledAmountPaid(any())).thenReturn(false);
+  when(() => mock.getDefaultCategoryNames()).thenReturn({'food', 'salary'});
 }
 
 // --- Notifier Mocks ---

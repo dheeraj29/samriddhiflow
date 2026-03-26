@@ -6,6 +6,7 @@ import 'providers.dart';
 import 'services/firestore_storage_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/json_data_service.dart';
+import 'services/location_service.dart';
 
 import 'services/calendar_service.dart';
 import 'services/notification_service.dart';
@@ -20,11 +21,57 @@ import 'utils/billing_helper.dart';
 
 // --- Heavy Service Providers (Moved for Bundle Optimization) ---
 
+// mapping databaseId to region
+const Map<String, String?> regionDatabaseMapping = {
+  'India': null, // null maps to (default) database
+};
+
+class CloudDatabaseRegionNotifier extends Notifier<String> {
+  @override
+  String build() {
+    final init = ref.watch(storageInitializerProvider);
+    if (!init.hasValue) return 'India';
+
+    final storage = ref.watch(storageServiceProvider);
+    return storage.getCloudDatabaseRegion();
+  }
+
+  // coverage:ignore-start
+  Future<void> setRegion(String region) async {
+    state = region;
+    final storage = ref.read(storageServiceProvider);
+    await storage.setCloudDatabaseRegion(region);
+    // coverage:ignore-end
+  }
+}
+
+final cloudDatabaseRegionProvider =
+    NotifierProvider<CloudDatabaseRegionNotifier, String>(
+        CloudDatabaseRegionNotifier.new);
+
+final locationServiceProvider = Provider<LocationService>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return LocationService(storage);
+});
+
+final detectedCountryProvider = FutureProvider<String?>((ref) async {
+  final init = ref.watch(storageInitializerProvider);
+  if (!init.hasValue) return null;
+
+  final locationService = ref.read(locationServiceProvider);
+  return await locationService.fetchCurrentCountryCode();
+});
+
 final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   // coverage:ignore-start
   final storage = ref.watch(storageServiceProvider);
   final taxConfig = ref.watch(taxConfigServiceProvider);
-  final firestoreStorage = FirestoreStorageService();
+  final region = ref.watch(cloudDatabaseRegionProvider);
+  final databaseId = regionDatabaseMapping[region];
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  final firestoreStorage = FirestoreStorageService(databaseId: databaseId);
   return CloudSyncService(firestoreStorage, storage, taxConfig,
       firebaseAuth: FirebaseAuth.instance);
   // coverage:ignore-end

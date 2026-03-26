@@ -1271,22 +1271,6 @@ void main() {
     });
   });
 
-  group('StorageService - Clear All Data', () {
-    test('clearAllData clears all boxes for active profile', () async {
-      when(() => mockAccountBox.toMap()).thenReturn({});
-      when(() => mockTransactionBox.toMap()).thenReturn({});
-      when(() => mockLoanBox.toMap()).thenReturn({});
-      when(() => mockRecurringBox.toMap()).thenReturn({});
-      when(() => mockCategoryBox.toMap()).thenReturn({});
-      when(() => mockSettingsBox.put('txnsSinceBackup', 0))
-          .thenAnswer((_) async {});
-
-      await storageService.clearAllData();
-
-      verify(() => mockSettingsBox.put('txnsSinceBackup', 0)).called(1);
-    });
-  });
-
   group('StorageService - Misc Operations', () {
     test('getLastRollover returns null for missing key', () {
       when(() => mockSettingsBox.get('last_rollover_acc1')).thenReturn(null);

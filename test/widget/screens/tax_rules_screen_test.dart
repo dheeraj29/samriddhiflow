@@ -74,7 +74,9 @@ void main() {
     await tester.tap(rebateSwitch);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.save));
+    await tester.tap(find.byWidgetPredicate((widget) {
+      return widget is Icon && widget.icon == Icons.save && widget.size == 24;
+    }));
     await tester.pumpAndSettle();
 
     verify(() => mockConfig.saveRulesForYear(2025, any())).called(1);
@@ -107,5 +109,52 @@ void main() {
     expect(find.textContaining('Values copied from previous year'),
         findsOneWidget);
     verify(() => mockConfig.getRulesForYear(2024)).called(1);
+  });
+
+  testWidgets('Year change warns about unsaved changes and can be cancelled',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(createTaxRulesScreen());
+    await tester.pumpAndSettle();
+
+    final jurisdictionDropdown = tester.widget<DropdownButton<String>>(
+        find.byType(DropdownButton<String>).first);
+    jurisdictionDropdown.onChanged?.call('Custom');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Country Name'), 'UAE');
+    await tester.pumpAndSettle();
+
+    clearInteractions(mockConfig);
+
+    final yearDropdownFinder = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byType(DropdownButton<int>),
+    );
+    final yearDropdown =
+        tester.widget<DropdownButton<int>>(yearDropdownFinder.first);
+    yearDropdown.onChanged?.call(2024);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unsaved Changes'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unsaved Changes'), findsNothing);
+    verifyNever(() => mockConfig.getRulesForYear(2024));
+  });
+
+  testWidgets('Selecting custom jurisdiction reveals country field',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(createTaxRulesScreen());
+    await tester.pumpAndSettle();
+
+    final jurisdictionDropdown = find.byType(DropdownButton<String>).first;
+    await tester.tap(jurisdictionDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom').last);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Country Name'), findsOneWidget);
   });
 }

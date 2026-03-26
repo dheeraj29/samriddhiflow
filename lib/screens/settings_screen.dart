@@ -123,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _buildCollapsibleSection(
             'Cloud & Sync',
-            _buildCloudSectionContent(context, user),
+            _buildCloudSectionContent(context, ref, user),
           ),
           _buildCollapsibleSection(
             'Data Management',
@@ -279,11 +279,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildCloudSectionContent(BuildContext context, dynamic user) {
+  Widget _buildCloudSectionContent(
+      BuildContext context, WidgetRef ref, dynamic user) {
+    final region = ref.watch(cloudDatabaseRegionProvider);
+    final countryResult = ref.watch(detectedCountryProvider);
+    final isRestricted = countryResult.asData?.value != null &&
+        ref
+            .read(locationServiceProvider)
+            .isCloudSyncRestricted(countryResult.asData!.value);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildCloudSection(context, user),
+        if (isRestricted)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cloud Synchronization is only available for users in India due to data residency compliance.',
+                    style: TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ListTile(
+          title: const Text('Server Region (Database)'),
+          subtitle: const Text('Country where your data is stored'),
+          leading: const Icon(Icons.public, color: Colors.blue),
+          trailing: Text(
+            '$region (${region == 'India' ? 'Asia-South1' : 'Default'})',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500),
+          ),
+        ),
+        const Divider(),
+        AbsorbPointer(
+          absorbing: isRestricted,
+          child: Opacity(
+            opacity: isRestricted ? 0.5 : 1.0,
+            child: _buildCloudSection(context, user),
+          ),
+        ),
       ],
     );
   }
@@ -1328,6 +1376,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(currencyProvider);
         ref.invalidate(categoriesProvider);
         ref.invalidate(dashboardConfigProvider);
+        ref.read(txnsSinceBackupProvider.notifier).reset();
 
         final summaryItems =
             stats.entries.map((e) => "${e.key}: ${e.value}").toList();
@@ -1486,6 +1535,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(currencyProvider);
         ref.invalidate(categoriesProvider);
         ref.invalidate(dashboardConfigProvider);
+        ref.read(txnsSinceBackupProvider.notifier).reset();
         // coverage:ignore-end
 
         ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line

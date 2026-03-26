@@ -77,12 +77,11 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         IconButton(
           icon: _compactView
               ? PureIcons.listExtended(size: 20)
-              : PureIcons.listCompact(size: 20), // coverage:ignore-line
+              : PureIcons.listCompact(size: 20),
           tooltip: _compactView
               ? 'Switch to Extended Numbers'
               : 'Switch to Compact Numbers',
-          onPressed: () => setState(
-              () => _compactView = !_compactView), // coverage:ignore-line
+          onPressed: () => setState(() => _compactView = !_compactView),
         ),
       ],
     );
@@ -159,9 +158,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           icon: Icons.account_balance_wallet,
           isExpanded: _isWalletExpanded,
           count: wallet.length,
-          onToggle: () => // coverage:ignore-line
-              setState(() => _isWalletExpanded =
-                  !_isWalletExpanded), // coverage:ignore-line
+          onToggle: () =>
+              setState(() => _isWalletExpanded = !_isWalletExpanded),
           items: wallet,
         ),
         const SizedBox(height: 24),
@@ -209,7 +207,6 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           ...items.map((acc) => _buildAccountItem(context, ref, acc)),
         if (isExpanded && items.isEmpty)
           const Padding(
-            // coverage:ignore-line
             padding: EdgeInsets.all(16.0),
             child: Text('No accounts in this section.',
                 style: TextStyle(color: Colors.grey)),
@@ -464,7 +461,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         ),
         const SizedBox(height: 4),
         Wrap(
-          spacing: 6,
+          spacing: 8,
           runSpacing: 4,
           children: [
             if (data.billed.abs() > 0.01)
@@ -571,22 +568,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
   Widget _buildMiniInfoChip(String label, double value, String currency,
       ThemeData theme, bool compact) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border:
-            Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        compact
-            ? '$label: ${CurrencyUtils.getSmartFormat(value, currency)}'
-            : '$label: ${CurrencyUtils.getFormatter(currency).format(value)}',
-        style: TextStyle(
-            fontSize: 9,
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold),
+    return Text(
+      compact
+          ? '$label: ${CurrencyUtils.getSmartFormat(value, currency)}'
+          : '$label: ${CurrencyUtils.getFormatter(currency).format(value)}',
+      style: TextStyle(
+        fontSize: 11,
+        color: theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w500,
       ),
     );
   }
