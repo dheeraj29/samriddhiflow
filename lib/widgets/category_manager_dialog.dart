@@ -6,6 +6,8 @@ import '../models/taxes/tax_data_models.dart';
 import '../providers.dart';
 import 'pure_icons.dart';
 
+enum CategoryFilter { all, customOnly }
+
 class CategoryManagerDialog extends StatefulWidget {
   const CategoryManagerDialog({super.key});
 
@@ -20,6 +22,7 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
   int _iconCode = 0xe5c7;
   String? _editingCategoryId;
   final ScrollController _iconScrollController = ScrollController();
+  CategoryFilter _categoryFilter = CategoryFilter.all;
 
   @override
   void dispose() {
@@ -65,10 +68,19 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
             allCategories.map((c) => c.iconCode).where((c) => c != 0).toSet();
         final currentIconOptions = {..._iconOptions, ...usedIcons}.toList();
 
-        final filteredCategories = allCategories.where((c) {
+        final defaultNames =
+            ref.read(storageServiceProvider).getDefaultCategoryNames();
+
+        var filteredCategories = allCategories.where((c) {
           if (_usage == CategoryUsage.both) return true;
           return c.usage == CategoryUsage.both || c.usage == _usage;
         }).toList();
+
+        if (_categoryFilter == CategoryFilter.customOnly) {
+          filteredCategories = filteredCategories
+              .where((c) => !defaultNames.contains(c.name.trim().toLowerCase()))
+              .toList();
+        }
 
         return AlertDialog(
           title: const Text('Manage Categories'),
@@ -85,6 +97,8 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
                 const Divider(),
                 const Text("Existing Categories",
                     style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildFilterChips(),
                 _buildCategoryList(ref, filteredCategories),
               ],
             ),
@@ -96,6 +110,28 @@ class _CategoryManagerDialogState extends State<CategoryManagerDialog> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return Row(
+      children: [
+        ChoiceChip(
+          label: const Text('All', style: TextStyle(fontSize: 12)),
+          selected: _categoryFilter == CategoryFilter.all,
+          onSelected: (_) =>
+              setState(() => _categoryFilter = CategoryFilter.all),
+          visualDensity: VisualDensity.compact,
+        ),
+        const SizedBox(width: 8),
+        ChoiceChip(
+          label: const Text('Custom Only', style: TextStyle(fontSize: 12)),
+          selected: _categoryFilter == CategoryFilter.customOnly,
+          onSelected: (_) =>
+              setState(() => _categoryFilter = CategoryFilter.customOnly),
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
     );
   }
 

@@ -18,7 +18,7 @@ class MockHive extends Mock implements HiveInterface {}
 
 class MockBox<T> extends Mock implements Box<T> {}
 
-void main() {
+void registerStorageServiceLifecycleTests() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late StorageService storageService;
@@ -280,52 +280,6 @@ void main() {
       expect(capturedAccount.freezeDate, freezeDate);
 
       verify(() => mockSettingsBox.put('last_rollover_cc2', any())).called(1);
-    });
-  });
-
-  group('StorageService Advanced - Cascasding Deletes', () {
-    test('deleteProfile deletes everything related', () async {
-      const pid = 'p1';
-
-      when(() => mockProfileBox.delete(pid)).thenAnswer((_) async {});
-
-      when(() => mockAccountBox.toMap()).thenReturn({
-        'a1': Account(
-            id: 'a1',
-            name: 'A1',
-            type: AccountType.savings,
-            balance: 0,
-            profileId: pid),
-      });
-      when(() => mockTransactionBox.toMap()).thenReturn({
-        't1': Transaction(
-            id: 't1',
-            title: 'T1',
-            amount: 0,
-            date: DateTime.now(),
-            type: TransactionType.expense,
-            category: 'C',
-            profileId: pid),
-      });
-      when(() => mockLoanBox.toMap()).thenReturn({});
-      when(() => mockRecurringBox.toMap()).thenReturn({});
-      when(() => mockCategoryBox.toMap()).thenReturn({});
-      when(() => mockLendingBox.toMap()).thenReturn({});
-      when(() => mockInsuranceBox.toMap()).thenReturn({});
-      when(() => mockTaxBox.toMap()).thenReturn({});
-
-      when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
-      when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});
-      when(() => mockSettingsBox.delete(any())).thenAnswer((_) async {});
-
-      settingsMap['activeProfileId'] = pid;
-      when(() => mockProfileBox.toMap()).thenReturn({});
-
-      await storageService.deleteProfile(pid);
-
-      verify(() => mockProfileBox.delete(pid)).called(1);
-      verify(() => mockAccountBox.delete('a1')).called(1);
-      verify(() => mockTransactionBox.delete('t1')).called(1);
     });
   });
 

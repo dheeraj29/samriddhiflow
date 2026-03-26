@@ -262,22 +262,10 @@ void main() {
 
       await tester.pump();
 
-      expect(
-        find.byWidgetPredicate((widget) =>
-            widget is Text &&
-            widget.data != null &&
-            widget.data!.contains('Billed:') &&
-            widget.data!.contains('700')),
-        findsOneWidget,
-      );
-      expect(
-        find.byWidgetPredicate((widget) =>
-            widget is Text &&
-            widget.data != null &&
-            widget.data!.contains('Unbilled:') &&
-            widget.data!.contains('500')),
-        findsOneWidget,
-      );
+      expect(find.text('Billed'), findsOneWidget);
+      expect(find.textContaining('700'), findsOneWidget);
+      expect(find.text('Unbilled'), findsOneWidget);
+      expect(find.textContaining('500'), findsOneWidget);
       expect(find.textContaining('Balance'), findsNothing);
     });
 

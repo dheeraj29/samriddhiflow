@@ -5,6 +5,10 @@ import 'cloud_storage_interface.dart';
 import 'firebase_web_safe.dart';
 
 class FirestoreStorageService implements CloudStorageInterface {
+  final String? databaseId;
+
+  FirestoreStorageService({this.databaseId});
+
   // Lazy access with Safety Check
   FirebaseFirestore get _firestore {
     try {
@@ -16,7 +20,8 @@ class FirestoreStorageService implements CloudStorageInterface {
       if (Firebase.apps.isEmpty) {
         throw Exception("Firestore accessed before Firebase Init (Offline?)");
       }
-      return FirebaseFirestore.instance;
+      return FirebaseFirestore.instanceFor(
+          app: Firebase.app(), databaseId: databaseId);
     } catch (e) {
       throw Exception("Firestore Access Failed (Safety): $e");
     }

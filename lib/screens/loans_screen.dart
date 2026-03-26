@@ -64,7 +64,7 @@ class LoansScreen extends ConsumerWidget {
                   title: Text(loan.name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                    '${loan.interestRate}% Int. • ${remainingMonths}m Left',
+                    '${loan.type.name.toUpperCase()} • ${loan.interestRate}% Int. • ${remainingMonths}m Left',
                   ),
                   trailing: SmartCurrencyText(
                     value: loan.remainingPrincipal,

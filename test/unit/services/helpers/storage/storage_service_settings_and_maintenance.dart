@@ -27,7 +27,7 @@ class ProfileFake extends Fake implements Profile {}
 
 class InsurancePolicyFake extends Fake implements InsurancePolicy {}
 
-void main() {
+void registerStorageServiceSettingsAndMaintenanceTests() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storageService;
   late MockHive mockHive;

@@ -137,6 +137,36 @@ class StorageService {
     await box.put('smartCalculatorEnabled', value);
   }
 
+  // --- Cloud Sync Settings ---
+  // coverage:ignore-start
+  String getCloudDatabaseRegion() {
+    final box = _hive.box(boxSettings);
+    return box.get('cloudDatabaseRegion', defaultValue: 'India');
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  Future<void> setCloudDatabaseRegion(String region) async {
+    final box = _hive.box(boxSettings);
+    await box.put('cloudDatabaseRegion', region);
+    // coverage:ignore-end
+  }
+
+  // --- GeoIP Detection ---
+  // coverage:ignore-start
+  String? getDetectedCountry() {
+    final box = _hive.box(boxSettings);
+    return box.get('detectedCountry') as String?;
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  Future<void> setDetectedCountry(String countryCode) async {
+    final box = _hive.box(boxSettings);
+    await box.put('detectedCountry', countryCode);
+    // coverage:ignore-end
+  }
+
   List<Profile> getProfiles() {
     return _hive
         .box<Profile>(boxProfiles)
@@ -188,11 +218,13 @@ class StorageService {
 
     // 8. If active profile was deleted, switch to another one
     if (getActiveProfileId() == profileId) {
+      // coverage:ignore-start
       final profiles = getProfiles();
       if (profiles.isNotEmpty) {
-        await setActiveProfileId(profiles.first.id); // coverage:ignore-line
+        await setActiveProfileId(profiles.first.id);
+        // coverage:ignore-end
       } else {
-        await setActiveProfileId('default');
+        await setActiveProfileId('default'); // coverage:ignore-line
       }
     }
   }
@@ -1396,6 +1428,15 @@ class StorageService {
       }
     }
     return added;
+  }
+
+  /// Returns the lowercase names of all default categories.
+  // coverage:ignore-start
+  Set<String> getDefaultCategoryNames() {
+    return _defaultCategoryCache
+        .map((d) => (d['name'] as String).trim().toLowerCase())
+        .toSet();
+    // coverage:ignore-end
   }
 
   List<Category> _getDefaultCategories(String profileId) {

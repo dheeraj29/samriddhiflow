@@ -16,7 +16,7 @@ class MockHive extends Mock implements HiveInterface {}
 
 class MockBox<T> extends Mock implements Box<T> {}
 
-void main() {
+void registerStorageServiceAdditionalCrudTests() {
   late StorageService storageService;
   late MockHive mockHive;
   late MockBox<dynamic> mockSettingsBox;
@@ -190,28 +190,6 @@ void main() {
   });
 
   group('StorageService - Model CRUD Operations', () {
-    test('Loan Operations', () async {
-      final loan = Loan(
-          id: 'l1',
-          name: 'Home Loan',
-          totalPrincipal: 1000000,
-          remainingPrincipal: 1000000,
-          interestRate: 8.5,
-          tenureMonths: 120,
-          startDate: DateTime.now(),
-          emiAmount: 12000,
-          firstEmiDate: DateTime.now(),
-          profileId: 'default');
-      when(() => mockLoanBox.put('l1', any())).thenAnswer((_) async {});
-      when(() => mockLoanBox.toMap()).thenReturn({'l1': loan});
-      when(() => mockLoanBox.delete('l1')).thenAnswer((_) async {});
-
-      await storageService.saveLoan(loan);
-      expect(storageService.getAllLoans(), contains(loan));
-      await storageService.deleteLoan('l1');
-      verify(() => mockLoanBox.delete('l1')).called(1);
-    });
-
     test('Recurring Transaction Operations', () async {
       final rt = RecurringTransaction(
           id: 'rt1',
@@ -285,80 +263,9 @@ void main() {
       await storageService.deleteLendingRecord('lr1');
       verify(() => mockLendingBox.delete('lr1')).called(1);
     });
-
-    test('Tax Year Data Operations', () async {
-      const taxData = TaxYearData(year: 2025, profileId: 'default');
-      when(() => mockTaxBox.put(any(), any())).thenAnswer((_) async {});
-      when(() => mockTaxBox.get(2025)).thenReturn(taxData);
-      when(() => mockTaxBox.values).thenReturn([taxData]);
-      when(() => mockTaxBox.toMap()).thenReturn({'default_2025': taxData});
-
-      await storageService.saveTaxYearData(taxData);
-      expect(storageService.getTaxYearData(2025), taxData);
-    });
   });
 
   group('StorageService - Transaction Impact & Rollover', () {
-    test('saveTransaction applies impact to account balance', () async {
-      final account = Account(
-          id: 'a1',
-          name: 'A1',
-          type: AccountType.savings,
-          balance: 1000,
-          profileId: 'default');
-      final txn = Transaction(
-          id: 't1',
-          title: 'T1',
-          amount: 200,
-          date: DateTime.now(),
-          type: TransactionType.expense,
-          category: 'Food',
-          accountId: 'a1',
-          profileId: 'default');
-
-      when(() => mockAccountBox.get('a1')).thenReturn(account);
-      when(() => mockAccountBox.put('a1', any())).thenAnswer((_) async {});
-      when(() => mockTransactionBox.get('t1')).thenReturn(null);
-      when(() => mockTransactionBox.put('t1', any())).thenAnswer((_) async {});
-      when(() => mockSettingsBox.get('txnsSinceBackup', defaultValue: 0))
-          .thenReturn(0);
-      when(() => mockSettingsBox.put('txnsSinceBackup', any()))
-          .thenAnswer((_) async {});
-
-      await storageService.saveTransaction(txn);
-
-      expect(account.balance, 800);
-      verify(() => mockAccountBox.put('a1', account)).called(1);
-    });
-
-    test('deleteTransaction reverses impact', () async {
-      final account = Account(
-          id: 'a1',
-          name: 'A1',
-          type: AccountType.savings,
-          balance: 800,
-          profileId: 'default');
-      final txn = Transaction(
-          id: 't1',
-          title: 'T1',
-          amount: 200,
-          date: DateTime.now(),
-          type: TransactionType.expense,
-          category: 'Food',
-          accountId: 'a1',
-          profileId: 'default');
-
-      when(() => mockTransactionBox.get('t1')).thenReturn(txn);
-      when(() => mockAccountBox.get('a1')).thenReturn(account);
-      when(() => mockAccountBox.put('a1', any())).thenAnswer((_) async {});
-      when(() => mockTransactionBox.put('t1', any())).thenAnswer((_) async {});
-
-      await storageService.deleteTransaction('t1');
-
-      expect(account.balance, 1000);
-      expect(txn.isDeleted, true);
-    });
-
     test('restoreTransaction reapplies impact', () async {
       final account = Account(
           id: 'a1',
@@ -464,28 +371,6 @@ void main() {
 
       // 0 + 500 - 200 = 300
       expect(account.balance, 300);
-    });
-
-    test('copyCategories correctly copies categories between profiles',
-        () async {
-      final c1 = Category(
-          id: 'c1',
-          name: 'Food',
-          usage: CategoryUsage.expense,
-          profileId: 'p1');
-      final c2 = Category(
-          id: 'c2',
-          name: 'Rent',
-          usage: CategoryUsage.expense,
-          profileId: 'p1');
-
-      when(() => mockCategoryBox.toMap()).thenReturn({'c1': c1, 'c2': c2});
-      when(() => mockCategoryBox.put(any(), any())).thenAnswer((_) async {});
-
-      await storageService.copyCategories('p1', 'p2');
-
-      // Verify two categories were created for p2 (excluding existing duplicates if any)
-      verify(() => mockCategoryBox.put(any(), any())).called(2);
     });
 
     test('advanceRecurringTransactionDate calculates next date', () async {

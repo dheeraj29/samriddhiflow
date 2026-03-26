@@ -132,6 +132,8 @@ void main() {
     when(() => mockStorageService.getLoans()).thenReturn([]);
     when(() => mockStorageService.getMonthlyBudget()).thenReturn(0.0);
     when(() => mockStorageService.getTxnsSinceBackup()).thenReturn(0);
+    when(() => mockStorageService.resetTxnsSinceBackup())
+        .thenAnswer((_) async {});
     when(() => mockStorageService.getBackupThreshold()).thenReturn(10);
     when(() => mockStorageService.getCategories()).thenReturn([]);
 

@@ -16,6 +16,7 @@ import 'package:uuid/uuid.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
 import 'package:samriddhi_flow/widgets/notched_border_painter.dart';
+import 'package:samriddhi_flow/widgets/smart_currency_text.dart';
 
 const employerPaidText = 'Employer Paid';
 const selectMonthsText = 'Select Months';
@@ -658,9 +659,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             children: [
               const Text('Approx. Gross Income',
                   style: TextStyle(fontSize: 12)),
-              Text(
-                  CurrencyUtils.formatCurrency(
-                      totalIncome, ref.watch(currencyProvider)),
+              SmartCurrencyText(
+                  value: totalIncome,
+                  locale: ref.watch(currencyProvider),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
             ],
@@ -670,9 +671,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('Est. Tax Liability', style: TextStyle(fontSize: 12)),
-              Text(
-                  CurrencyUtils.formatCurrency(
-                      estimatedTax, ref.watch(currencyProvider)),
+              SmartCurrencyText(
+                  value: estimatedTax,
+                  locale: ref.watch(currencyProvider),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -1330,9 +1331,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               subtitle: generatedTds.isNotEmpty
                   ? const Text('Includes projected monthly salary TDS')
                   : null,
-              trailing: Text(
-                  CurrencyUtils.formatCurrency(
-                      totalTds, ref.watch(currencyProvider)),
+              trailing: SmartCurrencyText(
+                  value: totalTds,
+                  locale: ref.watch(currencyProvider),
                   style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
             if (refundForecast > 0)
@@ -1521,18 +1522,53 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5)),
                 const SizedBox(height: 4),
-                Text(
-                  '${CurrencyUtils.formatCurrency(gross, currencyLocale)} (Gross) - '
-                  '${CurrencyUtils.formatCurrency(tax, currencyLocale)} (Tax) - '
-                  '${CurrencyUtils.formatCurrency(ded, currencyLocale)} (Ded) = '
-                  '${CurrencyUtils.formatCurrency(net, currencyLocale)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white70
-                        : Colors.black87,
-                  ),
+                Wrap(
+                  spacing: 2,
+                  children: [
+                    SmartCurrencyText(
+                        value: gross,
+                        locale: currencyLocale,
+                        suffix: ' (Gross) - ',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87)),
+                    SmartCurrencyText(
+                        value: tax,
+                        locale: currencyLocale,
+                        suffix: ' (Tax) - ',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87)),
+                    SmartCurrencyText(
+                        value: ded,
+                        locale: currencyLocale,
+                        suffix: ' (Ded) = ',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87)),
+                    SmartCurrencyText(
+                        value: net,
+                        locale: currencyLocale,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87)),
+                  ],
                 ),
               ],
             ),
@@ -1553,8 +1589,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 const SizedBox(height: 4),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
-                    CurrencyUtils.formatCurrency(net, currencyLocale),
+                  child: SmartCurrencyText(
+                    value: net,
+                    locale: currencyLocale,
                     style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -4917,14 +4954,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Future<void> _copySalaryFromPreviousYear() async {
-    // coverage:ignore-line
     final prevData =
-        // coverage:ignore-start
         ref.read(storageServiceProvider).getTaxYearData(_currentData.year - 1);
     if (prevData == null || prevData.salary.history.isEmpty) {
+      // coverage:ignore-line
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
           const SnackBar(
               content: Text('No salary data found in previous year')),
         );
@@ -4960,14 +4995,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Future<void> _copyHousePropFromPreviousYear() async {
-    // coverage:ignore-line
     final prevData =
-        // coverage:ignore-start
         ref.read(storageServiceProvider).getTaxYearData(_currentData.year - 1);
     if (prevData == null || prevData.houseProperties.isEmpty) {
       if (mounted) {
+        // coverage:ignore-line
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
+          // coverage:ignore-line
           const SnackBar(
               content: Text('No house properties found in previous year')),
         );
@@ -4976,17 +5010,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     }
 
     setState(() {
-      // coverage:ignore-line
-      _houseProperties.addAll(prevData.houseProperties); // coverage:ignore-line
+      _houseProperties.addAll(prevData.houseProperties);
     });
-    // coverage:ignore-start
     _updateSummary();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            // coverage:ignore-end
-            content: Text(
-                'Copied ${prevData.houseProperties.length} properties')), // coverage:ignore-line
+            content:
+                Text('Copied ${prevData.houseProperties.length} properties')),
       );
     }
   }

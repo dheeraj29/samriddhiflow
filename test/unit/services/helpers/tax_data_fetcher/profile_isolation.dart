@@ -14,7 +14,7 @@ class MockTaxConfigService extends Mock implements TaxConfigService {}
 
 class MockInsuranceTaxService extends Mock implements InsuranceTaxService {}
 
-void main() {
+void registerTaxProfileIsolationTests() {
   late TaxDataFetcher fetcher;
   late MockStorageService mockStorage;
   late MockTaxConfigService mockConfig;

@@ -9,7 +9,7 @@ import 'package:clock/clock.dart';
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
 
-void main() {
+void registerAdvanceTaxAndGeneratedTdsTests() {
   late IndianTaxService taxService;
   late MockTaxConfigService mockConfig;
 

@@ -31,6 +31,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
   int _emiDay = 1;
   LoanType _type = LoanType.personal;
   String? _selectedAccountId;
+  bool _hideBalance = true;
 
   double _calculatedEMI = 0;
   bool _calculateRateFromEMI = false;
@@ -128,9 +129,17 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
             ref.watch(accountsProvider).when(
                   data: (accounts) => DropdownButtonFormField<String?>(
                     initialValue: _selectedAccountId,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                         labelText: 'Default Payment Account (Optional)',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: IconButton(
+                          icon: Icon(_hideBalance
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => // coverage:ignore-line
+                              setState(() => _hideBalance =
+                                  !_hideBalance), // coverage:ignore-line
+                        ),
                         helperText:
                             'Select a savings account for EMI payments'),
                     items: [
@@ -558,9 +567,11 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
   String _formatAccountBalance(Account a) {
     if (a.type == AccountType.creditCard && a.creditLimit != null) {
       final avail = a.creditLimit! - a.balance;
+      if (_hideBalance) return 'Avail: •••';
       return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
       // coverage:ignore-end
     }
+    if (_hideBalance) return 'Bal: •••'; // coverage:ignore-line
     return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}'; // coverage:ignore-line
   }
 }

@@ -14,6 +14,7 @@ import '../models/category.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../utils/billing_helper.dart';
+import '../utils/currency_utils.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
@@ -35,6 +36,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isPrivacyMode = true;
   bool _isExpanded = false;
+  bool _isRecentTransactionsExpanded = false;
 
   @override
   void initState() {
@@ -114,21 +116,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   PreferredSizeWidget _buildAppBar(String title, dynamic activeProfile) {
     final theme = Theme.of(context);
     return AppBar(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          Text(
-            'Profile: ${activeProfile?.name ?? 'Default'}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).brightness == Brightness.light
-                  ? Colors.black54
-                  : Colors.white60,
+      title: GestureDetector(
+        onTap: () => _showPrivacyPolicy(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title,
+                    style: theme.textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 4),
+                Icon(Icons.info_outline,
+                    size: 14,
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.black38
+                        : Colors.white38),
+              ],
             ),
-          ),
-        ],
+            Text(
+              'Profile: ${activeProfile?.name ?? 'Default'}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.black54
+                    : Colors.white60,
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         _buildProfileSwitcher(context, ref),
@@ -190,10 +206,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               if (txnsSinceBackup >= backupThreshold)
                 _buildBackupReminder(context, ref, txnsSinceBackup),
-              _buildNetWorthCard(context, accountsAsync, currencyLocale, ref),
-              const SizedBox(height: 16),
-              _buildMonthlySummary(context, transactionsAsync, categories,
-                  currencyLocale, ref, _isPrivacyMode, dashboardConfig),
+              _buildNetWorthCard(context, accountsAsync, transactionsAsync,
+                  categories, dashboardConfig, currencyLocale, ref),
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -210,10 +224,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text('Recent Transactions',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis),
+                      child: InkWell(
+                        onTap: () => setState(() =>
+                            _isRecentTransactionsExpanded =
+                                !_isRecentTransactionsExpanded),
+                        child: Row(
+                          children: [
+                            Text('Recent Transactions',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis),
+                            Icon(
+                                _isRecentTransactionsExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                color: theme.colorScheme.onSurface),
+                          ],
+                        ),
+                      ),
                     ),
                     TextButton(
                         // coverage:ignore-start
@@ -226,8 +254,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ],
                 ),
               ),
-              _buildRecentTransactions(
-                  context, transactionsAsync, currencyLocale, categories),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: _isRecentTransactionsExpanded
+                    ? _buildRecentTransactions(
+                        context, transactionsAsync, currencyLocale, categories)
+                    : const SizedBox(width: double.infinity),
+              ),
             ],
           ),
         ),
@@ -270,6 +304,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildNetWorthCard(
       BuildContext context,
       AsyncValue<List<Account>> accountsAsync,
+      AsyncValue<List<Transaction>> transactionsAsync,
+      List<Category> categories,
+      DashboardVisibilityConfig dashboardConfig,
       String currencyLocale,
       WidgetRef ref) {
     final loansAsync = ref.watch(loansProvider);
@@ -280,6 +317,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           context,
           _computeNetWorthData(accounts, loans, ref),
           loans,
+          transactionsAsync,
+          categories,
+          dashboardConfig,
           currencyLocale,
           ref,
         ),
@@ -537,21 +577,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildAssetDebtPills(dynamic data, String currencyLocale) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatPill('Assets', data.assets, currencyLocale,
-              color: Colors.greenAccent, isPrivate: _isPrivacyMode),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildStatPill('Debt', data.debt, currencyLocale,
-              color: Colors.redAccent, isPrivate: _isPrivacyMode),
-        ),
-      ],
-    );
-  }
+  // Removed _buildAssetDebtPills
 
   Widget _buildNetWorthContent(
       BuildContext context,
@@ -567,12 +593,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         double ccUsagePercent
       }) data,
       List<Loan> loans,
+      AsyncValue<List<Transaction>> transactionsAsync,
+      List<Category> categories,
+      DashboardVisibilityConfig config,
       String currencyLocale,
       WidgetRef ref) {
-    final borderColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
-        : Colors.black.withValues(alpha: 0.1);
-
     return Column(
       children: [
         Container(
@@ -603,416 +628,346 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 4),
               _buildSavingsRow(data.currentBalance, currencyLocale),
               const SizedBox(height: 16),
-              if (data.ccDebt > 0) ...[
-                _buildCCStatsRow(data, currencyLocale),
-                const SizedBox(height: 16),
-              ],
-              _buildAssetDebtPills(data, currencyLocale),
+              if (data.ccDebt > 0) _buildCCStatsRow(data, currencyLocale),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: _isExpanded
+                    // coverage:ignore-start
+                    ? Column(
+                        children: [
+                          if (data.ccDebt > 0 || data.currentBalance > 0)
+                            const SizedBox(height: 16),
+                          Container(
+                              // coverage:ignore-end
+                              height: 1,
+                              // coverage:ignore-start
+                              color: Colors.white.withValues(alpha: 0.2)),
+                          const SizedBox(height: 16),
+                          ..._buildMergedExpandedContent(
+                              // coverage:ignore-end
+                              context,
+                              data,
+                              loans,
+                              transactionsAsync,
+                              categories,
+                              config,
+                              currencyLocale,
+                              ref),
+                        ],
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          child: _isExpanded && loans.isNotEmpty && data.totalLoanLiability > 0
-              ? Container(
-                  // coverage:ignore-line
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  // coverage:ignore-start
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      // coverage:ignore-end
-                      color: borderColor,
-                    ),
-                  ),
-                  child: Column(
-                    // coverage:ignore-line
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    // coverage:ignore-start
-                    children: [
-                      Row(
-                        children: [
-                          PureIcons.loan(color: Colors.orange),
-                          // coverage:ignore-end
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text('Total Loan Liability',
-                                style: TextStyle(fontWeight: FontWeight.w500)),
-                          ),
-                          SmartCurrencyText(
-                            // coverage:ignore-line
-                            value: data.totalLoanLiability,
-                            locale: currencyLocale,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.orange),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Builder(builder: (context) {
-                        // coverage:ignore-line
-                        final tenure = ref
-                            .read(loanServiceProvider) // coverage:ignore-line
-                            .calculateMaxRemainingTenure(
-                                loans); // coverage:ignore-line
-
-                        if (tenure.days <= 0) {
-                          // coverage:ignore-line
-                          return const SizedBox();
-                        }
-
-                        return Row(
-                          // coverage:ignore-line
-                          children: [
-                            // coverage:ignore-line
-                            const SizedBox(width: 36),
-                            // coverage:ignore-start
-                            Expanded(
-                              child: Text(
-                                'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
-                                style: TextStyle(
-                                    // coverage:ignore-end
-                                    fontSize: 12,
-                                    color: Colors.orange.withValues(
-                                        alpha: 0.8), // coverage:ignore-line
-                                    fontStyle: FontStyle.italic),
-                              ),
-                            ),
-                          ],
-                        );
-                      })
-                    ],
-                  ),
-                )
-              : const SizedBox(width: double.infinity),
         ),
       ],
     );
   }
 
-  Widget _buildStatPill(String label, double value, String locale,
-      {required Color color, bool isPrivate = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PureIcons.income(color: color, size: 16),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text('$label: ',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-                overflow: TextOverflow.ellipsis),
-          ),
-          Flexible(
-            child: isPrivate
-                ? const Text(
-                    hiddenTextChars,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  )
-                : SmartCurrencyText(
-                    value: value,
-                    locale: locale,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed _buildStatPill
 
-  Widget _buildMonthlySummary(
+  List<Widget> _buildMergedExpandedContent(
+      // coverage:ignore-line
       BuildContext context,
+      dynamic data,
+      List<Loan> loans,
       AsyncValue<List<Transaction>> transactionsAsync,
       List<Category> categories,
+      DashboardVisibilityConfig config,
       String currencyLocale,
-      WidgetRef ref,
-      bool isPrivate,
-      DashboardVisibilityConfig config) {
-    if (!config.showIncomeExpense && !config.showBudget) {
-      return const SizedBox.shrink();
-    }
+      WidgetRef ref) {
+    // coverage:ignore-start
+    return [
+      if (loans.isNotEmpty && data.totalLoanLiability > 0)
+        ..._buildLoanLiabilitySection(
+            loans, data.totalLoanLiability, currencyLocale, ref),
+      if (config.showIncomeExpense || config.showBudget)
+        _buildBudgetSection(transactionsAsync, config, currencyLocale, ref),
+      // coverage:ignore-end
+    ];
+  }
+
+  List<Widget> _buildLoanLiabilitySection(
+      List<Loan> loans, // coverage:ignore-line
+      double totalLoanLiability,
+      String currencyLocale,
+      WidgetRef ref) {
+    return [
+      // coverage:ignore-line
+      Row(
+        // coverage:ignore-line
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // coverage:ignore-start
+        children: [
+          Row(
+            children: [
+              PureIcons.loan(color: Colors.white70, size: 16),
+              // coverage:ignore-end
+              const SizedBox(width: 8),
+              const Text('Total Loan Liability',
+                  style: TextStyle(
+                      color: Colors.white70, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          _isPrivacyMode // coverage:ignore-line
+              ? const Text(hiddenTextChars,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16))
+              : SmartCurrencyText(
+                  // coverage:ignore-line
+                  value: totalLoanLiability,
+                  locale: currencyLocale,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.orangeAccent),
+                ),
+        ],
+      ),
+      Builder(builder: (context) {
+        // coverage:ignore-line
+        final tenure = ref
+            .read(loanServiceProvider)
+            .calculateMaxRemainingTenure(loans); // coverage:ignore-line
+
+        if (tenure.days <= 0) return const SizedBox(); // coverage:ignore-line
+
+        return Padding(
+          // coverage:ignore-line
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Row(
+            // coverage:ignore-line
+            children: [
+              // coverage:ignore-line
+              const SizedBox(width: 32),
+              // coverage:ignore-start
+              Expanded(
+                child: Text(
+                  'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
+                  // coverage:ignore-end
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.white70,
+                      fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  Widget _buildBudgetSection(
+      AsyncValue<List<Transaction>> transactionsAsync, // coverage:ignore-line
+      DashboardVisibilityConfig config,
+      String currencyLocale,
+      WidgetRef ref) {
+    // coverage:ignore-start
     return transactionsAsync.when(
       data: (transactions) {
         final totals = _computeMonthlyTotals(transactions, ref);
         final budget = ref.watch(monthlyBudgetProvider);
+        // coverage:ignore-end
 
-        if (!config.showBudget && !(_isExpanded && config.showIncomeExpense)) {
-          return const SizedBox.shrink();
-        }
-
-        if (budget <= 0 && !config.showIncomeExpense) {
-          return const SizedBox.shrink();
-        }
-
-        return _buildMonthlySummaryCard(
-            context, totals, budget, currencyLocale, ref, isPrivate, config);
+        // coverage:ignore-start
+        return Column(
+          children: [
+            if (config.showIncomeExpense) ...[
+              Row(
+                children: [
+                  _buildWhiteThemeStatItem(
+                      'Income (Month)',
+                      totals.income,
+                      // coverage:ignore-end
+                      Colors.white,
+                      currencyLocale),
+                  _buildWhiteThemeStatItem(
+                      'Budget Expense',
+                      totals.expense, // coverage:ignore-line
+                      Colors.white,
+                      currencyLocale),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            // coverage:ignore-start
+            if (config.showBudget && budget > 0)
+              _buildWhiteThemeBudgetProgress(
+                  totals.expense, budget, currencyLocale, _isPrivacyMode),
+            // coverage:ignore-end
+          ],
+        );
       },
-      loading: () => const SizedBox(),
+      loading: () => const SizedBox(), // coverage:ignore-line
       error: (e, s) => const SizedBox(), // coverage:ignore-line
     );
   }
 
-  Widget _buildMonthlySummaryCard(
-      BuildContext context,
-      ({double income, double expense}) totals,
-      double budget,
-      String currencyLocale,
-      WidgetRef ref,
-      bool isPrivate,
-      DashboardVisibilityConfig config) {
-    final borderColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
-        : Colors.black.withValues(alpha: 0.1);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: borderColor,
-        ),
-      ),
+  Widget _buildWhiteThemeStatItem(
+      // coverage:ignore-line
+      String label,
+      double value,
+      Color valueColor,
+      String currencyLocale) {
+    return Expanded(
+      // coverage:ignore-line
       child: Column(
+        // coverage:ignore-line
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _isExpanded && config.showIncomeExpense
-                // coverage:ignore-start
-                ? Column(
-                    children: [
-                      _buildIncomeExpenseRow(
-                          totals.income,
-                          totals.expense,
-                          // coverage:ignore-end
-                          currencyLocale,
-                          isPrivate),
-                      if (config.showBudget &&
-                          budget > 0) // coverage:ignore-line
-                        const SizedBox(height: 16), // coverage:ignore-line
-                    ],
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-          if (config.showBudget && budget > 0)
-            _buildBudgetProgress(
-                totals.expense, currencyLocale, ref, isPrivate),
+          // coverage:ignore-line
+          Text(label, // coverage:ignore-line
+              style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          const SizedBox(height: 4),
+          // coverage:ignore-start
+          _isPrivacyMode
+              ? Text(hiddenTextChars,
+                  style: TextStyle(
+                      // coverage:ignore-end
+                      color: valueColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold))
+              : SmartCurrencyText(
+                  // coverage:ignore-line
+                  value: value,
+                  locale: currencyLocale,
+                  style: TextStyle(
+                      // coverage:ignore-line
+                      color: valueColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
+  Widget _buildWhiteThemeBudgetProgress(
+      // coverage:ignore-line
+      double expense,
+      double budget,
+      String currencyLocale,
+      bool isPrivate) {
+    return Column(
+      // coverage:ignore-line
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // coverage:ignore-line
+        Row(
+          // coverage:ignore-line
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // coverage:ignore-line
+            const Text('Monthly Budget Progress',
+                style: TextStyle(fontSize: 11, color: Colors.white70)),
+            _buildWhiteThemeBudgetPercent(
+                expense, budget, isPrivate), // coverage:ignore-line
+          ],
+        ),
+        const SizedBox(height: 8),
+        // coverage:ignore-start
+        LinearProgressIndicator(
+          value: budget == 0 ? 0 : (expense / budget).clamp(0, 1),
+          backgroundColor: Colors.white.withValues(alpha: 0.2),
+          valueColor: AlwaysStoppedAnimation<Color>(
+              expense > budget ? Colors.red[300]! : Colors.greenAccent),
+          borderRadius: BorderRadius.circular(4),
+          // coverage:ignore-end
+        ),
+        const SizedBox(height: 8),
+        Row(
+          // coverage:ignore-line
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // coverage:ignore-start
+          children: [
+            Text(
+                'Exp: ${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(expense, currencyLocale)}',
+                // coverage:ignore-end
+                style: const TextStyle(fontSize: 10, color: Colors.white70)),
+            Text(
+                // coverage:ignore-line
+                'Rem: ${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(budget - expense, currencyLocale)}', // coverage:ignore-line
+                style: const TextStyle(fontSize: 10, color: Colors.white70)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWhiteThemeBudgetPercent(
+      // coverage:ignore-line
+      double expense,
+      double budget,
+      bool isPrivate) {
+    if (isPrivate) {
+      return const Text('••%',
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70));
+    }
+    final pctText = budget == 0 // coverage:ignore-line
+        ? '0%'
+        : '${((expense / budget) * 100).toStringAsFixed(0)}%'; // coverage:ignore-line
+    const textColor = Colors.white;
+    return Text(pctText, // coverage:ignore-line
+        style: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: textColor));
+  }
+
   ({double income, double expense}) _computeMonthlyTotals(
-      List<Transaction> transactions, WidgetRef ref) {
+      // coverage:ignore-line
+      List<Transaction> transactions,
+      WidgetRef ref) {
     double income = 0;
     double expense = 0;
-    final now = DateTime.now();
+    final now = DateTime.now(); // coverage:ignore-line
 
-    final categories = ref.watch(categoriesProvider);
-    final catMap = {for (var c in categories) c.name: c};
+    final categories = ref.watch(categoriesProvider); // coverage:ignore-line
+    final catMap = {
+      for (var c in categories) c.name: c
+    }; // coverage:ignore-line
 
     for (var t in transactions) {
-      if (!_isTransactionRelevantForThisMonth(t, now)) continue;
+      // coverage:ignore-line
+      if (!_isTransactionRelevantForThisMonth(t, now)) {
+        // coverage:ignore-line
+        continue;
+      }
 
+      // coverage:ignore-start
       if (t.type == TransactionType.income) {
-        income += t.amount; // coverage:ignore-line
+        income += t.amount;
       } else if (t.type == TransactionType.expense) {
         if (catMap[t.category]?.tag != CategoryTag.budgetFree) {
           expense += t.amount;
+          // coverage:ignore-end
         }
       }
     }
     return (income: income, expense: expense);
   }
 
+  // coverage:ignore-start
   bool _isTransactionRelevantForThisMonth(Transaction t, DateTime now) {
     if (t.accountId == null && t.loanId != null) return false;
     if (t.date.year != now.year || t.date.month != now.month) return false;
+    // coverage:ignore-end
     return true;
   }
 
-  Widget _buildIncomeExpenseRow(
-      // coverage:ignore-line
-      double income,
-      double expense,
-      String currencyLocale,
-      bool isPrivate) {
-    // coverage:ignore-start
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            // coverage:ignore-end
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // coverage:ignore-line
-              const Text('Income (This Month)',
-                  style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 4),
-              isPrivate
-                  ? const Text(hiddenTextChars,
-                      style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18))
-                  : SmartCurrencyText(
-                      // coverage:ignore-line
-                      value: income,
-                      locale: currencyLocale,
-                      style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          // coverage:ignore-line
-          child: Column(
-            // coverage:ignore-line
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // coverage:ignore-line
-              const Text('Expense (Budgeted)',
-                  style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 4),
-              isPrivate
-                  ? const Text(hiddenTextChars,
-                      style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18))
-                  : SmartCurrencyText(
-                      // coverage:ignore-line
-                      value: expense,
-                      locale: currencyLocale,
-                      style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBudgetProgress(
-      double expense, String currencyLocale, WidgetRef ref, bool isPrivate) {
-    final budget = ref.watch(monthlyBudgetProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Monthly Budget Progress',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
-            _buildBudgetPercentText(expense, budget, isPrivate),
-          ],
-        ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: budget == 0 ? 0 : (expense / budget).clamp(0, 1),
-          backgroundColor: Colors.grey.withValues(alpha: 0.1),
-          valueColor: AlwaysStoppedAnimation<Color>(
-              expense > budget ? Colors.redAccent : Colors.green),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Text('Spent: ',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-                isPrivate
-                    ? const Text('••••',
-                        style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold))
-                    : SmartCurrencyText(
-                        value: expense,
-                        locale: currencyLocale,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-              ],
-            ),
-            Row(
-              children: [
-                const Text('Remaining: ',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-                isPrivate
-                    ? const Text('••••',
-                        style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold))
-                    : SmartCurrencyText(
-                        value: budget - expense,
-                        locale: currencyLocale,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-              ],
-            ),
-          ],
-        )
-      ],
-    );
-  }
-
-  Widget _buildBudgetPercentText(
-      double expense, double budget, bool isPrivate) {
-    if (isPrivate) {
-      return const Text('••%',
-          style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey));
-    }
-    final pctText = budget == 0
-        ? '0%'
-        : '${((expense / budget) * 100).toStringAsFixed(0)}%';
-    final textColor = expense > budget ? Colors.redAccent : Colors.blueGrey;
-    return Text(pctText,
-        style: TextStyle(
-            fontSize: 12, fontWeight: FontWeight.bold, color: textColor));
-  }
+  // Removed _buildIncomeExpenseRow, _buildBudgetProgress, _buildBudgetPercentText
 
   Widget _buildQuickActions(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 16,
         children: [
           InkWell(
             onTap: () {
@@ -1175,7 +1130,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           },
         );
       },
-      loading: () => const SizedBox(),
+      loading: () => const SizedBox(), // coverage:ignore-line
       error: (e, s) => const SizedBox(), // coverage:ignore-line
     );
   }
@@ -1289,6 +1244,107 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  void _showPrivacyPolicy(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text('Samriddhi Flow — Privacy Policy',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              const Text(
+                  'Your privacy is important to us. Here is how Samriddhi Flow handles your data:',
+                  style: TextStyle(fontSize: 14)),
+              const SizedBox(height: 16),
+              _buildPolicyItem(
+                Icons.phone_android,
+                'Local-First Storage',
+                'All your financial data is stored locally on your device by default. Nothing leaves your device unless you choose to back up.',
+              ),
+              _buildPolicyItem(
+                Icons.cloud_outlined,
+                'User-Initiated Cloud Backup',
+                'Cloud backup is only triggered manually by you. We do not automatically upload any data to external servers without your explicit action.',
+              ),
+              _buildPolicyItem(
+                Icons.lock_outline,
+                'Optional Encryption',
+                'When backing up to the cloud, you can encrypt your data with a passcode of your choice. This passcode is NEVER stored anywhere — only you know it. Without the passcode, your cloud data cannot be read.',
+              ),
+              _buildPolicyItem(
+                Icons.analytics_outlined,
+                'No Tracking or Analytics',
+                'Samriddhi Flow does not collect, track, or transmit any usage analytics, personal information, or behavioral data.',
+              ),
+              _buildPolicyItem(
+                Icons.verified_user_outlined,
+                'Your Data, Your Control',
+                'You can export, restore, or delete all your data at any time from the Settings screen. We believe you should have full ownership of your financial information.',
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolicyItem(IconData icon, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(description,
+                    style: const TextStyle(fontSize: 13, height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

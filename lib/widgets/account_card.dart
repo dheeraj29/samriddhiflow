@@ -159,17 +159,23 @@ class AccountCard extends ConsumerWidget {
                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
+          Row(
             children: [
               if (displayBilled > 0)
-                _buildMiniInfo('Billed', displayBilled, account.currency),
+                Expanded(
+                  child:
+                      _buildMiniInfo('Billed', displayBilled, account.currency),
+                ),
               if (displayHistBalance.abs() > 0.01)
-                _buildMiniInfo('Balance', displayHistBalance, account.currency),
+                Expanded(
+                  child: _buildMiniInfo(
+                      'Balance', displayHistBalance, account.currency),
+                ),
               if (displayUnbilled > 0)
-                _buildMiniInfo('Unbilled', displayUnbilled, account.currency),
-              // User Request: No separate balance label
+                Expanded(
+                  child: _buildMiniInfo(
+                      'Unbilled', displayUnbilled, account.currency),
+                ),
             ],
           ),
         ],
@@ -293,15 +299,27 @@ class AccountCard extends ConsumerWidget {
   }
 
   Widget _buildMiniInfo(String label, double val, String currency) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4)),
-      child: Text(
-        '$label: ${_format(val)}',
-        style: const TextStyle(color: Colors.white70, fontSize: 9),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 11),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          _format(val),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

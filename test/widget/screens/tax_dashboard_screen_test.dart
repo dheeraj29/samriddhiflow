@@ -244,4 +244,62 @@ void main() {
 
     expect(find.textContaining('Taxable Insurance Alert'), findsNothing);
   });
+
+  testWidgets('Advance tax reminder shows overdue state',
+      (WidgetTester tester) async {
+    when(() => mockIndianTax.calculateDetailedLiability(any(), any()))
+        .thenReturn({
+      'totalTax': 50000.0,
+      'grossIncome': 1000000.0,
+      'capitalGainsTotal': 0.0,
+      'totalDeductions': 0.0,
+      'taxableIncome': 0.0,
+      'slabTax': 0.0,
+      'specialTax': 0.0,
+      'cess': 0.0,
+      'advanceTax': 0.0,
+      'tds': 0.0,
+      'tcs': 0.0,
+      'advanceTaxInterest': 0.0,
+      'netTaxPayable': 10000.0,
+      'nextAdvanceTaxDueDate': DateTime.now().subtract(const Duration(days: 3)),
+      'nextAdvanceTaxAmount': 15000.0,
+      'daysUntilAdvanceTax': -3,
+    });
+
+    await tester.pumpWidget(createTaxDashboardScreen());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Advance Tax Overdue!'), findsOneWidget);
+    expect(find.text('3d Late'), findsOneWidget);
+  });
+
+  testWidgets('Advance tax reminder shows due today badge',
+      (WidgetTester tester) async {
+    when(() => mockIndianTax.calculateDetailedLiability(any(), any()))
+        .thenReturn({
+      'totalTax': 50000.0,
+      'grossIncome': 1000000.0,
+      'capitalGainsTotal': 0.0,
+      'totalDeductions': 0.0,
+      'taxableIncome': 0.0,
+      'slabTax': 0.0,
+      'specialTax': 0.0,
+      'cess': 0.0,
+      'advanceTax': 0.0,
+      'tds': 0.0,
+      'tcs': 0.0,
+      'advanceTaxInterest': 0.0,
+      'netTaxPayable': 10000.0,
+      'nextAdvanceTaxDueDate': DateTime.now(),
+      'nextAdvanceTaxAmount': 15000.0,
+      'daysUntilAdvanceTax': 0,
+    });
+
+    await tester.pumpWidget(createTaxDashboardScreen());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Action Required: Advance Tax'), findsOneWidget);
+    expect(find.text('Due Today'), findsOneWidget);
+  });
 }

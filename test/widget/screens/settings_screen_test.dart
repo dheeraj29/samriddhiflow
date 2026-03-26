@@ -15,12 +15,15 @@ import 'package:samriddhi_flow/services/auth_service.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/json_data_service.dart';
 import 'package:samriddhi_flow/services/file_service.dart';
+import 'package:samriddhi_flow/services/location_service.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
 class MockUser extends Mock implements User {}
 
 class MockRepairService extends Mock implements RepairService {}
+
+class MockLocationService extends Mock implements LocationService {}
 
 class MockRepairJob extends Mock implements RepairJob {}
 
@@ -76,6 +79,7 @@ void main() {
   late MockJsonDataService mockJsonData;
   late MockFileService mockFileService;
   late MockRepairService mockRepair;
+  late MockLocationService mockLocation;
 
   setUpAll(() {
     registerFallbackValue(const DashboardVisibilityConfig());
@@ -93,6 +97,7 @@ void main() {
     mockJsonData = MockJsonDataService();
     mockFileService = MockFileService();
     mockRepair = MockRepairService();
+    mockLocation = MockLocationService();
 
     // Default stubs for StorageService
     when(() => mockStorage.isAppLockEnabled()).thenReturn(false);
@@ -105,8 +110,13 @@ void main() {
     when(() => mockStorage.getBackupThreshold()).thenReturn(20);
     when(() => mockStorage.getActiveProfileId()).thenReturn('p1');
     when(() => mockStorage.getAuthFlag()).thenReturn(false);
+    when(() => mockStorage.getCloudDatabaseRegion()).thenReturn('India');
     when(() => mockStorage.getAppPin()).thenReturn(null);
     when(() => mockStorage.isPinLocked()).thenReturn(false);
+    when(() => mockStorage.getDetectedCountry()).thenReturn('IN');
+    when(() => mockLocation.isCloudSyncRestricted(any())).thenReturn(false);
+    when(() => mockLocation.fetchCurrentCountryCode())
+        .thenAnswer((_) async => 'IN');
 
     when(() => mockStorage.setThemeMode(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveDashboardConfig(any())).thenAnswer((_) async {});
@@ -118,6 +128,8 @@ void main() {
     when(() => mockStorage.setAppPin(any())).thenAnswer((_) async {});
     when(() => mockStorage.setAppLockEnabled(any())).thenAnswer((_) async {});
     when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setCloudDatabaseRegion(any()))
+        .thenAnswer((_) async {});
     when(() => mockStorage.recalculateBilledAmount(any()))
         .thenAnswer((_) async {});
     when(() => mockStorage.resetTxnsSinceBackup()).thenAnswer((_) async {});
@@ -135,7 +147,8 @@ void main() {
         appPin: any(named: 'appPin'))).thenAnswer((_) async {});
   });
 
-  Widget createSettingsScreen({User? user}) {
+  Widget createSettingsScreen(
+      {User? user, List<dynamic> overrides = const []}) {
     return ProviderScope(
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -161,6 +174,8 @@ void main() {
         activeProfileIdProvider.overrideWith(MockProfileNotifier.new),
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
+        locationServiceProvider.overrideWithValue(mockLocation),
+        ...overrides,
       ],
       child: const MaterialApp(
         home: SettingsScreen(),
@@ -219,7 +234,7 @@ void main() {
   });
 
   testWidgets('Monthly budget can be updated', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1000));
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -238,7 +253,7 @@ void main() {
   });
 
   testWidgets('Profile switching works', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1000));
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -252,6 +267,8 @@ void main() {
   });
 
   testWidgets('Currency can be changed', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -268,6 +285,8 @@ void main() {
   });
 
   testWidgets('Backup threshold can be updated', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -285,6 +304,8 @@ void main() {
   });
 
   testWidgets('Add New Profile works', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -305,6 +326,8 @@ void main() {
     final mockUser = MockUser();
     when(() => mockUser.email).thenReturn('test@example.com');
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
@@ -328,6 +351,8 @@ void main() {
 
     when(() => mockRepair.jobs).thenReturn([job]);
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -346,6 +371,8 @@ void main() {
   });
 
   testWidgets('App Lock PIN flow', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -367,6 +394,8 @@ void main() {
 
   testWidgets('App Lock PIN flow accepts 6-digit PIN',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -393,6 +422,8 @@ void main() {
         .thenAnswer((_) async => AuthResponse(status: AuthStatus.success));
     when(() => mockCloudSync.deleteCloudData()).thenAnswer((_) async {});
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
@@ -416,6 +447,8 @@ void main() {
     when(() => mockCloudSync.deleteCloudData()).thenAnswer((_) async {});
     when(() => mockAuth.deleteAccount()).thenAnswer((_) async {});
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
@@ -480,6 +513,7 @@ void main() {
     expect(find.textContaining('profiles: 1'), findsOneWidget);
 
     verify(() => mockJsonData.restoreFromPackage(any())).called(1);
+    verify(() => mockStorage.resetTxnsSinceBackup()).called(1);
     // Note: We avoid tapping 'OK, Reload' here because it navigates to DashboardScreen,
     // which requires many more provider mocks than are relevant for this SettingsScreen test.
   });
@@ -530,6 +564,8 @@ void main() {
         passcode: any(named: 'passcode'),
         appPin: any(named: 'appPin'))).thenAnswer((_) async {});
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
@@ -585,7 +621,7 @@ void main() {
 
   testWidgets('Delete Profile confirmation dialog and execution',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 2000));
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(createSettingsScreen());
@@ -614,7 +650,7 @@ void main() {
 
   testWidgets('Copy Categories dialog shows other profiles',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 2000));
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(createSettingsScreen());
@@ -643,10 +679,11 @@ void main() {
   });
 
   testWidgets('App Lock - Use Existing PIN flow', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // Removed 1600px size
     when(() => mockStorage.getAppPin()).thenReturn('hashed_pin');
 
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -665,7 +702,7 @@ void main() {
 
   testWidgets('App Lock - Verify PIN with incorrect entry',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     when(() => mockStorage.isAppLockEnabled()).thenReturn(true);
@@ -691,7 +728,7 @@ void main() {
 
   testWidgets('Cloud Backup - Encryption Passcode prompt validation',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final mockUser = MockUser();
     when(() => mockUser.email).thenReturn('test@example.com');
@@ -726,7 +763,7 @@ void main() {
   });
 
   testWidgets('Restore Data (ZIP) cancellation', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => mockFileService.pickFile(
             allowedExtensions: any(named: 'allowedExtensions')))
@@ -748,6 +785,8 @@ void main() {
   });
 
   testWidgets('Sections are expanded by default', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -757,6 +796,8 @@ void main() {
 
   testWidgets('Clicking a section header toggles visibility',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -776,6 +817,8 @@ void main() {
 
   testWidgets('Global expand/collapse button works',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
@@ -797,5 +840,71 @@ void main() {
     expect(find.text('Theme Mode', skipOffstage: true), findsOneWidget);
     expect(
         find.text('Show Income & Expense', skipOffstage: true), findsOneWidget);
+  });
+
+  testWidgets('Server Region (Database) displays as static text',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(createSettingsScreen(user: MockUser()));
+    await tester.pumpAndSettle();
+
+    // Verify Title and Subtitle
+    expect(find.text('Server Region (Database)'), findsOneWidget);
+    expect(find.text('Country where your data is stored'), findsOneWidget);
+
+    // Verify static text for region
+    expect(find.text('India (Asia-South1)'), findsOneWidget);
+
+    // Verify it is NOT a dropdown anymore (no arrow icon, No DropdownButton)
+    expect(find.byType(DropdownButton<String>), findsNothing);
+  });
+
+  testWidgets('Restricted Region warning shows for non-IN location',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    // Mock user in US
+    when(() => mockLocation.isCloudSyncRestricted('US')).thenReturn(true);
+    await tester.pumpWidget(createSettingsScreen(
+      user: MockUser(),
+      overrides: [
+        detectedCountryProvider.overrideWith((ref) => Future.value('US')),
+      ],
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify warning banner
+    expect(
+        find.textContaining(
+            'Cloud Synchronization is only available for users in India'),
+        findsOneWidget);
+
+    // Verify cloud section is visually disabled - checking Opacity widget
+    final opacityFinder = find.byWidgetPredicate(
+        (widget) => widget is Opacity && widget.opacity == 0.5);
+    expect(opacityFinder, findsOneWidget);
+  });
+
+  testWidgets('No restricted warning for IN location',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    // Mock user in India
+    await tester.pumpWidget(createSettingsScreen(
+      user: MockUser(),
+      overrides: [
+        detectedCountryProvider.overrideWith((ref) => Future.value('IN')),
+      ],
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify warning banner is NOT present
+    expect(
+        find.textContaining(
+            'Cloud Synchronization is only available for users in India'),
+        findsNothing);
   });
 }

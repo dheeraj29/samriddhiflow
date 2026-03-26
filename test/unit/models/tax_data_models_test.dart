@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 
 void main() {
   group('HouseProperty', () {
@@ -683,6 +684,191 @@ void main() {
 
     test('camelCase fallback', () {
       expect('equityShares'.toHumanReadable(), contains('Equity'));
+    });
+  });
+
+  group('Tax data model regressions', () {
+    test('SalaryDetails copyWith preserves untouched values', () {
+      final details = SalaryDetails(
+        history: [
+          SalaryStructure(
+            id: 's1',
+            effectiveDate: DateTime(2024, 4, 1),
+            monthlyBasic: 1000000 / 12,
+          ),
+        ],
+        npsEmployer: 50000,
+      );
+
+      final copy = details.copyWith(
+        history: [
+          SalaryStructure(
+            id: 's1',
+            effectiveDate: DateTime(2024, 4, 1),
+            monthlyBasic: 1100000 / 12,
+          ),
+        ],
+      );
+
+      expect(copy.history.first.monthlyBasic, 1100000 / 12);
+      expect(copy.npsEmployer, 50000);
+    });
+
+    test('SalaryStructure calculateContribution supports all payout modes', () {
+      final base = SalaryStructure(
+        id: 'test',
+        effectiveDate: DateTime(2023, 4, 1),
+        monthlyBasic: 10000,
+        annualVariablePay: 12000,
+      );
+
+      final monthly =
+          base.copyWith(variablePayFrequency: PayoutFrequency.monthly);
+      expect(monthly.calculateContribution(1, 4), 11000);
+
+      final annual = base.copyWith(
+        variablePayFrequency: PayoutFrequency.annually,
+        variablePayStartMonth: 3,
+      );
+      expect(annual.calculateContribution(3, 4), 22000);
+      expect(annual.calculateContribution(1, 4), 10000);
+
+      final quarterly = base.copyWith(
+        variablePayFrequency: PayoutFrequency.quarterly,
+        variablePayStartMonth: 3,
+      );
+      expect(quarterly.calculateContribution(3, 4), 13000);
+      expect(quarterly.calculateContribution(6, 4), 13000);
+      expect(quarterly.calculateContribution(1, 4), 10000);
+
+      final trimester = base.copyWith(
+        variablePayFrequency: PayoutFrequency.trimester,
+        variablePayStartMonth: 3,
+      );
+      expect(trimester.calculateContribution(3, 4), 14000);
+      expect(trimester.calculateContribution(7, 4), 14000);
+
+      final halfYearly = base.copyWith(
+        variablePayFrequency: PayoutFrequency.halfYearly,
+        variablePayStartMonth: 3,
+      );
+      expect(halfYearly.calculateContribution(3, 4), 16000);
+      expect(halfYearly.calculateContribution(9, 4), 16000);
+
+      final custom = base.copyWith(
+        variablePayFrequency: PayoutFrequency.custom,
+        variablePayCustomMonths: [1, 5],
+      );
+      expect(custom.calculateContribution(1, 4), 16000);
+
+      final withAllowance = base.copyWith(
+        customAllowances: [
+          const CustomAllowance(
+            id: 'a1',
+            name: 'Bonus',
+            payoutAmount: 5000,
+            frequency: PayoutFrequency.annually,
+            startMonth: 4,
+          ),
+        ],
+      );
+      expect(withAllowance.calculateContribution(4, 4), 15000);
+      expect(withAllowance.calculateContribution(5, 4), 10000);
+    });
+
+    test('TaxYearData serialization preserves salary history', () {
+      final data = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(
+          history: [
+            SalaryStructure(
+              id: 's1',
+              effectiveDate: DateTime(2024, 4, 1),
+              monthlyBasic: 10000,
+            ),
+          ],
+          independentAllowances: const [
+            CustomAllowance(
+              id: 'f1',
+              name: 'Freelance',
+              payoutAmount: 1000,
+              frequency: PayoutFrequency.monthly,
+            ),
+          ],
+        ),
+      );
+
+      final fromMap = TaxYearData.fromMap(data.toMap());
+      expect(fromMap.year, 2024);
+      expect(fromMap.salary.history.length, 1);
+    });
+
+    test('TaxYearData totalSalary legacy getter remains zero', () {
+      const monthly = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(independentAllowances: [
+          CustomAllowance(
+            id: 'a1',
+            name: 'Test',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.monthly,
+          ),
+        ]),
+      );
+      const quarterly = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(independentAllowances: [
+          CustomAllowance(
+            id: 'q1',
+            name: 'Q',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.quarterly,
+          ),
+        ]),
+      );
+      const annually = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(independentAllowances: [
+          CustomAllowance(
+            id: 'ann1',
+            name: 'A',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.annually,
+            startMonth: 4,
+          ),
+        ]),
+      );
+      const custom = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(independentAllowances: [
+          CustomAllowance(
+            id: 'c1',
+            name: 'C',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.custom,
+            customMonths: [4, 10],
+          ),
+        ]),
+      );
+      const partial = TaxYearData(
+        year: 2024,
+        salary: SalaryDetails(independentAllowances: [
+          CustomAllowance(
+            id: 'p1',
+            name: 'P',
+            payoutAmount: 1000,
+            frequency: PayoutFrequency.monthly,
+            isPartial: true,
+            partialAmounts: {4: 5000, 5: 3000},
+          ),
+        ]),
+      );
+
+      expect(monthly.totalSalary, 0);
+      expect(quarterly.totalSalary, 0);
+      expect(annually.totalSalary, 0);
+      expect(custom.totalSalary, 0);
+      expect(partial.totalSalary, 0);
     });
   });
 }

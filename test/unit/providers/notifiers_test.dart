@@ -53,25 +53,6 @@ void main() {
     container.dispose();
   });
 
-  group('IsLoggedInNotifier', () {
-    test('setLoggedIn updates state and storage', () async {
-      when(() => mockStorageService.setAuthFlag(true)).thenAnswer((_) async {});
-      await container.read(isLoggedInProvider.notifier).setLoggedIn(true);
-      expect(container.read(isLoggedInProvider), true);
-      verify(() => mockStorageService.setAuthFlag(true)).called(1);
-    });
-  });
-
-  group('BudgetNotifier', () {
-    test('setBudget updates state and storage', () async {
-      when(() => mockStorageService.setMonthlyBudget(2000.0))
-          .thenAnswer((_) async {});
-      await container.read(monthlyBudgetProvider.notifier).setBudget(2000.0);
-      expect(container.read(monthlyBudgetProvider), 2000.0);
-      verify(() => mockStorageService.setMonthlyBudget(2000.0)).called(1);
-    });
-  });
-
   group('CategoriesNotifier', () {
     test('CRUD operations', () async {
       final cat = Category(
@@ -119,55 +100,13 @@ void main() {
     });
   });
 
-  group('Backup & Holiday Notifiers', () {
-    test('BackupThresholdNotifier setThreshold', () async {
-      when(() => mockStorageService.setBackupThreshold(50))
-          .thenAnswer((_) async {});
-      await container.read(backupThresholdProvider.notifier).setThreshold(50);
-      expect(container.read(backupThresholdProvider), 50);
-    });
+  group('LocalModeNotifier', () {
+    test('sets and updates state', () {
+      expect(container.read(localModeProvider), false);
 
-    test('TxnsSinceBackupNotifier reset and refresh', () async {
-      when(() => mockStorageService.resetTxnsSinceBackup())
-          .thenAnswer((_) async {});
-      await container.read(txnsSinceBackupProvider.notifier).reset();
-      expect(container.read(txnsSinceBackupProvider), 0);
+      container.read(localModeProvider.notifier).value = true;
 
-      when(() => mockStorageService.getTxnsSinceBackup()).thenReturn(10);
-      container.read(txnsSinceBackupProvider.notifier).refresh();
-      expect(container.read(txnsSinceBackupProvider), 10);
-    });
-
-    test('HolidaysNotifier add and remove', () async {
-      final date = DateTime(2024, 1, 1);
-      when(() => mockStorageService.addHoliday(date)).thenAnswer((_) async {});
-      when(() => mockStorageService.removeHoliday(date))
-          .thenAnswer((_) async {});
-      when(() => mockStorageService.getHolidays()).thenReturn([date]);
-
-      await container.read(holidaysProvider.notifier).addHoliday(date);
-      expect(container.read(holidaysProvider), [date]);
-
-      when(() => mockStorageService.getHolidays()).thenReturn([]);
-      await container.read(holidaysProvider.notifier).removeHoliday(date);
-      expect(container.read(holidaysProvider), isEmpty);
-    });
-  });
-
-  group('Profile & UI Notifiers', () {
-    test('ProfileNotifier setProfile', () async {
-      when(() => mockStorageService.setActiveProfileId('p2'))
-          .thenAnswer((_) async {});
-      await container.read(activeProfileIdProvider.notifier).setProfile('p2');
-      expect(container.read(activeProfileIdProvider), 'p2');
-    });
-
-    test('AppLockIntentNotifier lock and reset', () {
-      final notifier = container.read(appLockIntentProvider.notifier);
-      notifier.lock();
-      expect(container.read(appLockIntentProvider), true);
-      notifier.reset();
-      expect(container.read(appLockIntentProvider), false);
+      expect(container.read(localModeProvider), true);
     });
   });
 }

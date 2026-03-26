@@ -194,5 +194,34 @@ void main() {
 
       verify(() => mockStorage.saveLoan(any())).called(1);
     });
+
+    testWidgets('Calculates rate when adjust-rate mode is enabled',
+        (tester) async {
+      when(() => mockLoanService.calculateRateForEMITenure(
+          principal: any(named: 'principal'),
+          tenureMonths: any(named: 'tenureMonths'),
+          emi: any(named: 'emi'))).thenReturn(8.5);
+
+      await tester
+          .pumpWidget(createTestWidget(LoanRecalculateDialog(loan: testLoan)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Calculate Interest Rate?'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, 'Target Tenure (Months)'),
+          findsOneWidget);
+
+      await tester.enterText(
+          find.widgetWithText(TextField, 'New EMI Amount'), '3200');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Target Tenure (Months)'), '24');
+      await tester.tap(find.text('Update'));
+      await tester.pumpAndSettle();
+
+      verify(() => mockLoanService.calculateRateForEMITenure(
+          principal: 80000, tenureMonths: 24, emi: 3200)).called(1);
+      verify(() => mockStorage.saveLoan(any())).called(1);
+    });
   });
 }

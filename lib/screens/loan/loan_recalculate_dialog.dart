@@ -57,21 +57,17 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
             subtitle: const Text(
                 'If checked, Tenure will be used to find the new Rate. Otherwise, Tenure is recalculated.'),
             value: _adjustRate,
-            onChanged: (v) =>
-                setState(() => _adjustRate = v!), // coverage:ignore-line
+            onChanged: (v) => setState(() => _adjustRate = v!),
           ),
           if (_adjustRate) ...[
             const SizedBox(height: 8),
             TextField(
-              // coverage:ignore-line
-              controller: _tenureController, // coverage:ignore-line
+              controller: _tenureController,
               decoration: const InputDecoration(
                   labelText: 'Target Tenure (Months)',
                   border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly
-              ], // coverage:ignore-line
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
           ],
         ],
@@ -102,20 +98,18 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
     var loan = widget.loan;
 
     if (_adjustRate) {
-      // coverage:ignore-start
       if (newTenure > 0) {
         final newRate = loanService.calculateRateForEMITenure(
           principal: loan.remainingPrincipal,
-          // coverage:ignore-end
           tenureMonths: newTenure,
           emi: newEmi,
         );
-        loan.interestRate = newRate; // coverage:ignore-line
-        loan.emiAmount = newEmi; // coverage:ignore-line
+        loan.interestRate = newRate;
+        loan.emiAmount = newEmi;
 
-        final monthsPassed = DateTime.now().difference(loan.startDate).inDays ~/
-            30; // coverage:ignore-line
-        loan.tenureMonths = monthsPassed + newTenure; // coverage:ignore-line
+        final monthsPassed =
+            DateTime.now().difference(loan.startDate).inDays ~/ 30;
+        loan.tenureMonths = monthsPassed + newTenure;
       }
     } else {
       final calcTenure = loanService.calculateTenureForEMI(

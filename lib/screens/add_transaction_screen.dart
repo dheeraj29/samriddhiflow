@@ -52,6 +52,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   bool _adjustForHolidays = false;
   int? _holdingTenureMonths;
   double? _gainAmount;
+  bool _hideBalance = true; // default hidden for privacy during drops
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
@@ -269,8 +270,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: Row(
                 children: [
                   if (c.iconCode != 0) ...[
-                    PureIcons.categoryIcon(c.iconCode,
-                        size: 18, color: Colors.blueGrey),
+                    PureIcons.categoryIcon(c.iconCode, // coverage:ignore-line
+                        size: 18,
+                        color: Colors.blueGrey),
                     const SizedBox(width: 8),
                   ],
                   Text(c.name),
@@ -443,6 +445,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         labelText:
             _type == TransactionType.transfer ? 'From Account' : 'Account',
         border: const OutlineInputBorder(),
+        prefixIcon: IconButton(
+          icon: Icon(_hideBalance ? Icons.visibility_off : Icons.visibility),
+          onPressed: () => setState(
+              () => _hideBalance = !_hideBalance), // coverage:ignore-line
+        ),
       ),
       items: <DropdownMenuItem<String?>>[
         const DropdownMenuItem<String?>(
@@ -470,9 +477,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       key: ValueKey('to_account_dropdown_$_type-$_selectedAccountId'),
       isExpanded: true,
       initialValue: _toAccountId,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'To Account',
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
+        prefixIcon: IconButton(
+          icon: Icon(_hideBalance ? Icons.visibility_off : Icons.visibility),
+          onPressed: () => setState(
+              () => _hideBalance = !_hideBalance), // coverage:ignore-line
+        ),
       ),
       items: <DropdownMenuItem<String?>>[
         if (_toAccountId == null)
@@ -1005,12 +1017,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       // coverage:ignore-start
       if (a.creditLimit != null && a.creditLimit! > 0) {
         final available = a.creditLimit! - currentDebt;
+        if (_hideBalance) return 'Avail: •••';
         return 'Avail: ${CurrencyUtils.getSmartFormat(available, a.currency)}';
         // coverage:ignore-end
       } else {
+        if (_hideBalance) return 'Usage: •••'; // coverage:ignore-line
         return 'Usage: ${CurrencyUtils.getSmartFormat(currentDebt, a.currency)}'; // coverage:ignore-line
       }
     }
-    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}';
+    if (_hideBalance) return 'Bal: •••';
+    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}'; // coverage:ignore-line
   }
 }
