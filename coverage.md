@@ -2,13 +2,14 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-04-02T22:30:29.678881**
+> **Generated on: 2026-04-02T22:42:37.286248**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 93.7%**
 
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
+| screens/taxes/tax_constants.dart | 0.0% | 0/1 | FAIL |
 | widgets/auth_wrapper.dart | 77.9% | 243/312 | WARN |
 | screens/investments_screen.dart | 81.0% | 230/284 | PASS |
 | services/location_service.dart | 85.7% | 6/7 | PASS |
@@ -16,7 +17,7 @@
 | screens/taxes/tax_dashboard_screen.dart | 87.7% | 372/424 | PASS |
 | services/auth_service.dart | 88.6% | 70/79 | PASS |
 | utils/billing_helper.dart | 88.8% | 103/116 | PASS |
-| screens/taxes/insurance_portfolio_screen.dart | 89.1% | 384/431 | PASS |
+| screens/taxes/insurance_portfolio_screen.dart | 89.1% | 385/432 | PASS |
 | screens/accounts_screen.dart | 89.9% | 472/525 | PASS |
 | widgets/lock_wrapper.dart | 90.0% | 72/80 | PASS |
 | screens/dashboard_screen.dart | 90.5% | 411/454 | PASS |
