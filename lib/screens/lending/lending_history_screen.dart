@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../models/lending_record.dart';
 import '../../services/lending/lending_provider.dart';
@@ -34,7 +35,7 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payment History'),
+        title: Text(AppLocalizations.of(context)!.paymentHistoryAction),
       ),
       body: _buildBody(record, payments, currencyLocale),
     );
@@ -47,8 +48,9 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
         children: [
           _buildHeader(record, currencyLocale),
           const Divider(),
-          const Expanded(
-            child: Center(child: Text('No payments recorded.')),
+          Expanded(
+            child: Center(
+                child: Text(AppLocalizations.of(context)!.noPaymentsRecorded)),
           ),
         ],
       );
@@ -111,10 +113,13 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              _buildSummaryItem(AppLocalizations.of(context)!.totalAmountLabel,
+                  record.amount, locale, Colors.blue),
               _buildSummaryItem(
-                  'Total Amount', record.amount, locale, Colors.blue),
-              _buildSummaryItem(
-                  'Remaining', record.remainingAmount, locale, Colors.orange),
+                  AppLocalizations.of(context)!.remainingSummaryLabel,
+                  record.remainingAmount,
+                  locale,
+                  Colors.orange),
             ],
           ),
         ],
@@ -182,17 +187,17 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Payment?'),
-        content:
-            const Text('This will permanently remove this payment record.'),
+        title: Text(AppLocalizations.of(context)!.deletePaymentTitle),
+        content: Text(AppLocalizations.of(context)!.deletePaymentConfirmation),
         actions: [
           TextButton(
               onPressed: () =>
                   Navigator.pop(ctx, false), // coverage:ignore-line
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelButton)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(AppLocalizations.of(context)!.deleteButton,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -207,7 +212,9 @@ class _LendingHistoryScreenState extends ConsumerState<LendingHistoryScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment deleted')),
+          SnackBar(
+              content:
+                  Text(AppLocalizations.of(context)!.paymentDeletedMessage)),
         );
       }
     }

@@ -13,6 +13,7 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 
 class MockHive extends Mock implements HiveInterface {}
 
@@ -33,6 +34,7 @@ void registerStorageServiceLifecycleTests() {
   late MockBox<InsurancePolicy> mockInsuranceBox;
   late MockBox<TaxYearData> mockTaxBox;
   late MockBox<LendingRecord> mockLendingBox;
+  late MockBox<Investment> mockInvestmentBox;
   late Map<String, dynamic> settingsMap;
 
   setUpAll(() {
@@ -58,6 +60,13 @@ void registerStorageServiceLifecycleTests() {
     registerFallbackValue(
         Category(id: 'f', name: 'f', usage: CategoryUsage.expense));
     registerFallbackValue(Profile(id: 'f', name: 'f'));
+    registerFallbackValue(Investment(
+        id: 'f',
+        name: 'f',
+        type: InvestmentType.stock,
+        acquisitionDate: DateTime.now(),
+        acquisitionPrice: 0,
+        quantity: 0));
   });
 
   setUp(() {
@@ -72,6 +81,7 @@ void registerStorageServiceLifecycleTests() {
     mockInsuranceBox = MockBox<InsurancePolicy>();
     mockTaxBox = MockBox<TaxYearData>();
     mockLendingBox = MockBox<LendingRecord>();
+    mockInvestmentBox = MockBox<Investment>();
     settingsMap = {};
 
     when(() => mockHive.box<Account>(StorageService.boxAccounts))
@@ -95,6 +105,8 @@ void registerStorageServiceLifecycleTests() {
         .thenReturn(mockTaxBox);
     when(() => mockHive.box<LendingRecord>(StorageService.boxLendingRecords))
         .thenReturn(mockLendingBox);
+    when(() => mockHive.box<Investment>(StorageService.boxInvestments))
+        .thenReturn(mockInvestmentBox);
 
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
     when(() => mockHive.openBox(any()))
@@ -117,6 +129,8 @@ void registerStorageServiceLifecycleTests() {
         .thenAnswer((_) async => mockTaxBox);
     when(() => mockHive.openBox<LendingRecord>(any()))
         .thenAnswer((_) async => mockLendingBox);
+    when(() => mockHive.openBox<Investment>(any()))
+        .thenAnswer((_) async => mockInvestmentBox);
 
     // Stateful settings mock
     when(() => mockSettingsBox.get(any()))
@@ -139,6 +153,15 @@ void registerStorageServiceLifecycleTests() {
     settingsMap['activeProfileId'] = 'default';
     when(() => mockAccountBox.toMap()).thenReturn({});
     when(() => mockTransactionBox.toMap()).thenReturn({});
+    when(() => mockLoanBox.toMap()).thenReturn({});
+    when(() => mockRecurringBox.toMap()).thenReturn({});
+    when(() => mockProfileBox.toMap()).thenReturn({});
+    when(() => mockCategoryBox.toMap()).thenReturn({});
+    when(() => mockInsuranceBox.toMap()).thenReturn({});
+    when(() => mockTaxBox.toMap()).thenReturn({});
+    when(() => mockLendingBox.toMap()).thenReturn({});
+    when(() => mockInvestmentBox.toMap()).thenReturn({});
+    when(() => mockRecurringBox.values).thenReturn(const []);
 
     storageService = StorageService(mockHive);
 

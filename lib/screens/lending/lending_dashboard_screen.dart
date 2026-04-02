@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers.dart';
-import '../../services/lending/lending_provider.dart';
-import '../../models/lending_record.dart';
-import '../../utils/currency_utils.dart';
-import 'add_lending_screen.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'lending_history_screen.dart';
+import 'add_lending_screen.dart';
 import '../../widgets/app_list_item_card.dart';
+import '../../models/lending_record.dart';
+import '../../providers.dart';
+import '../../services/lending/lending_provider.dart';
+import '../../utils/currency_utils.dart';
 
 const dateFormatDdMmmYyyy = 'dd MMM yyyy';
 
@@ -23,7 +24,7 @@ class LendingDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lending & Borrowing'),
+        title: Text(AppLocalizations.of(context)!.lendingBorrowingTitle),
       ),
       body: Column(
         children: [
@@ -35,7 +36,7 @@ class LendingDashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildSummaryCard(
                     context,
-                    'Total Lent',
+                    AppLocalizations.of(context)!.totalLentLabel,
                     totalLent,
                     Colors.green,
                     currencyLocale,
@@ -45,7 +46,7 @@ class LendingDashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildSummaryCard(
                     context,
-                    'Total Borrowed',
+                    AppLocalizations.of(context)!.totalBorrowedLabel,
                     totalBorrowed,
                     Colors.redAccent,
                     currencyLocale,
@@ -58,7 +59,8 @@ class LendingDashboardScreen extends ConsumerWidget {
           // List of Records
           Expanded(
             child: lendingRecords.isEmpty
-                ? const Center(child: Text('No records found.'))
+                ? Center(
+                    child: Text(AppLocalizations.of(context)!.noLendingRecords))
                 : ListView.builder(
                     itemCount: lendingRecords.length,
                     itemBuilder: (context, index) {
@@ -81,7 +83,7 @@ class LendingDashboardScreen extends ConsumerWidget {
                     const AddLendingScreen()), // coverage:ignore-line
           );
         },
-        label: const Text('Add Record'),
+        label: Text(AppLocalizations.of(context)!.addRecordAction),
         icon: const Icon(Icons.add),
       ),
     );
@@ -131,18 +133,18 @@ class LendingDashboardScreen extends ConsumerWidget {
         return await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Delete Record?'),
-            content: const Text(
-                'Are you sure you want to delete this record? This action cannot be undone.'),
+            title: Text(AppLocalizations.of(context)!.deleteLendingRecordTitle),
+            content: Text(
+                AppLocalizations.of(context)!.deleteLendingRecordConfirmation),
             actions: [
               TextButton(
                   onPressed: () =>
                       Navigator.of(ctx).pop(false), // coverage:ignore-line
-                  child: const Text('Cancel')),
+                  child: Text(AppLocalizations.of(context)!.cancelButton)),
               TextButton(
                   onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('Delete',
-                      style: TextStyle(color: Colors.red))),
+                  child: Text(AppLocalizations.of(context)!.deleteButton,
+                      style: const TextStyle(color: Colors.red))),
             ],
           ),
         );
@@ -163,7 +165,8 @@ class LendingDashboardScreen extends ConsumerWidget {
           ),
           title: Text(record.personName,
               style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: _buildRecordSubtitle(record, formattedDate, locale),
+          subtitle:
+              _buildRecordSubtitle(context, record, formattedDate, locale),
           trailing: _buildRecordTrailing(context, ref, record, color, locale),
           onTap: () {
             // coverage:ignore-line
@@ -181,8 +184,8 @@ class LendingDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecordSubtitle(
-      LendingRecord record, String formattedDate, String locale) {
+  Widget _buildRecordSubtitle(BuildContext context, LendingRecord record,
+      String formattedDate, String locale) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -191,7 +194,9 @@ class LendingDashboardScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Paid: ${CurrencyUtils.formatCurrency(record.totalPaid, locale)} (${record.payments.length} txn)',
+              AppLocalizations.of(context)!.paidSubtitle(
+                  CurrencyUtils.formatCurrency(record.totalPaid, locale),
+                  record.payments.length),
               style: const TextStyle(color: Colors.teal, fontSize: 12),
             ),
           ),
@@ -199,9 +204,11 @@ class LendingDashboardScreen extends ConsumerWidget {
           Padding(
             // coverage:ignore-line
             padding: const EdgeInsets.only(top: 2),
+            // coverage:ignore-start
             child: Text(
-              // coverage:ignore-line
-              'Closed on ${DateFormat('dd MMM').format(record.closedDate!)}', // coverage:ignore-line
+              AppLocalizations.of(context)!.closedOnSubtitle(
+                  DateFormat('dd MMM').format(record.closedDate!)),
+              // coverage:ignore-end
               style: const TextStyle(
                   color: Colors.grey,
                   fontStyle: FontStyle.italic,
@@ -232,7 +239,9 @@ class LendingDashboardScreen extends ConsumerWidget {
             ),
             if (record.totalPaid > 0 && !record.isClosed)
               Text(
-                'Bal: ${CurrencyUtils.formatCurrency(record.remainingAmount, locale)}',
+                AppLocalizations.of(context)!.balanceTrailing(
+                    CurrencyUtils.formatCurrency(
+                        record.remainingAmount, locale)),
                 style: TextStyle(
                   color: color.withValues(alpha: 0.8),
                   fontSize: 12,
@@ -280,55 +289,55 @@ class LendingDashboardScreen extends ConsumerWidget {
       itemBuilder: (BuildContext context) {
         return [
           if (!record.isClosed) ...[
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               value: 'pay',
               child: Row(
                 children: [
-                  Icon(Icons.payment, color: Colors.orange),
-                  SizedBox(width: 8),
-                  Text('Record Payment'),
+                  const Icon(Icons.payment, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.recordPaymentAction),
                 ],
               ),
             ),
             if (record.payments.isNotEmpty)
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'history',
                 child: Row(
                   children: [
-                    Icon(Icons.list, color: Colors.teal),
-                    SizedBox(width: 8),
-                    Text('Payment History'),
+                    const Icon(Icons.list, color: Colors.teal),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.paymentHistoryAction),
                   ],
                 ),
               ),
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               value: 'settle',
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.teal),
-                  SizedBox(width: 8),
-                  Text('Settle Full'),
+                  const Icon(Icons.check_circle, color: Colors.teal),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.settleFullAction),
                 ],
               ),
             ),
           ],
-          const PopupMenuItem<String>(
+          PopupMenuItem<String>(
             value: 'edit',
             child: Row(
               children: [
-                Icon(Icons.edit, color: Colors.blue),
-                SizedBox(width: 8),
-                Text('Edit'),
+                const Icon(Icons.edit, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context)!.editAction),
               ],
             ),
           ),
-          const PopupMenuItem<String>(
+          PopupMenuItem<String>(
             value: 'delete',
             child: Row(
               children: [
-                Icon(Icons.delete, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Delete'),
+                const Icon(Icons.delete, color: Colors.red),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context)!.deleteAction),
               ],
             ),
           ),
@@ -342,13 +351,18 @@ class LendingDashboardScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mark as Settled?'),
-        content: Text(
-            'Has the amount of ${record.amount} been ${record.type == LendingType.lent ? 'received back from' : 'paid back to'} ${record.personName}?'),
+        title: Text(AppLocalizations.of(context)!.markAsSettledTitle),
+        content: Text(record.type == LendingType.lent
+            ? AppLocalizations.of(context)!.settleLentConfirmation(
+                record.amount.toString(), record.personName)
+            : AppLocalizations.of(context)!.settleBorrowedConfirmation(
+                // coverage:ignore-line
+                record.amount.toString(),
+                record.personName)), // coverage:ignore-line
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelButton)),
           ElevatedButton(
             onPressed: () {
               final updated =
@@ -356,7 +370,7 @@ class LendingDashboardScreen extends ConsumerWidget {
               ref.read(lendingProvider.notifier).updateRecord(updated);
               Navigator.of(ctx).pop();
             },
-            child: const Text('Yes, Settle'),
+            child: Text(AppLocalizations.of(context)!.yesSettleAction),
           ),
         ],
       ),
@@ -396,13 +410,13 @@ class LendingDashboardScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Record?'),
-        content: const Text(
-            'Are you sure you want to delete this record? This action cannot be undone.'),
+        title: Text(AppLocalizations.of(context)!.deleteLendingRecordTitle),
+        content:
+            Text(AppLocalizations.of(context)!.deleteLendingRecordConfirmation),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelButton)),
           TextButton(
               // coverage:ignore-start
               onPressed: () {
@@ -410,7 +424,8 @@ class LendingDashboardScreen extends ConsumerWidget {
                 Navigator.of(ctx).pop();
                 // coverage:ignore-end
               },
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child: Text(AppLocalizations.of(context)!.deleteAction,
+                  style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -449,31 +464,33 @@ class _LendingRecordPaymentDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Record Payment'),
+      title: Text(AppLocalizations.of(context)!.recordPaymentAction),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Remaining: ${CurrencyUtils.formatCurrency(widget.record.remainingAmount, widget.locale)}',
+            AppLocalizations.of(context)!.remainingLabel(
+                CurrencyUtils.formatCurrency(
+                    widget.record.remainingAmount, widget.locale)),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Amount Paid',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.currency_rupee),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.amountPaidLabel,
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.currency_rupee),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _noteController,
-            decoration: const InputDecoration(
-              labelText: 'Note (Optional)',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.note),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.noteLabel,
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.note),
             ),
           ),
           const SizedBox(height: 12),
@@ -494,10 +511,10 @@ class _LendingRecordPaymentDialogState
               }
             },
             child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Date',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.calendar_today),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.dateLabel,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.calendar_today),
               ),
               child: Text(DateFormat(dateFormatDdMmmYyyy).format(_payDate)),
             ),
@@ -507,7 +524,7 @@ class _LendingRecordPaymentDialogState
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         ElevatedButton(
           // coverage:ignore-start
           onPressed: () {
@@ -525,7 +542,7 @@ class _LendingRecordPaymentDialogState
             widget.onSave(payment); // coverage:ignore-line
             Navigator.pop(context); // coverage:ignore-line
           },
-          child: const Text('Save Payment'),
+          child: Text(AppLocalizations.of(context)!.savePaymentAction),
         ),
       ],
     );

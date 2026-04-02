@@ -30,12 +30,10 @@ class AppListItemCard extends StatelessWidget {
         ),
       ),
       child: onTap != null
-          // coverage:ignore-start
           ? InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(borderRadius),
               child: child,
-              // coverage:ignore-end
             )
           : child,
     );

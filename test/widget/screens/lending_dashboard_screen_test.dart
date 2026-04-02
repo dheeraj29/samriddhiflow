@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/screens/lending/lending_dashboard_screen.dart';
 import 'package:samriddhi_flow/services/lending/lending_provider.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/providers.dart';
 
 class MockLendingNotifier extends Notifier<List<LendingRecord>>
@@ -62,7 +63,11 @@ void main() {
           lendingProvider
               .overrideWith(() => MockLendingNotifier([record, record2])),
         ],
-        child: const MaterialApp(home: LendingDashboardScreen()),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('en'),
+            home: LendingDashboardScreen()),
       ),
     );
 
@@ -82,7 +87,11 @@ void main() {
           currencyProvider.overrideWith(() => MockCurrencyNotifier()),
           lendingProvider.overrideWith(() => MockLendingNotifier([])),
         ],
-        child: const MaterialApp(home: LendingDashboardScreen()),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('en'),
+            home: LendingDashboardScreen()),
       ),
     );
 
@@ -107,7 +116,12 @@ void main() {
           currencyProvider.overrideWith(() => MockCurrencyNotifier()),
           lendingProvider.overrideWith(() => MockLendingNotifier([record])),
         ],
-        child: const MaterialApp(home: LendingDashboardScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: LendingDashboardScreen(),
+        ),
       ),
     );
 

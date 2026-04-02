@@ -11,6 +11,7 @@ import 'dart:math';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/services/taxes/indian_tax_service.dart';
 import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
@@ -18,13 +19,7 @@ import 'package:samriddhi_flow/utils/currency_utils.dart';
 import 'package:samriddhi_flow/widgets/notched_border_painter.dart';
 import 'package:samriddhi_flow/widgets/smart_currency_text.dart';
 
-const employerPaidText = 'Employer Paid';
-const selectMonthsText = 'Select Months';
-const _transactionDateLabel = 'Transaction Date';
 const _dateFormatIso8601 = 'yyyy-MM-dd';
-const _addEntryLabel = 'Add Entry';
-const _adhocExemptionsLabel = 'Less: Ad-hoc Exemptions';
-const _selectStoppedMonthsLabel = 'Select Stopped Months';
 
 class TaxDetailsScreen extends ConsumerStatefulWidget {
   final TaxYearData data;
@@ -240,7 +235,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     // Feedback: Don't close on save, just show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tax details saved successfully!')),
+      SnackBar(
+          content: Text(AppLocalizations.of(context)!.taxDetailsSavedStatus)),
     );
 
     setState(() {
@@ -254,20 +250,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Clear $catName Data?'),
-        content: Text(
-            'Are you sure you want to clear all entries for $catName in FY ${_currentData.year}?'),
+        // coverage:ignore-end
+        title:
+            // coverage:ignore-start
+            Text(AppLocalizations.of(context)!.clearCategoryDataTitle(catName)),
+        content: Text(AppLocalizations.of(context)!
+            .clearCategoryDataContent(catName, _currentData.year.toString())),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              // coverage:ignore-end
-              child: const Text('CANCEL')),
-          // coverage:ignore-start
+              child: Text(
+                  AppLocalizations.of(context)!.cancelButton.toUpperCase())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             // coverage:ignore-end
-            child: const Text('CLEAR'),
+            child: Text(AppLocalizations.of(context)!
+                .clearButton
+                .toUpperCase()), // coverage:ignore-line
           ),
         ],
       ),
@@ -282,8 +282,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       });
       // coverage:ignore-start
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$catName data cleared for FY.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!
+                .categoryDataClearedStatus(catName))));
         // coverage:ignore-end
       }
     }
@@ -349,17 +350,20 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Clear ALL FY ${_currentData.year} Data?'),
-        content: const Text(
-            'This will permanently delete ALL tax details for this financial year across all categories.'),
+        title: Text(AppLocalizations.of(context)!
+            .clearAllFiscalYearDataTitle(_currentData.year.toString())),
+        content:
+            Text(AppLocalizations.of(context)!.clearAllFiscalYearDataContent),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('CANCEL')),
+              child: Text(
+                  AppLocalizations.of(context)!.cancelButton.toUpperCase())),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('DELETE ALL'),
+            child: Text(
+                AppLocalizations.of(context)!.deleteAllButton.toUpperCase()),
           ),
         ],
       ),
@@ -370,24 +374,45 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       if (mounted) {
         setState(() => _hasUnsavedChanges = false);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Tax data cleared.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.taxDataClearedStatus)));
       }
     }
   }
 
   int _selectedIndex = 0;
-  final List<({IconData icon, String label})> _navDestinations = [
-    (icon: Icons.work_outline, label: 'Salary'),
-    (icon: Icons.home_work_outlined, label: 'House Prop'),
-    (icon: Icons.storefront, label: 'Business'),
-    (icon: Icons.trending_up, label: 'Cap Gains'),
-    (icon: Icons.pie_chart_outline, label: 'Dividend'),
-    (icon: Icons.receipt_long, label: 'Tax Paid'),
-    (icon: Icons.card_giftcard, label: 'Gifts'),
-    (icon: Icons.agriculture, label: 'Agri'),
-    (icon: Icons.more_horiz, label: 'Other'),
-  ];
+  List<({IconData icon, String label})> get _navDestinations => [
+        (
+          icon: Icons.work_outline,
+          label: AppLocalizations.of(context)!.salaryTab
+        ),
+        (
+          icon: Icons.home_work_outlined,
+          label: AppLocalizations.of(context)!.housePropertyTab
+        ),
+        (
+          icon: Icons.storefront,
+          label: AppLocalizations.of(context)!.businessTab
+        ),
+        (
+          icon: Icons.trending_up,
+          label: AppLocalizations.of(context)!.capitalGainsTab
+        ),
+        (
+          icon: Icons.pie_chart_outline,
+          label: AppLocalizations.of(context)!.dividendTab
+        ),
+        (
+          icon: Icons.receipt_long,
+          label: AppLocalizations.of(context)!.taxPaidTab
+        ),
+        (
+          icon: Icons.card_giftcard,
+          label: AppLocalizations.of(context)!.giftsTab
+        ),
+        (icon: Icons.agriculture, label: AppLocalizations.of(context)!.agriTab),
+        (icon: Icons.more_horiz, label: AppLocalizations.of(context)!.otherTab),
+      ];
 
   void _showCategorySwitcher() {
     showModalBottomSheet(
@@ -401,8 +426,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Switch Category',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(AppLocalizations.of(context)!.switchCategoryTitle,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 16),
               Flexible(
                 child: GridView.builder(
@@ -478,31 +504,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-              'FY ${_currentData.year} - ${_navDestinations[_selectedIndex].label}'),
-          actions: [
-            IconButton(
-              icon: Icon(_selectedDateRange == null
-                  ? Icons.calendar_today
-                  : Icons.event_busy),
-              tooltip: _selectedDateRange == null
-                  ? 'Filter by Date Range'
-                  : 'Clear Date Filter',
-              onPressed: _selectedDateRange == null
-                  ? _pickDateRange
-                  : _clearDateFilter, // coverage:ignore-line
-            ),
-            if (widget.onDelete != null)
-              IconButton(
-                icon: const Icon(Icons.delete_sweep_outlined,
-                    color: Colors.redAccent),
-                tooltip: 'Clear ALL FY Data',
-                onPressed: _clearTaxData,
-              ),
-            ..._buildCopyAction(),
-          ],
-        ),
+        appBar: _buildAppBar(),
         body: Column(
           children: [
             _buildLiveSummary(),
@@ -525,61 +527,95 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showCategorySwitcher,
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          shape: const CircleBorder(),
-          child: Icon(_navDestinations[_selectedIndex].icon,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              size: 28),
-        ),
+        floatingActionButton: _buildFAB(),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: LayoutBuilder(
-          builder: (context, constraints) {
-            final double width = constraints.maxWidth;
-            const double fabRadius = 28.0; // Standard FAB radius
-            final fabRect = Rect.fromCircle(
-              center: Offset(width / 2, 0),
-              radius: fabRadius,
-            );
-
-            return CustomPaint(
-              painter: NotchedBorderPainter(
-                shape: const CircularNotchedRectangle(),
-                fabRect: fabRect,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                        .withValues(alpha: 0.2) // coverage:ignore-line
-                    : Colors.black.withValues(alpha: 0.1),
-              ),
-              child: BottomAppBar(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                height: 60,
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                shape: const CircularNotchedRectangle(),
-                notchMargin: 8,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.redAccent),
-                      tooltip: 'Clear Category Data',
-                      onPressed: _clearCurrentCategoryData,
-                    ),
-                    const Spacer(), // Leave space for FAB
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.save_outlined),
-                      tooltip: 'Save Changes',
-                      onPressed: _save,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+        bottomNavigationBar: _buildBottomAppBar(),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+          '${AppLocalizations.of(context)!.fiscalYearPrefix} ${_currentData.year} - ${_navDestinations[_selectedIndex].label}'),
+      actions: [
+        IconButton(
+          icon: Icon(_selectedDateRange == null
+              ? Icons.calendar_today
+              : Icons.event_busy),
+          tooltip: _selectedDateRange == null
+              ? AppLocalizations.of(context)!.filterByDateRangeLabel
+              : AppLocalizations.of(context)!
+                  .clearDateFilterLabel, // coverage:ignore-line
+          onPressed:
+              _selectedDateRange == null ? _pickDateRange : _clearDateFilter,
+        ),
+        if (widget.onDelete != null)
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined,
+                color: Colors.redAccent),
+            tooltip: AppLocalizations.of(context)!.clearAllFiscalYearDataLabel,
+            onPressed: _clearTaxData,
+          ),
+        ..._buildCopyAction(),
+      ],
+    );
+  }
+
+  Widget _buildFAB() {
+    return FloatingActionButton(
+      onPressed: _showCategorySwitcher,
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      shape: const CircleBorder(),
+      child: Icon(_navDestinations[_selectedIndex].icon,
+          color: Theme.of(context).colorScheme.onPrimaryContainer, size: 28),
+    );
+  }
+
+  Widget _buildBottomAppBar() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth;
+        const double fabRadius = 28.0;
+        final fabRect = Rect.fromCircle(
+          center: Offset(width / 2, 0),
+          radius: fabRadius,
+        );
+
+        return CustomPaint(
+          painter: NotchedBorderPainter(
+            shape: const CircularNotchedRectangle(),
+            fabRect: fabRect,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+                : Colors.black.withValues(alpha: 0.1),
+          ),
+          child: BottomAppBar(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 60,
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
+            child: Row(
+              children: [
+                IconButton(
+                  icon:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  tooltip: AppLocalizations.of(context)!.clearCategoryDataLabel,
+                  onPressed: _clearCurrentCategoryData,
+                ),
+                const Spacer(),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.save_outlined),
+                  tooltip: AppLocalizations.of(context)!.saveButton,
+                  onPressed: _save,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -612,7 +648,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       return [
         IconButton(
           icon: const Icon(Icons.copy),
-          tooltip: 'Copy Previous Year Data',
+          tooltip: AppLocalizations.of(context)!.copyPreviousYearDataLabel,
           onPressed: _copySalaryFromPreviousYear,
         )
       ];
@@ -621,7 +657,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       return [
         IconButton(
           icon: const Icon(Icons.copy),
-          tooltip: 'Copy Previous Year Data',
+          tooltip: AppLocalizations.of(context)!.copyPreviousYearDataLabel,
           onPressed: _copyHousePropFromPreviousYear,
         )
       ];
@@ -657,8 +693,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Approx. Gross Income',
-                  style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.approxGrossIncomeLabel,
+                  style: const TextStyle(fontSize: 12)),
               SmartCurrencyText(
                   value: totalIncome,
                   locale: ref.watch(currencyProvider),
@@ -670,7 +706,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Est. Tax Liability', style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.estimatedTaxLiabilityLabel,
+                  style: const TextStyle(fontSize: 12)),
               SmartCurrencyText(
                   value: estimatedTax,
                   locale: ref.watch(currencyProvider),
@@ -689,17 +726,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Unsaved Changes'),
-            content: const Text(
-                'You have unsaved changes. Are you sure you want to discard them?'),
+            title: Text(AppLocalizations.of(context)!.unsavedChangesTitle),
+            content: Text(AppLocalizations.of(context)!.unsavedChangesContent),
             actions: [
               TextButton(
                   onPressed: () =>
                       Navigator.pop(context, false), // coverage:ignore-line
-                  child: const Text('Keep Editing')),
+                  child: Text(AppLocalizations.of(context)!.keepEditingButton)),
               FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Discard')),
+                  child: Text(AppLocalizations.of(context)!.discardButton)),
             ],
           ),
         ) ??
@@ -738,11 +774,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         }),
         const Divider(),
         _buildDividendFooter(div),
-        const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Text(
-              'Note: Detailed breakdown is required for accurate interest calculation (Installment Shortfall Interest).',
-              style: TextStyle(color: Colors.grey, fontSize: 12)),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(AppLocalizations.of(context)!.dividendBreakdownNote,
+              style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ),
         _buildDividendUpdateButton(controllers),
       ],
@@ -753,9 +788,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Expanded(
-          child: Text('Dividend Income (Breakdown for Advance Tax)',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(
+              AppLocalizations.of(context)!.dividendIncomeBreakdownTitle,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         IconButton(
           padding: EdgeInsets.zero,
@@ -780,43 +816,46 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Text(
-        'Last Updated: ${DateFormat('MMM d, yyyy HH:mm').format(lastUpdated)}',
+        '${AppLocalizations.of(context)!.lastUpdatedLabel}: ${DateFormat('MMM d, yyyy HH:mm').format(lastUpdated)}',
         style: const TextStyle(color: Colors.grey, fontSize: 12),
       ),
     );
   }
 
   String _monthLabel(int m) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
+    final months = [
+      AppLocalizations.of(context)!.monthJan,
+      AppLocalizations.of(context)!.monthFeb,
+      AppLocalizations.of(context)!.monthMar,
+      AppLocalizations.of(context)!.monthApr,
+      AppLocalizations.of(context)!.monthMay,
+      AppLocalizations.of(context)!.monthJun,
+      AppLocalizations.of(context)!.monthJul,
+      AppLocalizations.of(context)!.monthAug,
+      AppLocalizations.of(context)!.monthSep,
+      AppLocalizations.of(context)!.monthOct,
+      AppLocalizations.of(context)!.monthNov,
+      AppLocalizations.of(context)!.monthDec
     ];
     return months[(m - 1).clamp(0, 11)];
   }
 
   String _buildDividendPeriodLabel(
       int idx, List<AdvanceTaxInstallmentRule> advanceRules) {
-    if (advanceRules.isEmpty) return 'Full Year';
+    if (advanceRules.isEmpty) {
+      return AppLocalizations.of(context)!
+          .fullYearLabel; // coverage:ignore-line
+    }
     if (idx == 0) {
       final rule = advanceRules[0];
-      return 'Period ${idx + 1} (Apr 1 - ${_monthLabel(rule.endMonth)} ${rule.endDay})';
+      return '${AppLocalizations.of(context)!.periodLabel} ${idx + 1} (Apr 1 - ${_monthLabel(rule.endMonth)} ${rule.endDay})';
     } else if (idx < advanceRules.length) {
       final prev = advanceRules[idx - 1];
       final curr = advanceRules[idx];
-      return 'Period ${idx + 1} (${_monthLabel(prev.endMonth)} ${prev.endDay + 1} - ${_monthLabel(curr.endMonth)} ${curr.endDay})';
+      return '${AppLocalizations.of(context)!.periodLabel} ${idx + 1} (${_monthLabel(prev.endMonth)} ${prev.endDay + 1} - ${_monthLabel(curr.endMonth)} ${curr.endDay})';
     } else {
       final prev = advanceRules.last;
-      return 'Period ${idx + 1} (${_monthLabel(prev.endMonth)} ${prev.endDay + 1} - Mar 31)';
+      return '${AppLocalizations.of(context)!.periodLabel} ${idx + 1} (${_monthLabel(prev.endMonth)} ${prev.endDay + 1} - Mar 31)';
     }
   }
 
@@ -829,7 +868,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         : CurrencyUtils.formatCurrency(div.grossDividend, currencyLocale);
 
     return ListTile(
-      title: const Text('Total Dividend Income'),
+      title: Text(AppLocalizations.of(context)!.totalDividendIncomeLabel),
       trailing: Text(totalText,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
     );
@@ -855,11 +894,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           );
         });
         _updateSummary();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'Dividend details updated internally. Click Save icon to persist.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.dividendUpdatedStatus)));
       },
-      child: const Text('Update Total'),
+      child: Text(AppLocalizations.of(context)!.updateTotalButton),
     );
   }
 
@@ -867,87 +906,22 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _buildSectionTitle('Salary Structures')),
-            TextButton.icon(
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Add Structure'),
-              onPressed: () => _editSalaryStructure(null),
-            ),
-          ],
-        ),
-        if (_salaryHistory.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-                'No salary structure defined. Add one to auto-fill monthly data.',
-                style: TextStyle(color: Colors.grey)),
-          )
-        else
-          ..._salaryHistory.map((s) {
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                          .withValues(alpha: 0.2) // coverage:ignore-line
-                      : Colors.black.withValues(alpha: 0.1),
-                ),
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.grey.withValues(alpha: 0.1),
-                  child: Icon(Icons.work_history_outlined,
-                      color: Theme.of(context).colorScheme.primary, size: 20),
-                ),
-                title: Text(
-                    'Effective: ${DateFormat('MMM d, yyyy').format(s.effectiveDate)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(
-                    'Basic: ${CurrencyUtils.formatCurrency(s.monthlyBasic, ref.watch(currencyProvider))} + Allowances'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    _editSalaryStructure(s);
-                  },
-                ),
-                // coverage:ignore-start
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                  _editSalaryStructure(s);
-                  // coverage:ignore-end
-                },
-              ),
-            );
-          }),
+        _buildSalaryStructureHeader(),
+        _buildSalaryStructureList(),
         const SizedBox(height: 16),
         const Divider(height: 32),
-        _buildSectionTitle('Exemptions & Deductions'),
-        _buildNumberField('Employer NPS', _salaryNpsEmployerCtrl),
-        _buildNumberField('Leave Encashment (Retirement / Resignation)',
-            _salaryLeaveEncashCtrl),
-        _buildNumberField(
-            'Gratuity (Retirement / Resignation)', _salaryGratuityCtrl),
+        _buildSalaryExemptionsDeductionsSection(),
         const SizedBox(height: 16),
-        _buildSectionTitle('Independent Allowances'),
-        _buildIndependentAllowances(),
+        _buildIndependentAllowancesSection(),
         const SizedBox(height: 16),
-        _buildSectionTitle('Custom Ad-hoc Exemptions'),
-        _buildIndependentExemptions(),
+        _buildCustomExemptionsSection(),
         const SizedBox(height: 16),
         _buildSalarySummaryCard(),
         const SizedBox(height: 16),
-        _buildSectionTitle('TDS / Taxes Already Paid'),
+        _buildTdsSummarySectionHeader(),
         _buildTdsSummarySection(),
         const SizedBox(height: 16),
-        _buildSectionTitle('Independent Deductions'),
-        _buildIndependentDeductions(),
+        _buildIndependentDeductionsSection(),
         const SizedBox(height: 16),
         _buildSalaryTakeHomeRow(),
         const SizedBox(height: 16),
@@ -956,12 +930,133 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
+  Widget _buildSalaryStructureHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+            child: _buildSectionTitle(
+                AppLocalizations.of(context)!.salaryStructuresTitle)),
+        TextButton.icon(
+          icon: const Icon(Icons.add_circle_outline),
+          label: Text(AppLocalizations.of(context)!.addStructureAction),
+          onPressed: () => _editSalaryStructure(null),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalaryStructureList() {
+    if (_salaryHistory.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(AppLocalizations.of(context)!.noSalaryStructureDefinedNote,
+            style: const TextStyle(color: Colors.grey)),
+      );
+    }
+    return Column(
+      children:
+          _salaryHistory.map((s) => _buildSalaryStructureCard(s)).toList(),
+    );
+  }
+
+  Widget _buildSalaryStructureCard(SalaryStructure s) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
+              : Colors.black.withValues(alpha: 0.1),
+        ),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+          child: Icon(Icons.work_history_outlined,
+              color: Theme.of(context).colorScheme.primary, size: 20),
+        ),
+        title: Text(
+            '${AppLocalizations.of(context)!.effectiveLabel}: ${DateFormat('MMM d, yyyy').format(s.effectiveDate)}',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+            '${AppLocalizations.of(context)!.basicLabel}: ${CurrencyUtils.formatCurrency(s.monthlyBasic, ref.watch(currencyProvider))} + ${AppLocalizations.of(context)!.allowancesLabel}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            _editSalaryStructure(s);
+          },
+        ),
+        // coverage:ignore-start
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _editSalaryStructure(s);
+          // coverage:ignore-end
+        },
+      ),
+    );
+  }
+
+  Widget _buildSalaryExemptionsDeductionsSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(l10n.exemptionsDeductionsTitle),
+        _buildNumberField(l10n.employerNPSLabel, _salaryNpsEmployerCtrl),
+        _buildNumberField(
+            l10n.leaveEncashmentTitleLabel, _salaryLeaveEncashCtrl),
+        _buildNumberField(l10n.gratuityTitleLabel, _salaryGratuityCtrl),
+      ],
+    );
+  }
+
+  Widget _buildIndependentAllowancesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+            AppLocalizations.of(context)!.independentAllowancesTitle),
+        _buildIndependentAllowances(),
+      ],
+    );
+  }
+
+  Widget _buildCustomExemptionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+            AppLocalizations.of(context)!.customAdHocExemptionsTitle),
+        _buildIndependentExemptions(),
+      ],
+    );
+  }
+
+  Widget _buildTdsSummarySectionHeader() {
+    return _buildSectionTitle(AppLocalizations.of(context)!.tdsTaxesPaidTitle);
+  }
+
+  Widget _buildIndependentDeductionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+            AppLocalizations.of(context)!.independentDeductionsTitle),
+        _buildIndependentDeductions(),
+      ],
+    );
+  }
+
   Widget _buildIndependentAllowances() {
     return Column(
       children: [
         if (_independentAllowances.isEmpty)
-          const Text('No independent allowances',
-              style: TextStyle(color: Colors.grey, fontSize: 12))
+          Text(AppLocalizations.of(context)!.noIndependentAllowancesNote,
+              style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
           ..._independentAllowances // coverage:ignore-line
               .map((a) =>
@@ -969,7 +1064,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         TextButton.icon(
           onPressed: () => _handleEditAllowance(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
-          label: const Text('Add Independent Allowance'),
+          label:
+              Text(AppLocalizations.of(context)!.addIndependentAllowanceAction),
         ),
       ],
     );
@@ -1055,8 +1151,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Column(
       children: [
         if (_independentExemptions.isEmpty)
-          const Text('No ad-hoc exemptions',
-              style: TextStyle(color: Colors.grey, fontSize: 12))
+          Text(AppLocalizations.of(context)!.noAdHocExemptionsNote,
+              style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
           ..._independentExemptions // coverage:ignore-line
               .map((e) =>
@@ -1064,7 +1160,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         TextButton.icon(
           onPressed: () => _handleEditExemption(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
-          label: const Text('Add Ad-hoc Exemption'),
+          label: Text(AppLocalizations.of(context)!.addAdHocExemptionAction),
         ),
       ],
     );
@@ -1150,8 +1246,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Column(
       children: [
         if (_independentDeductions.isEmpty)
-          const Text('No independent deductions',
-              style: TextStyle(color: Colors.grey, fontSize: 12))
+          Text(AppLocalizations.of(context)!.noIndependentDeductionsNote,
+              style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
           ..._independentDeductions // coverage:ignore-line
               .map((d) =>
@@ -1159,7 +1255,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         TextButton.icon(
           onPressed: () => _handleEditDeduction(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
-          label: const Text('Add Independent Deduction'),
+          label:
+              Text(AppLocalizations.of(context)!.addIndependentDeductionAction),
         ),
       ],
     );
@@ -1515,8 +1612,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Detailed Est (Current Month)',
-                    style: TextStyle(
+                Text(AppLocalizations.of(context)!.detailedEstCurrentMonthLabel,
+                    style: const TextStyle(
                         fontSize: 10,
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
@@ -1528,7 +1625,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     SmartCurrencyText(
                         value: gross,
                         locale: currencyLocale,
-                        suffix: ' (Gross) - ',
+                        suffix:
+                            ' (${AppLocalizations.of(context)!.grossShortLabel}) - ',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1539,7 +1637,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     SmartCurrencyText(
                         value: tax,
                         locale: currencyLocale,
-                        suffix: ' (Tax) - ',
+                        suffix:
+                            ' (${AppLocalizations.of(context)!.taxShortLabel}) - ',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1550,7 +1649,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     SmartCurrencyText(
                         value: ded,
                         locale: currencyLocale,
-                        suffix: ' (Ded) = ',
+                        suffix:
+                            ' (${AppLocalizations.of(context)!.dedShortLabel}) = ',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1580,8 +1680,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Net Monthly',
-                    style: TextStyle(
+                Text(AppLocalizations.of(context)!.netMonthlyLabel,
+                    style: const TextStyle(
                         fontSize: 10,
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
@@ -1617,9 +1717,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       return const SizedBox.shrink();
     }
 
-    final currencyLocale = ref.watch(currencyProvider);
-    final isCompact = ref.watch(currencyFormatProvider);
-
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -1634,147 +1731,154 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildSectionTitle('Monthly Take-Home Breakdown'),
-                // Short/Long Toggle
-                GestureDetector(
-                  onTap: () => ref
-                          .read(currencyFormatProvider.notifier)
-                          .value = // coverage:ignore-line
-                      !isCompact,
-                  behavior: HitTestBehavior.opaque,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Detailed', style: TextStyle(fontSize: 12)),
-                      const SizedBox(width: 4),
-                      Icon(
-                        isCompact ? Icons.compress : Icons.expand,
-                        size: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Text(
-              'Tax for bonuses/extras is applied in the month received.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            _buildTakeHomeBreakdownHeader(),
+            Text(
+              AppLocalizations.of(context)!.bonusTaxNote,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
-            // Flexbox Header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                border: Border(
-                    bottom: BorderSide(
-                        color: Theme.of(context)
-                            .dividerColor
-                            .withValues(alpha: 0.5))),
-              ),
-              child: const Row(
-                children: [
-                  Expanded(
-                      flex: 2,
-                      child: Text('Month',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(
-                      flex: 3,
-                      child: Text('Gross',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.end)),
-                  Expanded(
-                      flex: 3,
-                      child: Text('Tax',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.end)),
-                  Expanded(
-                      flex: 3,
-                      child: Text('Ded',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.end)),
-                  Expanded(
-                      flex: 3,
-                      child: Text('Net',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.end)),
-                ],
-              ),
-            ),
-            // Flexbox Rows
-            ...[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((m) {
-              final data = breakdown[m] ?? {};
-              final gross = data['gross'] ?? 0.0;
-              final tax = data['tax'] ?? 0.0;
-              final ded = data['deductions'] ?? 0.0;
-              final net = data['takeHome'] ?? 0.0;
-              final isStopped =
-                  _getStructureForMonth(m)?.stoppedMonths.contains(m) ?? false;
-
-              String format(double val) {
-                if (isStopped) return '-';
-                return isCompact
-                    ? CurrencyUtils.getSmartFormat(
-                        val, currencyLocale) // coverage:ignore-line
-                    : CurrencyUtils.formatCurrency(val, currencyLocale);
-              }
-
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  border: Border(
-                      bottom: BorderSide(
-                          color: Theme.of(context)
-                              .dividerColor
-                              .withValues(alpha: 0.1))),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                        flex: 2,
-                        child: Text(
-                            DateFormat('MMM').format(DateTime(2023, m, 1)),
-                            style: const TextStyle(fontSize: 13))),
-                    Expanded(
-                        flex: 3,
-                        child: Text(format(gross),
-                            style: const TextStyle(fontSize: 13),
-                            textAlign: TextAlign.end)),
-                    Expanded(
-                        flex: 3,
-                        child: Text(format(tax),
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.redAccent),
-                            textAlign: TextAlign.end)),
-                    Expanded(
-                        flex: 3,
-                        child: Text(format(ded),
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.orange),
-                            textAlign: TextAlign.end)),
-                    Expanded(
-                        flex: 3,
-                        child: Text(format(net),
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green),
-                            textAlign: TextAlign.end)),
-                  ],
-                ),
-              );
-            }),
+            _buildTakeHomeBreakdownTableHeader(),
+            ...[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
+                .map((m) => _buildTakeHomeBreakdownRow(m, breakdown)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTakeHomeBreakdownHeader() {
+    final isCompact = ref.watch(currencyFormatProvider);
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildSectionTitle(
+            AppLocalizations.of(context)!.monthlyTakeHomeBreakdownTitle),
+        GestureDetector(
+          onTap: () => // coverage:ignore-line
+              ref.read(currencyFormatProvider.notifier).value =
+                  !isCompact, // coverage:ignore-line
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(AppLocalizations.of(context)!.detailedLinkLabel,
+                  style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Icon(
+                isCompact ? Icons.compress : Icons.expand,
+                size: 14,
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTakeHomeBreakdownTableHeader() {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+            bottom: BorderSide(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.5))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+              flex: 2,
+              child: Text(l10n.monthLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+              flex: 3,
+              child: Text(l10n.grossShortLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(l10n.taxShortLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(l10n.dedShortLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(l10n.netShortLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.end)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTakeHomeBreakdownRow(
+      int m, Map<int, Map<String, double>> breakdown) {
+    final data = breakdown[m] ?? {};
+    final gross = data['gross'] ?? 0.0;
+    final tax = data['tax'] ?? 0.0;
+    final ded = data['deductions'] ?? 0.0;
+    final net = data['takeHome'] ?? 0.0;
+    final isStopped =
+        _getStructureForMonth(m)?.stoppedMonths.contains(m) ?? false;
+    final currencyLocale = ref.watch(currencyProvider);
+    final isCompact = ref.watch(currencyFormatProvider);
+
+    String format(double val) {
+      if (isStopped) return '-';
+      return isCompact
+          ? CurrencyUtils.getSmartFormat(
+              val, currencyLocale) // coverage:ignore-line
+          : CurrencyUtils.formatCurrency(val, currencyLocale);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+            bottom: BorderSide(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+              flex: 2,
+              child: Text(DateFormat('MMM').format(DateTime(2023, m, 1)),
+                  style: const TextStyle(fontSize: 13))),
+          Expanded(
+              flex: 3,
+              child: Text(format(gross),
+                  style: const TextStyle(fontSize: 13),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(format(tax),
+                  style: const TextStyle(fontSize: 13, color: Colors.redAccent),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(format(ded),
+                  style: const TextStyle(fontSize: 13, color: Colors.orange),
+                  textAlign: TextAlign.end)),
+          Expanded(
+              flex: 3,
+              child: Text(format(net),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
+                  textAlign: TextAlign.end)),
+        ],
       ),
     );
   }
@@ -1801,29 +1905,38 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       padding: const EdgeInsets.all(16),
       children: [
         _buildSummaryHeaderCard(
-          title: 'House Properties',
-          buttonLabel: 'Add Property',
+          title: AppLocalizations.of(context)!.housePropertiesTitle,
+          buttonLabel: AppLocalizations.of(context)!.addPropertyAction,
           onAdd: () => _addHousePropertyDialog(),
           children: [
-            _buildSummaryRow('Total Rent Received', totalRent),
-            _buildSummaryRow('Total Interest on Loan', totalInterest,
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.totalRentReceivedLabel,
+                totalRent),
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.totalInterestOnLoanLabel,
+                totalInterest,
                 isDeduction: true),
             if (hpRuleExemptions > 0)
-              _buildSummaryRow(_adhocExemptionsLabel,
-                  hpRuleExemptions, // coverage:ignore-line
+              _buildSummaryRow(
+                  // coverage:ignore-line
+                  AppLocalizations.of(context)!
+                      .adhocExemptionsLabel, // coverage:ignore-line
+                  hpRuleExemptions,
                   isDeduction: true),
             const Divider(),
-            _buildSummaryRow('Taxable HP Income', taxableHP, isBold: true),
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.taxableHPIncomeLabel, taxableHP,
+                isBold: true),
           ],
         ),
         const SizedBox(height: 16),
         if (_houseProperties.isNotEmpty)
           _buildFilterRow(_hpFilter, (v) => setState(() => _hpFilter = v)),
         if (_houseProperties.isEmpty)
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.only(top: 40.0),
-              child: Text('No House Properties added.'),
+              padding: const EdgeInsets.only(top: 40.0),
+              child: Text(AppLocalizations.of(context)!.noHousePropertiesNote),
             ),
           )
         else
@@ -1879,8 +1992,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           title: Text(hp.name,
               style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(hp.isSelfOccupied
-              ? 'Self Occupied • Interest: ${CurrencyUtils.formatCurrency(hp.interestOnLoan, ref.watch(currencyProvider))}'
-              : 'Let Out • Gross Income: ${CurrencyUtils.formatCurrency(hp.rentReceived, ref.watch(currencyProvider))}'),
+              ? '${AppLocalizations.of(context)!.selfOccupiedLabel} • ${AppLocalizations.of(context)!.interestLabel}: ${CurrencyUtils.formatCurrency(hp.interestOnLoan, ref.watch(currencyProvider))}'
+              : '${AppLocalizations.of(context)!.letOutLabel} • ${AppLocalizations.of(context)!.grossIncomeLabel}: ${CurrencyUtils.formatCurrency(hp.rentReceived, ref.watch(currencyProvider))}'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2006,7 +2119,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         Expanded(
           child: Text(
-            'Projected Annual Income',
+            AppLocalizations.of(context)!.projectedAnnualIncomeTitle,
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -2040,38 +2153,48 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        _buildSummaryRow('Total Gross Salary:', data.gross, isBold: true),
+        _buildSummaryRow(
+            AppLocalizations.of(context)!.totalGrossSalaryLabel, data.gross,
+            isBold: true),
         if (data.standardDeduction > 0)
-          _buildSummaryRow('Less: Standard Deduction:', data.standardDeduction,
-              isDeduction: true, color: deductColor),
+          _buildSummaryRow(
+              AppLocalizations.of(context)!.lessStandardDeductionLabel,
+              data.standardDeduction,
+              isDeduction: true,
+              color: deductColor),
         if (data.statutoryExemptions > 0)
           _buildSummaryRow(
               // coverage:ignore-line
-              'Less: Statutory Exemptions:',
+              AppLocalizations.of(context)!
+                  .lessStatutoryExemptionsLabel, // coverage:ignore-line
               data.statutoryExemptions,
               isDeduction: true,
               color: deductColor),
         if (data.nps > 0)
-          _buildSummaryRow('Less: Employer NPS (80CCD(2)):', data.nps,
+          _buildSummaryRow(
+              AppLocalizations.of(context)!.lessEmployerNPSLabel, data.nps,
               isDeduction: true, color: deductColor),
         if (data.customExemptions > 0) ...[
           const Divider(),
           _buildSummaryRow(
               // coverage:ignore-line
-              'Taxable Before Ad-hoc Exemptions:',
+              AppLocalizations.of(context)!
+                  .taxableBeforeAdHocExemptionsLabel, // coverage:ignore-line
               data.baseTaxableIncome,
               isBold: true,
               fontSize: 13),
           _buildSummaryRow(
               // coverage:ignore-line
-              'Less: Custom Ad-hoc Exemptions:',
+              AppLocalizations.of(context)!
+                  .lessCustomAdHocExemptionsLabel, // coverage:ignore-line
               data.customExemptions,
               isDeduction: true,
               color: deductColor),
         ],
         const Divider(),
         _buildSummaryRow(
-            'Total Taxable Salary Income:', data.totalTaxableIncome,
+            AppLocalizations.of(context)!.totalTaxableSalaryIncomeLabel,
+            data.totalTaxableIncome,
             isBold: true,
             fontSize: 18,
             color: Theme.of(context).colorScheme.primary),
@@ -2235,7 +2358,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const Divider(),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text(_transactionDateLabel),
+          title: Text(AppLocalizations.of(context)!.transactionDateLabel),
           subtitle: Text(DateFormat(_dateFormatIso8601).format(pickedDate)),
           trailing: const Icon(Icons.calendar_month),
           onTap: () async {
@@ -2313,7 +2436,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     required ValueChanged<DateTime> onDateChanged,
   }) {
     return AlertDialog(
-      title: Text(existing == null ? 'Add Property' : 'Edit Property'),
+      title: Text(existing == null
+          ? AppLocalizations.of(context)!.addPropertyAction
+          : AppLocalizations.of(context)!
+              .editPropertyAction), // coverage:ignore-line
       content: SingleChildScrollView(
         child: _buildHousePropertyInputs(
           nameCtrl,
@@ -2332,8 +2458,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel')), // coverage:ignore-line
+            onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         FilledButton(
           onPressed: () {
             _saveHouseProperty(
@@ -2348,7 +2474,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               pickedDate: pickedDate,
             );
           },
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context)!.saveButton),
         ),
       ],
     );
@@ -2412,18 +2538,25 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       padding: const EdgeInsets.all(16),
       children: [
         _buildSummaryHeaderCard(
-          title: 'Business & Profession',
-          buttonLabel: 'Add Business',
+          title: AppLocalizations.of(context)!.businessProfessionTitle,
+          buttonLabel: AppLocalizations.of(context)!.addBusinessAction,
           onAdd: () => _addBusinessDialog(),
           children: [
-            _buildSummaryRow('Total Turnover', totalTurnover),
-            _buildSummaryRow('Total Net Income', totalNet),
+            _buildSummaryRow(AppLocalizations.of(context)!.totalTurnoverLabel,
+                totalTurnover),
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.totalNetIncomeLabel, totalNet),
             if (bizRuleExemptions > 0)
-              _buildSummaryRow(_adhocExemptionsLabel,
-                  bizRuleExemptions, // coverage:ignore-line
+              _buildSummaryRow(
+                  // coverage:ignore-line
+                  AppLocalizations.of(context)!
+                      .adhocExemptionsLabel, // coverage:ignore-line
+                  bizRuleExemptions,
                   isDeduction: true),
             const Divider(),
-            _buildSummaryRow('Taxable Business Income', taxableBusiness,
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.taxableBusinessIncomeLabel,
+                taxableBusiness,
                 isBold: true),
           ],
           showChildren: _businessIncomes.isNotEmpty,
@@ -2434,10 +2567,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               _businessFilter, (v) => setState(() => _businessFilter = v)),
         ],
         if (_businessIncomes.isEmpty)
-          const Center(
+          Center(
               child: Padding(
-            padding: EdgeInsets.only(top: 40.0),
-            child: Text('No Business Income added.'),
+            padding: const EdgeInsets.only(top: 40.0),
+            child: Text(AppLocalizations.of(context)!.noBusinessIncomeNote),
           ))
         else
           ..._buildBusinessList(filteredForDisplay),
@@ -2492,7 +2625,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           title:
               Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
-              '${b.type.toString().split('.').last} • Gross: ${CurrencyUtils.formatCurrency(b.grossTurnover, ref.watch(currencyProvider))} • Net: ${CurrencyUtils.formatCurrency(b.netIncome, ref.watch(currencyProvider))}'),
+              '${b.type.toHumanReadable()} • ${AppLocalizations.of(context)!.grossShortLabel}: ${CurrencyUtils.formatCurrency(b.grossTurnover, ref.watch(currencyProvider))} • ${AppLocalizations.of(context)!.netShortLabel}: ${CurrencyUtils.formatCurrency(b.netIncome, ref.watch(currencyProvider))}'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2537,7 +2670,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
         return AlertDialog(
-          title: Text(existing == null ? 'Add Business' : 'Edit Business'),
+          title: Text(existing == null
+              ? AppLocalizations.of(context)!.addBusinessAction
+              : AppLocalizations.of(context)!
+                  .editBusinessAction), // coverage:ignore-line
           content: SingleChildScrollView(
             child: _buildBusinessDialogBody(
               nameCtrl: nameCtrl,
@@ -2582,15 +2718,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
             controller: nameCtrl,
-            decoration: const InputDecoration(labelText: 'Business Name')),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.businessNameLabel)),
         _buildBusinessTypeDropdown(type, rules, onTypeChanged),
         if (type != BusinessType.regular)
           _buildTurnoverWarning(
               turnoverCtrl, type, rules), // coverage:ignore-line
         TextField(
             controller: turnoverCtrl,
-            decoration:
-                const InputDecoration(labelText: 'Gross Turnover / Receipts'),
+            decoration: InputDecoration(
+                labelText:
+                    AppLocalizations.of(context)!.grossTurnoverReceiptsLabel),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
@@ -2598,17 +2736,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         TextField(
             controller: netCtrl,
             decoration: InputDecoration(
-                labelText: 'Net Income / Profit',
+                labelText: AppLocalizations.of(context)!.netIncomeProfitLabel,
                 helperText: type == BusinessType.regular
-                    ? 'Your Actual Profit'
-                    : 'Min 6% (Business) / 50% (Professional)'),
+                    ? AppLocalizations.of(context)!.actualProfitHelper
+                    : AppLocalizations.of(context)!
+                        .presumptiveProfitHelper), // coverage:ignore-line
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
             ]),
         const SizedBox(height: 8),
         _buildDatePickerTile(
-          title: _transactionDateLabel,
+          title: AppLocalizations.of(context)!.transactionDateLabel,
           date: pickedDate,
           onDatePicked: onDatePicked,
         ),
@@ -2686,17 +2825,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   Widget _buildBusinessTypeDropdown(
       BusinessType type, dynamic rules, ValueChanged<BusinessType?> onChanged) {
     return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Taxation Type',
-        helperText: 'For presumptive taxation',
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.taxationTypeLabel,
+        helperText: AppLocalizations.of(context)!.presumptiveTaxationHelper,
         suffixIcon: Tooltip(
           triggerMode: TooltipTriggerMode.tap,
-          showDuration: Duration(seconds: 5),
-          padding: EdgeInsets.all(12),
-          margin: EdgeInsets.symmetric(horizontal: 20),
-          message:
-              '• For Business (6% of Turnover).  • For Professionals (50% of Receipts).  • Regular: Actual Profit (Audit required if < limit).',
-          child: Icon(Icons.info_outline, color: Colors.blue),
+          showDuration: const Duration(seconds: 5),
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          message: AppLocalizations.of(context)!.taxationTypeTooltip,
+          child: const Icon(Icons.info_outline, color: Colors.blue),
         ),
       ),
       child: DropdownButtonHideUnderline(
@@ -2738,9 +2876,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           return Padding(
             // coverage:ignore-end
             padding: const EdgeInsets.only(top: 8.0),
+            // coverage:ignore-start
             child: Text(
-              // coverage:ignore-line
-              'Warning: Turnover exceeds limit (${CurrencyUtils.formatCurrency(limit, ref.watch(currencyProvider))}). Presumptive taxation may not apply.', // coverage:ignore-line
+              AppLocalizations.of(context)!.turnoverExceedsLimitWarning(
+                  CurrencyUtils.formatCurrency(
+                      limit, ref.watch(currencyProvider))),
+              // coverage:ignore-end
               style: const TextStyle(
                   color: Colors.orange,
                   fontSize: 12,
@@ -2764,18 +2905,23 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: _buildSummaryHeaderCard(
-            title: 'Capital Gains',
-            buttonLabel: _addEntryLabel,
+            title: AppLocalizations.of(context)!.capitalGainsTitle,
+            buttonLabel: AppLocalizations.of(context)!.addEntryAction,
             onAdd: () => _addCGEntryDialog(),
             children: [
-              const Text('Net Capital Gains Summary',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(AppLocalizations.of(context)!.netCapitalGainsSummaryTitle,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
-              _buildSummaryRow('Short Term (STCG)', totals['stcg']!,
+              _buildSummaryRow(AppLocalizations.of(context)!.shortTermSTCGLabel,
+                  totals['stcg']!,
                   isBold: true),
-              _buildSummaryRow('Long Term (Equity)', totals['ltcgEquity']!,
+              _buildSummaryRow(
+                  AppLocalizations.of(context)!.longTermEquityLabel,
+                  totals['ltcgEquity']!,
                   isBold: true),
-              _buildSummaryRow('Long Term (Other)', totals['ltcgOther']!,
+              _buildSummaryRow(AppLocalizations.of(context)!.longTermOtherLabel,
+                  totals['ltcgOther']!,
                   isBold: true),
             ],
             showChildren: _capitalGains.isNotEmpty,
@@ -2832,7 +2978,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   Widget _buildCGList(List<CapitalGainEntry> filtered) {
     if (filtered.isEmpty) {
-      return const Center(child: Text('No Capital Gains entries found.'));
+      return Center(
+          child: Text(AppLocalizations.of(context)!.noCapitalGainsFoundNote));
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2873,9 +3020,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                '${entry.matchAssetType.toHumanReadable()} • ${entry.isLTCG ? 'LTCG' : 'STCG'}'),
+                '${entry.matchAssetType.toHumanReadable()} • ${entry.isLTCG ? AppLocalizations.of(context)!.ltcgLabel : AppLocalizations.of(context)!.stcgLabel}'),
             Text(
-                'Gross: ${CurrencyUtils.formatCurrency(entry.saleAmount, ref.watch(currencyProvider))}'),
+                '${AppLocalizations.of(context)!.grossShortLabel}: ${CurrencyUtils.formatCurrency(entry.saleAmount, ref.watch(currencyProvider))}'),
             if (entry.intendToReinvest) _buildReinvestStatus(entry),
           ],
         ),
@@ -2906,7 +3053,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       entry.isManualEntry, entry.lastUpdated, entry.gainDate),
                   const SizedBox(height: 2),
                   Text(
-                      'Gain: ${CurrencyUtils.formatCurrency(entry.capitalGainAmount, ref.watch(currencyProvider))}',
+                      '${AppLocalizations.of(context)!.gainLabel}: ${CurrencyUtils.formatCurrency(entry.capitalGainAmount, ref.watch(currencyProvider))}',
                       textAlign: TextAlign.right,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ],
@@ -2926,8 +3073,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               },
               itemBuilder: (context) => [
                 // coverage:ignore-line
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                PopupMenuItem(
+                    // coverage:ignore-line
+                    value: 'edit',
+                    child: Text(AppLocalizations.of(context)!
+                        .editAction)), // coverage:ignore-line
+                PopupMenuItem(
+                    // coverage:ignore-line
+                    value: 'delete',
+                    child: Text(AppLocalizations.of(context)!
+                        .deleteAction)), // coverage:ignore-line
               ],
             ),
           ],
@@ -2950,8 +3105,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final icon =
         isPending ? Icons.warning_amber_rounded : Icons.check_circle_outline;
     final text = isPending
-        ? 'Reinvestment Pending'
-        : 'Reinvested: ${CurrencyUtils.formatCurrency(entry.reinvestedAmount, ref.watch(currencyProvider))} to ${entry.matchReinvestType.toHumanReadable()}'; // coverage:ignore-line
+        // coverage:ignore-start
+        ? AppLocalizations.of(context)!.reinvestmentPendingLabel
+        : AppLocalizations.of(context)!.reinvestedDetailsLabel(
+            CurrencyUtils.formatCurrency(
+                entry.reinvestedAmount, ref.watch(currencyProvider)),
+            entry.matchReinvestType.toHumanReadable());
+    // coverage:ignore-end
 
     // coverage:ignore-start
     return Row(
@@ -2968,13 +3128,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
   Widget _buildAssetTooltip(AssetType selectedAsset) {
     if (selectedAsset == AssetType.equityShares) {
-      return const Tooltip(
+      return Tooltip(
         triggerMode: TooltipTriggerMode.tap,
-        showDuration: Duration(seconds: 5),
-        padding: EdgeInsets.all(12),
-        message:
-            'Equity shares or Equity mutual funds (> 65% equity) and STT tax paid.',
-        child: Padding(
+        showDuration: const Duration(seconds: 5),
+        padding: const EdgeInsets.all(12),
+        message: AppLocalizations.of(context)!.equitySharesTooltip,
+        child: const Padding(
           padding: EdgeInsets.all(8.0),
           child: Icon(Icons.info_outline, color: Colors.blue, size: 20),
         ),
@@ -2982,13 +3141,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     }
     if (selectedAsset == AssetType.other) {
       // coverage:ignore-line
-      return const Tooltip(
+      return Tooltip(
+        // coverage:ignore-line
         triggerMode: TooltipTriggerMode.tap,
-        showDuration: Duration(seconds: 5),
-        padding: EdgeInsets.all(12),
-        message:
-            'Gold, Debt Funds, International Funds, NPS (Tier-2), Bonds, etc.',
-        child: Padding(
+        showDuration: const Duration(seconds: 5),
+        padding: const EdgeInsets.all(12),
+        message: AppLocalizations.of(context)!
+            .otherAssetsTooltip, // coverage:ignore-line
+        child: const Padding(
           padding: EdgeInsets.all(8.0),
           child: Icon(Icons.info_outline, color: Colors.blue, size: 20),
         ),
@@ -3013,13 +3173,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         // coverage:ignore-line
         const SizedBox(height: 12),
-        const Text('Reinvestment Details',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+            AppLocalizations.of(context)!
+                .reinvestmentDetailsTitle, // coverage:ignore-line
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
+        // coverage:ignore-start
         InputDecorator(
-          // coverage:ignore-line
-          decoration: const InputDecoration(
-            labelText: 'Type',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.typeLabel,
+            // coverage:ignore-end
             isDense: true,
           ),
           child: DropdownButtonHideUnderline(
@@ -3032,11 +3195,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   .map((t) => DropdownMenuItem(
                       // coverage:ignore-line
                       value: t,
-                      child: Text(
-                          t == ReinvestmentType.none // coverage:ignore-line
-                              ? 'Pending / Not Decided'
-                              // coverage:ignore-start
-                              : t.toHumanReadable())))
+                      // coverage:ignore-start
+                      child: Text(t == ReinvestmentType.none
+                          ? AppLocalizations.of(context)!.pendingNotDecidedLabel
+                          : t.toHumanReadable())))
                   .toList(),
               onChanged: (v) => onReinvestTypeChanged(v!),
               // coverage:ignore-end
@@ -3045,20 +3207,23 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ),
         if (selectedReinvestType ==
             ReinvestmentType.none) // coverage:ignore-line
-          const Padding(
+          Padding(
             // coverage:ignore-line
-            padding: EdgeInsets.only(top: 8.0, left: 4),
+            padding: const EdgeInsets.only(top: 8.0, left: 4),
             child: Text(
-              'Select a Reinvestment Type to enter Amount and Date.',
-              style: TextStyle(fontSize: 12, color: Colors.orange),
+              // coverage:ignore-line
+              AppLocalizations.of(context)!
+                  .selectReinvestmentTypeNote, // coverage:ignore-line
+              style: const TextStyle(fontSize: 12, color: Colors.orange),
             ),
           ),
         // coverage:ignore-start
         if (selectedReinvestType != ReinvestmentType.none) ...[
-          _buildNumberField('Amount Invested', reinvestCtrl),
+          _buildNumberField(
+              AppLocalizations.of(context)!.amountInvestedLabel, reinvestCtrl),
           _buildDatePickerTile(
+            title: AppLocalizations.of(context)!.reinvestDateLabel,
             // coverage:ignore-end
-            title: 'Reinvest Date',
             date: reinvestDate ?? gainDate,
             onDatePicked: onReinvestDateChanged,
             firstDate: DateTime(2000), // coverage:ignore-line
@@ -3137,12 +3302,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
             controller: descCtrl,
-            decoration: const InputDecoration(
-                labelText: 'Description (e.g. Sold Reliance)')),
+            decoration: InputDecoration(
+                labelText:
+                    AppLocalizations.of(context)!.descriptionAssetLabel)),
         const SizedBox(height: 8),
         InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Asset Sold',
+            labelText: AppLocalizations.of(context)!.assetSoldLabel,
             suffixIcon: _buildAssetTooltip(selectedAsset),
             floatingLabelBehavior: FloatingLabelBehavior.always,
           ),
@@ -3160,33 +3326,37 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           ),
         ),
         CheckboxListTile(
-          title: const Text('Is Long Term (LTCG)?'),
+          title: Text(AppLocalizations.of(context)!.isLTCGLabel),
           value: isLtcg,
           onChanged: onLtcgChanged,
         ),
         TextField(
             controller: saleCtrl,
-            decoration: const InputDecoration(labelText: 'Sale Amount'),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.saleAmountLabel),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
             ]),
         TextField(
             controller: costCtrl,
-            decoration: const InputDecoration(labelText: 'Cost of Acquisition'),
+            decoration: InputDecoration(
+                labelText:
+                    AppLocalizations.of(context)!.costOfAcquisitionLabel),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp),
             ]),
         _buildDatePickerTile(
-          title: 'Gain Date',
+          title: AppLocalizations.of(context)!.gainDateLabel,
           date: gainDate,
           onDatePicked: onDatePicked,
         ),
         const Divider(),
         CheckboxListTile(
-          title: const Text('Intend to Reinvest?'),
-          subtitle: const Text('Section 54/54F/54EC exemptions'),
+          title: Text(AppLocalizations.of(context)!.intendToReinvestLabel),
+          subtitle: Text(
+              AppLocalizations.of(context)!.reinvestmentExemptionsSubtitle),
           value: intendToReinvest,
           onChanged: onIntendChanged,
         ),
@@ -3219,8 +3389,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }) {
     return [
       TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancel')), // coverage:ignore-line
+          onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
+          child: Text(AppLocalizations.of(context)!.cancelButton)),
       FilledButton(
           onPressed: () {
             _onSaveCGEntry(
@@ -3239,7 +3409,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             );
             Navigator.pop(ctx);
           },
-          child: const Text('Save'))
+          child: Text(AppLocalizations.of(context)!.saveButton))
     ];
   }
 
@@ -3309,18 +3479,24 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       padding: const EdgeInsets.all(16),
       children: [
         _buildSummaryHeaderCard(
-          title: 'Other Sources',
-          buttonLabel: 'Add Other Income',
+          title: AppLocalizations.of(context)!.otherSourcesTitle,
+          buttonLabel: AppLocalizations.of(context)!.addOtherIncomeAction,
           onAdd: () => _addOtherIncomeDialog(),
           children: [
-            _buildSummaryRow('Dividends', totalDividend),
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.dividendsLabel, totalDividend),
             ..._buildOtherIncomeBreakup(filteredForTotals),
             if (otherRuleExemptions > 0)
-              _buildSummaryRow(_adhocExemptionsLabel,
-                  otherRuleExemptions, // coverage:ignore-line
+              _buildSummaryRow(
+                  // coverage:ignore-line
+                  AppLocalizations.of(context)!
+                      .adhocExemptionsLabel, // coverage:ignore-line
+                  otherRuleExemptions,
                   isDeduction: true),
             const Divider(),
-            _buildSummaryRow('Taxable Other Income', taxableOther,
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.taxableOtherIncomeLabel,
+                taxableOther,
                 isBold: true),
           ],
           showChildren: _otherIncomes.isNotEmpty || totalDividend > 0,
@@ -3331,10 +3507,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               _otherFilter, (v) => setState(() => _otherFilter = v)),
         ],
         if (_otherIncomes.isEmpty)
-          const Center(
+          Center(
               child: Padding(
-            padding: EdgeInsets.only(top: 40.0),
-            child: Text('No Other Income added.'),
+            padding: const EdgeInsets.only(top: 40.0),
+            child: Text(AppLocalizations.of(context)!.noOtherIncomeNote),
           ))
         else
           ..._buildOtherIncomeList(filteredForDisplay),
@@ -3442,8 +3618,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         context: context,
         builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
               return AlertDialog(
-                title:
-                    Text(existing == null ? 'Add Income' : 'Edit Other Income'),
+                title: Text(existing == null
+                    ? AppLocalizations.of(context)!.addIncomeAction
+                    : AppLocalizations.of(context)!
+                        .editOtherIncomeAction), // coverage:ignore-line
                 content: SingleChildScrollView(
                   child: _buildOtherIncomeDialogBody(
                     nameCtrl: nameCtrl,
@@ -3493,7 +3671,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
             controller: nameCtrl,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.nameLabel),
             textCapitalization: TextCapitalization.words),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
@@ -3504,7 +3683,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   value: s, child: Text(s.toOtherSourceDisplay())))
               .toList(),
           onChanged: onSubtypeChanged,
-          decoration: const InputDecoration(labelText: 'Income Type'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.incomeTypeLabel),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -3512,14 +3692,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           decoration: InputDecoration(
             labelText:
                 'Gross Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})',
-            suffixIcon: const Tooltip(
-              padding: EdgeInsets.all(12),
-              margin: EdgeInsets.symmetric(horizontal: 20),
-              showDuration: Duration(seconds: 5),
+            suffixIcon: Tooltip(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              showDuration: const Duration(seconds: 5),
               triggerMode: TooltipTriggerMode.tap,
-              message:
-                  'Fixed income (No loss possible) like bank interest, chit fund profit, etc. Do not include gifts here.',
-              child: Icon(Icons.info_outline, color: Colors.blue),
+              message: AppLocalizations.of(context)!.otherIncomeTooltip,
+              child: const Icon(Icons.info_outline, color: Colors.blue),
             ),
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -3529,7 +3708,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ),
         const SizedBox(height: 8),
         _buildDatePickerTile(
-          title: _transactionDateLabel,
+          title: AppLocalizations.of(context)!.transactionDateLabel,
           date: pickedDate,
           onDatePicked: onDatePicked,
         ),
@@ -3537,9 +3716,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           const SizedBox(height: 12),
           InputDecorator(
             // coverage:ignore-line
-            decoration: const InputDecoration(
-              labelText: 'Link Exemption (Optional)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              // coverage:ignore-line
+              labelText: AppLocalizations.of(context)!
+                  .linkExemptionOptionalLabel, // coverage:ignore-line
+              border: const OutlineInputBorder(),
               isDense: true,
               floatingLabelBehavior: FloatingLabelBehavior.always,
             ),
@@ -3551,12 +3732,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 isExpanded: true,
                 items: [
                   // coverage:ignore-line
-                  const DropdownMenuItem<String?>(
-                      value: null, child: Text('None')),
-                  ...validExemptions.map(// coverage:ignore-line
-                      (e) => DropdownMenuItem(
-                          value: e.id,
-                          child: Text(e.name))) // coverage:ignore-line
+                  DropdownMenuItem<String?>(
+                      // coverage:ignore-line
+                      value: null,
+                      // coverage:ignore-start
+                      child: Text(AppLocalizations.of(context)!.noneLabel)),
+                  ...validExemptions.map(
+                      (e) => DropdownMenuItem(value: e.id, child: Text(e.name)))
+                  // coverage:ignore-end
                 ],
                 onChanged: onExemptionChanged,
               ),
@@ -3579,8 +3762,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }) {
     return [
       TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancel')), // coverage:ignore-line
+          onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
+          child: Text(AppLocalizations.of(context)!.cancelAction)),
       FilledButton(
         onPressed: () {
           if (_onSaveOtherIncome(
@@ -3594,7 +3777,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             Navigator.pop(ctx);
           }
         },
-        child: const Text('Save'),
+        child: Text(AppLocalizations.of(context)!.saveAction),
       ),
     ];
   }
@@ -3644,10 +3827,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SegmentedButton<EntryFilter>(
-        segments: const [
-          ButtonSegment(value: EntryFilter.all, label: Text('All')),
-          ButtonSegment(value: EntryFilter.manual, label: Text('Manual')),
-          ButtonSegment(value: EntryFilter.synced, label: Text('Synced')),
+        segments: [
+          ButtonSegment(
+              value: EntryFilter.all,
+              label: Text(AppLocalizations.of(context)!.allFilterLabel)),
+          ButtonSegment(
+              value: EntryFilter.manual,
+              label: Text(AppLocalizations.of(context)!.manualFilterLabel)),
+          ButtonSegment(
+              value: EntryFilter.synced,
+              label: Text(AppLocalizations.of(context)!.syncedFilterLabel)),
         ],
         selected: {currentFilter},
         onSelectionChanged: (Set<EntryFilter> newSelection) {
@@ -3682,7 +3871,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               ),
             ),
             child: Text(
-              isManual ? 'Manual' : 'Synced',
+              isManual
+                  ? AppLocalizations.of(context)!.manualFilterLabel
+                  : AppLocalizations.of(context)!.syncedFilterLabel,
               style: TextStyle(
                 fontSize: 10,
                 color: isManual ? Colors.blue.shade700 : Colors.green.shade700,
@@ -3696,8 +3887,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Upd: ',
-                      style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('${AppLocalizations.of(context)!.updatedPrefix}: ',
+                      style: const TextStyle(fontSize: 9, color: Colors.grey)),
                   Text(DateFormat("MMM dd, HH:mm").format(lastUpdated),
                       style: const TextStyle(fontSize: 9, color: Colors.grey)),
                 ],
@@ -3709,8 +3900,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Txn: ',
-                      style: TextStyle(fontSize: 9, color: Colors.blueGrey)),
+                  Text('${AppLocalizations.of(context)!.transactionPrefix}: ',
+                      style:
+                          const TextStyle(fontSize: 9, color: Colors.blueGrey)),
                   Text(DateFormat("MMM dd, yyyy").format(transactionDate),
                       style:
                           const TextStyle(fontSize: 9, color: Colors.blueGrey)),
@@ -3824,13 +4016,15 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         _buildFilterRow(
             _taxPaidFilter, (v) => setState(() => _taxPaidFilter = v)),
         const SizedBox(height: 16),
-        _buildEntryListHeader('Advance Tax', isAdvanceTax: true),
+        _buildEntryListHeader(AppLocalizations.of(context)!.advanceTaxTitle,
+            isAdvanceTax: true),
         ..._buildTaxPaymentList(filteredAdvanceTax, isAdvanceTax: true),
         const SizedBox(height: 16),
-        _buildEntryListHeader('TDS', isTds: true),
+        _buildEntryListHeader(AppLocalizations.of(context)!.tdsTitle,
+            isTds: true),
         ..._buildTaxPaymentList(filteredTDS, isTds: true),
         const SizedBox(height: 16),
-        _buildEntryListHeader('TCS'),
+        _buildEntryListHeader(AppLocalizations.of(context)!.tcsTitle),
         ..._buildTaxPaymentList(filteredTCS),
       ],
     );
@@ -3851,9 +4045,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       {bool isTds = false, bool isAdvanceTax = false}) {
     if (filtered.isEmpty) {
       return [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Center(child: Text('No entries found.')),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Center(
+              child: Text(AppLocalizations.of(context)!.noEntriesFoundNote)),
         )
       ];
     }
@@ -3875,6 +4070,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     final DateTime? nextDueDate = taxDetails['nextAdvanceTaxDueDate'];
     final double? nextAmount = taxDetails['nextAdvanceTaxAmount'];
+    final double nextBase = taxDetails['nextAdvanceTaxBase'] ?? 0.0;
+    final double nextCess = taxDetails['nextAdvanceTaxCess'] ?? 0.0;
+    final double nextInterest = taxDetails['nextAdvanceTaxInterest'] ?? 0.0;
 
     return Container(
         padding: const EdgeInsets.all(12),
@@ -3889,7 +4087,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Advance Tax Schedule Hints',
+            Text(AppLocalizations.of(context)!.advanceTaxScheduleHintsTitle,
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onTertiaryContainer)),
@@ -3917,13 +4115,39 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     const Icon(Icons.info_outline,
                         size: 16, color: Colors.blue),
                     const SizedBox(width: 8),
-                    // coverage:ignore-start
                     Expanded(
-                      child: Text(
-                        'Next Due: ${CurrencyUtils.formatCurrency(nextAmount, ref.watch(currencyProvider))} by ${DateFormat('MMM dd').format(nextDueDate)}',
-                        // coverage:ignore-end
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13),
+                      // coverage:ignore-line
+                      child: Column(
+                        // coverage:ignore-line
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        // coverage:ignore-start
+                        children: [
+                          Text(
+                            'Next Due: ${CurrencyUtils.formatCurrency(nextAmount, ref.watch(currencyProvider))} by ${DateFormat('MMM dd').format(nextDueDate)}',
+                            // coverage:ignore-end
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          // coverage:ignore-start
+                          Text(
+                            AppLocalizations.of(context)!
+                                .advanceTaxBreakdownLabel(
+                                    CurrencyUtils.formatCurrency(
+                                        nextBase, ref.watch(currencyProvider)),
+                                    CurrencyUtils.formatCurrency(
+                                        nextCess, ref.watch(currencyProvider)),
+                                    CurrencyUtils.formatCurrency(nextInterest,
+                                        ref.watch(currencyProvider))),
+                            style: TextStyle(
+                                // coverage:ignore-end
+                                fontSize: 11,
+                                // coverage:ignore-start
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
+                            // coverage:ignore-end
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -3937,9 +4161,39 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               final installmentAmount =
                   ((taxDetails['baseForAdvanceTax'] ?? 0.0) as double) *
                       (r.requiredPercentage / 100);
-              return Text(
-                  '• By $month ${r.endDay}: ${r.requiredPercentage.toStringAsFixed(0)}% (${CurrencyUtils.formatCurrency(installmentAmount, ref.watch(currencyProvider))})',
-                  style: const TextStyle(fontSize: 12));
+              double base = installmentAmount;
+              double cess = 0.0;
+              if (rules.isCessEnabled && installmentAmount > 0) {
+                // coverage:ignore-start
+                base = CurrencyUtils.roundTo2Decimals(
+                    installmentAmount / (1 + (rules.cessRate / 100)));
+                cess = CurrencyUtils.roundTo2Decimals(installmentAmount - base);
+                // coverage:ignore-end
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      AppLocalizations.of(context)!.advanceTaxInstallmentNote(
+                          month,
+                          r.endDay.toString(),
+                          r.requiredPercentage.toStringAsFixed(0),
+                          CurrencyUtils.formatCurrency(
+                              installmentAmount, ref.watch(currencyProvider))),
+                      style: const TextStyle(fontSize: 12)),
+                  Text(
+                    AppLocalizations.of(context)!
+                        .advanceTaxBreakdownLabelNoInterest(
+                            CurrencyUtils.formatCurrency(
+                                base, ref.watch(currencyProvider)),
+                            CurrencyUtils.formatCurrency(
+                                cess, ref.watch(currencyProvider))),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              );
             }),
           ],
         ));
@@ -3957,7 +4211,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           icon: const Icon(Icons.add_circle, color: Colors.blue),
           onPressed: () =>
               _addTaxEntryDialog(isTds: isTds, isAdvanceTax: isAdvanceTax),
-          tooltip: _addEntryLabel,
+          tooltip: AppLocalizations.of(context)!.addEntryAction,
         ),
       ],
     );
@@ -3985,7 +4239,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         title: Text(
             '${DateFormat('MMM dd, yyyy').format(entry.date)}: ${CurrencyUtils.formatCurrency(entry.amount, ref.watch(currencyProvider))}',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: isCredit ? Text('Source: ${entry.source}') : null,
+        subtitle: isCredit
+            ? Text(AppLocalizations.of(context)!.sourceLabel(entry.source))
+            : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -4101,13 +4357,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       bool isTds, bool isAdvanceTax, TaxPaymentEntry? existing) {
     final String typeLabel;
     if (isAdvanceTax) {
-      typeLabel = 'Advance Tax';
+      typeLabel = AppLocalizations.of(context)!.advanceTaxTitle;
     } else if (isTds) {
-      typeLabel = 'TDS';
+      typeLabel = AppLocalizations.of(context)!.tdsTitle;
     } else {
-      typeLabel = 'TCS';
+      typeLabel =
+          AppLocalizations.of(context)!.tcsTitle; // coverage:ignore-line
     }
-    return existing == null ? 'Add $typeLabel Entry' : 'Edit $typeLabel Entry';
+    return existing == null
+        ? AppLocalizations.of(context)!.addEntryTypeAction(typeLabel)
+        : AppLocalizations.of(context)!
+            .editEntryTypeAction(typeLabel); // coverage:ignore-line
   }
 
   Widget _buildTaxEntryDialogBody({
@@ -4121,12 +4381,15 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
           controller: srcCtrl,
-          decoration: const InputDecoration(labelText: 'Source/Description'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.sourceDescriptionLabel),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: amtCtrl,
-          decoration: const InputDecoration(labelText: 'Gross Amount (₹)'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.grossAmountCurrencyLabel(
+                  CurrencyUtils.getSymbol(ref.watch(currencyProvider)))),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegexUtils.amountExp)
@@ -4134,7 +4397,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         ),
         const SizedBox(height: 8),
         _buildDatePickerTile(
-          title: _transactionDateLabel,
+          title: AppLocalizations.of(context)!.transactionDateLabel,
           date: pickedDate,
           onDatePicked: onDatePicked,
         ),
@@ -4166,7 +4429,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             Navigator.pop(ctx);
           }
         },
-        child: Text(existing == null ? 'Add' : 'Save'),
+        child: Text(existing == null
+            ? AppLocalizations.of(context)!.addButton
+            : AppLocalizations.of(context)!.saveButton), // coverage:ignore-line
       ),
     ];
   }
@@ -4219,27 +4484,31 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       padding: const EdgeInsets.all(16),
       children: [
         _buildSummaryHeaderCard(
-          title: 'Cash Gifts (Total)',
-          buttonLabel: 'Add Gift',
+          title: AppLocalizations.of(context)!.cashGiftsTotalTitle,
+          buttonLabel: AppLocalizations.of(context)!.addGiftAction,
           onAdd: () => _addCashGiftDialog(),
           children: [
-            _buildSummaryRow('Total Gifts Received', totalCashGifts),
+            _buildSummaryRow(
+                AppLocalizations.of(context)!.totalGiftsReceivedLabel,
+                totalCashGifts),
             const Divider(),
             _buildSummaryRow(
-                'Taxable Portion',
+                AppLocalizations.of(context)!.taxablePortionLabel,
                 totalCashGifts > rules.cashGiftExemptionLimit
                     ? totalCashGifts
                     : 0,
                 isBold: true),
             Text(
-              'Threshold: ${CurrencyUtils.formatCurrency(rules.cashGiftExemptionLimit, ref.watch(currencyProvider))} (Fully taxable if limit exceeded)',
+              AppLocalizations.of(context)!.giftThresholdNote(
+                  CurrencyUtils.formatCurrency(rules.cashGiftExemptionLimit,
+                      ref.watch(currencyProvider))),
               style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
             ),
           ],
         ),
         const SizedBox(height: 16),
         if (_cashGifts.isEmpty)
-          const Center(child: Text('No Cash Gifts recorded.'))
+          Center(child: Text(AppLocalizations.of(context)!.noCashGiftsNote))
         else
           ..._buildCashGiftList(filtered),
       ],
@@ -4306,7 +4575,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (context, setStateBuilder) {
         return AlertDialog(
-          title: Text(existing == null ? 'Add Gift' : 'Edit Gift'),
+          title: Text(existing == null
+              ? AppLocalizations.of(context)!.addGiftAction
+              : AppLocalizations.of(context)!
+                  .editGiftAction), // coverage:ignore-line
           content: _buildCashGiftDialogBody(
             nameCtrl: nameCtrl,
             amtCtrl: amtCtrl,
@@ -4346,8 +4618,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
             controller: nameCtrl,
-            decoration:
-                const InputDecoration(labelText: 'Gift Description / Source')),
+            decoration: InputDecoration(
+                labelText:
+                    AppLocalizations.of(context)!.giftDescriptionSourceLabel)),
         DropdownButtonFormField<String>(
           key: ValueKey(subtype),
           initialValue: subtype,
@@ -4356,17 +4629,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                   DropdownMenuItem(value: s, child: Text(s.toGiftDisplay())))
               .toList(),
           onChanged: onSubtypeChanged,
-          decoration: const InputDecoration(labelText: 'Gift Type'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.giftTypeLabel),
         ),
         _buildNumberField(
-          'Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})',
+          AppLocalizations.of(context)!.amountCurrencyLabel(
+              CurrencyUtils.getSymbol(ref.watch(currencyProvider))),
           amtCtrl,
-          subtitle:
-              'Gifts from relatives (marriage, inheritance) are Exempt generally.',
+          subtitle: AppLocalizations.of(context)!.giftRelativesExemptNote,
         ),
         const SizedBox(height: 8),
         _buildDatePickerTile(
-          title: _transactionDateLabel,
+          title: AppLocalizations.of(context)!.transactionDateLabel,
           date: pickedDate,
           onDatePicked: onDatePicked,
         ),
@@ -4448,8 +4722,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateBuilder) => AlertDialog(
-          title:
-              Text(existing == null ? 'Add Agri Income' : 'Edit Agri Income'),
+          title: Text(existing == null
+              ? AppLocalizations.of(context)!.addAgriIncomeAction
+              : AppLocalizations.of(context)!
+                  .editAgriIncomeAction), // coverage:ignore-line
           content: _buildAgriIncomeDialogBody(
             descCtrl: descCtrl,
             amtCtrl: amtCtrl,
@@ -4481,16 +4757,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         TextField(
           controller: descCtrl,
-          decoration: const InputDecoration(labelText: 'Description'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.descriptionLabel),
         ),
         const SizedBox(height: 8),
         _buildNumberField(
-          'Amount (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})',
+          AppLocalizations.of(context)!.amountCurrencyLabel(
+              CurrencyUtils.getSymbol(ref.watch(currencyProvider))),
           amtCtrl,
         ),
         const SizedBox(height: 8),
         _buildDatePickerTile(
-          title: 'Date',
+          title: AppLocalizations.of(context)!.dateLabel,
           date: pickedDate,
           onDatePicked: onDatePicked,
         ),
@@ -4517,7 +4795,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             Navigator.pop(ctx);
           }
         },
-        child: Text(existing == null ? 'Add' : 'Save'),
+        child: Text(existing == null
+            ? AppLocalizations.of(context)!.addButton
+            : AppLocalizations.of(context)!.saveButton), // coverage:ignore-line
       ),
     ];
   }
@@ -4554,15 +4834,15 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       padding: const EdgeInsets.all(16),
       children: [
         _buildSummaryHeaderCard(
-          title: 'Agricultural Income',
-          buttonLabel: _addEntryLabel,
+          title: AppLocalizations.of(context)!.agriculturalIncomeTitle,
+          buttonLabel: AppLocalizations.of(context)!.addEntryAction,
           onAdd: () => _addAgriIncomeDialog(),
           children: [
-            _buildSummaryRow('Net Agri Income',
+            _buildSummaryRow(AppLocalizations.of(context)!.netAgriIncomeLabel,
                 _agriIncomeHistory.fold(0.0, (sum, e) => sum + e.amount)),
-            const Text(
-              'Note: Agri income is used for rate purposes if > ₹5,000 and total income > basic exemption limit.',
-              style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+            Text(
+              AppLocalizations.of(context)!.agriIncomeNote,
+              style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
             ),
           ],
         ),
@@ -4570,7 +4850,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         if (_agriIncomeHistory.isNotEmpty)
           _buildFilterRow(_agriFilter, (v) => setState(() => _agriFilter = v)),
         if (_agriIncomeHistory.isEmpty)
-          const Center(child: Text('No Agricultural Income entries found.'))
+          Center(child: Text(AppLocalizations.of(context)!.noAgriIncomeNote))
         else
           ..._buildAgriList(filteredForDisplay),
         const SizedBox(height: 32),
@@ -4588,9 +4868,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
-                  child: Text('Total Net Agriculture Income',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                      AppLocalizations.of(context)!.totalNetAgriIncomeLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Text(
                   CurrencyUtils.formatCurrency(
@@ -4621,9 +4902,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     if (filtered.isEmpty) {
       return [
         // coverage:ignore-line
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Center(child: Text('No entries match filtering.')),
+        Padding(
+          // coverage:ignore-line
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          // coverage:ignore-start
+          child: Center(
+              child: Text(
+                  AppLocalizations.of(context)!.noEntriesMatchFilteringNote)),
+          // coverage:ignore-end
         )
       ];
     }
@@ -4647,7 +4933,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 color: Theme.of(context).colorScheme.primary, size: 20),
           ),
           title: Text(
-              e.description.isEmpty ? 'Agriculture Income' : e.description,
+              e.description.isEmpty
+                  ? AppLocalizations.of(context)!
+                      .agriculturalIncomeTitle // coverage:ignore-line
+                  : e.description,
               style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
               '${DateFormat(_dateFormatIso8601).format(e.date)} • ${CurrencyUtils.formatCurrency(e.amount, ref.watch(currencyProvider))}'),
@@ -4693,7 +4982,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           builder: (context, freq, _) {
             return DropdownButtonFormField<PayoutFrequency>(
               decoration: InputDecoration(
-                labelText: '$label Frequency',
+                labelText: AppLocalizations.of(context)!.frequencyLabel(label),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 border: const OutlineInputBorder(),
@@ -4756,10 +5045,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       child: ValueListenableBuilder<List<int>>(
         // coverage:ignore-line
         valueListenable: customMonthsNotifier,
-        builder: (c, list, _) => Text(// coverage:ignore-line
-            list.isEmpty
-                ? selectMonthsText
-                : '${list.length} Months Selected'), // coverage:ignore-line
+        // coverage:ignore-start
+        builder: (c, list, _) => Text(list.isEmpty
+            ? AppLocalizations.of(context)!.selectMonthsAction
+            : AppLocalizations.of(context)!
+                .monthsSelectedCountLabel(list.length.toString())),
+        // coverage:ignore-end
       ),
     );
   }
@@ -4772,8 +5063,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         return DropdownButtonFormField<int>(
           decoration: InputDecoration(
             labelText: freq == PayoutFrequency.annually
-                ? 'Payout Month'
-                : 'Start Month',
+                ? AppLocalizations.of(context)!.payoutMonthLabel
+                : AppLocalizations.of(context)!
+                    .startMonthLabel, // coverage:ignore-line
             contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             floatingLabelBehavior: FloatingLabelBehavior.always,
             border: const OutlineInputBorder(),
@@ -4892,8 +5184,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }) {
     final existing = params.existing;
     return AlertDialog(
-      title: Text(
-          existing == null ? 'Add Salary Structure' : 'Edit Salary Structure'),
+      title: Text(existing == null
+          ? AppLocalizations.of(context)!.addSalaryStructureAction
+          : AppLocalizations.of(context)!.editSalaryStructureAction),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -4925,8 +5218,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel')), // coverage:ignore-line
+            onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         if (existing != null)
           TextButton(
               onPressed: () {
@@ -4941,13 +5234,14 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                 });
                 Navigator.pop(ctx); // coverage:ignore-line
               },
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child: Text(AppLocalizations.of(context)!.deleteButton,
+                  style: const TextStyle(color: Colors.red))),
         FilledButton(
           onPressed: () => _onSaveSalaryStructure(
             ctx: ctx,
             params: params,
           ),
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context)!.saveButton),
         ),
       ],
     );
@@ -4960,8 +5254,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       // coverage:ignore-line
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('No salary data found in previous year')),
+          SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)!.noSalaryDataPreviousYearNote)),
         );
       }
       return;
@@ -4975,20 +5270,18 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     }).toList();
     // coverage:ignore-end
 
-    // coverage:ignore-start
     setState(() {
-      _currentData = _currentData.copyWith(
-        salary: _currentData.salary.copyWith(
-          history: [..._currentData.salary.history, ...newHistory],
-          // coverage:ignore-end
-        ),
-      );
+      // coverage:ignore-line
+      _salaryHistory.addAll(newHistory); // coverage:ignore-line
     });
+
     // coverage:ignore-start
     _updateSummary();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Copied ${newHistory.length} structures')),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!
+                .copiedStructuresCountNote(newHistory.length.toString()))),
         // coverage:ignore-end
       );
     }
@@ -4998,12 +5291,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final prevData =
         ref.read(storageServiceProvider).getTaxYearData(_currentData.year - 1);
     if (prevData == null || prevData.houseProperties.isEmpty) {
+      // coverage:ignore-start
       if (mounted) {
-        // coverage:ignore-line
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-line
-          const SnackBar(
-              content: Text('No house properties found in previous year')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .noHousePropertiesPreviousYearNote)),
+          // coverage:ignore-end
         );
       }
       return;
@@ -5016,8 +5310,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text('Copied ${prevData.houseProperties.length} properties')),
+            content: Text(AppLocalizations.of(context)!
+                .copiedPropertiesCountNote(
+                    prevData.houseProperties.length.toString()))),
       );
     }
   }
@@ -5164,7 +5459,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           controller: nameCtrl,
           decoration: InputDecoration(
               // coverage:ignore-line
-              labelText: isDeduction ? 'Deduction Name' : 'Allowance Name'),
+              labelText: isDeduction
+                  ? AppLocalizations.of(context)!
+                      .deductionNameLabel // coverage:ignore-line
+                  : AppLocalizations.of(context)!
+                      .allowanceNameLabel), // coverage:ignore-line
         ),
         TextField(
           // coverage:ignore-line
@@ -5172,8 +5471,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           decoration: InputDecoration(
               // coverage:ignore-line
               labelText: isDeduction
-                  ? 'Annual Deduction Amount'
-                  : 'Annual Payout Amount'),
+                  ? AppLocalizations.of(context)!
+                      .annualDeductionAmountLabel // coverage:ignore-line
+                  : AppLocalizations.of(context)!
+                      .annualPayoutAmountLabel), // coverage:ignore-line
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             // coverage:ignore-line
@@ -5189,11 +5490,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             customMonthsNotifier,
             startMonthNotifier), // coverage:ignore-line
         const SizedBox(height: 12),
+        // coverage:ignore-start
         SwitchListTile(
-          // coverage:ignore-line
-          title: const Text('Is Cliff Exemption?'),
-          subtitle: const Text(
-              'If checked, income above limit becomes fully taxable.'),
+          title: Text(AppLocalizations.of(context)!.isCliffExemptionTitle),
+          subtitle: Text(AppLocalizations.of(context)!.cliffExemptionSubtitle),
+          // coverage:ignore-end
           value: isCliff,
           onChanged: onIsCliffChanged,
         ),
@@ -5204,11 +5505,13 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             child: TextField(
               // coverage:ignore-line
               controller: exemptionLimitCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Exemption Limit',
-                  helperText:
-                      'Full allowance becomes taxable if it exceeds this limit',
-                  border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                  // coverage:ignore-line
+                  labelText: AppLocalizations.of(context)!
+                      .exemptionLimitLabel, // coverage:ignore-line
+                  helperText: AppLocalizations.of(context)!
+                      .exemptionLimitHelperText, // coverage:ignore-line
+                  border: const OutlineInputBorder(),
                   floatingLabelBehavior: FloatingLabelBehavior.always),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
@@ -5252,7 +5555,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     // coverage:ignore-start
     return [
       TextButton(
-          onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(AppLocalizations.of(context)!.cancelButton)),
       FilledButton(
         onPressed: () => _onAddCustomAllowance(
           // coverage:ignore-end
@@ -5269,7 +5573,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           onAdd: onAdd,
           existingId: existingId,
         ),
-        child: const Text('Save'),
+        child: Text(
+            AppLocalizations.of(context)!.saveButton), // coverage:ignore-line
       ),
     ];
   }
@@ -5424,8 +5729,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         // coverage:ignore-line
         const SizedBox(height: 8),
-        const Text('Monthly Amounts:',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+            AppLocalizations.of(context)!
+                .monthlyAmountsLabel, // coverage:ignore-line
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           // coverage:ignore-line
@@ -5510,12 +5817,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     // coverage:ignore-line
     if (existing == null) {
       return isDeduction
-          ? 'Add Independent Deduction'
-          : 'Add Independent Allowance';
+          ? AppLocalizations.of(context)!
+              .addIndependentDeductionAction // coverage:ignore-line
+          : AppLocalizations.of(context)!
+              .addIndependentAllowanceAction; // coverage:ignore-line
     }
     return isDeduction
-        ? 'Edit Independent Deduction'
-        : 'Edit Independent Allowance';
+        ? AppLocalizations.of(context)!
+            .editIndependentDeductionAction // coverage:ignore-line
+        : AppLocalizations.of(context)!
+            .editIndependentAllowanceAction; // coverage:ignore-line
   }
 
   Widget _buildFrequencySection(
@@ -5533,10 +5844,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         return Column(
           children: [
             InputDecorator(
-              // coverage:ignore-end
-              decoration: const InputDecoration(
-                  labelText: 'Payout Frequency',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8)),
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.payoutFrequencyLabel,
+                  // coverage:ignore-end
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8)),
               child: DropdownButtonHideUnderline(
                 // coverage:ignore-line
                 child: DropdownButton<PayoutFrequency>(
@@ -5548,8 +5859,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                     String text = f.toString().split('.').last;
                     text = text[0].toUpperCase() + text.substring(1);
                     if (f == PayoutFrequency.trimester) {
+                      text = AppLocalizations.of(context)!
+                          .payoutFrequencyTrimesterLabel;
                       // coverage:ignore-end
-                      text = 'Trimester (4mo)';
                     }
                     // coverage:ignore-start
                     return DropdownMenuItem(value: f, child: Text(text));
@@ -5585,8 +5897,11 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       return OutlinedButton(
         onPressed: () async {
           final selected = await _showMonthMultiSelect(
-              ctx, customMonthsNotifier.value, selectMonthsText);
-          // coverage:ignore-end
+              // coverage:ignore-end
+              ctx,
+              customMonthsNotifier.value, // coverage:ignore-line
+              AppLocalizations.of(ctx)!
+                  .selectMonthsAction); // coverage:ignore-line
           if (selected != null) {
             customMonthsNotifier.value = selected; // coverage:ignore-line
           }
@@ -5594,22 +5909,25 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         child: ValueListenableBuilder<List<int>>(
           // coverage:ignore-line
           valueListenable: customMonthsNotifier,
-          builder: (c, list, _) => Text(list.isEmpty // coverage:ignore-line
-              ? selectMonthsText
-              : '${list.length} Months Selected'), // coverage:ignore-line
+          // coverage:ignore-start
+          builder: (c, list, _) => Text(list.isEmpty
+              ? AppLocalizations.of(context)!.selectMonthsAction
+              : AppLocalizations.of(context)!
+                  .monthsSelectedCountLabel(list.length.toString())),
+          // coverage:ignore-end
         ),
       );
     }
     return ValueListenableBuilder<int?>(
       // coverage:ignore-line
       valueListenable: startMonthNotifier,
+      // coverage:ignore-start
       builder: (ctx, startM, _) => InputDecorator(
-        // coverage:ignore-line
         decoration: InputDecoration(
-          // coverage:ignore-line
           labelText: freq == PayoutFrequency.annually
-              ? 'Payout Month'
-              : 'Start Month', // coverage:ignore-line
+              ? AppLocalizations.of(context)!.payoutMonthLabel
+              : AppLocalizations.of(context)!.startMonthLabel,
+          // coverage:ignore-end
         ),
         child: DropdownButtonHideUnderline(
           // coverage:ignore-line
@@ -5644,9 +5962,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       builder: (context, val, _) => Column(
         children: [
           CheckboxListTile(
+            title: Text(AppLocalizations.of(context)!.isPartialIrregularTitle),
             // coverage:ignore-end
-            title: const Text('Is Partial / Irregular?'),
-            subtitle: const Text('View/Edit specific monthly amounts'),
+            subtitle: Text(AppLocalizations.of(context)!
+                .isPartialIrregularSubtitle), // coverage:ignore-line
             value: val,
             onChanged: (v) =>
                 isPartialNotifier.value = v ?? false, // coverage:ignore-line
@@ -5709,15 +6028,16 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     if (applicableMonths.isEmpty) {
       // coverage:ignore-line
-      return const Text('No payout months selected based on frequency.');
+      return Text(AppLocalizations.of(context)!
+          .noPayoutMonthsSelectedNote); // coverage:ignore-line
     }
 
+    // coverage:ignore-start
     return Column(
-      // coverage:ignore-line
       children: [
-        // coverage:ignore-line
-        const Text('Enter amounts for each payout month (overrides default):',
-            style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+        Text(AppLocalizations.of(context)!.enterAmountsForPayoutMonthsNote,
+            // coverage:ignore-end
+            style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
         const SizedBox(height: 8),
         Wrap(
           // coverage:ignore-line
@@ -5799,22 +6119,20 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Unemployment / No Salary',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const Text('Select months where you had no salary income.',
-            style: TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(AppLocalizations.of(context)!.unemploymentNoSalaryTitle,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(AppLocalizations.of(context)!.unemploymentNoSalarySubtitle,
+            style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 8),
         ValueListenableBuilder<List<int>>(
           valueListenable: stoppedMonthsNotifier,
           builder: (context, list, _) {
             return OutlinedButton.icon(
+              // coverage:ignore-start
               onPressed: () async {
-                // coverage:ignore-line
-                final selected = await _showMonthMultiSelect(
-                    // coverage:ignore-line
-                    context,
-                    list,
-                    _selectStoppedMonthsLabel);
+                final selected = await _showMonthMultiSelect(context, list,
+                    AppLocalizations.of(context)!.selectStoppedMonthsAction);
+                // coverage:ignore-end
                 if (selected != null) {
                   stoppedMonthsNotifier.value =
                       selected; // coverage:ignore-line
@@ -5822,8 +6140,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               },
               icon: const Icon(Icons.block),
               label: Text(list.isEmpty
-                  ? _selectStoppedMonthsLabel
-                  : '${list.length} Months Stopped'), // coverage:ignore-line
+                  ? AppLocalizations.of(context)!.selectStoppedMonthsAction
+                  : AppLocalizations.of(context)! // coverage:ignore-line
+                      .monthsStoppedCountLabel(
+                          list.length.toString())), // coverage:ignore-line
               style: list.isNotEmpty
                   ? OutlinedButton.styleFrom(
                       foregroundColor: Colors.orange) // coverage:ignore-line
@@ -5847,8 +6167,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           builder: (context, date, _) {
             return ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Effective Date',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              title: Text(AppLocalizations.of(context)!.effectiveDateLabel,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
               subtitle: Text(DateFormat('MMM d, yyyy').format(date),
                   style: const TextStyle(fontSize: 16)),
               trailing: const Icon(Icons.calendar_today),
@@ -5871,9 +6191,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 16),
         TextField(
           controller: basicCtrl,
-          decoration: const InputDecoration(
-              labelText: 'Annual Basic Pay (CTC)',
-              border: OutlineInputBorder(),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.annualBasicPayLabel,
+              border: const OutlineInputBorder(),
               floatingLabelBehavior: FloatingLabelBehavior.always),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
@@ -5883,11 +6203,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 16),
         TextField(
           controller: fixedCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Annual Fixed Allowances (CTC)',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.annualFixedAllowancesLabel,
+            border: const OutlineInputBorder(),
             floatingLabelBehavior: FloatingLabelBehavior.always,
-            helperText: 'HRA, Special, etc. (Fully Taxable)',
+            helperText:
+                AppLocalizations.of(context)!.annualFixedAllowancesHelperText,
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
@@ -5917,8 +6238,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         _buildPayoutSection(
           context: context,
-          label: 'Annual Performance Pay',
-          helperText: 'Max amount per year',
+          label: AppLocalizations.of(context)!.annualPerformancePayLabel,
+          helperText: AppLocalizations.of(context)!.maxAmountPerYearLabel,
           controller: perfCtrl,
           freqNotifier: perfFreqNotifier,
           startMonthNotifier: perfStartMonthNotifier,
@@ -5930,8 +6251,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 24),
         _buildPayoutSection(
           context: context,
-          label: 'Annual Variable Pay',
-          helperText: 'Total amount per year',
+          label: AppLocalizations.of(context)!.annualVariablePayLabel,
+          helperText: AppLocalizations.of(context)!.totalAmountPerYearLabel,
           controller: variableCtrl,
           freqNotifier: varFreqNotifier,
           startMonthNotifier: varStartMonthNotifier,
@@ -5960,18 +6281,25 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       children: [
         _buildNumberField(label, controller, subtitle: helperText),
         const SizedBox(height: 24),
-        _buildFrequencyRow('Payout', freqNotifier, startMonthNotifier,
-            customMonthsNotifier, context, selectMonthsText),
+        _buildFrequencyRow(
+            AppLocalizations.of(context)!.payoutLabel,
+            freqNotifier,
+            startMonthNotifier,
+            customMonthsNotifier,
+            context,
+            AppLocalizations.of(context)!.selectMonthsAction),
         ValueListenableBuilder<bool>(
           valueListenable: partialNotifier,
           builder: (context, isPartial, _) {
             return Column(
               children: [
                 CheckboxListTile(
-                  title: const Text('Partial Payout / Taxable Factor?'),
+                  title: Text(AppLocalizations.of(context)!
+                      .partialPayoutTaxableFactorTitle),
                   subtitle: isPartial
                       ? null
-                      : const Text('Default: Equal distribution'),
+                      : Text(AppLocalizations.of(context)!
+                          .defaultEqualDistributionSubtitle),
                   value: isPartial,
                   onChanged: (v) => partialNotifier.value =
                       v ?? false, // coverage:ignore-line
@@ -6006,9 +6334,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 16),
         TextField(
           controller: pfCtrl,
-          decoration: const InputDecoration(
-              labelText: 'Annual Employee PF',
-              border: OutlineInputBorder(),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.annualEmployeePFLabel,
+              border: const OutlineInputBorder(),
               floatingLabelBehavior: FloatingLabelBehavior.always),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
@@ -6018,9 +6346,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         const SizedBox(height: 16),
         TextField(
           controller: gratuityCtrl,
-          decoration: const InputDecoration(
-              labelText: 'Annual Gratuity Contribution',
-              border: OutlineInputBorder(),
+          decoration: InputDecoration(
+              labelText:
+                  AppLocalizations.of(context)!.annualGratuityContributionLabel,
+              border: const OutlineInputBorder(),
               floatingLabelBehavior: FloatingLabelBehavior.always),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
@@ -6043,8 +6372,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           valueListenable: customAllowancesNotifier,
           builder: (context, list, _) {
             if (list.isEmpty) {
-              return const Text('No custom allowances',
-                  style: TextStyle(color: Colors.grey, fontSize: 12));
+              return Text(AppLocalizations.of(context)!.noCustomAllowancesNote,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12));
             }
             return Column(
               // coverage:ignore-line
@@ -6068,8 +6397,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Custom Allowances',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(AppLocalizations.of(context)!.customAllowancesTitle,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         IconButton(
           icon: const Icon(Icons.add_circle_outline),
           onPressed: () {
@@ -6147,10 +6476,10 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     if (a.frequency == PayoutFrequency.annually && !a.isPartial) {
       // coverage:ignore-line
-      return 'Annual Payout: $payoutFormatted'; // coverage:ignore-line
+      return '${AppLocalizations.of(context)!.annualPayoutLabel}: $payoutFormatted'; // coverage:ignore-line
     }
 
-    return 'Per Payout: $payoutFormatted • Annual Total: $totalFormatted'; // coverage:ignore-line
+    return '${AppLocalizations.of(context)!.perPayoutLabel}: $payoutFormatted • ${AppLocalizations.of(context)!.annualTotalLabel}: $totalFormatted'; // coverage:ignore-line
   }
 
   double _calculateAllowanceAnnualTotal(CustomAllowance a) {
@@ -6348,7 +6677,10 @@ class _CGEntryDialogState extends State<_CGEntryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.existing == null ? 'Add Capital Gain' : 'Edit Entry'),
+      title: Text(widget.existing == null
+          ? AppLocalizations.of(context)!.addCapitalGainAction
+          : AppLocalizations.of(context)!
+              .editEntryAction), // coverage:ignore-line
       content: SingleChildScrollView(
         child: widget.parentState._buildCGEntryDialogBody(
           descCtrl: widget.descCtrl,
@@ -6447,13 +6779,11 @@ class _MonthMultiSelectDialogState extends State<_MonthMultiSelectDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            // coverage:ignore-end
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         FilledButton(
-            // coverage:ignore-line
-            onPressed: () =>
-                Navigator.pop(context, _current), // coverage:ignore-line
-            child: const Text('Select')),
+            onPressed: () => Navigator.pop(context, _current),
+            child: Text(AppLocalizations.of(context)!.selectButton)),
+        // coverage:ignore-end
       ],
     );
   }

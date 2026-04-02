@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../models/loan.dart';
-
 import '../../providers.dart';
 import '../../widgets/form_utils.dart';
 
@@ -31,92 +31,104 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
   }
 
   @override
+  void dispose() {
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Update Interest Rate'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      title: Text(AppLocalizations.of(context)!.updateInterestRateTitle),
+      content: _buildDialogContent(),
+      actions: _buildActions(),
+    );
+  }
+
+  Widget _buildDialogContent() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(AppLocalizations.of(context)!.enterNewRateDescription),
+        const SizedBox(height: 16),
+        _buildRateField(),
+        const SizedBox(height: 16),
+        FormUtils.buildDatePickerField(
+          context: context,
+          selectedDate: _selectedDate,
+          onDateTarget: (d) =>
+              setState(() => _selectedDate = d), // coverage:ignore-line
+          label: AppLocalizations.of(context)!.effectiveDateLabel,
+        ),
+        const SizedBox(height: 16),
+        Text(AppLocalizations.of(context)!.recalculationModeLabel,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        _buildRecalculationMode(),
+      ],
+    );
+  }
+
+  Widget _buildRateField() {
+    return TextField(
+      controller: _rateController,
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.newAnnualRateLabel,
+          suffixText: '%'),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+      ],
+    );
+  }
+
+  Widget _buildRecalculationMode() {
+    return RadioGroup<bool>(
+      groupValue: _updateTenure,
+      onChanged: (v) {
+        if (v != null) setState(() => _updateTenure = v);
+      },
+      child: Column(
         children: [
-          const Text('Enter new annual interest rate.'),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _rateController,
-            decoration: const InputDecoration(
-                labelText: 'New Annual Rate (%)', suffixText: '%'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-            ],
+          RadioListTile<bool>.adaptive(
+            title: Text(AppLocalizations.of(context)!.adjustEmiOption),
+            subtitle: Text(AppLocalizations.of(context)!.adjustEmiSubtitleLong),
+            value: false,
           ),
-          const SizedBox(height: 16),
-          FormUtils.buildDatePickerField(
-            context: context,
-            selectedDate: _selectedDate,
-            onDateTarget: (d) =>
-                setState(() => _selectedDate = d), // coverage:ignore-line
-            label: 'Effective Date',
-          ),
-          const SizedBox(height: 16),
-          const Text('Recalculation Mode:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          RadioGroup<bool>(
-            groupValue: _updateTenure,
-            onChanged: (v) {
-              if (v != null) setState(() => _updateTenure = v);
-            },
-            child: const Column(
-              children: [
-                RadioListTile<bool>.adaptive(
-                  title: Text('Adjust EMI'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Keep Tenure constant.'),
-                      Text('Monthly payment will change.'),
-                    ],
-                  ),
-                  value: false,
-                ),
-                RadioListTile<bool>.adaptive(
-                  title: Text('Adjust Tenure'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Keep EMI constant.'),
-                      Text('Loan duration will change.'),
-                    ],
-                  ),
-                  value: true,
-                ),
-              ],
-            ),
+          RadioListTile<bool>.adaptive(
+            title: Text(AppLocalizations.of(context)!.adjustTenureOption),
+            subtitle:
+                Text(AppLocalizations.of(context)!.adjustTenureSubtitleLong),
+            value: true,
           ),
         ],
       ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: () async {
-            final newRate = double.tryParse(_rateController.text);
-            if (newRate != null && newRate > 0) {
-              await _handleUpdateInterestRate(
-                loan: widget.loan,
-                newRate: newRate,
-                effectiveDate: _selectedDate,
-                updateTenure: _updateTenure,
-              );
-              if (context.mounted) {
-                Navigator.pop(context);
-              }
-            }
-          },
-          child: const Text('Update'),
-        ),
-      ],
     );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(AppLocalizations.of(context)!.cancelButton)),
+      ElevatedButton(
+        onPressed: _onUpdatePressed,
+        child: Text(AppLocalizations.of(context)!.updateButton),
+      ),
+    ];
+  }
+
+  void _onUpdatePressed() async {
+    final newRate = double.tryParse(_rateController.text);
+    if (newRate != null && newRate > 0) {
+      await _handleUpdateInterestRate(
+        loan: widget.loan,
+        newRate: newRate,
+        effectiveDate: _selectedDate,
+        updateTenure: _updateTenure,
+      );
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   Future<void> _handleUpdateInterestRate({
@@ -128,7 +140,6 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
     final storage = ref.read(storageServiceProvider);
     final loanService = ref.read(loanServiceProvider);
 
-    // 1. Calculate and lock-in interest at OLD rate until effective date
     final lastDate = loan.transactions.isNotEmpty
         // coverage:ignore-start
         ? loan.transactions
@@ -144,47 +155,49 @@ class _LoanUpdateRateDialogState extends ConsumerState<LoanUpdateRateDialog> {
       toDate: effectiveDate,
     );
 
-    // 2. Record Rate Change Event with Accrued Interest
-    final rateTxn = LoanTransaction(
-      id: const Uuid().v4(),
-      date: effectiveDate,
-      amount: newRate, // New rate recorded in amount
-      type: LoanTransactionType.rateChange,
-      principalComponent: 0,
-      interestComponent: accruedInterest,
-      resultantPrincipal: loan.remainingPrincipal,
-    );
-
-    loan.transactions = [...loan.transactions, rateTxn];
+    loan.transactions = [
+      ...loan.transactions,
+      LoanTransaction(
+        id: const Uuid().v4(),
+        date: effectiveDate,
+        amount: newRate,
+        type: LoanTransactionType.rateChange,
+        principalComponent: 0,
+        interestComponent: accruedInterest,
+        resultantPrincipal: loan.remainingPrincipal,
+      )
+    ];
     loan.interestRate = newRate;
 
-    // 3. Recalibrate (Adjust EMI or Adjust Tenure)
+    _recalibrateLoan(loan, loanService, updateTenure, effectiveDate, newRate);
+
+    await storage.saveLoan(loan);
+    ref.invalidate(loansProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.rateUpdatedSuccessMessage)));
+    }
+  }
+
+  void _recalibrateLoan(Loan loan, dynamic loanService, bool updateTenure,
+      DateTime effectiveDate, double newRate) {
     if (!updateTenure) {
-      // Adjust EMI (Keep Tenure)
       final monthsPassed =
           effectiveDate.difference(loan.startDate).inDays ~/ 30;
       final remainingMonths = (loan.tenureMonths - monthsPassed).clamp(1, 600);
-
       loan.emiAmount = loanService.calculateEMI(
         principal: loan.remainingPrincipal,
         annualRate: newRate,
         tenureMonths: remainingMonths,
       );
     } else {
-      // Adjust Tenure (Keep EMI)
       loan.tenureMonths = loanService.calculateTenureForEMI(
         principal: loan.remainingPrincipal,
         annualRate: newRate,
         emi: loan.emiAmount,
       );
-    }
-
-    await storage.saveLoan(loan);
-    ref.invalidate(loansProvider);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rate updated and loan recalibrated.')));
     }
   }
 }

@@ -5,6 +5,7 @@
 import 'package:hive_ce/hive_ce.dart';
 import 'package:samriddhi_flow/models/account.dart';
 import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/profile.dart';
@@ -36,6 +37,8 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(InvestmentAdapter());
+    registerAdapter(InvestmentTypeAdapter());
     registerAdapter(LendingPaymentAdapter());
     registerAdapter(LendingRecordAdapter());
     registerAdapter(LendingTypeAdapter());
@@ -43,6 +46,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());
     registerAdapter(LoanTypeAdapter());
+    registerAdapter(MutualFundCategoryAdapter());
     registerAdapter(OtherIncomeAdapter());
     registerAdapter(PayoutFrequencyAdapter());
     registerAdapter(ProfileAdapter());
@@ -83,6 +87,8 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(HousePropertyAdapter());
     registerAdapter(InsurancePolicyAdapter());
     registerAdapter(InsurancePremiumRuleAdapter());
+    registerAdapter(InvestmentAdapter());
+    registerAdapter(InvestmentTypeAdapter());
     registerAdapter(LendingPaymentAdapter());
     registerAdapter(LendingRecordAdapter());
     registerAdapter(LendingTypeAdapter());
@@ -90,6 +96,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(LoanTransactionAdapter());
     registerAdapter(LoanTransactionTypeAdapter());
     registerAdapter(LoanTypeAdapter());
+    registerAdapter(MutualFundCategoryAdapter());
     registerAdapter(OtherIncomeAdapter());
     registerAdapter(PayoutFrequencyAdapter());
     registerAdapter(ProfileAdapter());

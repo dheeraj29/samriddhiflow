@@ -1,16 +1,36 @@
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:mocktail/mocktail.dart';
+
 import 'package:samriddhi_flow/providers.dart';
+
+import 'package:samriddhi_flow/screens/accounts_screen.dart';
+
+import 'package:samriddhi_flow/screens/add_transaction_screen.dart';
+
 import 'package:samriddhi_flow/screens/dashboard_screen.dart';
+
+import 'package:samriddhi_flow/screens/reports_screen.dart';
+
 import 'package:samriddhi_flow/models/account.dart';
+
 import 'package:samriddhi_flow/models/category.dart';
+
 import 'package:samriddhi_flow/models/transaction.dart';
+
 import 'package:samriddhi_flow/services/notification_service.dart';
+
 import 'package:samriddhi_flow/feature_providers.dart';
+
 import 'package:samriddhi_flow/models/dashboard_config.dart';
+
 import 'package:samriddhi_flow/models/profile.dart';
+
 import 'package:samriddhi_flow/services/storage_service.dart';
 
 class MockStorageService extends Mock implements StorageService {}
@@ -80,6 +100,7 @@ class MockAppLockIntentNotifier extends AppLockIntentNotifier {
 class MockCalculatorVisibleNotifier extends CalculatorVisibleNotifier {
   @override
   bool build() => false;
+
   @override
   set value(bool v) {} // No-op setter
 }
@@ -101,13 +122,18 @@ class MockDashboardConfigNotifier extends DashboardConfigNotifier {
 
 void main() {
   late MockNotificationService mockNotificationService;
+
   late MockStorageService mockStorage;
+
   setUp(() {
     mockNotificationService = MockNotificationService();
+
     mockStorage = MockStorageService();
 
     when(() => mockStorage.getLastRollover(any())).thenReturn(null);
+
     when(() => mockNotificationService.init()).thenAnswer((_) async {});
+
     when(() => mockNotificationService.checkNudges())
         .thenAnswer((_) async => []);
   });
@@ -146,6 +172,9 @@ void main() {
         currencyFormatProvider.overrideWith(MockCurrencyFormatNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: DashboardScreen(),
       ),
     );
@@ -160,19 +189,25 @@ void main() {
           type: AccountType.savings,
           currency: 'USD'),
     ]));
+
     await tester.pumpAndSettle();
 
     expect(find.text('My Samriddhi'), findsOneWidget);
+
     expect(find.text('Total Net Worth'), findsOneWidget);
+
     expect(find.text('Quick Actions'), findsOneWidget);
+
     expect(find.text('Recent Transactions'), findsOneWidget);
   });
 
   testWidgets('DashboardScreen renders empty-state shell', (tester) async {
     await tester.pumpWidget(createWidgetUnderTest());
+
     await tester.pumpAndSettle();
 
     expect(find.text('My Samriddhi'), findsOneWidget);
+
     expect(find.textContaining('Net Worth'), findsWidgets);
   });
 
@@ -194,15 +229,19 @@ void main() {
     ];
 
     await tester.pumpWidget(createWidgetUnderTest(accounts: accounts));
+
     await tester.pumpAndSettle();
 
     expect(find.text('Total Net Worth'), findsOneWidget);
 
     // Initial state is hidden
+
     expect(find.text('••••••••'), findsOneWidget);
 
     // Tap to reveal
-    await tester.tap(find.byIcon(Icons.visibility));
+
+    await tester.tap(find.byIcon(Icons.visibility_off));
+
     await tester.pumpAndSettle();
 
     expect(find.textContaining('800'), findsWidgets);
@@ -228,23 +267,47 @@ void main() {
       ],
       transactions: [t1],
     ));
+
     await tester.pumpAndSettle();
 
     // Scroll to the Recent Transactions list
+
     await tester.ensureVisible(find.text('Recent Transactions'));
+
     await tester.pumpAndSettle();
 
     // Tap to expand Recent Transactions list
+
     await tester.tap(find.text('Recent Transactions'));
+
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsOneWidget);
   });
 
+  testWidgets(
+      'DashboardScreen shows recent transactions empty state when expanded',
+      (tester) async {
+    await tester.pumpWidget(createWidgetUnderTest());
+
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Recent Transactions'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Recent Transactions'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No transactions yet.'), findsOneWidget);
+  });
+
   testWidgets('DashboardScreen initializes notifications', (tester) async {
     await tester.pumpWidget(createWidgetUnderTest());
+
     await tester.pumpAndSettle();
+
     verify(() => mockNotificationService.init()).called(1);
+
     verify(() => mockNotificationService.checkNudges()).called(1);
   });
 
@@ -253,98 +316,158 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         notificationServiceProvider.overrideWithValue(mockNotificationService),
+
         accountsProvider.overrideWith((ref) => Stream.value([])),
+
         transactionsProvider.overrideWith((ref) => Stream.value([])),
+
         loansProvider.overrideWith((ref) => Stream.value([])),
+
         // Force high count
+
         txnsSinceBackupProvider.overrideWith(MockHighTxnCountNotifier.new),
+
         backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
+
         currencyProvider.overrideWith(MockCurrencyNotifier.new),
+
         categoriesProvider.overrideWith(MockCategoriesNotifier.new),
+
         activeProfileIdProvider.overrideWith(MockProfileIdNotifier.new),
+
         profilesProvider.overrideWith((ref) async => []),
+
         smartCalculatorEnabledProvider.overrideWith(MockSmartCalcNotifier.new),
+
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
+
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
+
         authStreamProvider.overrideWith((ref) => Stream.value(null)),
+
         appLockStatusProvider.overrideWith((ref) => false),
+
         appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+
         calculatorVisibleProvider
             .overrideWith(MockCalculatorVisibleNotifier.new),
+
         storageInitializerProvider.overrideWith((ref) async {}),
+
         monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
+
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+
         pendingRemindersProvider.overrideWithValue(0),
+
         localModeProvider.overrideWith(MockLocalModeNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: DashboardScreen(),
       ),
     ));
+
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Unsaved Data:'), findsOneWidget);
+
     // 25 transactions
+
     expect(find.textContaining('25'), findsOneWidget);
   });
 
-  testWidgets('DashboardScreen Quick Actions', (tester) async {
+  testWidgets('DashboardScreen Quick Actions opens add income flow',
+      (tester) async {
     // Set a large enough screen to ensure everything renders
+
     tester.view.physicalSize = const Size(2000, 4000);
+
     tester.view.devicePixelRatio = 3.0;
+
     addTearDown(tester.view.resetPhysicalSize);
 
     // Check navigation for Quick Actions
+
     await tester.pumpWidget(createWidgetUnderTest());
+
     await tester.pumpAndSettle();
 
     // Scroll to quick actions
+
     // Use widgetWithText to find the InkWell that wraps the 'Income' text.
+
     final incomeAction = find.widgetWithText(InkWell, 'Income');
 
     // Ensure it's visible before tapping (handles scrolling)
+
     await tester.ensureVisible(incomeAction);
+
     await tester.pumpAndSettle();
 
     expect(incomeAction, findsOneWidget,
         reason: 'Quick Action Income button not found');
 
     await tester.tap(incomeAction);
+
     await tester.pumpAndSettle();
+
+    expect(find.byType(AddTransactionScreen), findsOneWidget);
   });
 
-  testWidgets('DashboardScreen nav items handle taps', (tester) async {
+  testWidgets('DashboardScreen nav items open accounts screen', (tester) async {
     tester.view.physicalSize = const Size(2000, 4000);
+
     tester.view.devicePixelRatio = 3.0;
+
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(createWidgetUnderTest());
+
     await tester.pumpAndSettle();
 
     // Use Tooltip to find the specific nav item
+
     final accountsIcon = find.byTooltip('Accounts');
+
     expect(accountsIcon, findsOneWidget, reason: 'Accounts nav item not found');
 
     await tester.tap(accountsIcon);
+
     await tester.pumpAndSettle();
+
+    expect(find.byType(AccountsScreen), findsOneWidget);
   });
 
-  testWidgets('DashboardScreen switches tabs independently', (tester) async {
+  testWidgets('DashboardScreen switches tabs independently to reports',
+      (tester) async {
     tester.view.physicalSize = const Size(2000, 4000);
+
     tester.view.devicePixelRatio = 3.0;
+
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(createWidgetUnderTest());
+
     await tester.pumpAndSettle();
 
     // Use Tooltip to find the specific nav item
+
     final reportsIcon = find.byTooltip('Reports');
+
     expect(reportsIcon, findsOneWidget, reason: 'Reports nav item not found');
 
     await tester.tap(reportsIcon);
+
     await tester.pumpAndSettle();
+
+    expect(find.byType(ReportsScreen), findsOneWidget);
   });
 
   testWidgets('DashboardScreen displays active profile name', (tester) async {
@@ -353,37 +476,66 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         notificationServiceProvider.overrideWithValue(mockNotificationService),
+
         accountsProvider.overrideWith((ref) => Stream.value([])),
+
         transactionsProvider.overrideWith((ref) => Stream.value([])),
+
         loansProvider.overrideWith((ref) => Stream.value([])),
+
         txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
+
         backupThresholdProvider.overrideWith(MockBackupThresholdNotifier.new),
+
         currencyProvider.overrideWith(MockCurrencyNotifier.new),
+
         categoriesProvider.overrideWith(MockCategoriesNotifier.new),
+
         // Override with specific profile
+
         activeProfileIdProvider.overrideWith(MockProfileIdNotifier.new),
+
         profilesProvider.overrideWith((ref) async => [profile]),
+
         activeProfileProvider.overrideWithValue(profile),
+
         smartCalculatorEnabledProvider.overrideWith(MockSmartCalcNotifier.new),
+
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
+
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
+
         authStreamProvider.overrideWith((ref) => Stream.value(null)),
+
         appLockStatusProvider.overrideWith((ref) => false),
+
         appLockIntentProvider.overrideWith(MockAppLockIntentNotifier.new),
+
         calculatorVisibleProvider
             .overrideWith(MockCalculatorVisibleNotifier.new),
+
         storageInitializerProvider.overrideWith((ref) async {}),
+
         monthlyBudgetProvider.overrideWith(MockBudgetNotifier.new),
+
         recurringTransactionsProvider.overrideWith((ref) => Stream.value([])),
+
         holidaysProvider.overrideWith(MockHolidaysNotifier.new),
+
         dashboardConfigProvider.overrideWith(MockDashboardConfigNotifier.new),
+
         pendingRemindersProvider.overrideWithValue(0),
+
         localModeProvider.overrideWith(MockLocalModeNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: DashboardScreen(),
       ),
     ));
+
     await tester.pumpAndSettle();
 
     expect(find.text('Profile: Work Profile'), findsOneWidget);
@@ -394,29 +546,44 @@ void main() {
     final accounts = [
       Account(
         id: 'cc1',
+
         name: 'My Card',
+
         type: AccountType.creditCard,
+
         balance: -1000, // Spent 1000
+
         creditLimit: 5000,
+
         billingCycleDay: 15,
       ),
     ];
 
     // Mock rollover to 30 days ago to ensure "billed" logic triggers
+
     final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
     final rolloverDate = DateTime(thirtyDaysAgo.year, thirtyDaysAgo.month, 15);
+
     when(() => mockStorage.getLastRollover('cc1'))
         .thenReturn(rolloverDate.millisecondsSinceEpoch);
 
     // mock transactions to ensure unbilled/billed calculation
+
     final txns = [
       Transaction.create(
         title: 'Billed Spend',
+
         amount: 2000,
+
         type: TransactionType.expense,
+
         accountId: 'cc1',
+
         category: 'Leisure',
+
         // In the billed cycle window (e.g. 20 days ago)
+
         date: DateTime.now().subtract(const Duration(days: 20)),
       ),
     ];
@@ -425,21 +592,29 @@ void main() {
       accounts: accounts,
       transactions: txns,
     ));
+
     await tester.pumpAndSettle();
 
     // Reveal privacy mode to see numbers
-    await tester.tap(find.byIcon(Icons.visibility));
+
+    await tester.tap(find.byIcon(Icons.visibility_off));
+
     await tester.pumpAndSettle();
 
     // Verify CC Bill (Unpaid), Unbilled, and Usage are shown
+
     expect(find.text('CC Bill (Unpaid)'), findsOneWidget);
+
     expect(find.text('CC Unbilled'), findsOneWidget);
+
     expect(find.text('CC Usage'), findsOneWidget);
 
     // With balance -1000 and billedGross 2000, totalDue = 1000
+
     expect(find.textContaining('1,000'), findsWidgets);
 
     // Usage: 1000 / 5000 = 20%
+
     expect(find.textContaining('20.0%'), findsOneWidget);
   });
 
@@ -464,26 +639,36 @@ void main() {
     ];
 
     await tester.pumpWidget(createWidgetUnderTest(accounts: accounts));
+
     await tester.pumpAndSettle();
 
     // Tap to reveal
-    await tester.tap(find.byIcon(Icons.visibility));
+
+    await tester.tap(find.byIcon(Icons.visibility_off));
+
     await tester.pumpAndSettle();
 
     // Verify label is "Current Savings"
+
     expect(find.textContaining('Current Savings'), findsOneWidget);
 
     // Net Worth should be 1000 (Wallet 500 excluded)
+
     // Current Savings should be 1000 (Wallet 500 excluded)
+
     // Assets pill has been removed
+
     // Search for widgets containing '1,000'
+
     expect(find.textContaining('1,000'), findsNWidgets(2));
   });
 
   testWidgets('Tapping My Samriddhi opens privacy policy bottom sheet',
       (tester) async {
     tester.view.physicalSize = const Size(2400, 4800);
+
     tester.view.devicePixelRatio = 3.0;
+
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(createWidgetUnderTest(accounts: [
@@ -494,27 +679,41 @@ void main() {
           type: AccountType.savings,
           currency: 'USD'),
     ]));
+
     await tester.pumpAndSettle();
 
     // Tap the My Samriddhi title
+
     await tester.tap(find.text('My Samriddhi'));
+
     await tester.pumpAndSettle();
 
     // Verify privacy policy content appears
+
     expect(find.text('Samriddhi Flow — Privacy Policy'), findsOneWidget);
+
     expect(find.text('Local-First Storage'), findsOneWidget);
-    expect(find.text('User-Initiated Cloud Backup'), findsOneWidget);
+
+    expect(find.text('Cloud Backup'), findsOneWidget);
+
     expect(find.text('Optional Encryption'), findsOneWidget);
+
     expect(find.text('No Tracking or Analytics'), findsOneWidget);
+
     expect(find.text('Your Data, Your Control'), findsOneWidget);
 
     // Close it
+
     final closeBtn = find.text('Close');
+
     await tester.ensureVisible(closeBtn);
-    await tester.pumpAndSettle();
-    await tester.tap(closeBtn);
+
     await tester.pumpAndSettle();
 
-    expect(find.text('Samriddhi Flow — Privacy Policy'), findsNothing);
+    await tester.tap(closeBtn);
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Samriddhi Flow - Privacy Policy'), findsNothing);
   });
 }

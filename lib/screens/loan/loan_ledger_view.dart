@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../models/loan.dart';
 
 import '../../providers.dart';
@@ -40,10 +41,11 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
         _buildLedgerHeader(context),
         const SizedBox(height: 12),
         if (filteredTxns.isEmpty)
-          const Expanded(
+          Expanded(
             child: Center(
-                child: Text('No transactions match the filters.',
-                    style: TextStyle(color: Colors.grey))),
+                child: Text(
+                    AppLocalizations.of(context)!.noTransactionsMatchFilters,
+                    style: const TextStyle(color: Colors.grey))),
           )
         else
           Expanded(
@@ -101,8 +103,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Loan Ledger',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(AppLocalizations.of(context)!.loanLedgerTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         Row(
           children: [
             IconButton(
@@ -114,8 +116,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                   color: Colors.grey),
               onPressed: () => setState(() => _compactLedger = !_compactLedger),
               tooltip: _compactLedger
-                  ? 'Switch to Extended Numbers'
-                  : 'Switch to Compact Numbers',
+                  ? AppLocalizations.of(context)!.switchToExtendedTooltip
+                  : AppLocalizations.of(context)!.switchToCompactTooltip,
             ),
             IconButton(
               icon: PureIcons.icon(Icons.filter_list,
@@ -123,7 +125,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                       ? Theme.of(context).colorScheme.primary
                       : null),
               onPressed: () => _showFilterTypeDialog(),
-              tooltip: 'Filter by Type',
+              tooltip: AppLocalizations.of(context)!.filterByTypeTooltip,
             ),
             IconButton(
               icon: PureIcons.icon(Icons.date_range,
@@ -133,7 +135,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                           .primary // coverage:ignore-line
                       : null),
               onPressed: () => _showFilterDateDialog(), // coverage:ignore-line
-              tooltip: 'Filter by Date',
+              tooltip: AppLocalizations.of(context)!.filterByDateTooltip,
             ),
             if (_filterType != null || _filterDateRange != null)
               IconButton(
@@ -143,7 +145,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                   _filterDateRange = null;
                   _currentPage = 1;
                 }),
-                tooltip: 'Clear Filters',
+                tooltip: AppLocalizations.of(context)!.clearFiltersTooltip,
               ),
           ],
         ),
@@ -158,32 +160,37 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
     switch (txn.type) {
       case LoanTransactionType.emi:
         return (
-          title: 'EMI Payment',
+          title: AppLocalizations.of(ref.context)!.emiPaymentTitle,
           icon: Icons.event_note,
           color: Colors.green,
-          subtitle:
-              'Prin: ${currency.format(txn.principalComponent)} • Int: ${currency.format(txn.interestComponent)}',
+          subtitle: AppLocalizations.of(ref.context)!.emiPaymentSubtitle(
+              currency.format(txn.principalComponent),
+              currency.format(txn.interestComponent)),
         );
       case LoanTransactionType.prepayment:
         return (
-          title: 'Prepayment',
+          title: AppLocalizations.of(ref.context)!.prepaymentTitle,
           icon: Icons.speed,
           color: Colors.orange,
-          subtitle: 'Direct reduction of principal',
+          subtitle: AppLocalizations.of(ref.context)!.prepaymentSubtitle,
         );
       case LoanTransactionType.rateChange: // coverage:ignore-line
         return (
-          title: 'Interest Rate Updated',
+          title: AppLocalizations.of(ref.context)!
+              .interestRateUpdatedTitle, // coverage:ignore-line
           icon: Icons.trending_up,
           color: Colors.purple,
-          subtitle: 'New Rate: ${txn.amount}%', // coverage:ignore-line
+          subtitle: AppLocalizations.of(ref.context)! // coverage:ignore-line
+              .newRateSubtitle(txn.amount.toString()), // coverage:ignore-line
         );
       case LoanTransactionType.topup: // coverage:ignore-line
         return (
-          title: 'Loan Top-up',
+          title: AppLocalizations.of(ref.context)!
+              .loanTopUpTitle, // coverage:ignore-line
           icon: Icons.add_circle_outline,
           color: Colors.teal,
-          subtitle: 'Increased principal amount',
+          subtitle: AppLocalizations.of(ref.context)!
+              .loanTopUpSubtitle, // coverage:ignore-line
         );
     }
   }
@@ -219,8 +226,8 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
             Text(
                 '${DateFormat('MMM dd, yyyy, hh:mm a').format(txn.date)} • ${style.subtitle}',
                 style: const TextStyle(fontSize: 12)),
-            const Text('Balance: ',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(AppLocalizations.of(context)!.balanceLabel,
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
             SmartCurrencyText(
               value: txn.resultantPrincipal,
               locale: currencyLocale,
@@ -235,13 +242,13 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
             await _handleMenuSelection(v, txn);
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.delete, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Text('Delete'),
+                  const Icon(Icons.delete, color: Colors.red, size: 20),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.deleteButton),
                 ],
               ),
             )
@@ -255,7 +262,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Filter by Type'),
+        title: Text(AppLocalizations.of(context)!.filterByTypeTooltip),
         children: [
           SimpleDialogOption(
             // coverage:ignore-start
@@ -267,7 +274,7 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
               });
               Navigator.pop(context); // coverage:ignore-line
             },
-            child: const Text('All'),
+            child: Text(AppLocalizations.of(context)!.allOption),
           ),
           ...LoanTransactionType.values.map((type) => SimpleDialogOption(
                 onPressed: () {
@@ -277,7 +284,19 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
                   });
                   Navigator.pop(context);
                 },
-                child: Text(type.name.toUpperCase()),
+                child: Text((() {
+                  switch (type) {
+                    case LoanTransactionType.emi:
+                      return AppLocalizations.of(context)!.emiLabel;
+                    case LoanTransactionType.prepayment:
+                      return AppLocalizations.of(context)!.prepaymentLabel;
+                    case LoanTransactionType.rateChange:
+                      return AppLocalizations.of(context)!.rateChangeLabel;
+                    case LoanTransactionType.topup:
+                      return AppLocalizations.of(context)!.topupLabel;
+                  }
+                })()
+                    .toUpperCase()),
               )),
         ],
       ),
@@ -308,27 +327,28 @@ class _LoanLedgerViewState extends ConsumerState<LoanLedgerView> {
       final confirm = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-                title: const Text('Delete Entry?'),
-                content: const Column(
+                title:
+                    Text(AppLocalizations.of(context)!.deleteEntryConfirmTitle),
+                content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                        'Deleting this will attempt to reverse the principal impact, but won\'t perfectly recalculate interest history.'),
-                    SizedBox(height: 8),
-                    Text('Are you sure?',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(AppLocalizations.of(context)!
+                        .deleteEntryConfirmMessage),
+                    const SizedBox(height: 8),
+                    Text(AppLocalizations.of(context)!.areYouSureLabel,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
                 actions: [
                   TextButton(
                       onPressed: () =>
                           Navigator.pop(ctx, false), // coverage:ignore-line
-                      child: const Text('Cancel')),
+                      child: Text(AppLocalizations.of(context)!.cancelButton)),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Delete',
-                          style: TextStyle(color: Colors.red))),
+                      child: Text(AppLocalizations.of(context)!.deleteButton,
+                          style: const TextStyle(color: Colors.red))),
                 ],
               ));
 

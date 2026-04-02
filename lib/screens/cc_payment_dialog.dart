@@ -7,6 +7,7 @@ import '../utils/currency_utils.dart';
 import '../widgets/form_utils.dart';
 import '../utils/billing_helper.dart';
 import 'package:clock/clock.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class RecordCCPaymentDialog extends ConsumerStatefulWidget {
   final Account creditCardAccount;
@@ -40,24 +41,27 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
         _initAmountIfNeeded(txns);
 
         return AlertDialog(
-          title: Text('Pay ${widget.creditCardAccount.name} Bill'),
+          title: Text(AppLocalizations.of(context)!
+              .payBillTitle(widget.creditCardAccount.name)),
           content: SingleChildScrollView(child: _buildPaymentForm(context)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context), // coverage:ignore-line
-                child: const Text('Cancel')),
+                child: Text(AppLocalizations.of(context)!.cancelAction)),
             ElevatedButton(
               onPressed: () => _handlePayment(context),
-              child: const Text('Confirm'),
+              child: Text(AppLocalizations.of(context)!.confirmAction),
             ),
           ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => // coverage:ignore-line
-          AlertDialog(
-              title: const Text('Error'),
-              content: Text('$e')), // coverage:ignore-line
+      // coverage:ignore-start
+      error: (e, s) => AlertDialog(
+          title: Text(AppLocalizations.of(context)!.errorTitle),
+          content: Text(AppLocalizations.of(context)!
+              .errorLabelWithDetails(e.toString()))),
+      // coverage:ignore-end
     );
   }
 
@@ -79,61 +83,88 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   }
 
   Widget _buildPaymentForm(BuildContext context) {
-    final accountsAsync = ref.watch(accountsProvider);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.isFullyPaid)
-          Container(
-            // coverage:ignore-line
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(8),
-            // coverage:ignore-start
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-              // coverage:ignore-end
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 20),
-                SizedBox(width: 8),
-                Text('Bill is already marked as paid.',
-                    style: TextStyle(color: Colors.green, fontSize: 13)),
-              ],
-            ),
-          ),
+        if (widget.isFullyPaid) _buildFullyPaidNote(context),
         FormUtils.buildAmountField(
           controller: _amountController,
           currency: ref.watch(currencyProvider),
-          label: 'Payment Amount',
+          label: AppLocalizations.of(context)!.paymentAmountLabel,
         ),
-        CheckboxListTile(
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Round Off', style: TextStyle(fontSize: 14)),
-          subtitle: const Text('Round to nearest number',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
-          value: _isRounded,
-          onChanged: (v) {
-            setState(() {
-              _isRounded = v ?? false;
-              if (_isRounded) {
-                _originalAmount = double.tryParse(_amountController.text) ?? 0;
-                _amountController.text =
-                    _originalAmount!.roundToDouble().toStringAsFixed(2);
-              } else if (_originalAmount != null && _originalAmount! > 0) {
-                // coverage:ignore-line
-                _amountController.text =
-                    _originalAmount!.toStringAsFixed(2); // coverage:ignore-line
-              }
-            });
-          },
-        ),
+        _buildRoundOffCheckbox(context),
         const SizedBox(height: 8),
-        accountsAsync.when(
+        _buildAccountSelectorField(context),
+        const SizedBox(height: 16),
+        FormUtils.buildDatePickerField(
+          context: context,
+          selectedDate: _date,
+          onDateTarget: (picked) =>
+              setState(() => _date = picked), // coverage:ignore-line
+          label: AppLocalizations.of(context)!.paymentDateLabel,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFullyPaidNote(BuildContext context) {
+    // coverage:ignore-line
+    return Container(
+      // coverage:ignore-line
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(8),
+      // coverage:ignore-start
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+        // coverage:ignore-end
+      ),
+      child: Row(
+        // coverage:ignore-line
+        children: [
+          // coverage:ignore-line
+          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            // coverage:ignore-line
+            AppLocalizations.of(context)!
+                .billAlreadyPaidNote, // coverage:ignore-line
+            style: const TextStyle(color: Colors.green, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoundOffCheckbox(BuildContext context) {
+    return CheckboxListTile(
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding: EdgeInsets.zero,
+      title: Text(AppLocalizations.of(context)!.roundOffLabel,
+          style: const TextStyle(fontSize: 14)),
+      subtitle: Text(AppLocalizations.of(context)!.roundToNearestNote,
+          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      value: _isRounded,
+      onChanged: (v) {
+        setState(() {
+          _isRounded = v ?? false;
+          if (_isRounded) {
+            _originalAmount = double.tryParse(_amountController.text) ?? 0;
+            _amountController.text =
+                _originalAmount!.roundToDouble().toStringAsFixed(2);
+          } else if (_originalAmount != null && _originalAmount! > 0) {
+            // coverage:ignore-line
+            _amountController.text =
+                _originalAmount!.toStringAsFixed(2); // coverage:ignore-line
+          }
+        });
+      },
+    );
+  }
+
+  Widget _buildAccountSelectorField(BuildContext context) {
+    return ref.watch(accountsProvider).when(
           data: (accounts) {
             final sourceAccounts = accounts
                 .where((a) =>
@@ -145,23 +176,14 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
               value: _sourceAccountId,
               accounts: sourceAccounts,
               onChanged: (v) => setState(() => _sourceAccountId = v!),
-              label: 'Pay From Account',
+              label: AppLocalizations.of(context)!.payFromAccountLabel,
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (_, __) =>
-              const Text('Error loading accounts'), // coverage:ignore-line
-        ),
-        const SizedBox(height: 16),
-        FormUtils.buildDatePickerField(
-          context: context,
-          selectedDate: _date,
-          onDateTarget: (picked) =>
-              setState(() => _date = picked), // coverage:ignore-line
-          label: 'Payment Date',
-        ),
-      ],
-    );
+          error: (_, __) => // coverage:ignore-line
+              Text(AppLocalizations.of(context)!
+                  .errorLoadingAccounts), // coverage:ignore-line
+        );
   }
 
   Future<void> _handlePayment(BuildContext context) async {
@@ -181,8 +203,8 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
 
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Payment Recorded')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.paymentRecordedMsg)));
     } catch (e) {
       // coverage:ignore-start
       if (context.mounted) {
@@ -200,11 +222,12 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
   Future<void> _recordTransferTransaction(
       dynamic storage, double amount) async {
     final txn = Transaction.create(
-      title: 'CC Bill Payment: ${widget.creditCardAccount.name}',
+      title: AppLocalizations.of(context)!
+          .ccBillPaymentTitle(widget.creditCardAccount.name),
       amount: amount,
       date: _date,
       type: TransactionType.transfer,
-      category: 'Credit Card Bill',
+      category: AppLocalizations.of(context)!.creditCardBillCategory,
       accountId: _sourceAccountId == 'manual' ? null : _sourceAccountId,
       toAccountId: widget.creditCardAccount.id,
     );
@@ -258,11 +281,11 @@ class _RecordCCPaymentDialogState extends ConsumerState<RecordCCPaymentDialog> {
         diff > 0 ? TransactionType.income : TransactionType.expense;
 
     final adjustmentTxn = Transaction.create(
-      title: 'Rounding Adjustment',
+      title: AppLocalizations.of(context)!.roundingAdjustmentTitle,
       amount: CurrencyUtils.roundTo2Decimals(diff.abs()),
       date: _date,
       type: adjustmentType,
-      category: 'Adjustment',
+      category: AppLocalizations.of(context)!.adjustmentCategory,
       accountId: widget.creditCardAccount.id,
       toAccountId: null,
     );

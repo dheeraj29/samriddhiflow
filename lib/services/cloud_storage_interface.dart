@@ -12,4 +12,13 @@ abstract class CloudStorageInterface {
 
   /// Deletes all cloud data for the specified user.
   Future<void> deleteData(String uid);
+
+  /// Retrieves the UUID of the device currently marked as the active logged-in session.
+  Future<String?> getActiveSessionId(String uid);
+
+  /// Sets the specified device's UUID as the actively tracked session for this user account.
+  Future<void> setActiveSessionId(String uid, String deviceId);
+
+  /// Clears the active session device ID from the cloud.
+  Future<void> clearActiveSessionId(String uid);
 }

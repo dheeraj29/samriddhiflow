@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../providers.dart';
 import '../widgets/pure_icons.dart';
+import 'package:intl/intl.dart';
 
 class HolidayManagerScreen extends ConsumerWidget {
   const HolidayManagerScreen({super.key});
@@ -11,9 +12,10 @@ class HolidayManagerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final holidays = ref.watch(holidaysProvider)..sort();
 
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Holiday Manager'),
+        title: Text(l10n.holidayManagerTitle),
         actions: [
           IconButton(
             icon: PureIcons.add(),
@@ -30,10 +32,10 @@ class HolidayManagerScreen extends ConsumerWidget {
               children: [
                 PureIcons.info(color: Colors.blue),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Recurring transactions can be configured to avoid these dates by scheduling them a day earlier.',
-                    style: TextStyle(fontSize: 13),
+                    l10n.holidayInfoText,
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
               ],
@@ -41,7 +43,7 @@ class HolidayManagerScreen extends ConsumerWidget {
           ),
           Expanded(
             child: holidays.isEmpty
-                ? const Center(child: Text('No holidays added yet.'))
+                ? Center(child: Text(l10n.noHolidaysAdded))
                 : ListView.builder(
                     itemCount: holidays.length,
                     itemBuilder: (context, index) {

@@ -1,5 +1,7 @@
+import 'package:samriddhi_flow/screens/taxes/tax_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import '../../services/taxes/tax_data_fetcher.dart';
@@ -55,10 +57,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           // coverage:ignore-line
           _isServiceInitialized = true; // coverage:ignore-line
         });
-        ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line
-            SnackBar(
-                content: Text(
-                    'Error initializing tax data: $e'))); // coverage:ignore-line
+        // coverage:ignore-start
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!
+                .taxInitializationError(e.toString()))));
+        // coverage:ignore-end
       }
     }
   }
@@ -83,12 +86,13 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tax Dashboard', overflow: TextOverflow.ellipsis),
+        title: Text(AppLocalizations.of(context)!.taxDashboardTitle,
+            overflow: TextOverflow.ellipsis),
         centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.health_and_safety),
-            tooltip: 'Insurance Portfolio',
+            tooltip: AppLocalizations.of(context)!.insurancePortfolioTooltip,
             onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -141,13 +145,14 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Taxable Insurance Alert',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.taxableInsuranceAlertTitle,
+                    style: const TextStyle(
                         fontWeight: FontWeight.bold, color: Colors.orange),
                   ),
                   Text(
-                    'You have insurance policies that may be taxable in FY $_selectedYear-${_selectedYear + 1}. Ensure income is added to avoid penalties.',
+                    AppLocalizations.of(context)!.taxableInsuranceAlertMessage(
+                        _selectedYear, _selectedYear + 1),
                     style:
                         TextStyle(fontSize: 12, color: Colors.orange.shade900),
                   ),
@@ -163,7 +168,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                         InsurancePortfolioScreen(initialYear: _selectedYear)),
                 // coverage:ignore-end
               ),
-              child: const Text('View Policies'),
+              child: Text(AppLocalizations.of(context)!.viewPoliciesAction),
             ),
           ],
         ),
@@ -215,9 +220,10 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       DateTime end,
       bool smartSync,
       {bool forceReset = false}) async {
-    ScaffoldMessenger.of(context) // coverage:ignore-line
-        .showSnackBar(const SnackBar(
-            content: Text('Syncing...'))); // coverage:ignore-line
+    ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!
+                .syncingStatus))); // coverage:ignore-line
 
     try {
       final result =
@@ -238,15 +244,16 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
 
       // coverage:ignore-start
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Sync Complete')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.syncCompleteStatus)));
         // coverage:ignore-end
       }
     } catch (e) {
       // coverage:ignore-start
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Sync Failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.syncFailedStatus(e.toString()))));
         // coverage:ignore-end
       }
     }
@@ -372,10 +379,12 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   Widget _buildGainStatusIcon(CapitalGainEntry gain, bool isExpired) {
     // coverage:ignore-line
     if (isExpired) {
-      return const Chip(
-          label: Text('Expired'),
+      return Chip(
+          // coverage:ignore-line
+          label: Text(AppLocalizations.of(context)!
+              .expiredStatus), // coverage:ignore-line
           backgroundColor: Colors.redAccent,
-          labelStyle: TextStyle(color: Colors.white));
+          labelStyle: const TextStyle(color: Colors.white));
     }
     if (gain.reinvestedAmount >= gain.capitalGainAmount) {
       // coverage:ignore-line
@@ -401,7 +410,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
       contentPadding: EdgeInsets.zero,
       // coverage:ignore-start
       title: Text(
-          '${gain.description.isNotEmpty ? gain.description : 'Capital Gain'} (${gain.matchAssetType.toHumanReadable()})'),
+          '${gain.description.isNotEmpty ? gain.description : AppLocalizations.of(context)!.capitalGainLabel} (${gain.matchAssetType.toHumanReadable()})'),
       subtitle: Column(
         // coverage:ignore-end
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,8 +435,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             IconButton(
               // coverage:ignore-end
               icon: const Icon(Icons.add_task, color: Colors.blue),
-              tooltip: 'Add Reinvestment',
               // coverage:ignore-start
+              tooltip: AppLocalizations.of(context)!.addReinvestmentTooltip,
               onPressed: () async {
                 await Navigator.push(
                   context,
@@ -462,7 +471,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Widget _buildExemptionsCard(TaxYearData data) {
-    if (_allTaxData.isEmpty) return const SizedBox.shrink();
+    if (_allTaxData.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     final rules =
         ref.watch(taxConfigServiceProvider).getRulesForYear(data.year);
@@ -486,12 +497,16 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // coverage:ignore-line
-            const Text('Capital Gains Reinvestment Tracker',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+                AppLocalizations.of(context)!
+                    .capitalGainsTrackerTitle, // coverage:ignore-line
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             // coverage:ignore-start
             Text(
-                'Reinvest within ${rules.windowGainReinvest} years to claim exemption under 54/54F',
+                AppLocalizations.of(context)!
+                    .capitalGainsTrackerSubtitle(rules.windowGainReinvest),
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             // coverage:ignore-end
             const Divider(),
@@ -507,14 +522,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Widget _buildSummaryCard(TaxYearData data) {
-    // Calculate Tax on the fly
     final service = ref.watch(indianTaxServiceProvider);
-
-    // Need rules for detailed calc.
-    final config = ref.watch(taxConfigServiceProvider);
-    final rules = config.getRulesForYear(data.year);
-
+    final rules =
+        ref.watch(taxConfigServiceProvider).getRulesForYear(data.year);
     final taxDetails = service.calculateDetailedLiability(data, rules);
+    final currencyLocale = ref.watch(currencyProvider);
 
     return Card(
       elevation: 4,
@@ -523,76 +535,188 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Text('Projected Tax Liability',
-                style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 8),
-            SmartCurrencyText(
-              value: taxDetails['totalTax'] ?? 0,
-              locale: ref.watch(currencyProvider),
-              style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent),
-            ),
+            _buildProjectedTaxDisplay(
+                taxDetails['totalTax'] ?? 0, currencyLocale),
             const Divider(height: 32),
-            _RowItem('Gross Income', taxDetails['grossIncome'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('Capital Gains', taxDetails['capitalGainsTotal'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('Deductions', taxDetails['totalDeductions'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('Taxable Income', taxDetails['taxableIncome'] ?? 0,
-                locale: ref.watch(currencyProvider)),
+            _buildIncomeBreakdown(taxDetails, currencyLocale),
             const Divider(),
-            _RowItem('Tax on Income (Slab)', taxDetails['slabTax'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('Tax on Capital Gains', taxDetails['specialTax'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('Cess (4%)', taxDetails['cess'] ?? 0,
-                locale: ref.watch(currencyProvider)),
+            _buildTaxBreakdown(taxDetails, currencyLocale),
             const Divider(),
-            _RowItem('Total Tax Liability', taxDetails['totalTax'] ?? 0,
-                locale: ref.watch(currencyProvider), isBold: true),
-            _RowItem('Advance Tax Paid', taxDetails['advanceTax'] ?? 0,
-                locale: ref.watch(currencyProvider)),
-            _RowItem('TDS / TCS',
-                (taxDetails['tds'] ?? 0) + (taxDetails['tcs'] ?? 0),
-                locale: ref.watch(currencyProvider)),
-            if ((taxDetails['advanceTaxInterest'] ?? 0) > 0)
-              // coverage:ignore-start
-              _RowItem('Tax Shortfall Interest',
-                  taxDetails['advanceTaxInterest'] ?? 0,
-                  locale: ref.watch(currencyProvider), color: Colors.orange),
-            // coverage:ignore-end
-            const SizedBox(height: 8),
-            _RowItem('Net Tax Payable', taxDetails['netTaxPayable'] ?? 0,
-                locale: ref.watch(currencyProvider),
-                isBold: true,
-                color: (taxDetails['netTaxPayable'] ?? 0) > 0
-                    ? Colors.red
-                    : Colors.green),
+            _buildPaymentBreakdown(taxDetails, currencyLocale),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.description,
-                      size: 16, color: Theme.of(context).colorScheme.onSurface),
-                  const SizedBox(width: 8),
-                  Text('Suggested: ${service.suggestITR(data)}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
-                ],
-              ),
-            )
+            _buildItrSuggestion(service.suggestITR(data)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProjectedTaxDisplay(double totalTax, String currencyLocale) {
+    return Column(
+      children: [
+        Text(AppLocalizations.of(context)!.projectedTaxLiabilityTitle,
+            style: const TextStyle(color: Colors.grey)),
+        const SizedBox(height: 8),
+        SmartCurrencyText(
+          value: totalTax,
+          locale: currencyLocale,
+          style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.redAccent),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIncomeBreakdown(
+      Map<String, dynamic> taxDetails, String currencyLocale) {
+    return Column(
+      children: [
+        _RowItem(AppLocalizations.of(context)!.grossIncomeLabel,
+            taxDetails['grossIncome'] ?? 0,
+            locale: currencyLocale),
+        _RowItem(AppLocalizations.of(context)!.capitalGainsLabel,
+            taxDetails['capitalGainsTotal'] ?? 0,
+            locale: currencyLocale),
+        if ((taxDetails['cgDeductions'] ?? 0) > 0)
+          _RowItem(
+              AppLocalizations.of(context)!
+                  .capitalGainsDeductionsLabel, // coverage:ignore-line
+              taxDetails['cgDeductions'] ?? 0, // coverage:ignore-line
+              locale: currencyLocale),
+        _RowItem(AppLocalizations.of(context)!.deductionsLabel,
+            taxDetails['totalDeductions'] ?? 0,
+            locale: currencyLocale),
+        _RowItem(AppLocalizations.of(context)!.taxableIncomeLabel,
+            taxDetails['taxableIncome'] ?? 0,
+            locale: currencyLocale),
+      ],
+    );
+  }
+
+  Widget _buildTaxBreakdown(
+      Map<String, dynamic> taxDetails, String currencyLocale) {
+    return Column(
+      children: [
+        _RowItem(AppLocalizations.of(context)!.taxOnIncomeSlabLabel,
+            taxDetails['slabTax'] ?? 0,
+            locale: currencyLocale),
+        _RowItem(AppLocalizations.of(context)!.taxOnCapitalGainsLabel,
+            taxDetails['specialTax'] ?? 0,
+            locale: currencyLocale),
+        if ((taxDetails['cessOnSalaryTds'] ?? 0) > 0)
+          _RowItem(
+              AppLocalizations.of(context)!
+                  .cessOnSalaryTdsLabel, // coverage:ignore-line
+              taxDetails['cessOnSalaryTds'] ?? 0, // coverage:ignore-line
+              locale: currencyLocale,
+              color: Colors.blueGrey),
+        if ((taxDetails['cessOnOtherSlab'] ?? 0) > 0)
+          _RowItem(
+              AppLocalizations.of(context)!
+                  .cessOnOtherSlabLabel, // coverage:ignore-line
+              taxDetails['cessOnOtherSlab'] ?? 0, // coverage:ignore-line
+              locale: currencyLocale),
+        if ((taxDetails['cessOnSpecial'] ?? 0) > 0)
+          _RowItem(
+              AppLocalizations.of(context)!
+                  .cessOnSpecialLabel, // coverage:ignore-line
+              taxDetails['cessOnSpecial'] ?? 0, // coverage:ignore-line
+              locale: currencyLocale),
+        if ((taxDetails['cessOnSlab'] ?? 0) == 0 &&
+            (taxDetails['cessOnSpecial'] ?? 0) == 0)
+          _RowItem(
+              AppLocalizations.of(context)!.cessLabel, taxDetails['cess'] ?? 0,
+              locale: currencyLocale),
+      ],
+    );
+  }
+
+  Widget _buildPaymentBreakdown(
+      Map<String, dynamic> taxDetails, String currencyLocale) {
+    final netTaxPayable = taxDetails['netTaxPayable'] ?? 0.0;
+    final advanceTaxInterest =
+        (taxDetails['advanceTaxInterest'] ?? 0.0) as double;
+    return Column(
+      children: [
+        _RowItem(AppLocalizations.of(context)!.totalTaxLiabilityLabel,
+            taxDetails['totalTax'] ?? 0,
+            locale: currencyLocale, isBold: true),
+        _RowItem(AppLocalizations.of(context)!.advanceTaxPaidLabel,
+            taxDetails['advanceTax'] ?? 0,
+            locale: currencyLocale),
+        _RowItem(AppLocalizations.of(context)!.tdsTcsLabel,
+            (taxDetails['tds'] ?? 0) + (taxDetails['tcs'] ?? 0),
+            locale: currencyLocale),
+        if (advanceTaxInterest > 0)
+          _RowItem(
+              AppLocalizations.of(context)!
+                  .taxShortfallInterestLabel, // coverage:ignore-line
+              advanceTaxInterest,
+              locale: currencyLocale,
+              color: Colors.orange),
+        const SizedBox(height: 8),
+        _RowItem(
+            AppLocalizations.of(context)!.netTaxPayableLabel, netTaxPayable,
+            locale: currencyLocale,
+            isBold: true,
+            color: netTaxPayable > 0 ? Colors.red : Colors.green),
+        if (netTaxPayable > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Slab Pending - Base: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableBaseSlab'] ?? 0, currencyLocale)} • Cess: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableCessSlab'] ?? 0, currencyLocale)}',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  Text(
+                    'Capital Gains Pending - Base: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableBaseCG'] ?? 0, currencyLocale)} • Cess: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableCessCG'] ?? 0, currencyLocale)}',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  if (advanceTaxInterest > 0)
+                    Text(
+                      // coverage:ignore-line
+                      'Interest Pending: ${CurrencyUtils.formatCurrency(advanceTaxInterest, currencyLocale)}', // coverage:ignore-line
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.orange),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildItrSuggestion(String itr) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.description,
+              size: 16, color: Theme.of(context).colorScheme.onSurface),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(AppLocalizations.of(context)!.suggestedItrLabel(itr),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ),
+        ],
       ),
     );
   }
@@ -608,6 +732,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     final double? amount = taxDetails['nextAdvanceTaxAmount'] as dynamic;
     final int? daysLeft = taxDetails['daysUntilAdvanceTax'] as dynamic;
     final bool isRequirementMet = taxDetails['isRequirementMet'] == true;
+    final double baseAmount = taxDetails['nextAdvanceTaxBase'] ?? 0.0;
+    final double cessAmount = taxDetails['nextAdvanceTaxCess'] ?? 0.0;
+    final double intAmount = taxDetails['nextAdvanceTaxInterest'] ?? 0.0;
 
     if (dueDate == null ||
         amount == null ||
@@ -632,7 +759,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           // coverage:ignore-end
         },
         leading: _buildReminderIcon(isOverdue, isNear),
-        title: _buildReminderContent(isOverdue, isNear, amount, dueDate),
+        title: _buildReminderContent(isOverdue, isNear, amount, dueDate,
+            baseAmount, cessAmount, intAmount),
         trailing: daysLeft != null
             ? _buildDaysLeftBadge(isOverdue, isNear, daysLeft)
             : null,
@@ -703,15 +831,22 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   }
 
   Widget _buildReminderContent(
-      bool isOverdue, bool isNear, double amount, DateTime dueDate) {
+      bool isOverdue,
+      bool isNear,
+      double amount,
+      DateTime dueDate,
+      double baseAmount,
+      double cessAmount,
+      double intAmount) {
     final currencyLocale = ref.watch(currencyProvider);
     final String title;
     if (isOverdue) {
-      title = 'Advance Tax Overdue!';
+      title = AppLocalizations.of(context)!.advanceTaxOverdueTitle;
     } else if (isNear) {
-      title = 'Action Required: Advance Tax';
+      title = AppLocalizations.of(context)!.actionRequiredAdvanceTaxTitle;
     } else {
-      title = 'Upcoming Advance Tax';
+      title = AppLocalizations.of(context)!
+          .upcomingAdvanceTaxTitle; // coverage:ignore-line
     }
     final Color titleColor;
     if (isOverdue) {
@@ -733,8 +868,19 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           ),
         ),
         Text(
-          'Next: ${CurrencyUtils.formatCurrency(amount, currencyLocale)} due by ${dueDate.day}/${dueDate.month}/${dueDate.year}',
+          AppLocalizations.of(context)!.advanceTaxNextDueMessage(
+              CurrencyUtils.formatCurrency(amount, currencyLocale),
+              DateFormat(TaxConstants.dateFormat).format(dueDate)),
           style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        ),
+        Text(
+          AppLocalizations.of(context)!.advanceTaxBreakdownLabel(
+              CurrencyUtils.formatCurrency(baseAmount, currencyLocale),
+              CurrencyUtils.formatCurrency(cessAmount, currencyLocale),
+              CurrencyUtils.formatCurrency(intAmount, currencyLocale)),
+          style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -751,11 +897,11 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
     }
     final String text;
     if (isOverdue) {
-      text = '${daysLeft.abs()}d Late';
+      text = AppLocalizations.of(context)!.lateStatusDays(daysLeft.abs());
     } else if (daysLeft == 0) {
-      text = 'Due Today';
+      text = AppLocalizations.of(context)!.dueTodayStatus;
     } else {
-      text = '$daysLeft d left';
+      text = AppLocalizations.of(context)!.daysLeftStatus(daysLeft);
     }
 
     return Container(
@@ -796,8 +942,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Tax Year: ',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(AppLocalizations.of(context)!.taxYearLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 DropdownButton<int>(
                   value: years.contains(_selectedYear)
                       ? _selectedYear
@@ -807,7 +953,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                   items: years
                       .map((y) => DropdownMenuItem(
                             value: y,
-                            child: Text('FY $y-${y + 1}'),
+                            child: Text(AppLocalizations.of(context)!
+                                .fyLabel(y, y + 1)),
                           ))
                       .toList(),
                   onChanged: (val) {
@@ -846,7 +993,9 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
                     ]
                         .map((j) => DropdownMenuItem<String>(
                               value: j,
-                              child: Text(j),
+                              child: Text(j == 'India'
+                                  ? AppLocalizations.of(context)!.indiaLabel
+                                  : j),
                             ))
                         .toList(),
                     onChanged: (val) async {
@@ -875,7 +1024,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildActionButton(
-            label: 'Edit Details',
+            label: AppLocalizations.of(context)!.editDetailsAction,
             icon: Icons.edit_document,
             color: Colors.blue,
             // coverage:ignore-start
@@ -905,14 +1054,14 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
           ),
           const SizedBox(width: 8),
           _buildActionButton(
-            label: 'Sync Data',
+            label: AppLocalizations.of(context)!.syncDataAction,
             icon: Icons.sync,
             color: Colors.green,
             onPressed: _syncData,
           ),
           const SizedBox(width: 8),
           _buildActionButton(
-            label: 'Tax Config',
+            label: AppLocalizations.of(context)!.taxConfigAction,
             icon: Icons.settings,
             color: Colors.orange,
             // coverage:ignore-start
@@ -1022,7 +1171,7 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
           ?.lastSyncDate;
 
       return AlertDialog(
-        title: const Text('Sync Tax Data'),
+        title: Text(AppLocalizations.of(context)!.syncTaxDataTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1033,7 +1182,8 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
                 padding: const EdgeInsets.only(bottom: 12),
                 // coverage:ignore-start
                 child: Text(
-                  'Last Synced: ${DateFormat('dd MMM yyyy, hh:mm a').format(lastSyncDate)}',
+                  AppLocalizations.of(context)!.lastSyncedLabel(
+                      DateFormat('dd MMM yyyy, hh:mm a').format(lastSyncDate)),
                   style: TextStyle(
                       // coverage:ignore-end
                       fontSize: 12,
@@ -1041,14 +1191,18 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
                       fontStyle: FontStyle.italic),
                 ),
               ),
-            const Text('Sync Period (YTD)',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(AppLocalizations.of(context)!.syncPeriodYtdLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            _buildDatePickerRow('From: ', _start, Icons.event_available, (d) {
+            _buildDatePickerRow(AppLocalizations.of(context)!.fromLabel, _start,
+                Icons.event_available, (d) {
+              // coverage:ignore-line
               setState(() => _start = d); // coverage:ignore-line
             }),
             const SizedBox(height: 12),
-            _buildDatePickerRow('To: ', _end, Icons.calendar_today, (d) {
+            _buildDatePickerRow(AppLocalizations.of(context)!.toLabel, _end,
+                Icons.calendar_today, (d) {
+              // coverage:ignore-line
               setState(() => _end = d); // coverage:ignore-line
             }, firstDate: _start),
             const Divider(height: 24),
@@ -1058,7 +1212,7 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context), // coverage:ignore-line
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelAction)),
           FilledButton(
             // coverage:ignore-start
             onPressed: () {
@@ -1066,7 +1220,7 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
               widget.onSync(_start, _end, _smartSync);
               // coverage:ignore-end
             },
-            child: const Text('Sync Now'),
+            child: Text(AppLocalizations.of(context)!.syncNowAction),
           ),
         ],
       );
@@ -1093,7 +1247,7 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
             if (d != null) onPicked(d); // coverage:ignore-line
           },
           child: Text(
-            '${date.day}/${date.month}/${date.year}',
+            DateFormat(TaxConstants.dateFormat).format(date),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
@@ -1105,17 +1259,16 @@ class _TaxSyncDialogState extends State<_TaxSyncDialog> {
     return RadioGroup<bool>(
       onChanged: (v) => setState(() => _smartSync = v!), // coverage:ignore-line
       groupValue: _smartSync,
-      child: const Column(
+      child: Column(
         children: [
           RadioListTile<bool>(
-            title: Text('Smart Sync (Recommended)'),
-            subtitle: Text(
-                'Updates totals from transactions but PROTECTS your manual edits.'),
+            title: Text(AppLocalizations.of(context)!.smartSyncTitle),
+            subtitle: Text(AppLocalizations.of(context)!.smartSyncSubtitle),
             value: true,
           ),
           RadioListTile<bool>(
-            title: Text('Force Reset'),
-            subtitle: Text('Overwrites EVERYTHING. Manual edits will be lost.'),
+            title: Text(AppLocalizations.of(context)!.forceResetTitle),
+            subtitle: Text(AppLocalizations.of(context)!.forceResetSubtitle),
             value: false,
           ),
         ],

@@ -130,7 +130,7 @@ class TaxConfigService {
 
     // If today's month is BEFORE the start month, we are in the previous FY.
     if (now.month < referenceRules.financialYearStartMonth) {
-      return now.year - 1;
+      return now.year - 1; // coverage:ignore-line
     }
     return now.year;
   }

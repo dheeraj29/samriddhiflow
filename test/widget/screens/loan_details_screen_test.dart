@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -98,11 +99,10 @@ void main() {
         transactionsProvider.overrideWith((ref) => Stream.value([])),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         home: LoanDetailsScreen(loan: loan),
-        localizationsDelegates: const [
-          DefaultMaterialLocalizations.delegate,
-          DefaultWidgetsLocalizations.delegate,
-        ],
       ),
     );
   }
@@ -124,7 +124,7 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
 
     expect(find.text('Home Loan'), findsOneWidget);
-    expect(find.text('Amortization Curve (Yearly)'), findsOneWidget);
+    expect(find.textContaining('Amortization Curve (Yearly)'), findsOneWidget);
   });
 
   testWidgets('Standard Loan - Simulator interaction', (tester) async {
@@ -164,8 +164,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify results shown
-    expect(find.text('Interest Saved'), findsOneWidget);
-    expect(find.text('Tenure Reduced'), findsOneWidget);
+    expect(find.textContaining('Interest Saved'), findsOneWidget);
+    expect(find.textContaining('Tenure Reduced'), findsOneWidget);
   });
 
   testWidgets('Standard Loan - Ledger View', (tester) async {
@@ -210,10 +210,10 @@ void main() {
     await tester.tap(find.text('Delete Loan').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete Loan?'), findsOneWidget);
+    expect(find.textContaining('Delete Loan?'), findsOneWidget);
 
     when(() => mockStorageService.deleteLoan(any())).thenAnswer((_) async {});
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.textContaining('Delete').last);
     await tester.pumpAndSettle();
 
     verify(() => mockStorageService.deleteLoan(loan.id)).called(1);
@@ -253,8 +253,8 @@ void main() {
     // Test Rate Dialog trigger (Tap the Icon Button, not the text)
     await tester.tap(find.byIcon(Icons.percent));
     await tester.pumpAndSettle();
-    expect(find.text('Update Interest Rate'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.textContaining('Update Interest Rate'), findsOneWidget);
+    await tester.tap(find.textContaining('Cancel'));
     await tester.pumpAndSettle();
   });
 

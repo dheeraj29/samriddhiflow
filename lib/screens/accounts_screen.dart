@@ -13,6 +13,7 @@ import '../widgets/pure_icons.dart';
 import '../services/storage_service.dart';
 import 'cc_payment_dialog.dart';
 import 'update_billing_cycle_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 // No longer required per user request
 
@@ -64,23 +65,27 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       body: accountsAsync.when(
         data: (accounts) => _buildBody(context, accounts),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) =>
-            Center(child: Text('Error: $e')), // coverage:ignore-line
+        // coverage:ignore-start
+        error: (e, s) => Center(
+            child: Text(AppLocalizations.of(context)!
+                .errorLabelWithDetails(e.toString()))),
+        // coverage:ignore-end
       ),
     );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AppBar(
-      title: const Text('My Accounts'),
+      title: Text(l10n.myAccounts),
       actions: [
         IconButton(
           icon: _compactView
               ? PureIcons.listExtended(size: 20)
               : PureIcons.listCompact(size: 20),
           tooltip: _compactView
-              ? 'Switch to Extended Numbers'
-              : 'Switch to Compact Numbers',
+              ? l10n.extendedNumbersTooltip
+              : l10n.compactNumbersTooltip,
           onPressed: () => setState(() => _compactView = !_compactView),
         ),
       ],
@@ -101,11 +106,11 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         children: [
           PureIcons.accounts(size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text('No accounts found.'),
+          Text(AppLocalizations.of(context)!.noAccountsFound),
           TextButton(
             onPressed: () =>
                 _showAddAccountSheet(context, ref), // coverage:ignore-line
-            child: const Text('Add Account'),
+            child: Text(AppLocalizations.of(context)!.addAccountButton),
           ),
         ],
       ),
@@ -124,7 +129,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         _buildExpandableSection(
-          title: 'Pinned Accounts',
+          title: AppLocalizations.of(context)!.pinnedAccountsHeader,
           icon: Icons.push_pin,
           isExpanded: _isPinnedExpanded,
           count: pinned.length,
@@ -135,7 +140,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         ),
         const SizedBox(height: 16),
         _buildExpandableSection(
-          title: 'Savings Accounts',
+          title: AppLocalizations.of(context)!.savingsAccountsHeader,
           icon: Icons.account_balance,
           isExpanded: _isSavingsExpanded,
           count: savings.length,
@@ -145,7 +150,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         ),
         const SizedBox(height: 16),
         _buildExpandableSection(
-          title: 'Credit Cards',
+          title: AppLocalizations.of(context)!.creditCardsHeader,
           icon: Icons.credit_card,
           isExpanded: _isCCExpanded,
           count: creditCards.length,
@@ -154,7 +159,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         ),
         const SizedBox(height: 16),
         _buildExpandableSection(
-          title: 'Wallets',
+          title: AppLocalizations.of(context)!.walletsHeader,
           icon: Icons.account_balance_wallet,
           isExpanded: _isWalletExpanded,
           count: wallet.length,
@@ -206,10 +211,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         if (isExpanded)
           ...items.map((acc) => _buildAccountItem(context, ref, acc)),
         if (isExpanded && items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text('No accounts in this section.',
-                style: TextStyle(color: Colors.grey)),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(AppLocalizations.of(context)!.noAccountsInSection,
+                style: const TextStyle(color: Colors.grey)),
           ),
       ],
     );
@@ -239,7 +244,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       child: TextButton.icon(
         onPressed: () => _showAddAccountSheet(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Add New Account'),
+        label: Text(AppLocalizations.of(context)!.addNewAccountButton),
       ),
     );
   }
@@ -389,10 +394,12 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 color: Colors.redAccent,
                 borderRadius: BorderRadius.circular(4), // coverage:ignore-line
               ),
-              child: const Text(
-                'FROZEN',
+              child: Text(
+                // coverage:ignore-line
+                AppLocalizations.of(context)!
+                    .frozenLabel, // coverage:ignore-line
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -408,7 +415,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       ThemeData theme, NumberFormat currencyFormat) {
     if (acc.type != AccountType.creditCard) {
       return Text(
-        acc.type == AccountType.savings ? 'Savings Account' : 'Wallet',
+        acc.type == AccountType.savings
+            ? AppLocalizations.of(context)!.savingsAccountType
+            : AppLocalizations.of(context)!.walletType, // coverage:ignore-line
         style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface),
       );
     }
@@ -442,15 +451,23 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           children: [
             Text(
               _compactView
-                  ? 'L: ${CurrencyUtils.getSmartFormat(acc.creditLimit ?? 0, acc.currency)}'
-                  : 'Limit: ${currencyFormat.format(acc.creditLimit ?? 0)}',
+                  ? AppLocalizations.of(context)!.limitShort(
+                      CurrencyUtils.getSmartFormat(
+                          acc.creditLimit ?? 0, acc.currency))
+                  : AppLocalizations.of(context)! // coverage:ignore-line
+                      .limitLabel(currencyFormat.format(
+                          acc.creditLimit ?? 0)), // coverage:ignore-line
               style:
                   TextStyle(fontSize: 11, color: theme.colorScheme.onSurface),
             ),
             Text(
               _compactView
-                  ? 'Avail: ${CurrencyUtils.getSmartFormat(displayAvailable, acc.currency)}'
-                  : 'Available: ${currencyFormat.format(displayAvailable)}',
+                  ? AppLocalizations.of(context)!.availableShort(
+                      CurrencyUtils.getSmartFormat(
+                          displayAvailable, acc.currency))
+                  : AppLocalizations.of(context)! // coverage:ignore-line
+                      .availableLabel(currencyFormat
+                          .format(displayAvailable)), // coverage:ignore-line
               style: TextStyle(
                   fontSize: 11,
                   color: theme.colorScheme.onSurface,
@@ -466,19 +483,19 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           children: [
             if (data.billed.abs() > 0.01)
               _buildMiniInfoChip(
-                  // coverage:ignore-line
-                  'Billed',
+                  AppLocalizations.of(context)!
+                      .billedChip, // coverage:ignore-line
                   data.billed,
                   acc.currency,
                   theme,
                   _compactView), // coverage:ignore-line
             if (data.historicalBalance.abs() > 0.01)
-              _buildMiniInfoChip('Balance', data.historicalBalance,
-                  acc.currency, theme, _compactView),
+              _buildMiniInfoChip(AppLocalizations.of(context)!.balanceChip,
+                  data.historicalBalance, acc.currency, theme, _compactView),
             if (data.unbilled.abs() > 0.01)
               _buildMiniInfoChip(
-                  // coverage:ignore-line
-                  'Unbilled',
+                  AppLocalizations.of(context)!
+                      .unbilledChip, // coverage:ignore-line
                   data.unbilled,
                   acc.currency,
                   theme,
@@ -492,12 +509,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   Widget _buildUnfreezeDateText(Account acc, ThemeData theme, DateFormat df) {
     // coverage:ignore-line
     DateTime? targetDate;
-    String label = 'Calculates on';
+    String label =
+        AppLocalizations.of(context)!.calculatesOn; // coverage:ignore-line
 
+    // coverage:ignore-start
     if (!acc.isFrozenCalculated) {
-      // coverage:ignore-line
-      targetDate = acc.firstStatementDate; // coverage:ignore-line
-      label = 'Initial bill on';
+      targetDate = acc.firstStatementDate;
+      label = AppLocalizations.of(context)!.initialBillOn;
+      // coverage:ignore-end
     } else {
       // Phase 2: Next standard billing date
       if (acc.billingCycleDay != null) {
@@ -530,7 +549,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             acc, data, compact, currencyFormat, smartFormat),
         if (acc.type == AccountType.creditCard)
           Text(
-            '${(data.percent * 100).toStringAsFixed(0)}% used',
+            AppLocalizations.of(context)!
+                .percentUsed((data.percent * 100).toStringAsFixed(0)),
             style: TextStyle(
                 fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -544,8 +564,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       final displayAvailable = data.available > 0 ? data.available : 0.0;
       return Text(
         compact
-            ? '${CurrencyUtils.getSmartFormat(data.used, acc.currency)} / ${CurrencyUtils.getSmartFormat(displayAvailable, acc.currency)}'
-            : '${currencyFormat.format(data.used)} / ${currencyFormat.format(displayAvailable)}',
+            ? AppLocalizations.of(context)!.usedAvailableShort(
+                CurrencyUtils.getSmartFormat(data.used, acc.currency),
+                CurrencyUtils.getSmartFormat(displayAvailable, acc.currency))
+            // coverage:ignore-start
+            : AppLocalizations.of(context)!.usedAvailableLabel(
+                currencyFormat.format(data.used),
+                currencyFormat.format(displayAvailable)),
+        // coverage:ignore-end
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 14,
@@ -615,7 +641,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 leading: Icon(
                     acc.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                     color: Colors.blue),
-                title: Text(acc.isPinned ? 'Unpin Account' : 'Pin Account'),
+                title: Text(acc.isPinned
+                    ? AppLocalizations.of(context)!
+                        .unpinAccount // coverage:ignore-line
+                    : AppLocalizations.of(context)!.pinAccount),
                 onTap: () {
                   FocusScope.of(context).unfocus();
                   Navigator.pop(context);
@@ -632,7 +661,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               ],
               ListTile(
                 leading: const Icon(Icons.list_alt),
-                title: const Text('View Transactions'),
+                title: Text(AppLocalizations.of(context)!.viewTransactions),
                 // coverage:ignore-start
                 onTap: () {
                   FocusScope.of(context).unfocus();
@@ -651,7 +680,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Edit Account'),
+                title: Text(AppLocalizations.of(context)!.editAccount),
                 onTap: () {
                   FocusScope.of(context).unfocus();
                   Navigator.pop(context);
@@ -660,8 +689,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete Account',
-                    style: TextStyle(color: Colors.red)),
+                title: Text(AppLocalizations.of(context)!.deleteAccount,
+                    style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   FocusScope.of(context).unfocus();
                   Navigator.pop(context);
@@ -683,8 +712,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   Widget _buildPayBillOption(BuildContext context, WidgetRef ref, Account acc) {
     return ListTile(
       leading: const Icon(Icons.payment, color: Colors.green),
-      title: const Text('Pay Bill',
-          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+      title: Text(AppLocalizations.of(context)!.payBillAction,
+          style: const TextStyle(
+              color: Colors.green, fontWeight: FontWeight.bold)),
       onTap: () {
         FocusScope.of(context).unfocus();
         Navigator.pop(context);
@@ -740,10 +770,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     return ListTile(
       // coverage:ignore-line
       leading: const Icon(Icons.edit_calendar, color: Colors.purple),
-      title: const Text('Update Billing Cycle',
-          style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
-      subtitle: const Text('Move to a new cycle day or due date safely'),
+      title: Text(
+          AppLocalizations.of(context)!
+              .updateBillingCycle, // coverage:ignore-line
+          style: const TextStyle(
+              color: Colors.purple, fontWeight: FontWeight.bold)),
       // coverage:ignore-start
+      subtitle: Text(AppLocalizations.of(context)!.updateBillingCycleDesc),
       onTap: () async {
         FocusScope.of(context).unfocus();
         Navigator.pop(context);
@@ -767,8 +800,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   }
 
   Widget _buildBillingDateInfo(WidgetRef ref, Account acc) {
-    String lastBillStr = 'Not calculated yet';
-    String nextBillStr = 'TBD';
+    String lastBillStr = AppLocalizations.of(context)!.notCalculatedYet;
+    String nextBillStr = AppLocalizations.of(context)!.tbdLabel;
 
     if (acc.billingCycleDay != null) {
       final dates = _getBillingDatesStrings(ref, acc);
@@ -781,9 +814,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Last Bill Date: $lastBillStr',
+          Text(AppLocalizations.of(context)!.lastBillDate(lastBillStr),
               style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          Text('Next Bill Date: $nextBillStr',
+          Text(AppLocalizations.of(context)!.nextBillDate(nextBillStr),
               style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
@@ -791,7 +824,12 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   }
 
   (String, String) _getBillingDatesStrings(WidgetRef ref, Account acc) {
-    if (acc.billingCycleDay == null) return ('TBD', 'TBD');
+    if (acc.billingCycleDay == null) {
+      return (
+        AppLocalizations.of(context)!.tbdLabel, // coverage:ignore-line
+        AppLocalizations.of(context)!.tbdLabel // coverage:ignore-line
+      );
+    }
 
     final now = DateTime.now();
     final storage = ref.read(storageServiceProvider);
@@ -800,10 +838,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
     if (acc.isFrozen) {
       String last = lastRollover != null
-          ? df.format(DateTime.fromMillisecondsSinceEpoch(
-              lastRollover)) // coverage:ignore-line
-          : 'Not calculated yet';
-      // coverage:ignore-start
+          // coverage:ignore-start
+          ? df.format(DateTime.fromMillisecondsSinceEpoch(lastRollover))
+          : AppLocalizations.of(context)!.notCalculatedYet;
       String next = (!acc.isFrozenCalculated && acc.firstStatementDate != null)
           ? df.format(acc.firstStatementDate!)
           : df.format(BillingHelper.getCycleEnd(now, acc.billingCycleDay!));
@@ -833,26 +870,26 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       BuildContext context, WidgetRef ref, Account acc) {
     return ListTile(
       leading: const Icon(Icons.cleaning_services, color: Colors.blueGrey),
-      title: const Text('Clear Billed Amount',
-          style:
-              TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
-      subtitle: const Text('Mark current bill as paid/cleared'),
+      title: Text(AppLocalizations.of(context)!.clearBilledAmountTitle,
+          style: const TextStyle(
+              color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+      subtitle: Text(AppLocalizations.of(context)!.clearBilledAmountDesc),
       onTap: () async {
         Navigator.pop(context);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Clear Billed Amount?'),
-            content: const Text(
-                'This will set the current "Billed Amount" to 0 without recording a payment transaction.'),
+            title: Text(AppLocalizations.of(context)!.clearBilledAmountTitle),
+            content:
+                Text(AppLocalizations.of(context)!.clearBilledConfirmMessage),
             actions: [
               TextButton(
                   onPressed: () =>
                       Navigator.pop(context, false), // coverage:ignore-line
-                  child: const Text('Cancel')),
+                  child: Text(AppLocalizations.of(context)!.cancelAction)),
               TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Clear')),
+                  child: Text(AppLocalizations.of(context)!.clearActionCap)),
             ],
           ),
         );
@@ -862,8 +899,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           ref.invalidate(accountsProvider);
           ref.invalidate(transactionsProvider);
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Billed amount cleared.')));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(
+                    AppLocalizations.of(context)!.billedAmountClearedStatus)));
           }
         }
       },
@@ -874,15 +912,18 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       BuildContext context, WidgetRef ref, Account acc) {
     return ListTile(
       leading: const Icon(Icons.build_circle_outlined, color: Colors.orange),
-      title: const Text('Recalculate Bill',
-          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-      subtitle: const Text('Refreshes billing cycle display'),
+      title: Text(AppLocalizations.of(context)!.recalculateBillTitle,
+          style: const TextStyle(
+              color: Colors.orange, fontWeight: FontWeight.bold)),
+      subtitle: Text(AppLocalizations.of(context)!.recalculateBillDesc),
       // coverage:ignore-start
       onTap: () async {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
-          const SnackBar(content: Text('Recalculating bill...')),
+          SnackBar(
+              // coverage:ignore-end
+              content: Text(AppLocalizations.of(context)!
+                  .recalculatingBillStatus)), // coverage:ignore-line
         );
         try {
           await ref
@@ -891,7 +932,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               .recalculateBilledAmount(acc.id);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Bill recalculated for ${acc.name}.')),
+              SnackBar(
+                  content: Text(AppLocalizations.of(context)!
+                      .billRecalculatedStatus(acc.name))),
               // coverage:ignore-end
             );
           }
@@ -917,21 +960,21 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account?'),
+        title: Text(AppLocalizations.of(context)!.deleteAccountQuestion),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to delete "${acc.name}"?'),
+            Text(AppLocalizations.of(context)!
+                .deleteAccountConfirmMessage(acc.name)),
             const SizedBox(height: 8),
-            const Text(
-                'Existing transactions will NOT be deleted but will no longer be linked to this account.'),
+            Text(AppLocalizations.of(context)!.deleteAccountWarning),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), // coverage:ignore-line
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancelAction),
           ),
           TextButton(
             onPressed: () async {
@@ -941,12 +984,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               ref.invalidate(transactionsProvider);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Account "${acc.name}" deleted.')),
+                  SnackBar(
+                      content: Text(AppLocalizations.of(context)!
+                          .accountDeletedStatus(acc.name))),
                 );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.deleteActionCap),
           ),
         ],
       ),
@@ -1074,19 +1119,27 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   }
 
   Widget _buildHeader() {
-    return Text(widget.account == null ? 'New Account' : 'Edit Account',
+    return Text(
+        widget.account == null
+            ? AppLocalizations.of(context)!.newAccountTitle
+            : AppLocalizations.of(context)!.editAccountTitle,
         style: Theme.of(context).textTheme.headlineSmall);
   }
 
   Widget _buildNameField() {
     return TextFormField(
       initialValue: _name,
-      decoration: const InputDecoration(labelText: 'Account Name'),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.accountNameLabel),
       validator: (v) {
-        if (v == null || v.isEmpty) return 'Required';
+        if (v == null || v.isEmpty) {
+          return AppLocalizations.of(context)!
+              .requiredLabel; // coverage:ignore-line
+        }
         final nameLower = v.trim().toLowerCase();
         if (nameLower == 'manual' || nameLower == 'deleted account') {
-          return 'Reserved name';
+          return AppLocalizations.of(context)!
+              .reservedNameError; // coverage:ignore-line
         }
         return null;
       },
@@ -1101,7 +1154,8 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         opacity: widget.account != null ? 0.5 : 1.0,
         child: DropdownButtonFormField<AccountType>(
           initialValue: _type,
-          decoration: const InputDecoration(labelText: 'Type'),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.typeLabel),
           items: AccountType.values
               .map((t) => DropdownMenuItem<AccountType>(
                     value: t,
@@ -1118,12 +1172,12 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     return TextFormField(
       initialValue: _initialBalance.toString(),
       decoration: InputDecoration(
-        labelText: 'Current Balance',
+        labelText: AppLocalizations.of(context)!.currentBalanceLabel,
         prefixText:
             '${CurrencyUtils.getSymbol(_type == AccountType.wallet ? _currency : ref.watch(currencyProvider))} ',
       ),
-      keyboardType:
-          const TextInputType.numberWithOptions(decimal: true, signed: true),
+      keyboardType: TextInputType
+          .text, // Fix for iOS minus sign missing on numeric keypad
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegexUtils.negativeAmountExp)
       ],
@@ -1139,7 +1193,9 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
-      child: Text(widget.account == null ? 'Create Account' : 'Update Account'),
+      child: Text(widget.account == null
+          ? AppLocalizations.of(context)!.createAccountAction
+          : AppLocalizations.of(context)!.updateAccountAction),
     );
   }
 
@@ -1147,17 +1203,17 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
   Widget _buildCurrencyDropdown() {
     return DropdownButtonFormField<String>(
       initialValue: _currency,
-      // coverage:ignore-end
-      decoration: const InputDecoration(labelText: 'Currency'),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.currencyLabel),
       items: {
-        // coverage:ignore-line
-        'en_US': 'US Dollar (\$)',
-        'en_IN': 'Indian Rupee (₹)',
-        'en_GB': 'British Pound (£)',
-        'de_DE': 'Euro (€)',
-        'ja_JP': 'Japanese Yen (¥)',
-        'zh_CN': 'Chinese Yuan (¥)',
-        'ar_AE': 'UAE Dirham (د.إ)',
+        'en_US': AppLocalizations.of(context)!.usDollarLabel,
+        'en_IN': AppLocalizations.of(context)!.indianRupeeLabel,
+        'en_GB': AppLocalizations.of(context)!.britishPoundLabel,
+        'de_DE': AppLocalizations.of(context)!.euroLabel,
+        'ja_JP': AppLocalizations.of(context)!.japaneseYenLabel,
+        'zh_CN': AppLocalizations.of(context)!.chineseYuanLabel,
+        'ar_AE': AppLocalizations.of(context)!.uaeDirhamLabel,
+        // coverage:ignore-end
       }
           // coverage:ignore-start
           .entries
@@ -1187,8 +1243,8 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
     return TextFormField(
       initialValue: _limit?.toString(),
       decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.creditLimitLabel,
         // coverage:ignore-end
-        labelText: 'Credit Limit',
         prefixText:
             '${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).currencySymbol} ', // coverage:ignore-line
       ),
@@ -1198,9 +1254,11 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
         FilteringTextInputFormatter.allow(
             RegexUtils.amountExp) // coverage:ignore-line
       ],
-      validator: (v) => v!.isEmpty ? 'Required' : null, // coverage:ignore-line
-      onSaved: (v) =>
-          _limit = double.tryParse(v ?? '') ?? 0, // coverage:ignore-line
+      // coverage:ignore-start
+      validator: (v) =>
+          v!.isEmpty ? AppLocalizations.of(context)!.requiredLabel : null,
+      onSaved: (v) => _limit = double.tryParse(v ?? '') ?? 0,
+      // coverage:ignore-end
     );
   }
 
@@ -1215,25 +1273,25 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
       children: [
         Expanded(
           child: _buildCycleDayField(
+            label: AppLocalizations.of(context)!.billGenDayLabel,
+            hint: AppLocalizations.of(context)!.day15Hint,
+            helperText: AppLocalizations.of(context)!.dayOfMonthHelper,
+            value: _billingDay,
+            onSaved: (val) => _billingDay = val,
             // coverage:ignore-end
-            label: 'Bill Gen. Day',
-            hint: 'e.g. 15',
-            helperText: 'Day of month',
-            value: _billingDay, // coverage:ignore-line
-            onSaved: (val) => _billingDay = val, // coverage:ignore-line
             canEdit: !isEditing,
           ),
         ),
         const SizedBox(width: 16),
+        // coverage:ignore-start
         Expanded(
-          // coverage:ignore-line
           child: _buildCycleDayField(
-            // coverage:ignore-line
-            label: 'Payment Due Day',
-            hint: 'e.g. 5',
-            helperText: 'Day of month',
-            value: _dueDay, // coverage:ignore-line
-            onSaved: (val) => _dueDay = val, // coverage:ignore-line
+            label: AppLocalizations.of(context)!.paymentDueDayLabel,
+            hint: AppLocalizations.of(context)!.day5Hint,
+            helperText: AppLocalizations.of(context)!.dayOfMonthHelper,
+            value: _dueDay,
+            onSaved: (val) => _dueDay = val,
+            // coverage:ignore-end
             canEdit: true, // Always editable as requested
           ),
         ),
@@ -1270,7 +1328,10 @@ class _AddAccountSheetState extends ConsumerState<AddAccountSheet> {
           .toList(), // coverage:ignore-line
       onChanged: canEdit ? (v) => onSaved(v) : null, // coverage:ignore-line
       onSaved: onSaved,
-      validator: (v) => v == null ? 'Req' : null, // coverage:ignore-line
+      validator: (v) => // coverage:ignore-line
+          v == null
+              ? AppLocalizations.of(context)!.requiredShortLabel
+              : null, // coverage:ignore-line
     );
   }
 

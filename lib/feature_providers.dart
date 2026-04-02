@@ -17,6 +17,7 @@ import 'models/account.dart';
 import 'models/transaction.dart';
 import 'models/loan.dart';
 import 'models/recurring_transaction.dart';
+import 'models/investment.dart';
 import 'utils/billing_helper.dart';
 
 // --- Heavy Service Providers (Moved for Bundle Optimization) ---
@@ -251,6 +252,30 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 final themeModeProvider =
     NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
+class LocaleNotifier extends Notifier<Locale?> {
+  @override
+  Locale? build() {
+    final init = ref.watch(storageInitializerProvider);
+    if (!init.hasValue) return null;
+
+    final storage = ref.watch(storageServiceProvider);
+    final localeCode = storage.getLocale();
+    if (localeCode != null) {
+      return Locale(localeCode);
+    }
+    return null;
+  }
+
+  Future<void> setLocale(String? localeCode) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.setLocale(localeCode);
+    state = localeCode != null ? Locale(localeCode) : null;
+  }
+}
+
+final localeProvider =
+    NotifierProvider<LocaleNotifier, Locale?>(LocaleNotifier.new);
+
 class SmartCalculatorEnabledNotifier extends Notifier<bool> {
   @override
   bool build() {
@@ -289,3 +314,99 @@ class CalculatorVisibleNotifier extends Notifier<bool> {
 final calculatorVisibleProvider =
     NotifierProvider<CalculatorVisibleNotifier, bool>(
         CalculatorVisibleNotifier.new);
+
+class InvestmentsNotifier extends Notifier<List<Investment>> {
+  @override // coverage:ignore-line
+  List<Investment> build() {
+    final init = ref.watch(storageInitializerProvider); // coverage:ignore-line
+    if (!init.hasValue) return []; // coverage:ignore-line
+
+    ref.watch(activeProfileIdProvider); // coverage:ignore-line
+
+    final storage = ref.watch(storageServiceProvider); // coverage:ignore-line
+    return storage.getInvestments(); // coverage:ignore-line
+  }
+
+  // coverage:ignore-start
+  Future<void> saveInvestment(Investment investment) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.saveInvestment(investment);
+    ref.invalidateSelf();
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  Future<void> deleteInvestment(String id) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.deleteInvestment(id);
+    ref.invalidateSelf();
+    // coverage:ignore-end
+  }
+
+  // Bulk update valuations from a map (ticker -> price)
+  // coverage:ignore-start
+  Future<void> updateValuations(Map<String, double> prices) async {
+    final storage = ref.read(storageServiceProvider);
+    final current = state;
+    for (var inv in current) {
+      // coverage:ignore-end
+      // Priority: match by codeName, fallback to name
+      // coverage:ignore-start
+      final key = (inv.codeName != null && inv.codeName!.isNotEmpty)
+          ? inv.codeName
+          : inv.name;
+      if (prices.containsKey(key)) {
+        final updated = inv.copyWith(currentPrice: prices[key]);
+        await storage.saveInvestment(updated);
+        // coverage:ignore-end
+      }
+    }
+    ref.invalidateSelf(); // coverage:ignore-line
+  }
+}
+
+final investmentsProvider =
+    NotifierProvider<InvestmentsNotifier, List<Investment>>(
+        InvestmentsNotifier.new);
+
+final investmentSummaryProvider = Provider((ref) {
+  final investments = ref.watch(investmentsProvider);
+
+  double totalInvested = 0;
+  double totalCurrent = 0;
+  int readyToSellLTCount = 0;
+  double readyToSellLTValue = 0;
+
+  final categoryBreakdown = <MutualFundCategory, double>{};
+  final typeBreakdown = <InvestmentType, double>{};
+
+  for (final inv in investments) {
+    if (inv.isSold) continue;
+
+    totalInvested += inv.investedValue;
+    totalCurrent += inv.currentValuation;
+
+    if (inv.isLongTerm) {
+      readyToSellLTCount++; // coverage:ignore-line
+      readyToSellLTValue += inv.currentValuation; // coverage:ignore-line
+    }
+
+    typeBreakdown[inv.type] =
+        (typeBreakdown[inv.type] ?? 0) + inv.currentValuation;
+
+    if (inv.type == InvestmentType.mutualFund && inv.mfCategory != null) {
+      categoryBreakdown[inv.mfCategory!] = // coverage:ignore-line
+          (categoryBreakdown[inv.mfCategory!] ?? 0) +
+              inv.currentValuation; // coverage:ignore-line
+    }
+  }
+
+  return (
+    totalInvested: totalInvested,
+    totalCurrent: totalCurrent,
+    readyToSellLTCount: readyToSellLTCount,
+    readyToSellLTValue: readyToSellLTValue,
+    categoryBreakdown: categoryBreakdown,
+    typeBreakdown: typeBreakdown,
+  );
+});

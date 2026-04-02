@@ -1,0 +1,98 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:samriddhi_flow/services/cloud_sync_service.dart';
+import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+
+import 'package:samriddhi_flow/models/profile.dart';
+import 'package:samriddhi_flow/models/category.dart';
+import 'package:samriddhi_flow/models/account.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/models/loan.dart';
+import 'package:samriddhi_flow/models/recurring_transaction.dart';
+
+class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class MockCloudSyncService extends Mock implements CloudSyncService {}
+
+class MockStorageService extends Mock implements StorageService {}
+
+class MockUser extends Mock implements User {}
+
+class MockCloudStorage extends Mock implements CloudStorageInterface {}
+
+class MockTaxConfigService extends Mock implements TaxConfigService {}
+
+class ProfileFake extends Fake implements Profile {}
+
+class CategoryFake extends Fake implements Category {}
+
+class AccountFake extends Fake implements Account {}
+
+class TransactionFake extends Fake implements Transaction {}
+
+class LoanFake extends Fake implements Loan {}
+
+class RecurringTransactionFake extends Fake implements RecurringTransaction {}
+
+void main() {
+  setUpAll(() {
+    registerFallbackValue(ProfileFake());
+    registerFallbackValue(CategoryFake());
+    registerFallbackValue(AccountFake());
+    registerFallbackValue(TransactionFake());
+    registerFallbackValue(LoanFake());
+    registerFallbackValue(RecurringTransactionFake());
+  });
+
+  late MockFirebaseAuth mockAuth;
+  late MockUser mockUser;
+  late MockCloudStorage mockCloudStorage;
+  late MockStorageService mockStorage;
+  late MockTaxConfigService mockTaxConfig;
+
+  setUp(() {
+    mockAuth = MockFirebaseAuth();
+    mockUser = MockUser();
+    mockCloudStorage = MockCloudStorage();
+    mockStorage = MockStorageService();
+    mockTaxConfig = MockTaxConfigService();
+
+    when(() => mockUser.uid).thenReturn('test-uid');
+    when(() => mockUser.getIdToken(true)).thenAnswer((_) async => 'fake-token');
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockCloudStorage.fetchData('test-uid'))
+        .thenAnswer((_) async => {});
+    when(() => mockStorage.getAuthFlag()).thenReturn(true);
+    when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
+    when(() => mockStorage.clearAllData()).thenAnswer((_) async {});
+    // Stub the restore helpers
+    when(() => mockStorage.getProfiles()).thenReturn([]);
+    when(() => mockStorage.saveProfile(any())).thenAnswer((_) async {});
+    when(() => mockStorage.saveSettings(any())).thenAnswer((_) async {});
+  });
+
+  group('Session Hardening Logic', () {
+    test('CloudSyncService verifies session ID and token freshness', () async {
+      when(() => mockCloudStorage.getActiveSessionId('test-uid'))
+          .thenAnswer((_) async => 'correct-uuid');
+      when(() => mockStorage.getSessionId()).thenReturn('correct-uuid');
+
+      final cloudSync = CloudSyncService(
+        mockCloudStorage,
+        mockStorage,
+        mockTaxConfig,
+        firebaseAuth: mockAuth,
+      );
+
+      // Attempt restoration
+      await cloudSync.restoreFromCloud();
+
+      // Verify freshness and identity checks were triggered
+      verify(() => mockUser.getIdToken(true)).called(2);
+      verify(() => mockCloudStorage.getActiveSessionId('test-uid')).called(1);
+    });
+  });
+}

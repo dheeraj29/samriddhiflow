@@ -2,6 +2,7 @@ import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,11 +25,10 @@ class GoldLoanInterestPaymentDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _GoldLoanActionDialog(
-      title: 'Pay Interest & Renew',
-      description:
-          'Pay the interest due to renew the loan tenure or simply clear dues. Principal will NOT be reduced.',
+      title: AppLocalizations.of(context)!.payInterestAndRenewTitle,
+      description: AppLocalizations.of(context)!.payInterestAndRenewDescription,
       initialAmount: accruedInterest,
-      confirmButtonText: 'Pay & Renew',
+      confirmButtonText: AppLocalizations.of(context)!.payAndRenewAction,
       loanAccountId: loan.accountId,
       onConfirm: (amount, date, accountId) async {
         if (amount <= 0) return;
@@ -51,8 +51,9 @@ class GoldLoanInterestPaymentDialog extends ConsumerWidget {
           date: date,
           accountId: accountId,
           loanTxn: loanTxn,
-          transactionTitle: 'Loan Interest: ${loan.name}',
-          transactionCategory: 'Bank loan',
+          transactionTitle:
+              AppLocalizations.of(context)!.loanInterestTitle(loan.name),
+          transactionCategory: AppLocalizations.of(context)!.bankLoanCategory,
         );
       },
     );
@@ -74,11 +75,15 @@ class GoldLoanCloseDialog extends ConsumerWidget {
     final totalDue = loan.remainingPrincipal + accruedInterest;
 
     return _GoldLoanActionDialog(
-      title: 'Close Gold Loan',
-      description:
-          'Pay Principal (${CurrencyUtils.formatCurrency(loan.remainingPrincipal, ref.watch(currencyProvider))}) + Interest (${CurrencyUtils.formatCurrency(accruedInterest, ref.watch(currencyProvider))}) to close this loan.',
+      title: AppLocalizations.of(context)!.closeGoldLoanTitle,
+      description: AppLocalizations.of(context)!.closeGoldLoanDescription(
+        CurrencyUtils.formatCurrency(
+            loan.remainingPrincipal, ref.watch(currencyProvider)),
+        CurrencyUtils.formatCurrency(
+            accruedInterest, ref.watch(currencyProvider)),
+      ),
       initialAmount: totalDue,
-      confirmButtonText: 'Close Loan',
+      confirmButtonText: AppLocalizations.of(context)!.closeLoanAction,
       confirmButtonColor: Colors.red,
       loanAccountId: loan.accountId,
       onConfirm: (amount, date, accountId) async {
@@ -107,8 +112,9 @@ class GoldLoanCloseDialog extends ConsumerWidget {
           date: date,
           accountId: accountId,
           loanTxn: loanTxn,
-          transactionTitle: 'Loan Closure: ${loan.name}',
-          transactionCategory: 'Bank loan',
+          transactionTitle:
+              AppLocalizations.of(context)!.loanClosureTitle(loan.name),
+          transactionCategory: AppLocalizations.of(context)!.bankLoanCategory,
         );
       },
     );
@@ -224,7 +230,7 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
             TextField(
               controller: amountController,
               decoration: InputDecoration(
-                  labelText: 'Payment Amount',
+                  labelText: AppLocalizations.of(context)!.paymentAmountLabel,
                   prefixText:
                       '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} '),
               keyboardType:
@@ -257,7 +263,7 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
               child: TextField(
                 controller: dateController,
                 decoration: InputDecoration(
-                    labelText: 'Date Effective',
+                    labelText: AppLocalizations.of(context)!.dateEffectiveLabel,
                     prefixIcon: PureIcons.calendar()),
                 readOnly: true,
                 enabled: false,
@@ -266,10 +272,13 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String?>(
               initialValue: selectedAccountId,
-              decoration: const InputDecoration(labelText: 'Paid From Account'),
+              decoration: InputDecoration(
+                  labelText:
+                      AppLocalizations.of(context)!.paidFromAccountLabel),
               items: [
-                const DropdownMenuItem(
-                    value: null, child: Text('Manual (No account)')),
+                DropdownMenuItem(
+                    value: null,
+                    child: Text(AppLocalizations.of(context)!.noAccountManual)),
                 ...accounts.map(
                     (a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
               ],
@@ -280,7 +289,7 @@ class _GoldLoanActionDialogState extends ConsumerState<_GoldLoanActionDialog> {
       ),
       actions: [
         TextButton(
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancelButton),
             onPressed: () => Navigator.pop(context)), // coverage:ignore-line
         ElevatedButton(
           style: widget.confirmButtonColor != null

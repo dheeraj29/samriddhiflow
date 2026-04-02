@@ -8,6 +8,7 @@ import 'package:samriddhi_flow/screens/settings_screen.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/services/repair_service.dart';
@@ -16,6 +17,7 @@ import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/json_data_service.dart';
 import 'package:samriddhi_flow/services/file_service.dart';
 import 'package:samriddhi_flow/services/location_service.dart';
+import 'package:samriddhi_flow/widgets/auth_wrapper.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
@@ -60,6 +62,23 @@ class MockTxnsSinceBackupNotifier extends TxnsSinceBackupNotifier {
   int build() => 0;
   @override
   Future<void> reset() async => state = 0;
+}
+
+class TrackingTxnsSinceBackupNotifier extends TxnsSinceBackupNotifier {
+  TrackingTxnsSinceBackupNotifier({this.initialValue = 0});
+
+  final int initialValue;
+  bool resetCalled = false;
+
+  @override
+  int build() => initialValue;
+
+  @override
+  Future<void> reset() async {
+    resetCalled = true;
+    await ref.read(storageServiceProvider).resetTxnsSinceBackup();
+    state = 0;
+  }
 }
 
 class MockProfileNotifier extends ProfileNotifier {
@@ -142,6 +161,8 @@ void main() {
     when(() => mockFileService.pickFile(
             allowedExtensions: any(named: 'allowedExtensions')))
         .thenAnswer((_) async => null);
+    when(() => mockStorage.getLocale()).thenReturn(null);
+    when(() => mockStorage.setLocale(any())).thenAnswer((_) async {});
     when(() => mockCloudSync.syncToCloud(
         passcode: any(named: 'passcode'),
         appPin: any(named: 'appPin'))).thenAnswer((_) async {});
@@ -164,6 +185,8 @@ void main() {
         authServiceProvider.overrideWithValue(mockAuth),
         jsonDataServiceProvider.overrideWithValue(mockJsonData),
         fileServiceProvider.overrideWithValue(mockFileService),
+        firebaseInitializerProvider.overrideWith((ref) async {}),
+        connectivityCheckProvider.overrideWith((ref) => () async => false),
         themeModeProvider.overrideWith(ThemeModeNotifier.new),
         dashboardConfigProvider.overrideWith(DashboardConfigNotifier.new),
         smartCalculatorEnabledProvider
@@ -174,10 +197,14 @@ void main() {
         activeProfileIdProvider.overrideWith(MockProfileNotifier.new),
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
+        localeProvider.overrideWith(LocaleNotifier.new),
         locationServiceProvider.overrideWithValue(mockLocation),
         ...overrides,
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: SettingsScreen(),
       ),
     );
@@ -217,6 +244,28 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setThemeMode('dark')).called(1);
+  });
+
+  testWidgets('Language can be changed', (WidgetTester tester) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    final dropdown = find.byType(DropdownButton<String?>);
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorage.setLocale('en')).called(1);
+
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('System Default').last);
+    await tester.pumpAndSettle();
+
+    verify(() => mockStorage.setLocale(null)).called(1);
   });
 
   testWidgets('Dashboard customization switches work',
@@ -376,7 +425,7 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
-    final appLockTile = find.text('App Lock (PIN)');
+    final appLockTile = find.text('App Lock PIN');
     await tester.scrollUntilVisible(appLockTile, 500);
     await tester.tap(appLockTile);
     await tester.pumpAndSettle();
@@ -385,7 +434,7 @@ void main() {
 
     final textField = find.byType(TextField);
     await tester.enterText(textField, '1234');
-    await tester.tap(find.text('SAVE & ENABLE'));
+    await tester.tap(find.text('Save & Enable'));
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setAppPin('1234')).called(1);
@@ -399,7 +448,7 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
-    final appLockTile = find.text('App Lock (PIN)');
+    final appLockTile = find.text('App Lock PIN');
     await tester.scrollUntilVisible(appLockTile, 500);
     await tester.tap(appLockTile);
     await tester.pumpAndSettle();
@@ -408,7 +457,7 @@ void main() {
 
     final textField = find.byType(TextField);
     await tester.enterText(textField, '123456');
-    await tester.tap(find.text('SAVE & ENABLE'));
+    await tester.tap(find.text('Save & Enable'));
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setAppPin('123456')).called(1);
@@ -514,8 +563,12 @@ void main() {
 
     verify(() => mockJsonData.restoreFromPackage(any())).called(1);
     verify(() => mockStorage.resetTxnsSinceBackup()).called(1);
-    // Note: We avoid tapping 'OK, Reload' here because it navigates to DashboardScreen,
-    // which requires many more provider mocks than are relevant for this SettingsScreen test.
+
+    await tester.tap(find.text('OK, Reload'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AuthWrapper), findsOneWidget);
   });
 
   testWidgets('Restore Data (ZIP) triggers PIN dialog before file picker',
@@ -546,7 +599,7 @@ void main() {
 
     // 4. Enter PIN
     await tester.enterText(find.byType(TextField), '1111');
-    await tester.tap(find.text('VERIFY'));
+    await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
     // 5. Now pickFile should be called
@@ -557,6 +610,7 @@ void main() {
   testWidgets('Cloud Sync Success resets backup reminder counter',
       (WidgetTester tester) async {
     final mockUser = MockUser();
+    final txnsNotifier = TrackingTxnsSinceBackupNotifier(initialValue: 12);
     when(() => mockUser.email).thenReturn('test@example.com');
 
     // 1. Setup mock cloud sync to succeed
@@ -578,6 +632,7 @@ void main() {
         authServiceProvider.overrideWithValue(mockAuth),
         jsonDataServiceProvider.overrideWithValue(mockJsonData),
         fileServiceProvider.overrideWithValue(mockFileService),
+        firebaseInitializerProvider.overrideWith((ref) async {}),
         themeModeProvider.overrideWith(ThemeModeNotifier.new),
         dashboardConfigProvider.overrideWith(DashboardConfigNotifier.new),
         smartCalculatorEnabledProvider
@@ -585,13 +640,18 @@ void main() {
         currencyProvider.overrideWith(CurrencyNotifier.new),
         monthlyBudgetProvider.overrideWith(BudgetNotifier.new),
         backupThresholdProvider.overrideWith(BackupThresholdNotifier.new),
-        activeProfileIdProvider.overrideWith(ProfileNotifier.new),
+        activeProfileIdProvider.overrideWith(MockProfileNotifier.new),
         isOfflineProvider.overrideWith(MockIsOfflineNotifier.new),
         isLoggedInProvider.overrideWith(MockIsLoggedInNotifier.new),
-        // Use a simple StateProvider for testing the reset call
-        txnsSinceBackupProvider.overrideWith(MockTxnsSinceBackupNotifier.new),
+        txnsSinceBackupProvider.overrideWith(() => txnsNotifier),
+        connectivityCheckProvider.overrideWith((ref) => () async => false),
+        detectedCountryProvider.overrideWith((ref) => Future.value('IN')),
+        locationServiceProvider.overrideWithValue(mockLocation),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: SettingsScreen(),
       ),
     ));
@@ -613,9 +673,9 @@ void main() {
     // 5. Verify sync was called and counter reset triggered
     verify(() => mockCloudSync.syncToCloud(
         passcode: '1234', appPin: any(named: 'appPin'))).called(1);
-    // Since we use the real notifier (but mocked storage), we can't easily check for 'reset' call
-    // without another mock or state check.
-    // Let's just verify the success snackbar appeared which follows the reset.
+    expect(txnsNotifier.resetCalled, isTrue);
+    expect(txnsNotifier.state, 0);
+    verify(() => mockStorage.resetTxnsSinceBackup()).called(1);
     expect(find.text('Cloud Sync Success!'), findsOneWidget);
   });
 
@@ -687,13 +747,13 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
     await tester.pumpAndSettle();
 
-    final appLockTile = find.text('App Lock (PIN)');
+    final appLockTile = find.text('App Lock PIN');
     await tester.scrollUntilVisible(appLockTile, 500);
     await tester.tap(appLockTile);
     await tester.pumpAndSettle();
 
-    expect(find.text('USE EXISTING'), findsOneWidget);
-    await tester.tap(find.text('USE EXISTING'));
+    expect(find.text('Use Existing PIN'), findsOneWidget);
+    await tester.tap(find.text('Use Existing PIN'));
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setAppLockEnabled(true)).called(1);
@@ -714,13 +774,13 @@ void main() {
     final appLockSwitch = find.byWidgetPredicate((widget) =>
         widget is SwitchListTile &&
         widget.title is Text &&
-        (widget.title as Text).data == 'App Lock (PIN)');
+        (widget.title as Text).data!.contains('App Lock'));
     await tester.scrollUntilVisible(appLockSwitch, 500);
     await tester.tap(appLockSwitch);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '1111');
-    await tester.tap(find.text('VERIFY'));
+    await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
 
     expect(find.text('Incorrect PIN'), findsOneWidget);
@@ -755,7 +815,7 @@ void main() {
     await tester.tap(encryptSwitch);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('BACKUP (UNENCRYPTED)'));
+    await tester.tap(find.text('Backup Unencrypted'));
     await tester.pumpAndSettle();
 
     verify(() => mockCloudSync.syncToCloud(
@@ -854,7 +914,7 @@ void main() {
     expect(find.text('Country where your data is stored'), findsOneWidget);
 
     // Verify static text for region
-    expect(find.text('India (Asia-South1)'), findsOneWidget);
+    expect(find.text('India (India)'), findsOneWidget);
 
     // Verify it is NOT a dropdown anymore (no arrow icon, No DropdownButton)
     expect(find.byType(DropdownButton<String>), findsNothing);
@@ -864,11 +924,13 @@ void main() {
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    final mockUser = MockUser();
+    when(() => mockUser.email).thenReturn('test@example.com');
 
     // Mock user in US
     when(() => mockLocation.isCloudSyncRestricted('US')).thenReturn(true);
     await tester.pumpWidget(createSettingsScreen(
-      user: MockUser(),
+      user: mockUser,
       overrides: [
         detectedCountryProvider.overrideWith((ref) => Future.value('US')),
       ],
@@ -891,10 +953,12 @@ void main() {
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    final mockUser = MockUser();
+    when(() => mockUser.email).thenReturn('test@example.com');
 
     // Mock user in India
     await tester.pumpWidget(createSettingsScreen(
-      user: MockUser(),
+      user: mockUser,
       overrides: [
         detectedCountryProvider.overrideWith((ref) => Future.value('IN')),
       ],

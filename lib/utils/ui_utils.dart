@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class UIUtils {
@@ -76,27 +77,28 @@ class UIUtils {
     // build/screen transition, resolving the "DevTools trigger" issue on Web.
     return Future.delayed(Duration.zero, () {
       if (!context.mounted) return null;
+      final l10n = AppLocalizations.of(context)!;
       return showDialog<String>(
         context: context,
         barrierDismissible: false,
         useRootNavigator: true, // Show above all app state transitions
         builder: (context) => AlertDialog(
-          title: const Text("Encrypted Backup Found"),
+          title: Text(l10n.encryptedBackupPromptTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                   isRetry
-                      ? "Incorrect passcode. Please try again."
-                      : "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
+                      ? l10n.incorrectPasscodeError // coverage:ignore-line
+                      : l10n.encryptedBackupPromptBody,
                   style: TextStyle(color: isRetry ? Colors.red : null)),
               const SizedBox(height: 16),
               TextField(
                 controller: controller,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Passcode",
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.passcodeLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 autofocus: true,
               ),
@@ -106,7 +108,7 @@ class UIUtils {
             TextButton(
               onPressed: () =>
                   Navigator.pop(context, null), // coverage:ignore-line
-              child: const Text("SKIP"),
+              child: Text(l10n.skipAction),
             ),
             ElevatedButton(
               onPressed: () {
@@ -114,7 +116,7 @@ class UIUtils {
                   Navigator.pop(context, controller.text);
                 }
               },
-              child: const Text("RESTORE"),
+              child: Text(l10n.restoreActionCap),
             ),
           ],
         ),

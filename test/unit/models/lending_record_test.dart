@@ -181,5 +181,24 @@ void main() {
       expect(fromMap.totalPaid, 200.0);
       expect(fromMap.remainingAmount, 600.0);
     });
+
+    test('LendingRecord.fromMap defaults null payments to empty list', () {
+      final record = LendingRecord.fromMap({
+        'id': '1',
+        'personName': 'P',
+        'amount': 100,
+        'reason': 'R',
+        'date': testDate.toIso8601String(),
+        'type': LendingType.lent.index,
+        'payments': null,
+        'profileId': 'px',
+        'isClosed': true,
+        'closedDate': testClosedDate.toIso8601String(),
+      });
+
+      expect(record.payments, isEmpty);
+      expect(record.profileId, 'px');
+      expect(record.isClosed, isTrue);
+    });
   });
 }

@@ -2,8 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/services/auth_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
@@ -19,6 +21,8 @@ abstract class RefInterface {
 
 class MockRef extends Mock implements RefInterface {}
 
+class MockCloudSyncService extends Mock implements CloudSyncService {}
+
 class MockLogoutRequestedNotifier extends Mock
     implements LogoutRequestedNotifier {}
 
@@ -26,12 +30,14 @@ void main() {
   late AuthService authService;
   late MockFirebaseAuth mockAuth;
   late MockStorageService mockStorage;
+  late MockCloudSyncService mockCloudSync;
   late MockUser mockUser;
   late MockRef mockRef;
 
   setUp(() {
     mockAuth = MockFirebaseAuth();
     mockStorage = MockStorageService();
+    mockCloudSync = MockCloudSyncService();
     mockUser = MockUser();
     mockRef = MockRef();
 
@@ -39,6 +45,15 @@ void main() {
 
     registerFallbackValue(false);
     when(() => mockRef.read(logoutRequestedProvider)).thenReturn(false);
+    when(() => mockRef.read(cloudSyncServiceProvider))
+        .thenReturn(mockCloudSync);
+    when(() => mockUser.uid).thenReturn('test-uid');
+    when(() => mockStorage.getSessionId()).thenReturn(null);
+    when(() => mockStorage.clearSessionId()).thenAnswer((_) async {});
+    when(() => mockCloudSync.getCloudSessionId(any()))
+        .thenAnswer((_) async => null);
+    when(() => mockCloudSync.clearActiveSessionId(any()))
+        .thenAnswer((_) async {});
   });
 
   test('currentUser returns mocked user', () {

@@ -1,21 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:samriddhi_flow/providers.dart';
-import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/models/account.dart';
-import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
-import 'dart:io';
-import 'package:hive_ce/hive.dart';
+import 'package:samriddhi_flow/models/transaction.dart';
+import 'package:samriddhi_flow/providers.dart';
+import 'package:samriddhi_flow/services/storage_service.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
-class MockProfileNotifier extends ProfileNotifier {
+class TestProfileNotifier extends ProfileNotifier {
   final String _id;
-  MockProfileNotifier(this._id);
+  TestProfileNotifier(this._id);
+
   @override
   String build() => _id;
 }
@@ -57,11 +59,13 @@ void main() {
     mockStorageService = MockStorageService();
     when(() => mockStorageService.checkCreditCardRollovers())
         .thenAnswer((_) async {});
+    when(() => mockStorageService.setActiveProfileId(any()))
+        .thenAnswer((_) async {});
   });
 
   group('accountsProvider', () {
     test('yields initial accounts and reacts to box changes', () async {
-      final List<Account> accounts = [
+      final accounts = [
         Account(
             id: 'a1',
             name: 'Acc 1',
@@ -75,7 +79,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorageService),
           storageInitializerProvider.overrideWith((ref) async {}),
-          activeProfileIdProvider.overrideWith(() => MockProfileNotifier('p1')),
+          activeProfileIdProvider.overrideWith(() => TestProfileNotifier('p1')),
         ],
       );
 
@@ -84,7 +88,7 @@ void main() {
       await box.clear();
 
       List<Account>? result;
-      container.listen(accountsProvider, (prev, next) {
+      final subscription = container.listen(accountsProvider, (prev, next) {
         next.whenData((val) => result = val);
       }, fireImmediately: true);
 
@@ -97,20 +101,70 @@ void main() {
           type: AccountType.savings,
           balance: 200,
           profileId: 'p1');
-      final List<Account> newAccounts = [...accounts, newAccount];
+      final newAccounts = [...accounts, newAccount];
       when(() => mockStorageService.getAccounts()).thenReturn(newAccounts);
 
       await box.add(newAccount);
       await Future.delayed(const Duration(milliseconds: 100));
       expect(result, newAccounts);
 
+      subscription.close();
+      container.dispose();
+    });
+
+    test('refreshes accounts when active profile changes', () async {
+      final profileOneAccounts = [
+        Account(
+            id: 'p1-a1',
+            name: 'Profile 1 Acc',
+            type: AccountType.savings,
+            balance: 100,
+            profileId: 'p1'),
+      ];
+      final profileTwoAccounts = [
+        Account(
+            id: 'p2-a1',
+            name: 'Profile 2 Acc',
+            type: AccountType.savings,
+            balance: 200,
+            profileId: 'p2'),
+      ];
+
+      when(() => mockStorageService.getAccounts())
+          .thenReturn(profileOneAccounts);
+
+      final container = ProviderContainer(
+        overrides: [
+          storageServiceProvider.overrideWithValue(mockStorageService),
+          storageInitializerProvider.overrideWith((ref) async {}),
+          activeProfileIdProvider.overrideWith(() => TestProfileNotifier('p1')),
+        ],
+      );
+
+      List<Account>? result;
+      final subscription = container.listen(accountsProvider, (prev, next) {
+        next.whenData((val) => result = val);
+      }, fireImmediately: true);
+
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(result?.single.profileId, 'p1');
+
+      when(() => mockStorageService.getAccounts())
+          .thenReturn(profileTwoAccounts);
+      await container.read(activeProfileIdProvider.notifier).setProfile('p2');
+
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(result?.single.profileId, 'p2');
+      verify(() => mockStorageService.setActiveProfileId('p2')).called(1);
+
+      subscription.close();
       container.dispose();
     });
   });
 
   group('transactionsProvider', () {
     test('yields initial transactions and reacts to box changes', () async {
-      final List<Transaction> txns = [
+      final txns = [
         Transaction(
             id: 't1',
             title: 'T1',
@@ -127,7 +181,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorageService),
           storageInitializerProvider.overrideWith((ref) async {}),
-          activeProfileIdProvider.overrideWith(() => MockProfileNotifier('p1')),
+          activeProfileIdProvider.overrideWith(() => TestProfileNotifier('p1')),
         ],
       );
 
@@ -138,7 +192,7 @@ void main() {
       await box.clear();
 
       List<Transaction>? result;
-      container.listen(transactionsProvider, (prev, next) {
+      final subscription = container.listen(transactionsProvider, (prev, next) {
         next.whenData((val) => result = val);
       }, fireImmediately: true);
 
@@ -154,13 +208,14 @@ void main() {
           category: 'c1',
           accountId: 'a1',
           profileId: 'p1');
-      final List<Transaction> newTxns = [...txns, newTxn];
+      final newTxns = [...txns, newTxn];
       when(() => mockStorageService.getTransactions()).thenReturn(newTxns);
 
       await box.add(newTxn);
       await Future.delayed(const Duration(milliseconds: 100));
       expect(result, newTxns);
 
+      subscription.close();
       container.dispose();
     });
   });
@@ -168,7 +223,7 @@ void main() {
   group('loansProvider', () {
     test('yields initial loans and reacts to box changes', () async {
       final startDate = DateTime.now();
-      final List<Loan> loans = [
+      final loans = [
         Loan(
             id: 'l1',
             name: 'Loan 1',
@@ -187,7 +242,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorageService),
           storageInitializerProvider.overrideWith((ref) async {}),
-          activeProfileIdProvider.overrideWith(() => MockProfileNotifier('p1')),
+          activeProfileIdProvider.overrideWith(() => TestProfileNotifier('p1')),
         ],
       );
 
@@ -196,7 +251,7 @@ void main() {
       await box.clear();
 
       List<Loan>? result;
-      container.listen(loansProvider, (prev, next) {
+      final subscription = container.listen(loansProvider, (prev, next) {
         next.whenData((val) => result = val);
       }, fireImmediately: true);
 
@@ -214,20 +269,21 @@ void main() {
           emiAmount: 200,
           firstEmiDate: startDate,
           profileId: 'p1');
-      final List<Loan> newLoans = [...loans, newLoan];
+      final newLoans = [...loans, newLoan];
       when(() => mockStorageService.getLoans()).thenReturn(newLoans);
 
       await box.add(newLoan);
       await Future.delayed(const Duration(milliseconds: 100));
       expect(result, newLoans);
 
+      subscription.close();
       container.dispose();
     });
   });
 
   group('recurringTransactionsProvider', () {
     test('yields initial recurring and reacts to box changes', () async {
-      final List<RecurringTransaction> recurring = [
+      final recurring = [
         RecurringTransaction(
             id: 'r1',
             title: 'R1',
@@ -244,7 +300,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorageService),
           storageInitializerProvider.overrideWith((ref) async {}),
-          activeProfileIdProvider.overrideWith(() => MockProfileNotifier('p1')),
+          activeProfileIdProvider.overrideWith(() => TestProfileNotifier('p1')),
         ],
       );
 
@@ -255,7 +311,8 @@ void main() {
       await box.clear();
 
       List<RecurringTransaction>? result;
-      container.listen(recurringTransactionsProvider, (prev, next) {
+      final subscription =
+          container.listen(recurringTransactionsProvider, (prev, next) {
         next.whenData((val) => result = val);
       }, fireImmediately: true);
 
@@ -271,13 +328,14 @@ void main() {
           nextExecutionDate: DateTime.now(),
           profileId: 'p1',
           type: TransactionType.expense);
-      final List<RecurringTransaction> newRecurring = [...recurring, newRec];
+      final newRecurring = [...recurring, newRec];
       when(() => mockStorageService.getRecurring()).thenReturn(newRecurring);
 
       await box.add(newRec);
       await Future.delayed(const Duration(milliseconds: 100));
       expect(result, newRecurring);
 
+      subscription.close();
       container.dispose();
     });
   });

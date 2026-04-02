@@ -1,20 +1,22 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:samriddhi_flow/core/app_constants.dart';
-import '../utils/network_utils.dart';
-import '../utils/debug_logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
-import '../navigator_key.dart';
-import '../utils/ui_utils.dart';
+import '../utils/connectivity_platform.dart';
+import '../core/app_constants.dart';
+import '../utils/debug_logger.dart';
 import '../screens/login_screen.dart';
+import '../utils/ui_utils.dart';
+import '../utils/network_utils.dart';
+import '../navigator_key.dart';
 import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
-import '../utils/connectivity_platform.dart';
-import 'package:flutter/foundation.dart';
 import '../utils/platform_utils.dart' as platform_utils;
+import '../l10n/app_localizations.dart';
 
 const continueOfflineText = 'Continue Offline';
 
@@ -267,11 +269,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final isPersistentLogin = ref.read(isLoggedInProvider);
         if (isPersistentLogin && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            // coverage:ignore-end
-            const SnackBar(
-              content: Text("Connection failed. Switching to Offline Mode."),
+            SnackBar(
+              // coverage:ignore-end
+              content: Text(AppLocalizations.of(context)!
+                  .connectionFailedOffline), // coverage:ignore-line
               backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -300,6 +303,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           setState(() => _isRedirectingLocal = false); // coverage:ignore-line
         }
 
+        await _claimSessionOnNewSignIn(previous, next);
+
         if (_shouldSkipAuthProcessing(authService)) return;
 
         final checkFn = ref.read(connectivityCheckProvider);
@@ -324,6 +329,20 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       if (!storageInit.hasValue || !_bootGracePeriodFinished) return;
       _handleAutoRestore(context, next);
     });
+  }
+
+  /// Claims a new session UUID when the user signs in for the first time.
+  Future<void> _claimSessionOnNewSignIn(
+      AsyncValue<User?>? previous, AsyncValue<User?> next) async {
+    if (previous?.value != null || next.value == null) return;
+    final storage = ref.read(storageServiceProvider);
+    var sessionId = storage.getSessionId();
+    if (sessionId == null) {
+      sessionId = const Uuid().v4();
+      await storage.setSessionId(sessionId);
+    }
+    // Optimization: Don't hit Firestore on startup.
+    // Defer session claim to syncToCloud/restoreFromCloud.
   }
 
   bool _shouldSkipAuthProcessing(dynamic authService) {
@@ -351,7 +370,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (!stillOffline && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Session verification failed. Sync paused."),
+          content:
+              Text(AppLocalizations.of(context)!.sessionVerificationFailed),
           duration: const Duration(seconds: 10),
           action: SnackBarAction(
             label: "FIX",
@@ -377,34 +397,18 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (_isRestoring && passcode == null) return; // Guard
 
     setState(() => _isRestoring = true);
-    final cloudSync = ref.read(cloudSyncServiceProvider);
 
-    // Explicitly check for region restrictions before auto-restore
-    final country = await ref.read(detectedCountryProvider.future);
-    // coverage:ignore-start
-    if (country != null && country.toUpperCase() != 'IN') {
-      if (context.mounted) {
-        setState(() => _isRestoring = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-end
-          const SnackBar(
-            content: Text(
-                "Auto-restore skipped: Cloud functions are only available in India."),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
+    if (await _isRegionRestricted(context)) return;
 
     try {
+      final cloudSync = ref.read(cloudSyncServiceProvider);
       await cloudSync.restoreFromCloud(passcode: passcode);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Cloud Restore Completed"),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.restoreCompleteStatus),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
         ref.invalidate(accountsProvider);
@@ -418,6 +422,27 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     } finally {
       if (mounted) setState(() => _isRestoring = false);
     }
+  }
+
+  /// Returns true if the user's region prevents cloud operations.
+  Future<bool> _isRegionRestricted(BuildContext context) async {
+    final country = await ref.read(detectedCountryProvider.future);
+    if (country != null && country.toUpperCase() != 'IN') {
+      // coverage:ignore-start
+      if (context.mounted) {
+        setState(() => _isRestoring = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            // coverage:ignore-end
+            content: Text(AppLocalizations.of(context)!
+                .autoRestoreRegionWarning), // coverage:ignore-line
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return true;
+    }
+    return false;
   }
 
   Future<void> _handleRestoreError(BuildContext context, dynamic e) async {
@@ -585,11 +610,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget _handleFirebaseResult(BuildContext context,
       AsyncValue<void> firebaseInit, bool isPersistentLogin) {
     return firebaseInit.when(
-      // coverage:ignore-start
       loading: () => _buildLoadingScreen(
         _getLoadingMessage(),
-        showOfflineBypass: isPersistentLogin && !_isRedirectingLocal,
-        // coverage:ignore-end
+        showOfflineBypass:
+            isPersistentLogin && !_isRedirectingLocal, // coverage:ignore-line
       ),
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
@@ -612,17 +636,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     );
   }
 
-  // coverage:ignore-start
   String _getLoadingMessage() {
     if (_isRedirectingLocal) {
-      return _isSlowConnection
-          // coverage:ignore-end
+      return _isSlowConnection // coverage:ignore-line
           ? "Slow link. Finalizing Account..."
           : "Finalizing Account...";
     }
-    return _isSlowConnection
-        ? "Slow link. Connecting..."
-        : "Connecting..."; // coverage:ignore-line
+    return _isSlowConnection ? "Slow link. Connecting..." : "Connecting...";
   }
 
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {

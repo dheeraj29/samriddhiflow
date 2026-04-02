@@ -12,6 +12,7 @@ import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
 import '../widgets/pagination_bar.dart';
 import '../utils/transaction_filter_utils.dart';
+import '../l10n/app_localizations.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
   final String? initialCategory;
@@ -73,7 +74,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return [
       IconButton(
         icon: PureIcons.selectAll(),
-        tooltip: 'Select All (Filtered)',
+        tooltip: AppLocalizations.of(context)!.selectAllTooltip,
         onPressed: _handleSelectAll,
       ),
       IconButton(
@@ -133,13 +134,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ? PureIcons.listExtended(size: 20)
             : PureIcons.listCompact(size: 20),
         tooltip: _compactView
-            ? 'Switch to Extended Numbers'
-            : 'Switch to Compact Numbers',
+            ? AppLocalizations.of(context)!.extendedNumbersTooltip
+            : AppLocalizations.of(context)!.compactNumbersTooltip,
         onPressed: () => setState(() => _compactView = !_compactView),
       ),
       IconButton(
         icon: PureIcons.checklist(),
-        tooltip: 'Select Transactions',
+        tooltip: AppLocalizations.of(context)!.selectTransactionsTooltip,
         onPressed: () {
           setState(() {
             _isSelectionMode = true;
@@ -194,8 +195,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: _isSelectionMode
-            ? Text('${_selectedIds.length} Selected')
-            : const Text('All Transactions'),
+            ? Text(AppLocalizations.of(context)!
+                .selectedCount(_selectedIds.length))
+            : Text(AppLocalizations.of(context)!.allTransactionsTitle),
         actions: _buildAppBarActions,
       ),
       body: transactionsAsync.when(
@@ -206,15 +208,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           return accountsAsync.when(
             data: (accounts) => _buildFilteredBody(context, transactions,
                 accounts, categories, allCategories, currencyLocale),
-            loading: () => const Center(
-                child: CircularProgressIndicator()), // coverage:ignore-line
-            error: (e, s) =>
-                Center(child: Text('Error: $e')), // coverage:ignore-line
+            // coverage:ignore-start
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(
+                child: Text(AppLocalizations.of(context)!
+                    .errorLabelWithDetails(e.toString()))),
+            // coverage:ignore-end
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) =>
-            Center(child: Text('Error: $e')), // coverage:ignore-line
+        // coverage:ignore-start
+        error: (e, s) => Center(
+            child: Text(AppLocalizations.of(context)!
+                .errorLabelWithDetails(e.toString()))),
+        // coverage:ignore-end
       ),
     );
   }
@@ -226,6 +233,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       List<String> categories,
       List<Category> allCategories,
       String currencyLocale) {
+    final filtered = _getFilteredTransactions(transactions);
+    final totalPages = (filtered.length / _pageSize).ceil();
+    final safeCurrentPage =
+        _currentPage.clamp(1, totalPages > 0 ? totalPages : 1);
+    final paginatedTxns = _getPaginatedTransactions(filtered, safeCurrentPage);
+
+    return Column(
+      children: [
+        if (!_isSelectionMode)
+          _buildFilterWidget(context, accounts, categories),
+        if (transactions.isEmpty)
+          _buildEmptyState(AppLocalizations.of(context)!.noTransactionsFound)
+        else if (filtered.isEmpty)
+          _buildEmptyState(AppLocalizations.of(context)!
+              .noMatchesFilter) // coverage:ignore-line
+        else ...[
+          _buildTransactionList(
+              paginatedTxns, accounts, allCategories, currencyLocale),
+          _buildPaginationBar(safeCurrentPage, totalPages),
+        ]
+      ],
+    );
+  }
+
+  List<Transaction> _getFilteredTransactions(List<Transaction> transactions) {
     var filtered = TransactionFilterUtils.filter(
       transactions: transactions,
       type: _typeFilter,
@@ -235,85 +267,82 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       customRange: _customRange,
     );
     filtered.sort((a, b) => b.date.compareTo(a.date));
+    return filtered;
+  }
 
-    final totalPages = (filtered.length / _pageSize).ceil();
-    int safeCurrentPage =
-        _currentPage.clamp(1, totalPages > 0 ? totalPages : 1);
-
+  List<Transaction> _getPaginatedTransactions(
+      List<Transaction> filtered, int safeCurrentPage) {
+    if (filtered.isEmpty) return <Transaction>[];
     final startIndex = (safeCurrentPage - 1) * _pageSize;
     final endIndex = (startIndex + _pageSize > filtered.length)
         ? filtered.length
         : startIndex + _pageSize; // coverage:ignore-line
-    final paginatedTxns = filtered.isNotEmpty
-        ? filtered.sublist(startIndex, endIndex)
-        : <Transaction>[];
+    return filtered.sublist(startIndex, endIndex);
+  }
 
-    return Column(
-      children: [
-        if (!_isSelectionMode)
-          TransactionFilter(
-            selectedRange: _range,
-            selectedCategory: _category,
-            selectedAccountId: _selectedAccountId,
-            selectedType: _typeFilter,
-            categories: categories,
-            accountItems: [
-              const DropdownMenuItem<String?>(
-                  value: 'none', child: Text('No Account (Manual)')),
-              ...accounts.map((a) =>
-                  DropdownMenuItem<String?>(value: a.id, child: Text(a.name)))
-            ],
-            // coverage:ignore-start
-            onRangeChanged: (v) {
-              setState(() {
-                _range = v;
-                _currentPage = 1;
-                // coverage:ignore-end
-              });
-              if (v == TimeRange.custom) {
-                // coverage:ignore-line
-                _selectCustomRange(context); // coverage:ignore-line
-              }
-            },
-            // coverage:ignore-start
-            onCategoryChanged: (v) => setState(() {
-              _category = v;
-              _currentPage = 1;
-              // coverage:ignore-end
-            }),
-            // coverage:ignore-start
-            onAccountChanged: (v) => setState(() {
-              _selectedAccountId = v;
-              _currentPage = 1;
-              // coverage:ignore-end
-            }),
-            onTypeChanged: (v) => setState(() {
-              _typeFilter = v;
-              _currentPage = 1;
-            }),
-            onCustomRangeTap: () =>
-                _selectCustomRange(context), // coverage:ignore-line
-            customRangeLabel: _customRange != null
-                ? '${DateFormat('MMM dd').format(_customRange!.start)} - ${DateFormat('MMM dd').format(_customRange!.end)}'
-                : null,
-          ),
-        if (transactions.isEmpty)
-          const Expanded(child: Center(child: Text('No transactions found.')))
-        else if (filtered.isEmpty)
-          const Expanded(
-              // coverage:ignore-line
-              child: Center(child: Text('No matches for this filter.')))
-        else ...[
-          _buildTransactionList(
-              paginatedTxns, accounts, allCategories, currencyLocale),
-          PaginationBar(
-            safeCurrentPage: safeCurrentPage,
-            totalPages: totalPages,
-            onPageChanged: (page) =>
-                setState(() => _currentPage = page), // coverage:ignore-line
-          ),
-        ]
+  Widget _buildFilterWidget(
+      BuildContext context, List<Account> accounts, List<String> categories) {
+    return TransactionFilter(
+      selectedRange: _range,
+      selectedCategory: _category,
+      selectedAccountId: _selectedAccountId,
+      selectedType: _typeFilter,
+      categories: categories,
+      accountItems: [
+        DropdownMenuItem<String?>(
+            value: 'none',
+            child: Text(AppLocalizations.of(context)!.noAccountManual)),
+        ...accounts.map(
+            (a) => DropdownMenuItem<String?>(value: a.id, child: Text(a.name)))
       ],
+      // coverage:ignore-start
+      onRangeChanged: (v) {
+        setState(() {
+          _range = v;
+          _currentPage = 1;
+          // coverage:ignore-end
+        });
+        if (v == TimeRange.custom) {
+          // coverage:ignore-line
+          _selectCustomRange(context); // coverage:ignore-line
+        }
+      },
+      // coverage:ignore-start
+      onCategoryChanged: (v) => setState(() {
+        _category = v;
+        _currentPage = 1;
+        // coverage:ignore-end
+      }),
+      // coverage:ignore-start
+      onAccountChanged: (v) => setState(() {
+        _selectedAccountId = v;
+        _currentPage = 1;
+        // coverage:ignore-end
+      }),
+      onTypeChanged: (v) => setState(() {
+        _typeFilter = v;
+        _currentPage = 1;
+      }),
+      onCustomRangeTap: () =>
+          _selectCustomRange(context), // coverage:ignore-line
+      customRangeLabel: _customRange != null
+          ? '${DateFormat('MMM dd').format(_customRange!.start)} - ${DateFormat('MMM dd').format(_customRange!.end)}'
+          : null,
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Expanded(
+      child: Center(child: Text(message)),
+    );
+  }
+
+  Widget _buildPaginationBar(int safeCurrentPage, int totalPages) {
+    return PaginationBar(
+      safeCurrentPage: safeCurrentPage,
+      totalPages: totalPages,
+      onPageChanged: (page) =>
+          setState(() => _currentPage = page), // coverage:ignore-line
     );
   }
 
@@ -385,17 +414,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-              title: Text('Delete ${_selectedIds.length} Transactions?'),
-              content: const Text('Items will be moved to Recycle Bin.'),
+              title: Text(AppLocalizations.of(context)!
+                  .deleteSelectedTitle(_selectedIds.length)),
+              content:
+                  Text(AppLocalizations.of(context)!.itemsMoveToRecycleBin),
               actions: [
                 TextButton(
                     onPressed: () =>
                         Navigator.pop(ctx, false), // coverage:ignore-line
-                    child: const Text('Cancel')),
+                    child: Text(AppLocalizations.of(context)!.cancelButton)),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Delete',
-                        style: TextStyle(color: Colors.red))),
+                    child: Text(AppLocalizations.of(context)!.deleteButton,
+                        style: const TextStyle(color: Colors.red))),
               ],
             ));
 
@@ -411,8 +442,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           _selectedIds.clear();
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Transactions moved to Recycle Bin')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.transactionsMovedToRecycleBin)));
       }
     }
   }
@@ -426,19 +458,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
               // coverage:ignore-line
-              title: const Text('Delete Transaction?'),
-              content: const Text('This will be moved to Recycle Bin.'),
-              // coverage:ignore-start
+              title: Text(AppLocalizations.of(context)!
+                  .deleteTransactionTitle), // coverage:ignore-line
+              content:
+                  // coverage:ignore-start
+                  Text(AppLocalizations.of(context)!.itemsMoveToRecycleBin),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    // coverage:ignore-end
-                    child: const Text('Cancel')),
+                    child: Text(AppLocalizations.of(context)!.cancelButton)),
                 TextButton(
-                    // coverage:ignore-line
-                    onPressed: () =>
-                        Navigator.pop(ctx, true), // coverage:ignore-line
-                    child: const Text('Delete')),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(AppLocalizations.of(context)!.deleteButton)),
+                // coverage:ignore-end
               ],
             ));
 
@@ -447,9 +479,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       final storage = ref.read(storageServiceProvider);
       await storage.deleteTransaction(txn.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            // coverage:ignore-end
-            const SnackBar(content: Text('Moved to Recycle Bin')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.movedToRecycleBin)));
+        // coverage:ignore-end
       }
     }
   }

@@ -12,6 +12,7 @@ import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class MockIndianTaxService extends Mock implements IndianTaxService {}
 
@@ -64,6 +65,9 @@ void main() {
         currencyFormatProvider.overrideWith(() => MockCurrencyFormatNotifier()),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         home: TaxDetailsScreen(
           data: data,
           onSave: onSave ?? (d) {},
@@ -190,10 +194,13 @@ void main() {
     when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
         .thenReturn([]);
 
-    await pumpScreen(tester, data, onSave: _dummyOnSave);
+    await pumpScreen(tester, data);
 
     // 1. Initial state: No structure
-    expect(find.textContaining('No salary structure defined.'), findsOneWidget);
+    expect(
+        find.textContaining('No salary structure defined for this period.',
+            skipOffstage: false),
+        findsOneWidget);
 
     // 2. Add Structure
     await tester.tap(find.text('Add Structure'));
@@ -212,11 +219,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('No salary structure defined.'), findsNothing);
-    expect(find.textContaining('Basic:'), findsOneWidget);
-    expect(find.textContaining('Allowances'), findsAtLeast(1));
-
-    expect(find.textContaining('Allowances'), findsAtLeast(1));
+    expect(
+        find.textContaining('No salary structure defined.',
+            skipOffstage: false),
+        findsNothing);
+    expect(find.textContaining('Basic:', skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('Allowances', skipOffstage: false),
+        findsAtLeast(1));
 
     // 3. Edit structure
     await tester.tap(find.widgetWithIcon(IconButton, Icons.edit).first);
@@ -230,7 +239,7 @@ void main() {
       matching: find.text('Save'),
     ));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Basic:'), findsOneWidget);
+    expect(find.textContaining('Basic:', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('General: Filter by Date Range works', (tester) async {
@@ -274,7 +283,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(saveCalled, isTrue);
-    expect(find.text('Tax details saved successfully!'), findsOneWidget);
+    expect(
+        find.textContaining('Tax details saved successfully.'), findsOneWidget);
   });
 
   testWidgets('General: Clear Tax Data dialog and deletion flow',
@@ -290,10 +300,10 @@ void main() {
     await pumpScreen(tester, data, onDelete: () => deleteCalled = true);
 
     // Tap Delete icon in AppBar
-    await tester.tap(find.byTooltip('Clear ALL FY Data'));
+    await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('Clear ALL FY 2025 Data?'), findsOneWidget);
+    expect(find.text('Clear ALL Data for FY 2025?'), findsOneWidget);
 
     // Test Cancel
     await tester.tap(find.text('CANCEL'));
@@ -301,7 +311,7 @@ void main() {
     expect(deleteCalled, isFalse);
 
     // Test Action
-    await tester.tap(find.byTooltip('Clear ALL FY Data'));
+    await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('DELETE ALL'));
@@ -356,10 +366,11 @@ void main() {
 
     await pumpScreen(tester, data);
 
-    await tester.tap(find.byTooltip('Copy Previous Year Data'));
+    await tester.tap(find.byTooltip('Copy from Previous Year'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No salary data found in previous year'), findsOneWidget);
+    expect(find.textContaining('No salary data found for the previous year.'),
+        findsOneWidget);
   });
 
   testWidgets('House Property Tab: Can add a property', (tester) async {
@@ -373,9 +384,12 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to House Prop tab
-    await switchTab(tester, 'House Prop');
+    await switchTab(tester, 'House Property');
 
-    expect(find.textContaining('No House Properties added.'), findsOneWidget);
+    expect(
+        find.textContaining('No house properties found for this year.',
+            skipOffstage: false),
+        findsOneWidget);
 
     // 2. Add Property
     await tester.tap(find.textContaining('Add Property'));
@@ -405,13 +419,13 @@ void main() {
     when(() => mockStorage.getTaxYearData(2024)).thenReturn(previousYearData);
 
     await pumpScreen(tester, data);
-    await switchTab(tester, 'House Prop');
+    await switchTab(tester, 'House Property');
 
-    await tester.tap(find.byTooltip('Copy Previous Year Data'));
+    await tester.tap(find.byTooltip('Copy from Previous Year'));
     await tester.pumpAndSettle();
 
     expect(find.text('Old House'), findsOneWidget);
-    expect(find.text('Copied 1 properties'), findsOneWidget);
+    expect(find.textContaining('1 house properties copied.'), findsOneWidget);
   });
 
   testWidgets('Business Tab: Can add a business entity', (tester) async {
@@ -427,7 +441,8 @@ void main() {
     // 1. Switch to Business tab
     await switchTab(tester, 'Business');
 
-    expect(find.textContaining('No Business Income added.'), findsOneWidget);
+    expect(find.textContaining('No business income found for this year.'),
+        findsOneWidget);
 
     // 2. Add Entry
     await tester.tap(find.textContaining('Add Business'));
@@ -451,10 +466,12 @@ void main() {
     await pumpScreen(tester, data);
 
     // 1. Switch to Cap Gains tab
-    await switchTab(tester, 'Cap Gains');
+    await switchTab(tester, 'Capital Gains');
 
     expect(
-        find.textContaining('No Capital Gains entries found.'), findsOneWidget);
+        find.textContaining('No capital gains found for this year.',
+            skipOffstage: false),
+        findsOneWidget);
 
     // 2. Add Entry
     await tester.tap(find.textContaining('Add Entry'));
@@ -485,8 +502,7 @@ void main() {
     await tester.tap(find.text('Update Total'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Dividend details updated internally'),
-        findsOneWidget);
+    expect(find.textContaining('Dividend income updated.'), findsOneWidget);
   });
 
   testWidgets('Agri Tab: Can update agri income history', (tester) async {
@@ -502,7 +518,7 @@ void main() {
     // 1. Switch to Agri tab
     await switchTab(tester, 'Agri');
 
-    expect(find.textContaining('No Agricultural Income entries found.'),
+    expect(find.textContaining('No agricultural income found for this year.'),
         findsOneWidget);
 
     // 2. Add history entry
@@ -611,8 +627,8 @@ void main() {
     // 1. Switch to Cash Gifts tab
     await switchTab(tester, 'Gifts');
 
-    final emptyState =
-        find.textContaining('No Cash Gifts recorded.', skipOffstage: false);
+    final emptyState = find.textContaining('No cash gifts found for this year.',
+        skipOffstage: false);
     await tester.ensureVisible(emptyState);
     expect(emptyState, findsOneWidget);
 
@@ -716,11 +732,10 @@ void main() {
       (tester) async {
     final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
     const data = TaxYearData(year: 2025);
-    final now = DateTime.now();
 
     // Mock breakdown for current month
     final mockBreakdown = {
-      now.month: {
+      DateTime.now().month: {
         'gross': 100000.0,
         'tax': 10000.0,
         'deductions': 5000.0,
@@ -735,16 +750,19 @@ void main() {
     await pumpScreen(tester, data);
 
     // Verify presence of breakdown UI
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+    await tester.pumpAndSettle();
+
     final detailedEstFinder =
-        find.text('Detailed Est (Current Month)', skipOffstage: false);
+        find.text('DETAILED EST. (CURRENT MONTH)', skipOffstage: false);
+    await tester.ensureVisible(detailedEstFinder);
+    await tester.pumpAndSettle();
     expect(detailedEstFinder, findsOneWidget);
 
-    expect(find.text('Net Monthly', skipOffstage: false), findsOneWidget);
+    expect(find.text('NET MONTHLY', skipOffstage: false), findsOneWidget);
 
     // Verify values (using en_IN locale format ₹1,00,000.00 etc.)
     expect(find.textContaining('85,000', skipOffstage: false), findsWidgets);
     expect(find.textContaining('1,00,000', skipOffstage: false), findsWidgets);
   });
 }
-
-void _dummyOnSave(TaxYearData d) {}

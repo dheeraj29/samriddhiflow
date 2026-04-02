@@ -5,6 +5,7 @@ import '../../models/lending_record.dart';
 import '../../services/lending/lending_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class AddLendingScreen extends ConsumerStatefulWidget {
   final LendingRecord? recordToEdit;
@@ -107,11 +108,14 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mode = widget.recordToEdit == null ? "Add" : "Edit";
+    final l10n = AppLocalizations.of(context)!;
+    final modeTitle = widget.recordToEdit == null
+        ? l10n.addLendingRecordTitle
+        : l10n.editLendingRecordTitle;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('$mode Lending Record'),
+        title: Text(modeTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -122,16 +126,16 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
             children: [
               // Type Selector
               SegmentedButton<LendingType>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: LendingType.lent,
-                    label: Text('Lent (Given)'),
-                    icon: Icon(Icons.arrow_upward),
+                    label: Text(l10n.lentLabel),
+                    icon: const Icon(Icons.arrow_upward),
                   ),
                   ButtonSegment(
                     value: LendingType.borrowed,
-                    label: Text('Borrowed (Taken)'),
-                    icon: Icon(Icons.arrow_downward),
+                    label: Text(l10n.borrowedLabel),
+                    icon: const Icon(Icons.arrow_downward),
                   ),
                 ],
                 selected: {_selectedType},
@@ -148,14 +152,13 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
               // Person Name
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Person Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+                decoration: InputDecoration(
+                  labelText: l10n.personNameLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person),
                 ),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Please enter a name'
-                    : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? l10n.enterNameError : null,
               ),
               const SizedBox(height: 16),
 
@@ -167,14 +170,18 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegexUtils.amountExp),
                 ],
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.currency_rupee),
+                decoration: InputDecoration(
+                  labelText: l10n.amountLabelSimplified,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.currency_rupee),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Enter amount';
-                  if (double.tryParse(value) == null) return 'Invalid number';
+                  if (value == null || value.isEmpty) {
+                    return l10n.enterAmountError;
+                  }
+                  if (double.tryParse(value) == null) {
+                    return l10n.invalidNumberError; // coverage:ignore-line
+                  }
                   return null;
                 },
               ),
@@ -183,10 +190,10 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
               // Reason
               TextFormField(
                 controller: _reasonController,
-                decoration: const InputDecoration(
-                  labelText: 'Reason / Description',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.notes),
+                decoration: InputDecoration(
+                  labelText: l10n.reasonDescriptionLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.notes),
                 ),
               ),
               const SizedBox(height: 16),
@@ -195,10 +202,10 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
               InkWell(
                 onTap: () => _selectDate(context), // coverage:ignore-line
                 child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
+                  decoration: InputDecoration(
+                    labelText: l10n.dateLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
                   ),
                   child: Text(
                     DateFormat('dd MMM yyyy').format(_selectedDate),
@@ -210,7 +217,7 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
 
               if (widget.recordToEdit != null)
                 SwitchListTile(
-                  title: const Text('Mark as Closed / SETTLED'),
+                  title: Text(l10n.markAsClosedOption),
                   value: _isClosed,
                   onChanged: (val) =>
                       setState(() => _isClosed = val), // coverage:ignore-line
@@ -228,7 +235,9 @@ class _AddLendingScreenState extends ConsumerState<AddLendingScreen> {
                   foregroundColor: Colors.white,
                 ),
                 child: Text(
-                  '$mode Record',
+                  widget.recordToEdit == null
+                      ? l10n.addRecordButton
+                      : l10n.editRecordButton,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),

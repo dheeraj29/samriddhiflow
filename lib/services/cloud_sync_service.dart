@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_core/firebase_core.dart';
 import 'cloud_storage_interface.dart';
+import 'firestore_storage_service.dart';
 import 'storage_service.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
@@ -51,6 +52,54 @@ class CloudSyncService {
     }
   }
 
+  Future<void> updateActiveSessionId(String deviceId) async {
+    final auth = _auth;
+    if (auth == null) return;
+    final user = auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.getIdToken(true); // Force token refresh for Rules enforcement
+      await _cloudStorage.setActiveSessionId(user.uid, deviceId);
+    } catch (_) {
+      // Ignore if offline or failing
+    }
+  }
+
+  Future<String?> getCloudSessionId(String uid) async {
+    // coverage:ignore-line
+    try {
+      return await _cloudStorage
+          .getActiveSessionId(uid); // coverage:ignore-line
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearActiveSessionId(String uid) async {
+    // coverage:ignore-line
+    try {
+      await _cloudStorage.clearActiveSessionId(uid); // coverage:ignore-line
+    } catch (_) {
+      // Ignore failures during logout cleanup
+    }
+  }
+
+  Future<void> _verifySession(User user) async {
+    // 1. Force token refresh to satisfy <12s Token Issue Time requirement in Firestore Rules
+    await user.getIdToken(true);
+
+    // 2. Enforce Single Device Session Logic
+    final cloudSessionId = await _cloudStorage.getActiveSessionId(user.uid);
+    final localSessionId = _storageService.getSessionId();
+
+    if (cloudSessionId != null &&
+        localSessionId != null &&
+        cloudSessionId != localSessionId) {
+      throw Exception(
+          "SESSION_EXPIRED:Logged in from another device."); // coverage:ignore-line
+    }
+  }
+
   Future<void> syncToCloud({String? passcode, String? appPin}) async {
     _checkRegionLock();
     final auth = _auth;
@@ -60,6 +109,13 @@ class CloudSyncService {
 
     final user = auth.currentUser;
     if (user == null) throw Exception(errUserNotLoggedIn);
+
+    await _verifySession(user);
+    // Claim session in cloud before sync if not already claimed on startup
+    final sessionId = _storageService.getSessionId();
+    if (sessionId != null) {
+      await updateActiveSessionId(sessionId);
+    }
 
     final encryption =
         (passcode != null && passcode.isNotEmpty) ? EncryptionService() : null;
@@ -80,40 +136,75 @@ class CloudSyncService {
     }
 
     // Serialize all app data
-    final data = {
-      'accounts': encryptIfRequested(
-          _storageService.getAllAccounts().map((e) => e.toMap()).toList()),
-      'transactions_v2': _preparePartitionedTransactions(
-          _storageService.getAllTransactions(), encryptIfRequested),
-      'loans_v2': _preparePartitionedLoans(
-          _storageService.getAllLoans(), encryptIfRequested),
-      'recurring': encryptIfRequested(
-          _storageService.getAllRecurring().map((e) => e.toMap()).toList()),
-      'categories':
-          _storageService.getAllCategories().map((e) => e.toMap()).toList(),
-      'profiles': encryptIfRequested(
-          _storageService.getProfiles().map((e) => e.toMap()).toList()),
-      'settings': encryptIfRequested(settingsToEncrypt),
-      'last_sync': lastSync,
-      'insurance_policies': encryptIfRequested(_storageService
-          .getInsurancePolicies()
-          .map((e) => e.toMap())
-          .toList()),
-      'tax_rules_v2': _preparePartitionedTaxRules(
-          _taxConfigService.getAllRules(), encryptIfRequested),
-      'tax_data_v2': _preparePartitionedTaxData(
-          _storageService.getAllTaxYearData(), encryptIfRequested),
-      'lending_records': encryptIfRequested(
-          _storageService.getLendingRecords().map((e) => e.toMap()).toList()),
-      'is_encrypted': encryption != null,
-      'sync_format_version': 2,
-    };
+    final data = _createSyncPayload(
+      encryptor: encryptIfRequested,
+      isEncrypted: encryption != null,
+      settingsToEncrypt: settingsToEncrypt,
+      lastSync: lastSync,
+    );
 
     try {
       await _cloudStorage.syncData(user.uid, _sanitizeForSync(data));
     } on FirebaseException catch (e) {
       _handleSyncError(e);
     }
+  }
+
+  Map<String, dynamic> _createSyncPayload({
+    required dynamic Function(dynamic) encryptor,
+    required bool isEncrypted,
+    required Map<String, dynamic> settingsToEncrypt,
+    dynamic lastSync,
+  }) {
+    return {
+      'accounts': encryptor(
+          _storageService.getAllAccounts().map((e) => e.toMap()).toList()),
+      'transactions_v2': _preparePartitionedTransactions(
+          _storageService.getAllTransactions(), encryptor),
+      'loans_v2':
+          _preparePartitionedLoans(_storageService.getAllLoans(), encryptor),
+      'recurring': encryptor(
+          _storageService.getAllRecurring().map((e) => e.toMap()).toList()),
+      'categories':
+          _storageService.getAllCategories().map((e) => e.toMap()).toList(),
+      'profiles': encryptor(
+          _storageService.getProfiles().map((e) => e.toMap()).toList()),
+      'settings': encryptor(settingsToEncrypt),
+      'last_sync': lastSync,
+      'insurance_policies': encryptor(_storageService
+          .getInsurancePolicies()
+          .map((e) => e.toMap())
+          .toList()),
+      'tax_rules_v2': _preparePartitionedTaxRules(
+          _taxConfigService.getAllRules(), encryptor),
+      'tax_data_v2': _preparePartitionedTaxData(
+          _storageService.getAllTaxYearData(), encryptor),
+      'lending_records': encryptor(
+          _storageService.getLendingRecords().map((e) => e.toMap()).toList()),
+      'is_encrypted': isEncrypted,
+      'sync_format_version': 2,
+    };
+  }
+
+  dynamic Function(dynamic) _createDecryptor({
+    required bool isEncrypted,
+    required EncryptionService? encryption,
+    required String? passcode,
+  }) {
+    return (dynamic payload) {
+      if (!isEncrypted || payload == null || payload is! String) {
+        // coverage:ignore-line
+        return payload;
+      }
+      try {
+        final decryptedString =
+            encryption!.decryptData(payload, passcode!); // coverage:ignore-line
+        return jsonDecode(decryptedString); // coverage:ignore-line
+      } catch (e) {
+        throw Exception(
+            "Incorrect passcode or corrupted data"); // coverage:ignore-line
+      }
+    };
   }
 
   Map<String, dynamic> _preparePartitionedTransactions(
@@ -148,7 +239,7 @@ class CloudSyncService {
   void _handleSyncError(FirebaseException e) {
     if (e.code.contains('unauthenticated') ||
         e.code.contains('unavailable') ||
-        e.code.contains('permission-denied')) {
+        e.code.contains(FirestoreStorageService.permissionDeniedCode)) {
       // coverage:ignore-line
       throw Exception(
           "Cloud Sync temporarily unavailable (${e.code}). Please try again later.");
@@ -181,6 +272,12 @@ class CloudSyncService {
       throw Exception("No cloud data found");
     }
 
+    // Claim session in cloud after successful verification and fetch
+    final sessionId = _storageService.getSessionId();
+    if (sessionId != null) {
+      await updateActiveSessionId(sessionId);
+    }
+
     final data = _sanitizeFirestoreData(rawData) as Map<String, dynamic>;
 
     final bool isEncrypted = data['is_encrypted'] == true;
@@ -193,20 +290,11 @@ class CloudSyncService {
           "Passcode required for encrypted backup"); // coverage:ignore-line
     }
 
-    dynamic decrypt(dynamic payload) {
-      if (!isEncrypted || payload == null || payload is! String) {
-        // coverage:ignore-line
-        return payload;
-      }
-      try {
-        final decryptedString =
-            encryption!.decryptData(payload, passcode!); // coverage:ignore-line
-        return jsonDecode(decryptedString); // coverage:ignore-line
-      } catch (e) {
-        throw Exception(
-            "Incorrect passcode or corrupted data"); // coverage:ignore-line
-      }
-    }
+    final decrypt = _createDecryptor(
+      isEncrypted: isEncrypted,
+      encryption: encryption,
+      passcode: passcode,
+    );
 
     // Cache local Tax Data before wiping
     final localTaxData = _storageService.getAllTaxYearData();
@@ -239,6 +327,7 @@ class CloudSyncService {
     }
 
     try {
+      await _verifySession(user);
       return await _cloudStorage.fetchData(user.uid);
     } on FirebaseException catch (e) {
       if (e.code.contains('unauthenticated') ||
@@ -435,6 +524,12 @@ class CloudSyncService {
       throw Exception(errUserNotLoggedIn);
     }
 
+    await _verifySession(user);
+    // Claim session in cloud before deletion
+    final sessionId = _storageService.getSessionId();
+    if (sessionId != null) {
+      await updateActiveSessionId(sessionId);
+    }
     await _cloudStorage.deleteData(user.uid);
   }
 

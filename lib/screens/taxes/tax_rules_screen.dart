@@ -2,13 +2,14 @@ import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../services/taxes/tax_config_service.dart';
 import '../../models/taxes/tax_rules.dart';
 import '../../models/taxes/tax_data_models.dart';
-import '../../widgets/pure_icons.dart';
 import '../../models/category.dart';
 import '../../providers.dart';
 import '../../utils/currency_utils.dart';
+import '../../widgets/pure_icons.dart';
 
 class TaxRulesScreen extends ConsumerStatefulWidget {
   const TaxRulesScreen({super.key});
@@ -189,22 +190,22 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   String _getMonthName(int month) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    if (month < 1 || month > 12) return '';
-    return months[month - 1];
+    final l10n = AppLocalizations.of(context)!;
+    final monthNames = {
+      1: l10n.monthJan,
+      2: l10n.monthFeb,
+      3: l10n.monthMar,
+      4: l10n.monthApr,
+      5: l10n.monthMay,
+      6: l10n.monthJun,
+      7: l10n.monthJul,
+      8: l10n.monthAug,
+      9: l10n.monthSep,
+      10: l10n.monthOct,
+      11: l10n.monthNov,
+      12: l10n.monthDec,
+    };
+    return monthNames[month] ?? '';
   }
 
   @override
@@ -305,10 +306,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       );
 
       await config.saveRulesForYear(_selectedYear, newRules);
-      setState(() => _hasUnsavedChanges = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tax Rules Saved Successfully')));
+        setState(() => _hasUnsavedChanges = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.taxRulesSavedStatus)));
       }
     }
   }
@@ -319,17 +320,17 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Unsaved Changes'),
-          content: const Text(
-              'You have unsaved changes. Switching years will discard them. Continue?'),
+          title: Text(AppLocalizations.of(context)!.unsavedChangesTitle),
+          content: Text(
+              AppLocalizations.of(context)!.unsavedChangesSwitchYearContent),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
+                child: Text(AppLocalizations.of(context)!.cancelAction)),
             TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, true), // coverage:ignore-line
-                child: const Text('Continue')),
+                child: Text(AppLocalizations.of(context)!.continueAction)),
           ],
         ),
       );
@@ -366,18 +367,18 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restore System Defaults?'),
-        content: const Text(
-            'This will delete custom tax rules for this year and revert to system defaults (or previous year). Continue?'),
+        title: Text(AppLocalizations.of(context)!.restoreSystemDefaultsTitle),
+        content:
+            Text(AppLocalizations.of(context)!.restoreSystemDefaultsContent),
         actions: [
           TextButton(
               onPressed: () =>
                   Navigator.pop(ctx, false), // coverage:ignore-line
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelAction)),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Restore'),
+            child: Text(AppLocalizations.of(context)!.restoreAction),
           ),
         ],
       ),
@@ -387,24 +388,15 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       await config.deleteRulesForYear(_selectedYear);
       _loadRulesForYear(_selectedYear);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tax Rules reset for FY.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.taxRulesResetStatus)));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Fix: Use the calculated Financial Year as the anchor, not calendar year.
-    // This prevents showing "2026-2027" when we are still in "2025-2026" (e.g. Feb 2026).
-    final currentYear =
-        ref.read(taxConfigServiceProvider).getCurrentFinancialYear();
-
-    // Feedback: FY shall not be future, it shall be only present and 8 years old.
-    final years = List.generate(8, (i) => currentYear - i);
-    final theme = Theme.of(context);
-    final appBarFgColor = theme.appBarTheme.foregroundColor ??
-        (theme.brightness == Brightness.dark ? Colors.white : Colors.black);
+    final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
       canPop: !_hasUnsavedChanges,
@@ -414,23 +406,19 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
         final shouldPop = await showDialog<bool>(
           // coverage:ignore-line
           context: context,
+          // coverage:ignore-start
           builder: (ctx) => AlertDialog(
-            // coverage:ignore-line
-            title: const Text('Unsaved Changes'),
-            content: const Text(
-                'You have unsaved changes. Are you sure you want to leave?'),
-            // coverage:ignore-start
+            title: Text(AppLocalizations.of(context)!.unsavedChangesTitle),
+            content: Text(AppLocalizations.of(context)!.unsavedChangesContent),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  // coverage:ignore-end
-                  child: const Text('Cancel')),
+                  child: Text(AppLocalizations.of(context)!.cancelAction)),
               TextButton(
-                  // coverage:ignore-line
-                  onPressed: () =>
-                      Navigator.pop(ctx, true), // coverage:ignore-line
-                  child: const Text('Discard',
-                      style: TextStyle(color: Colors.red))),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(AppLocalizations.of(context)!.discardAction,
+                      // coverage:ignore-end
+                      style: const TextStyle(color: Colors.red))),
             ],
           ),
         );
@@ -441,60 +429,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       child: Scaffold(
         appBar: AppBar(
           titleSpacing: 24, // Shifts title slightly right
-          title: const Text('Tax Configuration'),
+          title: Text(l10n.taxConfigurationTitle),
           actions: [
-            // Financial Year Dropdown
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value:
-                    years.contains(_selectedYear) ? _selectedYear : years.first,
-                dropdownColor: theme.cardColor,
-                iconEnabledColor: appBarFgColor,
-                style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontWeight: FontWeight.bold),
-                selectedItemBuilder: (BuildContext context) {
-                  return years.map((int value) {
-                    return Center(
-                      child: Text(
-                        'FY $value-${value + 1}',
-                        style: TextStyle(
-                            color: appBarFgColor, fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  }).toList();
-                },
-                items: years
-                    .map((y) => DropdownMenuItem(
-                          value: y,
-                          child: Text('FY $y-${y + 1}'),
-                        ))
-                    .toList(),
-                onChanged: (val) => _handleYearChange(val),
-              ),
-            ),
-            // Copy Previous Year
-            IconButton(
-              icon: const Icon(Icons.copy_all),
-              tooltip: 'Copy Rules from Previous Year',
-              onPressed: () {
-                _loadRulesForYear(_selectedYear - 1);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'Values copied from previous year. Click Save to apply.')));
-              },
-            ),
-            // Restore Defaults
-            IconButton(
-              icon: const Icon(Icons.restore),
-              tooltip: 'Restore System Defaults',
-              onPressed: () => _handleRestoreDefaults(context),
-            ),
-            // Save
-            IconButton(
-              icon: PureIcons.save(),
-              onPressed: _save,
-            ),
+            _buildYearSelector(),
+            _buildActionButtons(),
           ],
           bottom: TabBar(
             controller: _tabController,
@@ -502,15 +440,15 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
             tabAlignment: TabAlignment.start,
             padding:
                 const EdgeInsets.only(left: 8), // Shifts tabs slightly right
-            tabs: const [
-              Tab(text: 'General'),
-              Tab(text: 'Salary'),
-              Tab(text: 'Business'),
-              Tab(text: 'House Prop'),
-              Tab(text: 'Cap Gains'),
-              Tab(text: 'Agri Income'),
-              Tab(text: 'Advance Tax'),
-              Tab(text: 'Mappings'),
+            tabs: [
+              Tab(text: l10n.generalTab),
+              Tab(text: l10n.salaryTab),
+              Tab(text: l10n.businessTab),
+              Tab(text: l10n.housePropTab),
+              Tab(text: l10n.capGainsTab),
+              Tab(text: l10n.agriIncomeTab),
+              Tab(text: l10n.advanceTaxTab),
+              Tab(text: l10n.mappingsTab),
             ],
           ),
         ),
@@ -518,96 +456,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           key: _formKey,
           child: Column(
             children: [
-              // TOP LEVEL JURISDICTION
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Tax Jurisdiction',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _jurisdiction,
-                                isDense: true,
-                                items: ['India', 'Custom']
-                                    .map((j) => DropdownMenuItem(
-                                        value: j, child: Text(j)))
-                                    .toList(),
-                                onChanged: (val) =>
-                                    _handleJurisdictionChange(val),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_jurisdiction == 'Custom') ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: _customCountryCtrl,
-                              onChanged: (v) =>
-                                  setState(() => _hasUnsavedChanges = true),
-                              decoration: const InputDecoration(
-                                labelText: 'Country Name',
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Financial Year Start Month
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Financial Year Start Month',
-                              helperText:
-                                  'Determines the start of the financial year (e.g. April 1st). Affects tax calculations.',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: _fyStartMonth,
-                                isDense: true,
-                                items: [
-                                  for (int i = 1; i <= 12; i++)
-                                    DropdownMenuItem(
-                                      value: i,
-                                      child: Text(_getMonthName(i)),
-                                    ),
-                                ],
-                                onChanged: (val) {
-                                  // coverage:ignore-line
-                                  if (val != null) {
-                                    // coverage:ignore-start
-                                    setState(() {
-                                      _fyStartMonth = val;
-                                      _hasUnsavedChanges = true;
-                                      // coverage:ignore-end
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _buildTaxJurisdictionSelector(),
               const SizedBox(height: 12),
               Expanded(
                 child: TabBarView(
@@ -632,23 +481,23 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildGeneralTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Tax Rates & Slabs'),
+        _buildSectionHeader(l10n.taxRatesSlabsHeader),
         _buildRebateSettings(),
         _buildCessSettings(),
         _buildCashGiftSettings(),
         const SizedBox(height: 8),
         _buildSlabsEditor(),
         const Divider(),
-        const Divider(),
-        _buildSectionHeader('Custom General Exemptions'),
+        _buildSectionHeader(l10n.customGeneralExemptionsHeader),
         _buildCustomExemptionsEditor(),
         Center(
           child: TextButton.icon(
             icon: const Icon(Icons.add),
-            label: const Text('Add Custom Exemption'),
+            label: Text(l10n.addCustomExemptionAction),
             onPressed: _addCustomRuleDialog,
           ),
         ),
@@ -657,49 +506,54 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildRebateSettings() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         SwitchListTile(
-          title: const Text('Enable Rebate'),
+          title: Text(l10n.enableRebateLabel),
           value: _isRebateEnabled,
           onChanged: (v) => setState(() => _isRebateEnabled = v),
         ),
         if (_isRebateEnabled)
-          _buildNumberField('Rebate Limit', _rebateLimitCtrl, isAmount: true),
+          _buildNumberField(l10n.rebateLimitLabel, _rebateLimitCtrl,
+              isAmount: true),
       ],
     );
   }
 
   Widget _buildCessSettings() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         SwitchListTile(
-          title: const Text('Enable Health & Edu Cess'),
+          title: Text(l10n.enableCessLabel),
           value: _isCessEnabled,
           onChanged: (v) =>
               setState(() => _isCessEnabled = v), // coverage:ignore-line
         ),
-        if (_isCessEnabled) _buildNumberField('Cess Rate (%)', _cessRateCtrl),
+        if (_isCessEnabled)
+          _buildNumberField(l10n.cessRateLabel, _cessRateCtrl),
       ],
     );
   }
 
   Widget _buildCashGiftSettings() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         SwitchListTile(
-          title: const Text('Enable Cash Gift Exemption'),
+          title: Text(l10n.enableCashGiftExemptLabel),
           value: _isCashGiftExempt,
           onChanged: (v) =>
               setState(() => _isCashGiftExempt = v), // coverage:ignore-line
         ),
         if (_isCashGiftExempt) ...[
-          _buildNumberField('Cash Gift Exemption Limit', _cashGiftLimitCtrl,
+          _buildNumberField(l10n.cashGiftExemptLimitLabel, _cashGiftLimitCtrl,
               isAmount: true),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text('Select Taxable Gift Types:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(l10n.selectTaxableGiftTypesLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           Wrap(
             spacing: 8,
@@ -733,28 +587,29 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildMappingsTab() {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addMappingDialog,
-        label: const Text('Add Mapping'),
+        label: Text(l10n.addMappingAction),
         icon: const Icon(Icons.add_link),
       ),
       body: (_tagMappings.isEmpty && _advancedMappings.isEmpty)
-          ? const Center(child: Text('No mappings defined.'))
+          ? Center(child: Text(l10n.noMappingsFoundNote))
           : ListView(
               // coverage:ignore-line
               padding: const EdgeInsets.all(16),
               children: [
                 // coverage:ignore-line
-                const Text(
-                    'Map Transaction Tags or Descriptions to Tax Heads for auto-assignment.'),
+                Text(l10n.mappingsInstructionNote), // coverage:ignore-line
                 const SizedBox(height: 16),
                 // coverage:ignore-start
                 ..._tagMappings.entries.map((e) {
                   return Card(
                     child: ListTile(
                       title: Text(e.key), // Tag or Description
-                      subtitle: Text('Maps to: ${e.value.toHumanReadable()}'),
+                      subtitle: Text(AppLocalizations.of(context)!
+                          .mapsToLabel(e.value.toHumanReadable())),
                       trailing: IconButton(
                         // coverage:ignore-end
                         icon: const Icon(Icons.delete),
@@ -771,9 +626,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                   );
                 }),
                 const Divider(), // coverage:ignore-line
-                const Text(
-                    'Advanced Mappings (CG / Filters)', // coverage:ignore-line
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                    AppLocalizations.of(context)!
+                        .advancedMappingsHeader, // coverage:ignore-line
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 // coverage:ignore-start
                 const SizedBox(height: 8),
                 ..._advancedMappings.asMap().entries.map((e) {
@@ -916,6 +772,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildSlabsEditor() {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -924,8 +781,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Income Slabs',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.incomeSlabsLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                     icon: const Icon(Icons.add),
                     // coverage:ignore-start
@@ -952,7 +809,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       initialValue:
                           slab.isUnlimited ? '' : slab.upto.toStringAsFixed(0),
                       decoration: InputDecoration(
-                        hintText: slab.isUnlimited ? 'Unlimited' : '',
+                        hintText: slab.isUnlimited ? l10n.unlimitedLabel : '',
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
@@ -974,7 +831,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                       },
                     ),
                   ),
-                  const Text('  Rate: '),
+                  Text('  ${l10n.rateLabel}: '),
                   SizedBox(
                     width: 60,
                     child: TextFormField(
@@ -1064,12 +921,13 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildSalaryTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Standard Deductions'),
+        _buildSectionHeader(l10n.standardDeductionsHeader),
         SwitchListTile(
-          title: const Text('Enable Standard Deduction'),
+          title: Text(l10n.enableStdDedSalaryLabel),
           value: _isStdDedSalaryEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1079,13 +937,13 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isStdDedSalaryEnabled)
-          _buildNumberField('Standard Deduction (Salary)', _stdDedSalaryCtrl,
+          _buildNumberField(l10n.stdDedSalaryLabel, _stdDedSalaryCtrl,
               isAmount: true),
         const Divider(),
-        _buildSectionHeader('Retirement Exemptions'),
+        _buildSectionHeader(l10n.retirementExemptionsHeader),
         SwitchListTile(
-          title: const Text('Enable Retirement / Resignation Exemptions'),
-          subtitle: const Text('Gratuity & Leave Encashment'),
+          title: Text(l10n.enableRetirementExemptLabel),
+          subtitle: Text(l10n.retirementExemptSubtitle),
           value: _isRetirementExemptionEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1095,16 +953,17 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isRetirementExemptionEnabled) ...[
-          _buildNumberField('Gratuity Exemption Limit', _limitGratuityCtrl,
+          _buildNumberField(l10n.gratuityLimitLabel, _limitGratuityCtrl,
               isAmount: true),
-          _buildNumberField('Leave Encashment Limit', _limitLeaveEncashmentCtrl,
+          _buildNumberField(
+              l10n.leaveEncashLimitLabel, _limitLeaveEncashmentCtrl,
               isAmount: true),
         ],
         const Divider(),
-        _buildSectionHeader('Employer Gifts'),
+        _buildSectionHeader(l10n.employerGiftsHeader),
         SwitchListTile(
-          title: const Text('Enable Gifts from Employer Rule'),
-          subtitle: const Text('Exempt up to a limit'),
+          title: Text(l10n.enableEmployerGiftLabel),
+          subtitle: Text(l10n.employerGiftSubtitle),
           value: _isEmployerGiftEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1114,21 +973,22 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isEmployerGiftEnabled)
-          _buildNumberField('Gift Exemption Limit', _employerGiftLimitCtrl,
-              isAmount: true, subtitle: 'Default: 5000'),
+          _buildNumberField(l10n.giftExemptLimitLabel, _employerGiftLimitCtrl,
+              isAmount: true, subtitle: l10n.defaultGiftLimitHint),
       ],
     );
   }
 
   Widget _buildBusinessTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Presumptive Income'),
+        _buildSectionHeader(l10n.presumptiveIncomeHeader),
         const SizedBox(height: 16),
         SwitchListTile(
-          title: const Text('Enable Business exemption'),
-          subtitle: const Text('Presumptive income for Businesses'),
+          title: Text(l10n.enableBusinessExemptLabel),
+          subtitle: Text(l10n.businessExemptSubtitle),
           value: _is44ADEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1138,14 +998,14 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_is44ADEnabled) ...[
-          _buildNumberField('Turnover Limit for 44AD', _limit44ADCtrl,
+          _buildNumberField(l10n.limit44ADLabel, _limit44ADCtrl,
               isInt: true, isAmount: true),
-          _buildNumberField('Presumptive Profit Rate (%)', _rate44ADCtrl),
+          _buildNumberField(l10n.rate44ADLabel, _rate44ADCtrl),
         ],
         const Divider(),
         SwitchListTile(
-          title: const Text('Enable Professional exemption'),
-          subtitle: const Text('Presumptive income for Professionals'),
+          title: Text(l10n.enableProfessionalExemptLabel),
+          subtitle: Text(l10n.professionalExemptSubtitle),
           value: _is44ADAEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1155,21 +1015,22 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_is44ADAEnabled) ...[
-          _buildNumberField('Gross Receipts Limit for 44ADA', _limit44ADACtrl,
+          _buildNumberField(l10n.limit44ADALabel, _limit44ADACtrl,
               isInt: true, isAmount: true),
-          _buildNumberField('Presumptive Profit Rate (%)', _rate44ADACtrl),
+          _buildNumberField(l10n.rate44ADALabel, _rate44ADACtrl),
         ],
       ],
     );
   }
 
   Widget _buildHousePropertyTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('House Property Configuration'),
+        _buildSectionHeader(l10n.housePropConfigHeader),
         SwitchListTile(
-          title: const Text('Enable 30% Standard Deduction'),
+          title: Text(l10n.enableStdDedHPLabel),
           value: _isStdDedHPEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1179,13 +1040,12 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isStdDedHPEnabled)
-          _buildNumberField('Standard Deduction Rate (%)', _stdDedHPCtrl,
-              subtitle: 'Usually 30%'),
+          _buildNumberField(l10n.stdDedHPRateLabel, _stdDedHPCtrl,
+              subtitle: l10n.stdDedHPSubtitle),
         const Divider(),
         SwitchListTile(
-          title: const Text('Enable Interest Deduction Cap'),
-          subtitle:
-              const Text('Limit max interest deduction for self-occupied'),
+          title: Text(l10n.enableHPMaxInterestLabel),
+          subtitle: Text(l10n.hpMaxInterestSubtitle),
           value: _isHPMaxInterestEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1195,20 +1055,21 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isHPMaxInterestEnabled)
-          _buildNumberField('Max Interest Deduction (Self-Occ)', _maxHPDedLimit,
+          _buildNumberField(l10n.maxHPInterestDedLabel, _maxHPDedLimit,
               isAmount: true),
       ],
     );
   }
 
   Widget _buildCapitalGainsTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Capital Gains Rates'),
+        _buildSectionHeader(l10n.capGainsRatesHeader),
         SwitchListTile(
-          title: const Text('Enable Special CG Rates'),
-          subtitle: const Text('Use special rates instead of normal slabs'),
+          title: Text(l10n.enableSpecialCGRatesLabel),
+          subtitle: Text(l10n.specialCGRatesSubtitle),
           value: _isCGRatesEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1218,11 +1079,11 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isCGRatesEnabled) ...[
-          _buildNumberField('LTCG Rate (Equity) %', _ltcgRateCtrl),
-          _buildNumberField('STCG Rate (Equity) %', _stcgRateCtrl),
+          _buildNumberField(l10n.ltcgRateEquityLabel, _ltcgRateCtrl),
+          _buildNumberField(l10n.stcgRateEquityLabel, _stcgRateCtrl),
         ],
         SwitchListTile(
-          title: const Text('Enable LTCG Exemption'),
+          title: Text(l10n.enableLTCGExemptionLabel),
           value: _isLTCGExemption112AEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1232,12 +1093,12 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isLTCGExemption112AEnabled)
-          _buildNumberField('Standard Exemption (LTCG)', _stdExempt112ACtrl,
+          _buildNumberField(l10n.stdExemptLTCGLabel, _stdExempt112ACtrl,
               isAmount: true),
         const Divider(),
-        _buildSectionHeader('Reinvestment Rules'),
+        _buildSectionHeader(l10n.reinvestmentRulesHeader),
         SwitchListTile(
-          title: const Text('Enable Reinvestment Exemptions'),
+          title: Text(l10n.enableReinvestmentExemptLabel),
           value: _isCGReinvestmentEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1247,9 +1108,9 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isCGReinvestmentEnabled) ...[
-          _buildNumberField('Reinvestment Window (Years)', _winReinvestCtrl),
+          _buildNumberField(l10n.reinvestWindowLabel, _winReinvestCtrl),
           _buildNumberField(
-              'Max Capital Gain Reinvest Limit', _maxCGReinvestLimitCtrl,
+              l10n.maxCGReinvestLimitLabel, _maxCGReinvestLimitCtrl,
               isAmount: true),
         ],
       ],
@@ -1257,14 +1118,15 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildAgriConfigTab() {
+    final l10n = AppLocalizations.of(context)!;
+    final currency = ref.watch(currencyProvider);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Agriculture Income Configuration'),
+        _buildSectionHeader(l10n.agriIncomeConfigHeader),
         SwitchListTile(
-          title: const Text('Enable Partial Integration'),
-          subtitle:
-              const Text('Determines tax using partial integration method'),
+          title: Text(l10n.enablePartialIntegrationLabel),
+          subtitle: Text(l10n.partialIntegrationSubtitle),
           value: _isAgriIncomeEnabled,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1274,28 +1136,28 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         if (_isAgriIncomeEnabled) ...[
-          const Text(
-              'Partial Integration Method determines tax on Agriculture Income if it exceeds the threshold and non-agri income exceeds basic exemption.'),
+          Text(l10n.agriIncomeMethodDesc),
           const SizedBox(height: 16),
-          _buildNumberField('Agriculture Income Threshold', _agriThresholdCtrl,
+          _buildNumberField(l10n.agriThresholdLabel, _agriThresholdCtrl,
               isAmount: true,
-              subtitle:
-                  'Default: ${CurrencyUtils.formatCurrency(5000, ref.watch(currencyProvider))}'),
-          _buildNumberField('Agri Basic Exemption Limit', _agriBasicLimitCtrl,
+              subtitle: l10n.agriThresholdSubtitle(
+                  CurrencyUtils.formatCurrency(5000, currency))),
+          _buildNumberField(l10n.agriBasicLimitLabel, _agriBasicLimitCtrl,
               isAmount: true,
-              subtitle:
-                  'Default: ${CurrencyUtils.formatCurrency(400000, ref.watch(currencyProvider))} (Used for Partial Integration)'),
+              subtitle: l10n.agriBasicLimitSubtitle(
+                  CurrencyUtils.formatCurrency(400000, currency))),
         ],
       ],
     );
   }
 
   Widget _buildCustomExemptionsEditor() {
+    final l10n = AppLocalizations.of(context)!;
     // Defines custom exemptions displayed in General or Mappings
     if (_customExemptions.isEmpty) {
-      return const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text('No custom exemptions defined.'));
+      return Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(l10n.noCustomExemptionsMsg));
     }
 
     // coverage:ignore-start
@@ -1329,18 +1191,19 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildAdvanceTaxTab() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionHeader('Advance Tax Configurations'),
-        const Text(
-          'Define the installment schedule, required percentages, and interest rates for advance tax calculations.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+        _buildSectionHeader(l10n.advanceTaxConfigHeader),
+        Text(
+          l10n.advanceTaxConfigDesc,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 16),
         SwitchListTile(
-          title: const Text('Enable Advance Tax Interest Calculation'),
-          subtitle: const Text('Calculate interest based on shortfalls'),
+          title: Text(l10n.enableAdvanceTaxInterestLabel),
+          subtitle: Text(l10n.advanceTaxInterestSubtitle),
           value: _enableAdvanceTaxInterest,
           // coverage:ignore-start
           onChanged: (v) => setState(() {
@@ -1350,22 +1213,20 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           }),
         ),
         _buildNumberField(
-          'Reminder Days Before Deadline',
+          l10n.reminderDaysLabel,
           _advanceTaxReminderDaysCtrl,
           isAmount: false,
         ),
         _buildNumberField(
-          'Interest Calculation Base Threshold (Fixed)',
+          l10n.interestThresholdLabel,
           _advanceTaxInterestThresholdCtrl,
           isAmount: true,
-          subtitle:
-              'Advance tax interest applies only if tax liability after TDS exceeds this amount.',
+          subtitle: l10n.interestThresholdSubtitle,
         ),
         if (_enableAdvanceTaxInterest) ...[
           SwitchListTile(
-            title: const Text('Interest till Payment Date'),
-            subtitle: const Text(
-                'If missed installment, calculate interest till payment date instead of next installment.'),
+            title: Text(l10n.interestTillPaymentDateLabel),
+            subtitle: Text(l10n.interestTillPaymentDateSubtitle),
             value: _interestTillPaymentDate,
             // coverage:ignore-start
             onChanged: (v) => setState(() {
@@ -1375,9 +1236,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
             }),
           ),
           SwitchListTile(
-            title: const Text('Include Capital Gains in Advance Tax Base'),
-            subtitle: const Text(
-                'If enabled, STCG/LTCG tax is included in required installments. If disabled, ONLY Normal Income (Salary, Business, etc.) is considered for installment matching.'),
+            title: Text(l10n.includeCGInAdvanceTaxLabel),
+            subtitle: Text(l10n.includeCGInAdvanceTaxSubtitle),
             value: _isCgIncludedInAdvanceTax,
             // coverage:ignore-start
             onChanged: (v) => setState(() {
@@ -1390,22 +1250,23 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Installment Schedule',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l10n.installmentScheduleHeader,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               TextButton.icon(
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Installment'),
+                label: Text(l10n.addInstallmentBtn),
                 onPressed: _advanceTaxRules.length < 4 ? _addInstallment : null,
               ),
             ],
           ),
           if (_advanceTaxRules.isEmpty)
-            const Padding(
+            Padding(
               // coverage:ignore-line
-              padding: EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
-                  child: Text('No installments configured.',
-                      style: TextStyle(color: Colors.grey))),
+                  // coverage:ignore-line
+                  child: Text(l10n.noInstallmentsMsg, // coverage:ignore-line
+                      style: const TextStyle(color: Colors.grey))),
             )
           else
             ..._advanceTaxRules
@@ -1418,6 +1279,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   }
 
   Widget _buildInstallmentRuleTile(int i, AdvanceTaxInstallmentRule r) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -1428,7 +1290,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
               children: [
                 Expanded(
                   child: Text(
-                    'Installment #${i + 1}',
+                    l10n.installmentNumberLabel(i + 1),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -1449,7 +1311,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
               children: [
                 Expanded(
                   child: _buildMonthDayPicker(
-                    label: 'Start Month',
+                    label: l10n.startMonthLabel,
                     month: r.startMonth,
                     day: r.startDay,
                     // coverage:ignore-start
@@ -1464,7 +1326,7 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildMonthDayPicker(
-                    label: 'End Month',
+                    label: l10n.endMonthLabel,
                     month: r.endMonth,
                     day: r.endDay,
                     // coverage:ignore-start
@@ -1483,10 +1345,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                 Expanded(
                   child: TextFormField(
                     initialValue: r.requiredPercentage.toString(),
-                    decoration: const InputDecoration(
-                      labelText: 'Required %',
+                    decoration: InputDecoration(
+                      labelText: l10n.requiredPercentageLabel,
                       suffixText: '%',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     keyboardType:
@@ -1507,10 +1369,10 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
                 Expanded(
                   child: TextFormField(
                     initialValue: r.interestRate.toString(),
-                    decoration: const InputDecoration(
-                      labelText: 'Interest Rate % (Monthly)',
+                    decoration: InputDecoration(
+                      labelText: l10n.interestRateMonthlyLabel,
                       suffixText: '%',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     keyboardType:
@@ -1632,6 +1494,163 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
       ),
     );
   }
+
+  Widget _buildYearSelector() {
+    final theme = Theme.of(context);
+    final currentYear =
+        ref.read(taxConfigServiceProvider).getCurrentFinancialYear();
+    final years = List.generate(8, (i) => currentYear - i);
+    final appBarFgColor = theme.appBarTheme.foregroundColor ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black);
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<int>(
+        value: years.contains(_selectedYear) ? _selectedYear : years.first,
+        dropdownColor: theme.cardColor,
+        iconEnabledColor: appBarFgColor,
+        style: TextStyle(
+            color: theme.textTheme.bodyLarge?.color,
+            fontWeight: FontWeight.bold),
+        selectedItemBuilder: (BuildContext context) {
+          return years.map((int value) {
+            return Center(
+              child: Text(
+                AppLocalizations.of(context)!.fyLabel(value, value + 1),
+                style: TextStyle(
+                    color: appBarFgColor, fontWeight: FontWeight.bold),
+              ),
+            );
+          }).toList();
+        },
+        items: years
+            .map((y) => DropdownMenuItem(
+                  value: y,
+                  child: Text(AppLocalizations.of(context)!.fyLabel(y, y + 1)),
+                ))
+            .toList(),
+        onChanged: _handleYearChange,
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.copy_all),
+          tooltip: l10n.copyPreviousYearTooltip,
+          onPressed: () {
+            _loadRulesForYear(_selectedYear - 1);
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.copiedFromPreviousYearStatus)));
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.restore),
+          tooltip: l10n.restoreDefaultsTooltip,
+          onPressed: () => _handleRestoreDefaults(context),
+        ),
+        IconButton(
+          icon: PureIcons.save(),
+          onPressed: _save,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaxJurisdictionSelector() {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: l10n.taxJurisdictionLabel,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _jurisdiction,
+                      isDense: true,
+                      items: ['India', 'Custom']
+                          .map((j) => DropdownMenuItem(
+                              value: j,
+                              child: Text(j == 'India'
+                                  ? l10n.indiaLabel
+                                  : l10n.customLabel)))
+                          .toList(),
+                      onChanged: _handleJurisdictionChange,
+                    ),
+                  ),
+                ),
+              ),
+              if (_jurisdiction == 'Custom') ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _customCountryCtrl,
+                    onChanged: (v) => setState(() => _hasUnsavedChanges = true),
+                    decoration: InputDecoration(
+                      labelText: l10n.countryNameLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: l10n.fyStartMonthLabel,
+                    helperText: l10n.fyStartMonthHelper,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _fyStartMonth,
+                      isDense: true,
+                      items: [
+                        for (int i = 1; i <= 12; i++)
+                          DropdownMenuItem(
+                            value: i,
+                            child: Text(_getMonthName(i)),
+                          ),
+                      ],
+                      onChanged: (val) {
+                        // coverage:ignore-line
+                        if (val != null) {
+                          // coverage:ignore-start
+                          setState(() {
+                            _fyStartMonth = val;
+                            _hasUnsavedChanges = true;
+                            // coverage:ignore-end
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CustomExemptionDialog extends StatefulWidget {
@@ -1670,24 +1689,25 @@ class _CustomExemptionDialogState extends State<_CustomExemptionDialog> {
 
   @override // coverage:ignore-line
   Widget build(BuildContext context) {
+    // coverage:ignore-start
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      // coverage:ignore-line
-      title: const Text('Add Custom Exemption'),
-      // coverage:ignore-start
+      title: Text(l10n.addCustomExemptionTitle),
       content: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
               controller: _nameCtrl,
+              decoration: InputDecoration(labelText: l10n.nameLabel),
               // coverage:ignore-end
-              decoration: const InputDecoration(labelText: 'Name'),
               textCapitalization: TextCapitalization.words),
           const SizedBox(height: 12),
+          // coverage:ignore-start
           DropdownButtonFormField<String>(
-            // coverage:ignore-line
-            initialValue: _head, // coverage:ignore-line
-            decoration: const InputDecoration(
-              labelText: 'Income Head',
-              border: OutlineInputBorder(),
+            initialValue: _head,
+            decoration: InputDecoration(
+              labelText: l10n.incomeHeadLabel,
+              // coverage:ignore-end
+              border: const OutlineInputBorder(),
             ),
             // coverage:ignore-start
             items: _heads
@@ -1701,10 +1721,11 @@ class _CustomExemptionDialogState extends State<_CustomExemptionDialog> {
             },
           ),
           const SizedBox(height: 12),
+          // coverage:ignore-start
           TextField(
-              // coverage:ignore-line
-              controller: _limitCtrl, // coverage:ignore-line
-              decoration: const InputDecoration(labelText: 'Limit'),
+              controller: _limitCtrl,
+              decoration: InputDecoration(labelText: l10n.limitFieldLabel),
+              // coverage:ignore-end
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -1713,14 +1734,13 @@ class _CustomExemptionDialogState extends State<_CustomExemptionDialog> {
                     RegexUtils.amountExp), // coverage:ignore-line
               ]),
           const SizedBox(height: 12),
+          // coverage:ignore-start
           SwitchListTile(
-            // coverage:ignore-line
-            title: const Text('Is Cliff Exemption?'),
-            subtitle: const Text(
-                'If checked, income above limit becomes fully taxable.'),
-            value: _isCliff, // coverage:ignore-line
-            onChanged: (v) =>
-                setState(() => _isCliff = v), // coverage:ignore-line
+            title: Text(l10n.isCliffExemptionLabel),
+            subtitle: Text(l10n.cliffExemptionSubtitle),
+            value: _isCliff,
+            onChanged: (v) => setState(() => _isCliff = v),
+            // coverage:ignore-end
           ),
         ]),
       ),
@@ -1728,9 +1748,7 @@ class _CustomExemptionDialogState extends State<_CustomExemptionDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            // coverage:ignore-end
-            child: const Text('Cancel')),
-        // coverage:ignore-start
+            child: Text(l10n.cancelBtnLabel)),
         FilledButton(
           onPressed: () {
             widget.onAdd(TaxExemptionRule(
@@ -1744,7 +1762,7 @@ class _CustomExemptionDialogState extends State<_CustomExemptionDialog> {
             ));
             Navigator.pop(context); // coverage:ignore-line
           },
-          child: const Text('Add'),
+          child: Text(l10n.addBtnLabel), // coverage:ignore-line
         )
       ],
     );

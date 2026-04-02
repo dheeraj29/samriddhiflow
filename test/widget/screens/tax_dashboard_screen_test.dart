@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,6 +116,9 @@ void main() {
         currencyProvider.overrideWith(MockCurrencyNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: TaxDashboardScreen(),
       ),
     );
@@ -127,11 +131,11 @@ void main() {
 
     expect(find.text('Tax Dashboard'), findsOneWidget);
     expect(find.text('Projected Tax Liability'), findsOneWidget);
-    expect(find.textContaining('Suggested: ITR-1'), findsOneWidget);
+    expect(find.textContaining('Suggested ITR form: ITR-1'), findsOneWidget);
 
     // Check reminder card
     expect(find.text('Action Required: Advance Tax'), findsOneWidget);
-    expect(find.textContaining('5 d left'), findsOneWidget);
+    expect(find.textContaining('5 days left'), findsOneWidget);
   });
 
   testWidgets('Year selection changes data', (WidgetTester tester) async {
@@ -156,7 +160,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sync Tax Data'), findsOneWidget);
-    expect(find.text('Smart Sync (Recommended)'), findsOneWidget);
+    expect(find.text('Smart Sync (Merge)'), findsOneWidget);
   });
 
   testWidgets('Insurance button navigates to Insurance Portfolio',
@@ -187,8 +191,9 @@ void main() {
     await tester.pumpWidget(createTaxDashboardScreen());
     await tester.pumpAndSettle();
 
-    expect(find.text('Taxable Insurance Alert'), findsOneWidget);
-    expect(find.textContaining('taxable in FY 2025-2026'), findsOneWidget);
+    expect(find.textContaining('Taxable Insurance Payouts Detected'),
+        findsWidgets);
+    expect(find.textContaining('FY 2025-2026'), findsWidgets);
   });
 
   testWidgets('InsuranceTaxDisclaimer appears when income NOT added for year',
@@ -215,7 +220,8 @@ void main() {
     await tester.pumpWidget(createTaxDashboardScreen());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Taxable Insurance Alert'), findsOneWidget);
+    expect(find.textContaining('Taxable Insurance Payouts Detected'),
+        findsOneWidget);
   });
 
   testWidgets('InsuranceTaxDisclaimer disappears when income IS added for year',
@@ -270,8 +276,8 @@ void main() {
     await tester.pumpWidget(createTaxDashboardScreen());
     await tester.pumpAndSettle();
 
-    expect(find.text('Advance Tax Overdue!'), findsOneWidget);
-    expect(find.text('3d Late'), findsOneWidget);
+    expect(find.text('Advance Tax OVERDUE'), findsOneWidget);
+    expect(find.text('3 days late'), findsOneWidget);
   });
 
   testWidgets('Advance tax reminder shows due today badge',
@@ -300,6 +306,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Action Required: Advance Tax'), findsOneWidget);
-    expect(find.text('Due Today'), findsOneWidget);
+    expect(find.text('DUE TODAY'), findsOneWidget);
   });
 }

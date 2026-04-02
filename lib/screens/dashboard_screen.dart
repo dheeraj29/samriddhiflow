@@ -23,6 +23,7 @@ import '../models/dashboard_config.dart';
 import 'lending/lending_dashboard_screen.dart';
 import '../widgets/bell_animation.dart';
 import '../services/storage_service.dart';
+import '../l10n/app_localizations.dart';
 
 const hiddenTextChars = '••••••';
 
@@ -66,8 +67,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           content: Text(nudge),
           // coverage:ignore-end
           duration: const Duration(seconds: 5),
+          // coverage:ignore-start
           action: SnackBarAction(
-              label: 'Dismiss', onPressed: () {}), // coverage:ignore-line
+              label: AppLocalizations.of(context)!.dismissButton,
+              onPressed: () {}),
+          // coverage:ignore-end
           behavior: SnackBarBehavior.floating,
         ));
         // Slight delay so they don't all stack instantly if multiple
@@ -89,11 +93,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _handleCalculatorsReactivity();
 
     final activeProfile = ref.watch(activeProfileProvider);
-    const title = 'My Samriddhi';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: _buildAppBar(title, activeProfile),
+      appBar: _buildAppBar(l10n.mySamriddhi, activeProfile),
       body: _buildBody(),
       bottomNavigationBar: _buildBottomNav(context),
     );
@@ -136,7 +140,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ],
             ),
             Text(
-              'Profile: ${activeProfile?.name ?? 'Default'}',
+              AppLocalizations.of(context)!.profileLabel(activeProfile?.name ??
+                  AppLocalizations.of(context)!.defaultVal),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).brightness == Brightness.light
                     ? Colors.black54
@@ -160,7 +165,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             },
             icon: PureIcons.notifications(
                 isActive: ref.watch(pendingRemindersProvider) > 0),
-            tooltip: 'Reminders',
+            tooltip: AppLocalizations.of(context)!.remindersTooltip,
           ),
         ),
         if (ref.watch(appLockStatusProvider))
@@ -170,7 +175,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 .read(appLockIntentProvider.notifier)
                 .lock(), // coverage:ignore-line
             icon: const Icon(Icons.lock_outline),
-            tooltip: 'Lock App',
+            tooltip: AppLocalizations.of(context)!
+                .lockAppTooltip, // coverage:ignore-line
           ),
         if ((ref.watch(authStreamProvider).value != null ||
                 ref.watch(isLoggedInProvider)) &&
@@ -180,7 +186,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             onPressed: () =>
                 UIUtils.handleLogout(context, ref), // coverage:ignore-line
             icon: PureIcons.logout(),
-            tooltip: 'Logout',
+            tooltip: AppLocalizations.of(context)!.logoutTooltip,
           ),
         const SizedBox(width: 8),
       ],
@@ -211,7 +217,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('Quick Actions',
+                child: Text(AppLocalizations.of(context)!.quickActionsHeader,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
               ),
@@ -230,7 +236,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 !_isRecentTransactionsExpanded),
                         child: Row(
                           children: [
-                            Text('Recent Transactions',
+                            Text(
+                                AppLocalizations.of(context)!
+                                    .recentTransactionsHeader,
                                 style: theme.textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis),
@@ -250,7 +258,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             MaterialPageRoute(
                                 builder: (_) => const TransactionsScreen())),
                         // coverage:ignore-end
-                        child: const Text('View All')),
+                        child:
+                            Text(AppLocalizations.of(context)!.viewAllButton)),
                   ],
                 ),
               ),
@@ -270,26 +279,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildBottomNav(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          IconButton(icon: PureIcons.home(), tooltip: 'Home', onPressed: () {}),
+          IconButton(
+              icon: PureIcons.home(),
+              tooltip: l10n.homeTooltip,
+              onPressed: () {}), // coverage:ignore-line
           IconButton(
             icon: PureIcons.accounts(),
-            tooltip: 'Accounts',
+            tooltip: l10n.accountsTooltip,
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AccountsScreen())),
           ),
           IconButton(
             icon: PureIcons.reports(),
-            tooltip: 'Reports',
+            tooltip: l10n.reportsTooltip,
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const ReportsScreen())),
           ),
           IconButton(
             icon: PureIcons.settings(),
-            tooltip: 'Settings',
+            tooltip: l10n.settingsTooltip,
             onPressed: () => Navigator.push(
                 context, // coverage:ignore-line
                 MaterialPageRoute(
@@ -447,12 +460,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Row(
           children: [
-            const Text('Total Net Worth',
-                style: TextStyle(color: Colors.white70)),
+            Text(AppLocalizations.of(context)!.totalNetWorthLabel,
+                style: const TextStyle(color: Colors.white70)),
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(
-                _isPrivacyMode ? Icons.visibility : Icons.visibility_off,
+                _isPrivacyMode ? Icons.visibility_off : Icons.visibility,
                 color: Colors.white70,
                 size: 18,
               ),
@@ -499,8 +512,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildSavingsRow(double currentBalance, String currencyLocale) {
     return Row(
       children: [
-        const Text('Current Savings: ',
-            style: TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(AppLocalizations.of(context)!.currentSavingsLabel,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
         _isPrivacyMode
             ? const Text(
                 hiddenTextChars,
@@ -524,8 +537,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildCCStatsRow(dynamic data, String currencyLocale) {
     return Row(
       children: [
-        _buildCCStatItem('CC Bill (Unpaid)', data.ccBilled, currencyLocale),
-        _buildCCStatItem('CC Unbilled', data.ccUnbilled, currencyLocale),
+        _buildCCStatItem(AppLocalizations.of(context)!.ccBillUnpaidLabel,
+            data.ccBilled, currencyLocale),
+        _buildCCStatItem(AppLocalizations.of(context)!.ccUnbilledLabel,
+            data.ccUnbilled, currencyLocale),
         _buildCCUsageItem(data.ccUsagePercent),
       ],
     );
@@ -562,8 +577,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const Text('CC Usage',
-              style: TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(AppLocalizations.of(context)!.ccUsageLabel,
+              style: const TextStyle(color: Colors.white70, fontSize: 11)),
           const SizedBox(height: 2),
           Text(
             _isPrivacyMode
@@ -595,7 +610,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       List<Loan> loans,
       AsyncValue<List<Transaction>> transactionsAsync,
       List<Category> categories,
-      DashboardVisibilityConfig config,
+      DashboardVisibilityConfig dashboardConfig,
       String currencyLocale,
       WidgetRef ref) {
     return Column(
@@ -628,6 +643,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 4),
               _buildSavingsRow(data.currentBalance, currencyLocale),
               const SizedBox(height: 16),
+              // New: Budget Progress in collapsed view
+              transactionsAsync.when(
+                data: (transactions) {
+                  final totals = _computeMonthlyTotals(transactions, ref);
+                  final budget = ref.watch(monthlyBudgetProvider);
+                  if (dashboardConfig.showBudget && budget > 0) {
+                    return Column(
+                      children: [
+                        _buildWhiteThemeBudgetProgress(totals.expense, budget,
+                            currencyLocale, _isPrivacyMode),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }
+                  return const SizedBox();
+                },
+                loading: () => const SizedBox(), // coverage:ignore-line
+                error: (_, __) => const SizedBox(), // coverage:ignore-line
+              ),
               if (data.ccDebt > 0) _buildCCStatsRow(data, currencyLocale),
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
@@ -651,7 +685,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               loans,
                               transactionsAsync,
                               categories,
-                              config,
+                              dashboardConfig,
                               currencyLocale,
                               ref),
                         ],
@@ -705,8 +739,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               PureIcons.loan(color: Colors.white70, size: 16),
               // coverage:ignore-end
               const SizedBox(width: 8),
-              const Text('Total Loan Liability',
-                  style: TextStyle(
+              Text(
+                  AppLocalizations.of(context)!
+                      .totalLoanLiabilityLabel, // coverage:ignore-line
+                  style: const TextStyle(
                       color: Colors.white70, fontWeight: FontWeight.w500)),
             ],
           ),
@@ -746,7 +782,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // coverage:ignore-start
               Expanded(
                 child: Text(
-                  'Debt Free in ~${tenure.months.toStringAsFixed(1)} months (${tenure.days} days)',
+                  AppLocalizations.of(context)!.debtFreeIn(
+                      tenure.months.toStringAsFixed(1), tenure.days),
                   // coverage:ignore-end
                   style: const TextStyle(
                       fontSize: 11,
@@ -781,14 +818,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Row(
                 children: [
                   _buildWhiteThemeStatItem(
-                      'Income (Month)',
-                      totals.income,
+                      AppLocalizations.of(context)!.incomeMonthLabel,
                       // coverage:ignore-end
+                      totals.income,
                       Colors.white,
                       currencyLocale),
                   _buildWhiteThemeStatItem(
-                      'Budget Expense',
-                      totals.expense, // coverage:ignore-line
+                      // coverage:ignore-line
+                      AppLocalizations.of(context)!
+                          .budgetExpenseLabel, // coverage:ignore-line
+                      totals.expense,
                       Colors.white,
                       currencyLocale),
                 ],
@@ -847,50 +886,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildWhiteThemeBudgetProgress(
-      // coverage:ignore-line
-      double expense,
-      double budget,
-      String currencyLocale,
-      bool isPrivate) {
+      double expense, double budget, String currencyLocale, bool isPrivate) {
     return Column(
-      // coverage:ignore-line
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // coverage:ignore-line
         Row(
-          // coverage:ignore-line
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // coverage:ignore-line
-            const Text('Monthly Budget Progress',
-                style: TextStyle(fontSize: 11, color: Colors.white70)),
-            _buildWhiteThemeBudgetPercent(
-                expense, budget, isPrivate), // coverage:ignore-line
+            Text(AppLocalizations.of(context)!.monthlyBudgetProgress,
+                style: const TextStyle(fontSize: 11, color: Colors.white70)),
+            _buildWhiteThemeBudgetPercent(expense, budget, isPrivate),
           ],
         ),
         const SizedBox(height: 8),
-        // coverage:ignore-start
         LinearProgressIndicator(
           value: budget == 0 ? 0 : (expense / budget).clamp(0, 1),
           backgroundColor: Colors.white.withValues(alpha: 0.2),
           valueColor: AlwaysStoppedAnimation<Color>(
               expense > budget ? Colors.red[300]! : Colors.greenAccent),
           borderRadius: BorderRadius.circular(4),
-          // coverage:ignore-end
         ),
         const SizedBox(height: 8),
         Row(
-          // coverage:ignore-line
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          // coverage:ignore-start
           children: [
             Text(
-                'Exp: ${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(expense, currencyLocale)}',
-                // coverage:ignore-end
+                '${AppLocalizations.of(context)!.expLabel}${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(expense, currencyLocale)}',
                 style: const TextStyle(fontSize: 10, color: Colors.white70)),
             Text(
-                // coverage:ignore-line
-                'Rem: ${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(budget - expense, currencyLocale)}', // coverage:ignore-line
+                '${AppLocalizations.of(context)!.remLabel}${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(budget - expense, currencyLocale)}',
                 style: const TextStyle(fontSize: 10, color: Colors.white70)),
           ],
         ),
@@ -899,64 +923,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildWhiteThemeBudgetPercent(
-      // coverage:ignore-line
-      double expense,
-      double budget,
-      bool isPrivate) {
-    if (isPrivate) {
-      return const Text('••%',
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.white70));
-    }
-    final pctText = budget == 0 // coverage:ignore-line
+      double expense, double budget, bool isPrivate) {
+    // Override privacy mode: Always show percentage as requested by user
+    final pctText = budget == 0
         ? '0%'
-        : '${((expense / budget) * 100).toStringAsFixed(0)}%'; // coverage:ignore-line
+        : '${((expense / budget) * 100).toStringAsFixed(0)}%';
     const textColor = Colors.white;
-    return Text(pctText, // coverage:ignore-line
+    return Text(pctText,
         style: const TextStyle(
             fontSize: 11, fontWeight: FontWeight.bold, color: textColor));
   }
 
   ({double income, double expense}) _computeMonthlyTotals(
-      // coverage:ignore-line
-      List<Transaction> transactions,
-      WidgetRef ref) {
+      List<Transaction> transactions, WidgetRef ref) {
     double income = 0;
     double expense = 0;
-    final now = DateTime.now(); // coverage:ignore-line
+    final now = DateTime.now();
 
-    final categories = ref.watch(categoriesProvider); // coverage:ignore-line
-    final catMap = {
-      for (var c in categories) c.name: c
-    }; // coverage:ignore-line
+    final categories = ref.watch(categoriesProvider);
+    final catMap = {for (var c in categories) c.name: c};
 
     for (var t in transactions) {
-      // coverage:ignore-line
       if (!_isTransactionRelevantForThisMonth(t, now)) {
-        // coverage:ignore-line
         continue;
       }
 
-      // coverage:ignore-start
       if (t.type == TransactionType.income) {
-        income += t.amount;
+        income += t.amount; // coverage:ignore-line
       } else if (t.type == TransactionType.expense) {
         if (catMap[t.category]?.tag != CategoryTag.budgetFree) {
           expense += t.amount;
-          // coverage:ignore-end
         }
       }
     }
     return (income: income, expense: expense);
   }
 
-  // coverage:ignore-start
   bool _isTransactionRelevantForThisMonth(Transaction t, DateTime now) {
     if (t.accountId == null && t.loanId != null) return false;
     if (t.date.year != now.year || t.date.month != now.month) return false;
-    // coverage:ignore-end
     return true;
   }
 
@@ -978,8 +983,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       builder: (_) => const AddTransactionScreen(
                           initialType: TransactionType.income)));
             },
-            child: _buildActionItem(
-                context, Icons.add_circle_outline, 'Income', Colors.green),
+            child: _buildActionItem(context, Icons.add_circle_outline,
+                AppLocalizations.of(context)!.incomeAction, Colors.green),
           ),
           const SizedBox(width: 16),
           InkWell(
@@ -995,8 +1000,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           // coverage:ignore-line
                           initialType: TransactionType.transfer)));
             },
-            child: _buildActionItem(
-                context, Icons.swap_horiz, 'Transfer', Colors.blue),
+            child: _buildActionItem(context, Icons.swap_horiz,
+                AppLocalizations.of(context)!.transferAction, Colors.blue),
           ),
           const SizedBox(width: 16),
           InkWell(
@@ -1012,8 +1017,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           // coverage:ignore-line
                           initialType: TransactionType.expense)));
             },
-            child: _buildActionItem(
-                context, Icons.payment, 'Pay Bill', Colors.orange),
+            child: _buildActionItem(context, Icons.payment,
+                AppLocalizations.of(context)!.payBillAction, Colors.orange),
           ),
           const SizedBox(width: 16),
           InkWell(
@@ -1024,8 +1029,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   MaterialPageRoute(builder: (_) => const LoansScreen()));
               // coverage:ignore-end
             },
-            child: _buildActionItem(
-                context, Icons.account_balance, 'Loans', Colors.purple),
+            child: _buildActionItem(context, Icons.account_balance,
+                AppLocalizations.of(context)!.loansAction, Colors.purple),
           ),
           const SizedBox(width: 16),
           InkWell(
@@ -1035,8 +1040,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Navigator.pushNamed(context, '/taxes');
               // coverage:ignore-end
             },
-            child: _buildActionItem(
-                context, Icons.receipt_long, 'Taxes', Colors.blueGrey),
+            child: _buildActionItem(context, Icons.receipt_long,
+                AppLocalizations.of(context)!.taxesAction, Colors.blueGrey),
           ),
           const SizedBox(width: 16),
           InkWell(
@@ -1044,16 +1049,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             onTap: () {
               FocusScope.of(context).unfocus();
               Navigator.push(
-                // coverage:ignore-end
-                context,
-                MaterialPageRoute(
-                    // coverage:ignore-line
-                    builder: (_) =>
-                        const LendingDashboardScreen()), // coverage:ignore-line
-              );
+                  // coverage:ignore-end
+                  context,
+                  MaterialPageRoute(
+                      // coverage:ignore-line
+                      builder: (_) =>
+                          const LendingDashboardScreen())); // coverage:ignore-line
             },
-            child: _buildActionItem(
-                context, Icons.handshake, 'Lending', Colors.teal),
+            child: _buildActionItem(context, Icons.handshake,
+                AppLocalizations.of(context)!.lendingAction, Colors.teal),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            // coverage:ignore-start
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              Navigator.pushNamed(context, '/investments');
+              // coverage:ignore-end
+            },
+            child: _buildActionItem(context, Icons.trending_up,
+                AppLocalizations.of(context)!.investmentsAction, Colors.indigo),
           ),
         ],
       ),
@@ -1088,9 +1103,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return transactionsAsync.when(
       data: (transactions) {
         if (transactions.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Center(child: Text('No transactions yet.')),
+          return Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Center(
+                child: Text(AppLocalizations.of(context)!.noTransactionsYet)),
           );
         }
 
@@ -1155,7 +1171,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Unsaved Data: $count transactions recorded since last backup.',
+                  AppLocalizations.of(context)!.unsavedDataTitle(count),
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).brightness == Brightness.dark
@@ -1171,7 +1187,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               TextButton(
                 onPressed: () => Navigator.pushNamed(
                     context, '/settings'), // coverage:ignore-line
-                child: const Text('Go to Backup'),
+                child: Text(AppLocalizations.of(context)!.goToBackupButton),
               ),
               const Spacer(),
               TextButton(
@@ -1179,8 +1195,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ref
                         .read(txnsSinceBackupProvider.notifier)
                         .reset(), // coverage:ignore-line
-                child:
-                    const Text('Dismiss', style: TextStyle(color: Colors.grey)),
+                child: Text(AppLocalizations.of(context)!.dismissButton,
+                    style: const TextStyle(color: Colors.grey)),
               ),
             ],
           ),
@@ -1207,7 +1223,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           initialValue: activeProfileId,
           // coverage:ignore-start
           icon: PureIcons.person(),
-          tooltip: 'Switch Profile (${activeProfile.name})',
+          tooltip: AppLocalizations.of(context)!
+              .switchProfileTooltip(activeProfile.name),
           onSelected: (id) async {
             await ref.read(activeProfileIdProvider.notifier).setProfile(id);
             // coverage:ignore-end
@@ -1276,43 +1293,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               ),
-              const Text('Samriddhi Flow — Privacy Policy',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(AppLocalizations.of(context)!.privacyPolicyTitle,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              const Text(
-                  'Your privacy is important to us. Here is how Samriddhi Flow handles your data:',
-                  style: TextStyle(fontSize: 14)),
+              Text(AppLocalizations.of(context)!.privacyPolicyIntro,
+                  style: const TextStyle(fontSize: 14)),
               const SizedBox(height: 16),
               _buildPolicyItem(
                 Icons.phone_android,
-                'Local-First Storage',
-                'All your financial data is stored locally on your device by default. Nothing leaves your device unless you choose to back up.',
+                AppLocalizations.of(context)!.localFirstTitle,
+                AppLocalizations.of(context)!.localFirstDesc,
               ),
               _buildPolicyItem(
                 Icons.cloud_outlined,
-                'User-Initiated Cloud Backup',
-                'Cloud backup is only triggered manually by you. We do not automatically upload any data to external servers without your explicit action.',
+                AppLocalizations.of(context)!.cloudBackupTitle,
+                AppLocalizations.of(context)!.cloudBackupDesc,
               ),
               _buildPolicyItem(
                 Icons.lock_outline,
-                'Optional Encryption',
-                'When backing up to the cloud, you can encrypt your data with a passcode of your choice. This passcode is NEVER stored anywhere — only you know it. Without the passcode, your cloud data cannot be read.',
+                AppLocalizations.of(context)!.optionalEncryptionTitle,
+                AppLocalizations.of(context)!.optionalEncryptionDesc,
               ),
               _buildPolicyItem(
                 Icons.analytics_outlined,
-                'No Tracking or Analytics',
-                'Samriddhi Flow does not collect, track, or transmit any usage analytics, personal information, or behavioral data.',
+                AppLocalizations.of(context)!.noTrackingTitle,
+                AppLocalizations.of(context)!.noTrackingDesc,
               ),
               _buildPolicyItem(
                 Icons.verified_user_outlined,
-                'Your Data, Your Control',
-                'You can export, restore, or delete all your data at any time from the Settings screen. We believe you should have full ownership of your financial information.',
+                AppLocalizations.of(context)!.dataControlTitle,
+                AppLocalizations.of(context)!.dataControlDesc,
               ),
               const SizedBox(height: 16),
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close'),
+                  child: Text(AppLocalizations.of(context)!.closeButton),
                 ),
               ),
             ],

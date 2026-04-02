@@ -11,6 +11,7 @@ import 'transactions_screen.dart';
 import '../utils/transaction_filter_utils.dart';
 import '../utils/report_utils.dart';
 import '../widgets/transaction_filter.dart'; // Needed for TimeRange enum
+import '../l10n/app_localizations.dart';
 
 const dateFormatMmmmYyyy = 'MMMM yyyy';
 
@@ -44,7 +45,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: const Text('Financial Reports')),
+      appBar: AppBar(
+          title: Text(AppLocalizations.of(context)!.financialReportsTitle)),
       body: _buildContent(
         transactionsAsync,
         accountsAsync,
@@ -67,17 +69,25 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
 
     if (transactionsAsync.hasError) {
+      // coverage:ignore-start
       return Center(
-          child: Text(
-              'Error: ${transactionsAsync.error}')); // coverage:ignore-line
+          child: Text(AppLocalizations.of(context)!
+              .errorLabelWithDetails(transactionsAsync.error.toString())));
+      // coverage:ignore-end
     }
     if (accountsAsync.hasError) {
+      // coverage:ignore-start
       return Center(
-          child: Text('Error: ${accountsAsync.error}')); // coverage:ignore-line
+          child: Text(AppLocalizations.of(context)!
+              .errorLabelWithDetails(accountsAsync.error.toString())));
+      // coverage:ignore-end
     }
     if (loansAsync.hasError) {
+      // coverage:ignore-start
       return Center(
-          child: Text('Error: ${loansAsync.error}')); // coverage:ignore-line
+          child: Text(AppLocalizations.of(context)!
+              .errorLabelWithDetails(loansAsync.error.toString())));
+      // coverage:ignore-end
     }
 
     final transactions = transactionsAsync.value ?? [];
@@ -90,7 +100,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildReportBody(List<Transaction> transactions,
       List<dynamic> accounts, List<Loan> loans, String currencyLocale) {
     if (transactions.isEmpty) {
-      return const Center(child: Text('No data available.'));
+      return Center(child: Text(AppLocalizations.of(context)!.noDataAvailable));
     }
 
     final dateInfo = _prepareDateInfo(transactions);
@@ -130,9 +140,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     String currencyLocale,
   ) {
     if (data.isEmpty && _type != ReportType.loan) {
-      return const Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: Text('No data for selected criteria.')),
+      return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(
+            child: Text(AppLocalizations.of(context)!.noDataSelectedCriteria)),
       );
     }
 
@@ -229,7 +240,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final rest = sortedEntries.skip(6);
     double othersSum = rest.fold(0, (sum, e) => sum + e.value);
     if (othersSum > 0) {
-      chartEntries.add(MapEntry('Others', othersSum));
+      chartEntries.add(
+          MapEntry(AppLocalizations.of(context)!.othersCategory, othersSum));
     }
     return chartEntries;
   }
@@ -244,9 +256,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         runSpacing: 8,
         alignment: WrapAlignment.center,
         children: [
-          _buildFilterChip('Spending', ReportType.spending),
-          _buildFilterChip('Income', ReportType.income),
-          _buildFilterChip('Loan', ReportType.loan),
+          _buildFilterChip(AppLocalizations.of(context)!.spendingReport,
+              ReportType.spending),
+          _buildFilterChip(
+              AppLocalizations.of(context)!.incomeReport, ReportType.income),
+          _buildFilterChip(
+              AppLocalizations.of(context)!.loanReport, ReportType.loan),
         ],
       ),
     );
@@ -287,11 +302,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       child: DropdownButtonFormField<String>(
         initialValue: _timeFilterMode,
         isExpanded: true,
-        decoration: const InputDecoration(
-            labelText: 'Period',
-            contentPadding: EdgeInsets.symmetric(horizontal: 10),
-            border: OutlineInputBorder()),
-        items: _getPeriodOptions().map((opt) {
+        decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.periodLabel,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+            border: const OutlineInputBorder()),
+        items: _getPeriodOptions(context).map((opt) {
           return DropdownMenuItem<String>(
             value: opt['val'],
             child: Text(opt['label']!, overflow: TextOverflow.ellipsis),
@@ -305,14 +320,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  List<Map<String, String>> _getPeriodOptions() {
+  List<Map<String, String>> _getPeriodOptions(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return [
-      {'val': '30', 'label': '30 Days'},
-      {'val': '90', 'label': '90 Days'},
-      {'val': '365', 'label': 'Last Year'},
-      {'val': 'month', 'label': 'Month'},
-      {'val': 'year', 'label': 'Year'},
-      {'val': 'all', 'label': 'All Time'},
+      {'val': '30', 'label': l10n.days30},
+      {'val': '90', 'label': l10n.days90},
+      {'val': '365', 'label': l10n.lastYear},
+      {'val': 'month', 'label': l10n.monthOption},
+      {'val': 'year', 'label': l10n.yearOption},
+      {'val': 'all', 'label': l10n.allTime},
     ];
   }
 
@@ -323,14 +339,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: DropdownButtonFormField<String?>(
           initialValue: _selectedLoanId,
           isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: 'Loan',
-              contentPadding: EdgeInsets.symmetric(horizontal: 10),
-              border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.loanLabel,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              border: const OutlineInputBorder()),
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: null,
-              child: Text('All Loans', overflow: TextOverflow.ellipsis),
+              child: Text(AppLocalizations.of(context)!.allLoans,
+                  overflow: TextOverflow.ellipsis),
             ),
             ...loans.map((l) => DropdownMenuItem(
                   value: l.id,
@@ -348,18 +365,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: DropdownButtonFormField<LoanType?>(
           initialValue: _selectedLoanType,
           isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: 'Type',
-              contentPadding: EdgeInsets.symmetric(horizontal: 10),
-              border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.typeLabel,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              border: const OutlineInputBorder()),
           items: <DropdownMenuItem<LoanType?>>[
-            const DropdownMenuItem<LoanType?>(
+            DropdownMenuItem<LoanType?>(
                 value: null,
-                child: Text('All', overflow: TextOverflow.ellipsis)),
-            ...LoanType.values.map((t) => DropdownMenuItem<LoanType?>(
-                value: t,
-                child: Text(t.name.toUpperCase(),
-                    overflow: TextOverflow.ellipsis))),
+                child: Text(AppLocalizations.of(context)!.allOption,
+                    overflow: TextOverflow.ellipsis)),
+            ...LoanType.values.map((t) {
+              final label = switch (t) {
+                LoanType.personal =>
+                  AppLocalizations.of(context)!.loanTypePersonal,
+                LoanType.home => AppLocalizations.of(context)!.loanTypeHome,
+                LoanType.education =>
+                  AppLocalizations.of(context)!.loanTypeEducation,
+                LoanType.car => AppLocalizations.of(context)!.loanTypeCar,
+                LoanType.business =>
+                  AppLocalizations.of(context)!.loanTypeBusiness,
+                LoanType.gold => AppLocalizations.of(context)!.loanTypeGold,
+                LoanType.other => AppLocalizations.of(context)!.loanTypeOther,
+              };
+              return DropdownMenuItem<LoanType?>(
+                  value: t,
+                  child: Text(label.toUpperCase(),
+                      overflow: TextOverflow.ellipsis));
+            }),
           ],
           // coverage:ignore-start
           onChanged: (v) {
@@ -379,17 +411,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: DropdownButtonFormField<String?>(
           initialValue: _selectedAccountId,
           isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: 'Account',
-              contentPadding: EdgeInsets.symmetric(horizontal: 10),
-              border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.accountLabel,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              border: const OutlineInputBorder()),
           items: <DropdownMenuItem<String?>>[
-            const DropdownMenuItem<String?>(
+            DropdownMenuItem<String?>(
                 value: null,
-                child: Text('All Accounts', overflow: TextOverflow.ellipsis)),
-            const DropdownMenuItem<String?>(
+                child: Text(AppLocalizations.of(context)!.allAccounts,
+                    overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem<String?>(
                 value: 'none',
-                child: Text('Manual (No Account)',
+                child: Text(AppLocalizations.of(context)!.manualNoAccount,
                     overflow: TextOverflow.ellipsis)),
             ...accounts.map((a) => DropdownMenuItem<String?>(
                 value: a.id, // coverage:ignore-line
@@ -411,8 +444,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               size: 16,
               color: _excludedCategories.isEmpty ? Colors.grey : Colors.blue),
           label: Text(_excludedCategories.isEmpty
-              ? 'Filter Categories'
-              : '${_excludedCategories.length} Categories Excluded'),
+              ? AppLocalizations.of(context)!.filterCategories
+              : AppLocalizations.of(context)!
+                  .categoriesExcluded(_excludedCategories.length)),
           onPressed: () {
             FocusScope.of(context).unfocus();
             _showExclusionDialog(ref.read(transactionsProvider).value ?? []);
@@ -429,10 +463,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ? DateFormat(dateFormatMmmmYyyy).format(_selectedMonth!)
           // coverage:ignore-end
           : null,
-      decoration: const InputDecoration(
-          labelText: 'Select Month',
-          contentPadding: EdgeInsets.symmetric(horizontal: 10),
-          border: OutlineInputBorder()),
+      decoration: InputDecoration(
+          // coverage:ignore-line
+          labelText: AppLocalizations.of(context)!
+              .selectMonthLabel, // coverage:ignore-line
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+          border: const OutlineInputBorder()),
       items: monthsAvailable
           // coverage:ignore-start
           .map((m) => DropdownMenuItem(value: m, child: Text(m)))
@@ -452,11 +488,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildYearPicker(Set<int> yearsAvailable) {
     return DropdownButtonFormField<int>(
       initialValue: _selectedYear,
-      // coverage:ignore-end
-      decoration: const InputDecoration(
-          labelText: 'Select Year',
-          contentPadding: EdgeInsets.symmetric(horizontal: 10),
-          border: OutlineInputBorder()),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.selectYearLabel,
+          // coverage:ignore-end
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+          border: const OutlineInputBorder()),
       items: yearsAvailable
           // coverage:ignore-start
           .map((y) => DropdownMenuItem(value: y, child: Text(y.toString())))
@@ -474,8 +510,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Column(
       children: [
-        const Text('Total Liability',
-            style: TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(AppLocalizations.of(context)!.totalLiability,
+            style: const TextStyle(color: Colors.grey, fontSize: 12)),
         SmartCurrencyText(
           value: totalLiability,
           locale: currencyLocale,
@@ -490,8 +526,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Expanded(
               child: Column(
                 children: [
-                  const Text('EMI Paid',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(AppLocalizations.of(context)!.emiPaid,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   SmartCurrencyText(
                     value: emiPaid,
                     locale: currencyLocale,
@@ -504,8 +540,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Expanded(
               child: Column(
                 children: [
-                  const Text('Prepayment',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(AppLocalizations.of(context)!.prepayment,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   SmartCurrencyText(
                     value: prepaymentPaid,
                     locale: currencyLocale,
@@ -586,7 +622,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return Center(
       child: Column(
         children: [
-          Text(_type == ReportType.loan ? 'Total Paid' : 'Total',
+          Text(
+              _type == ReportType.loan
+                  ? AppLocalizations.of(context)!
+                      .totalPaid // coverage:ignore-line
+                  : AppLocalizations.of(context)!.totalLabel,
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
           SmartCurrencyText(
             value: total,
@@ -711,8 +751,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 Flexible(
                   child: Text(
                     _type == ReportType.income
-                        ? 'Capital Gains (Realized)'
-                        : 'Capital Losses (Realized)',
+                        ? AppLocalizations.of(context)!.capitalGainsRealized
+                        : AppLocalizations.of(context)!
+                            .capitalLossesRealized, // coverage:ignore-line
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -801,7 +842,7 @@ class _CategoryExclusionDialog extends StatelessWidget {
     return StatefulBuilder(
       builder: (context, setLocalState) {
         return AlertDialog(
-          title: const Text('Filter Categories'),
+          title: Text(AppLocalizations.of(context)!.filterCategories),
           content: SizedBox(
             width: double.maxFinite,
             child: _buildExclusionList(setLocalState),
@@ -814,11 +855,11 @@ class _CategoryExclusionDialog extends StatelessWidget {
                 });
                 onChanged();
               },
-              child: const Text('Reset'),
+              child: Text(AppLocalizations.of(context)!.resetButton),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Done'),
+              child: Text(AppLocalizations.of(context)!.doneButton),
             ),
           ],
         );

@@ -159,6 +159,57 @@ void main() {
       // Total Gross = 500k + 3k = 503k
       expect(salaryIncome, closeTo(503000, 1));
     });
+
+    test('Leaves salary unchanged when employer gifts stay within exemption',
+        () {
+      final data = TaxYearData(
+          year: 2025,
+          salary: SalaryDetails(history: [
+            SalaryStructure(
+                id: 'gift-under-limit',
+                monthlyBasic: 100000 / 12,
+                effectiveDate: DateTime(2025, 4, 1),
+                customAllowances: const [
+                  CustomAllowance(
+                      id: 'gift',
+                      name: 'Gift Voucher',
+                      payoutAmount: 4000,
+                      frequency: PayoutFrequency.annually,
+                      startMonth: 4,
+                      exemptionLimit: 5000)
+                ])
+          ]));
+
+      final rules = defaultRules.copyWith(
+        isGiftFromEmployerEnabled: true,
+        giftFromEmployerExemptionLimit: 5000,
+        isStdDeductionSalaryEnabled: false,
+      );
+
+      final salaryIncome = taxService.calculateSalaryIncome(data, rules);
+      expect(salaryIncome, closeTo(100000, 1));
+    });
+
+    test('Ignores employer gift exemption logic when the feature is disabled',
+        () {
+      final data = TaxYearData(
+          year: 2025,
+          salary: SalaryDetails(history: [
+            SalaryStructure(
+                id: 'gift-disabled',
+                monthlyBasic: 100000 / 12,
+                effectiveDate: DateTime(2025, 4, 1))
+          ]));
+
+      final rules = defaultRules.copyWith(
+        isGiftFromEmployerEnabled: false,
+        giftFromEmployerExemptionLimit: 5000,
+        isStdDeductionSalaryEnabled: false,
+      );
+
+      final salaryIncome = taxService.calculateSalaryIncome(data, rules);
+      expect(salaryIncome, closeTo(100000, 1));
+    });
   });
 
   group('IndianTaxService - calculateHousePropertyIncome', () {
@@ -271,6 +322,7 @@ void main() {
 
       final rules = defaultRules.copyWith(
           isCGReinvestmentEnabled: true,
+          isLTCGExemption112AEnabled: false,
           maxCGReinvestLimit: 10000000,
           windowGainReinvest: 2);
 
@@ -278,8 +330,17 @@ void main() {
 
       final cgResults = taxService.calculateCapitalGains(data, rules);
       // Gain = 10L, Reinvest = 6L (Valid target: Residential)
-      // Taxable = 10L - 6L = 4L
-      expect(cgResults['LTCG_Equity'], 400000);
+      // Restored logic: calculateCapitalGains returns Net Gain (4L)
+      expect(cgResults['LTCG_Equity'], 400000.0);
+
+      final details = taxService.calculateDetailedLiability(data, rules);
+      // capitalGainsTotal reflects Gross
+      expect(details['capitalGainsTotal'], 1000000.0);
+      // cgDeductions reflects Reinvestments + 112A exemptions
+      expect(details['cgDeductions'], 600000.0);
+      // Net taxable isolation check: Total taxable from this source = 10L - 6L = 4L
+      // Standard exemption for 112A might apply if enabled, but here rules has 12.5k or similar?
+      // actually defaultRules has isCGRatesEnabled: false.
     });
   });
 

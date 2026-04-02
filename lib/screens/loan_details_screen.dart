@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 import '../providers.dart';
 import '../models/loan.dart';
@@ -149,7 +150,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         if (!isGoldLoan)
           IconButton(
             icon: PureIcons.addCircle(),
-            tooltip: 'Top-up Loan',
+            tooltip: AppLocalizations.of(context)!.topUpLoanTooltip,
             onPressed: () {
               FocusScope.of(context).unfocus();
               showDialog(
@@ -159,7 +160,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
-          tooltip: 'More options',
+          tooltip: AppLocalizations.of(context)!.moreOptionsTooltip,
           onSelected: (value) {
             if (value == 'rename') {
               // coverage:ignore-start
@@ -172,13 +173,13 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
             }
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               value: 'rename',
-              child: Text('Rename Loan'),
+              child: Text(AppLocalizations.of(context)!.renameLoanAction),
             ),
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               value: 'delete',
-              child: Text('Delete Loan'),
+              child: Text(AppLocalizations.of(context)!.deleteLoanAction),
             ),
           ],
         )
@@ -192,11 +193,18 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavIcon(Icons.show_chart, 'Amortization',
-              LoanDetailView.amortization, theme),
-          _buildNavIcon(Icons.calculate_outlined, 'Simulator',
-              LoanDetailView.simulator, theme),
-          _buildNavIcon(Icons.list_alt, 'Ledger', LoanDetailView.ledger, theme),
+          _buildNavIcon(
+              Icons.show_chart,
+              AppLocalizations.of(context)!.amortizationTab,
+              LoanDetailView.amortization,
+              theme),
+          _buildNavIcon(
+              Icons.calculate_outlined,
+              AppLocalizations.of(context)!.simulatorTab,
+              LoanDetailView.simulator,
+              theme),
+          _buildNavIcon(Icons.list_alt, AppLocalizations.of(context)!.ledgerTab,
+              LoanDetailView.ledger, theme),
           _buildPayButton(currentLoan),
         ],
       ),
@@ -219,8 +227,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
           children: [
             PureIcons.payment(color: Colors.green),
             const SizedBox(height: 4),
-            const Text('Pay',
-                style: TextStyle(
+            Text(AppLocalizations.of(context)!.payAction,
+                style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.green)),
@@ -249,7 +257,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   accruedInterest: accruedInterest),
             ),
             icon: Icons.refresh,
-            label: 'Renew',
+            label: AppLocalizations.of(context)!.renewAction,
             color: Colors.blue[800]!,
           ),
           _buildGoldAction(
@@ -259,7 +267,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 builder: (_) => LoanPartPaymentDialog(loan: currentLoan)),
             // coverage:ignore-end
             icon: Icons.show_chart,
-            label: 'Part Pay',
+            label: AppLocalizations.of(context)!.partPayAction,
             color: Colors.orange[800]!,
           ),
           _buildGoldAction(
@@ -267,7 +275,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                 context: context,
                 builder: (_) => LoanUpdateRateDialog(loan: currentLoan)),
             icon: Icons.percent,
-            label: 'Rate',
+            label: AppLocalizations.of(context)!.rateAction,
             color: Colors.purple[800]!,
           ),
           _buildGoldAction(
@@ -280,7 +288,7 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                   accruedInterest: accruedInterest),
             ),
             icon: Icons.check_circle_outline,
-            label: 'Close',
+            label: AppLocalizations.of(context)!.closeAction,
             color: Colors.green[800]!,
           ),
         ],
@@ -411,7 +419,8 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Amortization Curve (Yearly)', style: theme.textTheme.titleMedium),
+        Text(AppLocalizations.of(context)!.amortizationCurveTitle,
+            style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
         SizedBox(
           height: 250,
@@ -437,13 +446,13 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
                               TextSpan(
                                   // coverage:ignore-line
                                   text:
-                                      'P: ${NumberFormat.compact().format(p)} | ', // coverage:ignore-line
+                                      '${AppLocalizations.of(context)!.principalShort}: ${NumberFormat.compact().format(p)} | ', // coverage:ignore-line
                                   style: const TextStyle(
                                       color: Colors.greenAccent, fontSize: 12)),
                               TextSpan(
                                   // coverage:ignore-line
                                   text:
-                                      'Interest: ${NumberFormat.compact().format(i)}', // coverage:ignore-line
+                                      '${AppLocalizations.of(context)!.interestShort}: ${NumberFormat.compact().format(i)}', // coverage:ignore-line
                                   style: const TextStyle(
                                       color: Color(0xFF64B5F6), fontSize: 12)),
                             ]);
@@ -505,111 +514,137 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
       String currencyLocale, NumberFormat currency, LoanService loanService) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12)),
-          child: Row(
-            children: [
-              PureIcons.info(color: Colors.orange, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Total Interest Payable: ${NumberFormat.simpleCurrency(locale: currencyLocale).format(currentLoan.emiAmount * currentLoan.tenureMonths - currentLoan.totalPrincipal)}  •  '
-                  'Estimated Yearly Interest: ${NumberFormat.simpleCurrency(locale: currencyLocale).format(currentLoan.totalPrincipal * currentLoan.interestRate / 100)}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildSimulatorHeader(currencyLocale, currentLoan),
         const SizedBox(height: 16),
-        TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Extra Payment Amount',
-            prefixText:
-                '${NumberFormat.simpleCurrency(locale: currencyLocale).currencySymbol} ',
-            border: const OutlineInputBorder(),
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(
-                RegexUtils.amountWithOptionalDecimalsExp),
-          ],
-          onChanged: (v) {
-            setState(() {
-              _prepaymentAmount = double.tryParse(v) ?? 0;
-              _isSimulating = true;
-            });
-          },
-        ),
+        _buildPrepaymentInput(currencyLocale),
         const SizedBox(height: 16),
-        RadioGroup<bool>(
-          groupValue: _reduceTenure,
-          onChanged: (v) {
-            // coverage:ignore-line
-            if (v != null) {
-              setState(() => _reduceTenure = v); // coverage:ignore-line
-            }
-          },
-          child: const Row(
-            children: [
-              Expanded(
-                child: RadioListTile<bool>.adaptive(
-                  title: Text('Reduce Tenure'),
-                  value: true,
-                ),
-              ),
-              Expanded(
-                child: RadioListTile<bool>.adaptive(
-                  title: Text('Reduce EMI'),
-                  value: false,
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildTenureEmiToggle(),
         if (_isSimulating && _prepaymentAmount > 0) ...[
           const Divider(),
-          Builder(builder: (context) {
-            final impact = loanService.calculatePrepaymentImpact(
-                loan: currentLoan,
-                prepaymentAmount: _prepaymentAmount,
-                reduceTenure: _reduceTenure);
-            return Column(
-              children: [
-                ListTile(
-                  title: Text(_reduceTenure ? 'New Tenure' : 'New EMI'),
-                  trailing: Text(
-                    _reduceTenure
-                        ? '${impact['newTenure']} months'
-                        : currency.format(impact['newEMI']),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('Interest Saved'),
-                  trailing: Text(
-                    currency.format(impact['interestSaved']),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                ),
-                if (_reduceTenure && (impact['tenureSaved'] ?? 0) > 0)
-                  ListTile(
-                    title: const Text('Tenure Reduced'),
-                    trailing: Text(
-                      '${impact['tenureSaved']} months',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                  ),
-              ],
-            );
-          }),
+          _buildSimulatorImpact(currentLoan, loanService, currency),
         ]
+      ],
+    );
+  }
+
+  Widget _buildSimulatorHeader(String currencyLocale, Loan currentLoan) {
+    final l10n = AppLocalizations.of(context)!;
+    final totalInterest = currentLoan.emiAmount * currentLoan.tenureMonths -
+        currentLoan.totalPrincipal;
+    final yearlyInterest =
+        currentLoan.totalPrincipal * currentLoan.interestRate / 100;
+    final currency = NumberFormat.simpleCurrency(locale: currencyLocale);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          PureIcons.info(color: Colors.orange, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${l10n.totalInterestPayableLabel(currency.format(totalInterest))}'
+              '${l10n.estimatedYearlyInterestLabel(currency.format(yearlyInterest))}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrepaymentInput(String currencyLocale) {
+    return TextFormField(
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.extraPaymentAmountLabel,
+        prefixText:
+            '${NumberFormat.simpleCurrency(locale: currencyLocale).currencySymbol} ',
+        border: const OutlineInputBorder(),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(
+            RegexUtils.amountWithOptionalDecimalsExp),
+      ],
+      onChanged: (v) {
+        setState(() {
+          _prepaymentAmount = double.tryParse(v) ?? 0;
+          _isSimulating = true;
+        });
+      },
+    );
+  }
+
+  Widget _buildTenureEmiToggle() {
+    return RadioGroup<bool>(
+      groupValue: _reduceTenure,
+      onChanged: (v) {
+        // coverage:ignore-line
+        if (v != null) {
+          setState(() => _reduceTenure = v); // coverage:ignore-line
+        }
+      },
+      child: Row(
+        children: [
+          Expanded(
+            child: RadioListTile<bool>.adaptive(
+              title: Text(AppLocalizations.of(context)!.reduceTenureLabel),
+              value: true,
+            ),
+          ),
+          Expanded(
+            child: RadioListTile<bool>.adaptive(
+              title: Text(AppLocalizations.of(context)!.reduceEmiLabel),
+              value: false,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSimulatorImpact(
+      Loan currentLoan, LoanService loanService, NumberFormat currency) {
+    final impact = loanService.calculatePrepaymentImpact(
+        loan: currentLoan,
+        prepaymentAmount: _prepaymentAmount,
+        reduceTenure: _reduceTenure);
+
+    return Column(
+      children: [
+        ListTile(
+          title: Text(_reduceTenure
+              ? AppLocalizations.of(context)!.newTenureLabel
+              : AppLocalizations.of(context)!
+                  .newEmiLabel), // coverage:ignore-line
+          trailing: Text(
+            _reduceTenure
+                ? AppLocalizations.of(context)!.monthsCount(impact['newTenure'])
+                : currency.format(impact['newEMI']), // coverage:ignore-line
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.green),
+          ),
+        ),
+        ListTile(
+          title: Text(AppLocalizations.of(context)!.interestSavedLabel),
+          trailing: Text(
+            currency.format(impact['interestSaved']),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.green),
+          ),
+        ),
+        if (_reduceTenure && (impact['tenureSaved'] ?? 0) > 0)
+          ListTile(
+            title: Text(AppLocalizations.of(context)!.tenureReducedLabel),
+            trailing: Text(
+              AppLocalizations.of(context)!.monthsCount(impact['tenureSaved']),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.green),
+            ),
+          ),
       ],
     );
   }
@@ -679,14 +714,16 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
         loan.remainingPrincipal -= principalComp; // coverage:ignore-line
         newLoanTxns.add(loanTxn); // coverage:ignore-line
 
-        // coverage:ignore-start
         if (loan.accountId != null) {
+          // coverage:ignore-line
           final expTxn = Transaction.create(
-            title: 'Loan EMI: ${loan.name}',
-            amount: loan.emiAmount,
-            // coverage:ignore-end
+            // coverage:ignore-line
+            title:
+                '${AppLocalizations.of(context)!.loanEmiTitle}: ${loan.name}', // coverage:ignore-line
+            amount: loan.emiAmount, // coverage:ignore-line
             type: TransactionType.expense,
-            category: 'Bank loan',
+            category: AppLocalizations.of(context)!
+                .bankLoanCategory, // coverage:ignore-line
             accountId: loan.accountId!, // coverage:ignore-line
             date: emiDate,
             loanId: loan.id, // coverage:ignore-line
@@ -721,8 +758,9 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
 
     // coverage:ignore-start
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Recorded $count payments successfully.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              AppLocalizations.of(context)!.recordedPaymentsSuccess(count))));
       // coverage:ignore-end
     }
   }
@@ -731,17 +769,17 @@ class _LoanDetailsScreenState extends ConsumerState<LoanDetailsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Loan?'),
-        content: const Text(
-            'This will remove the loan tracking. Existing transactions will NOT be deleted.'),
+        title: Text(AppLocalizations.of(context)!.deleteLoanConfirmTitle),
+        content: Text(AppLocalizations.of(context)!.deleteLoanConfirmMessage),
         actions: [
           TextButton(
               onPressed: () =>
                   Navigator.pop(ctx, false), // coverage:ignore-line
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancelButton)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child: Text(AppLocalizations.of(context)!.deleteAction,
+                  style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -790,28 +828,30 @@ class _BulkPaymentDialogState extends State<_BulkPaymentDialog> {
 
   @override // coverage:ignore-line
   Widget build(BuildContext context) {
+    // coverage:ignore-start
     return AlertDialog(
-      // coverage:ignore-line
-      title: const Text('Bulk Record Payments'),
+      title: Text(AppLocalizations.of(context)!.bulkRecordPaymentsTitle),
       content: Column(
-        // coverage:ignore-line
+        // coverage:ignore-end
         mainAxisSize: MainAxisSize.min,
         children: [
           // coverage:ignore-line
-          const Text(
-              'Record EMI payments for a date range automatically. Assumes paid on time.'),
+          Text(AppLocalizations.of(context)!
+              .bulkRecordDesc), // coverage:ignore-line
           const SizedBox(height: 16),
+          // coverage:ignore-start
           _buildBulkDateTile(
-            // coverage:ignore-line
-            'Start Date',
-            _startDate, // coverage:ignore-line
-            (d) => setState(() => _startDate = d), // coverage:ignore-line
+            AppLocalizations.of(context)!.startDateLabel,
+            _startDate,
+            (d) => setState(() => _startDate = d),
+            // coverage:ignore-end
           ),
+          // coverage:ignore-start
           _buildBulkDateTile(
-            // coverage:ignore-line
-            'End Date',
-            _endDate, // coverage:ignore-line
-            (d) => setState(() => _endDate = d), // coverage:ignore-line
+            AppLocalizations.of(context)!.endDateLabel,
+            _endDate,
+            (d) => setState(() => _endDate = d),
+            // coverage:ignore-end
           ),
           if (_isProcessing)
             const LinearProgressIndicator(), // coverage:ignore-line
@@ -821,11 +861,10 @@ class _BulkPaymentDialogState extends State<_BulkPaymentDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            // coverage:ignore-end
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         ElevatedButton(
-          // coverage:ignore-line
-          onPressed: _isProcessing // coverage:ignore-line
+          onPressed: _isProcessing
+              // coverage:ignore-end
               ? null
               // coverage:ignore-start
               : () async {
@@ -836,7 +875,8 @@ class _BulkPaymentDialogState extends State<_BulkPaymentDialog> {
                     // coverage:ignore-end
                   }
                 },
-          child: const Text('Record Payments'),
+          child: Text(AppLocalizations.of(context)!
+              .recordPaymentsAction), // coverage:ignore-line
         ),
       ],
     );

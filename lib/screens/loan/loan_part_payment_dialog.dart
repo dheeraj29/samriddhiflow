@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../models/loan.dart';
 import '../../models/transaction.dart';
 import '../../providers.dart';
@@ -32,17 +33,16 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
     final currency = ref.watch(currencyProvider);
 
     return AlertDialog(
-      title: const Text('Part Principal Payment'),
+      title: Text(AppLocalizations.of(context)!.partPrincipalPaymentTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-              'Reduce the outstanding principal. Interest on the reduced amount will decrease from the payment date.'),
+          Text(AppLocalizations.of(context)!.partPaymentDescription),
           const SizedBox(height: 16),
           FormUtils.buildAmountField(
             controller: _amountController,
             currency: currency,
-            label: 'Amount',
+            label: AppLocalizations.of(context)!.amountLabel,
             autofocus: true,
           ),
           const SizedBox(height: 16),
@@ -51,7 +51,7 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
             selectedDate: _selectedDate,
             onDateTarget: (d) =>
                 setState(() => _selectedDate = d), // coverage:ignore-line
-            label: 'Payment Date',
+            label: AppLocalizations.of(context)!.paymentDateLabel,
           ),
           const SizedBox(height: 16),
           ref.watch(accountsProvider).when(
@@ -61,7 +61,7 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
                     accounts: accounts,
                     onChanged: (v) => setState(
                         () => _selectedAccountId = v), // coverage:ignore-line
-                    label: 'Paid From Account',
+                    label: AppLocalizations.of(context)!.paidFromAccountLabel,
                     allowManual: true,
                   );
                 },
@@ -72,18 +72,19 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
       ),
       actions: [
         TextButton(
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancelButton),
             onPressed: () => Navigator.pop(context)), // coverage:ignore-line
         ElevatedButton(
-          child: const Text('Pay Principal'),
+          child: Text(AppLocalizations.of(context)!.payPrincipalAction),
           onPressed: () async {
             final amount = double.tryParse(_amountController.text);
             if (amount != null && amount > 0) {
               await _handlePartPayment(amount);
               if (context.mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Part principal payment successful.')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(AppLocalizations.of(context)!
+                        .partPaymentSuccessMessage)));
               }
             }
           },
@@ -115,10 +116,10 @@ class _LoanPartPaymentDialogState extends ConsumerState<LoanPartPaymentDialog> {
     if (_selectedAccountId != null && _selectedAccountId != 'manual') {
       final acc = accounts.firstWhere((a) => a.id == _selectedAccountId);
       final expTxn = Transaction.create(
-        title: 'Loan Part Pay: ${loan.name}',
+        title: AppLocalizations.of(ref.context)!.loanPartPayTitle(loan.name),
         amount: amount,
         type: TransactionType.expense,
-        category: 'Bank loan',
+        category: AppLocalizations.of(ref.context)!.bankLoanCategory,
         accountId: _selectedAccountId!,
         date: _selectedDate,
         loanId: loan.id,

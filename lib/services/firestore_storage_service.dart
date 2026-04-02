@@ -5,6 +5,7 @@ import 'cloud_storage_interface.dart';
 import 'firebase_web_safe.dart';
 
 class FirestoreStorageService implements CloudStorageInterface {
+  static const String permissionDeniedCode = 'permission-denied';
   final String? databaseId;
 
   FirestoreStorageService({this.databaseId});
@@ -75,10 +76,67 @@ class FirestoreStorageService implements CloudStorageInterface {
           .doc('current')
           .delete();
       await _firestore.collection('users').doc(uid).delete();
-    } on FirebaseException {
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
       rethrow;
     } catch (_) {
       throw Exception("Firestore deletion failed");
+    }
+  }
+
+  @override
+  Future<String?> getActiveSessionId(String uid) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('session')
+          .doc('current')
+          .get();
+      if (!doc.exists) return null;
+      return doc.data()?['deviceId'] as String?;
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore session check failed");
+    }
+  }
+
+  @override
+  Future<void> setActiveSessionId(String uid, String deviceId) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('session')
+          .doc('current')
+          .set({
+        'deviceId': deviceId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore session set failed");
+    }
+  }
+
+  @override
+  Future<void> clearActiveSessionId(String uid) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('session')
+          .doc('current')
+          .delete();
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore session clear failed");
     }
   }
 }

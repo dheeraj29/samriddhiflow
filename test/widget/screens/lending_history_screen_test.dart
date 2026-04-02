@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_visible_for_overriding_member
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +16,7 @@ class MockLendingNotifier extends Notifier<List<LendingRecord>>
 
 void main() {
   late MockLendingNotifier mockLendingNotifier;
+
   late MockStorageService mockStorage;
 
   setUpAll(() {
@@ -29,7 +32,9 @@ void main() {
 
   setUp(() {
     mockLendingNotifier = MockLendingNotifier();
+
     mockStorage = MockStorageService();
+
     setupStorageDefaults(mockStorage);
   });
 
@@ -41,6 +46,8 @@ void main() {
         storageInitializerProvider.overrideWith((ref) => const AsyncData(null)),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: LendingHistoryScreen(recordId: recordId),
       ),
     );
@@ -57,17 +64,20 @@ void main() {
       date: DateTime(2025, 1, 1),
       payments: [],
     );
-
-    // ignore: invalid_use_of_visible_for_overriding_member
     when(() => mockLendingNotifier.build()).thenReturn([record]);
 
     await tester.pumpWidget(createTestWidget('rec1'));
+
     await tester.pumpAndSettle();
 
     expect(find.text('Payment History'), findsOneWidget);
+
     expect(find.text('No payments recorded.'), findsOneWidget);
+
     expect(find.text('John Doe'), findsOneWidget);
+
     // Be robust against formatting (₹1,000.00 vs 1000 etc.)
+
     expect(find.textContaining('1'), findsAtLeast(1));
   });
 
@@ -93,16 +103,18 @@ void main() {
         ),
       ],
     );
-
-    // ignore: invalid_use_of_visible_for_overriding_member
     when(() => mockLendingNotifier.build()).thenReturn([record]);
 
     await tester.pumpWidget(createTestWidget('rec1'));
+
     await tester.pumpAndSettle();
 
     expect(find.text('No payments recorded.'), findsNothing);
+
     expect(find.textContaining('200'), findsOneWidget);
+
     expect(find.textContaining('300'), findsOneWidget);
+
     expect(find.text('Partial payment'), findsOneWidget);
   });
 
@@ -125,23 +137,26 @@ void main() {
       date: DateTime(2025, 1, 1),
       payments: payments,
     );
-
-    // ignore: invalid_use_of_visible_for_overriding_member
     when(() => mockLendingNotifier.build()).thenReturn([record]);
 
     await tester.pumpWidget(createTestWidget('rec1'));
+
     await tester.pumpAndSettle();
 
     // Verify first item of the page (Index 0 is p19)
+
     expect(find.textContaining('29'), findsOneWidget);
 
     // Scroll to find the last item of the page (Index 14 is p5)
+
     final lastItemOnPage = find.textContaining('15');
+
     await tester.dragUntilVisible(
       lastItemOnPage,
       find.byType(ListView),
       const Offset(0, -200),
     );
+
     await tester.pumpAndSettle();
 
     expect(lastItemOnPage, findsOneWidget);
@@ -149,13 +164,19 @@ void main() {
     expect(find.text('Page 1 of 2'), findsOneWidget);
 
     // Tap next page
+
     final nextButton = find.byIcon(Icons.chevron_right);
+
     expect(nextButton, findsOneWidget);
+
     await tester.tap(nextButton);
+
     await tester.pumpAndSettle();
 
     // Second page shows remaining 5 items (p4 to p0)
+
     expect(find.byType(ListTile), findsNWidgets(5));
+
     expect(find.text('Page 2 of 2'), findsOneWidget);
   });
 
@@ -175,27 +196,35 @@ void main() {
         ),
       ],
     );
-
-    // ignore: invalid_use_of_visible_for_overriding_member
     when(() => mockLendingNotifier.build()).thenReturn([record]);
+
     when(() => mockLendingNotifier.updateRecord(any()))
         .thenAnswer((_) async {});
 
     await tester.pumpWidget(createTestWidget('rec1'));
+
     await tester.pumpAndSettle();
 
     // Tap delete icon - it's a PureIcons.deleteOutlined which returns Icon(Icons.delete_outline)
+
     final deleteIcon = find.byIcon(Icons.delete_outline);
+
     expect(deleteIcon, findsOneWidget);
+
     await tester.tap(deleteIcon);
+
     await tester.pumpAndSettle();
 
     // Confirm dialog
+
     expect(find.text('Delete Payment?'), findsOneWidget);
+
     await tester.tap(find.text('Delete'));
+
     await tester.pumpAndSettle();
 
     // Verify updateRecord was called
+
     verify(() => mockLendingNotifier.updateRecord(any())).called(1);
 
     expect(find.text('Payment deleted'), findsOneWidget);

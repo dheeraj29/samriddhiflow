@@ -1,30 +1,31 @@
-import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../models/recurring_transaction.dart';
 import '../widgets/pure_icons.dart';
-
-const adjForHolidaysText = ' (Adj. for Holidays)';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import '../utils/regex_utils.dart';
 
 class RecurringManagerScreen extends ConsumerWidget {
   const RecurringManagerScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final recurringAsync = ref.watch(recurringTransactionsProvider);
     final currencyLocale = ref.watch(currencyProvider);
     final currency = NumberFormat.simpleCurrency(locale: currencyLocale);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Recurring Payments')),
+      appBar: AppBar(title: Text(l10n.recurringPaymentsTitle)),
       body: recurringAsync.when(
         data: (rules) {
           if (rules.isEmpty) {
-            return const Center(child: Text('No recurring payments set up.'));
+            return Center(
+                child: Text(l10n.noRecurringPayments)); // coverage:ignore-line
           }
           return ListView.builder(
             itemCount: rules.length,
@@ -41,12 +42,13 @@ class RecurringManagerScreen extends ConsumerWidget {
                       Text(
                           '${rule.category} • ${currency.format(rule.amount)}'),
                       Text(
-                        'Next: ${DateFormat('MMM dd, yyyy').format(rule.nextExecutionDate)}',
+                        l10n.nextExecutionLabel(DateFormat('MMM dd, yyyy')
+                            .format(rule.nextExecutionDate)),
                         style:
                             const TextStyle(color: Colors.blue, fontSize: 13),
                       ),
                       Text(
-                        _getScheduleDescription(rule),
+                        _getScheduleDescription(context, rule),
                         style:
                             const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
@@ -57,7 +59,7 @@ class RecurringManagerScreen extends ConsumerWidget {
                     children: [
                       IconButton(
                         icon: PureIcons.calendar(color: Colors.blueGrey),
-                        tooltip: 'Add to System Calendar',
+                        tooltip: l10n.addToCalendarTooltip,
                         onPressed: () {
                           // coverage:ignore-line
                           ref
@@ -65,11 +67,10 @@ class RecurringManagerScreen extends ConsumerWidget {
                               .read(calendarServiceProvider)
                               .downloadRecurringEvent(
                                 title: rule.title,
+                                description: l10n.recurringEventDescription(
+                                    rule.title, currency.format(rule.amount)),
+                                startDate: rule.nextExecutionDate,
                                 // coverage:ignore-end
-                                description:
-                                    'Recurring payment: ${rule.title} for ${currency.format(rule.amount)}', // coverage:ignore-line
-                                startDate: rule
-                                    .nextExecutionDate, // coverage:ignore-line
                                 occurrences: 12, // Default to 1 year
                               );
                         },
@@ -92,56 +93,72 @@ class RecurringManagerScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) =>
-            Center(child: Text('Error: $e')), // coverage:ignore-line
+        error: (e, s) => // coverage:ignore-line
+            Center(
+                child: Text(l10n.errorLabelWithDetails(
+                    e.toString()))), // coverage:ignore-line
       ),
     );
   }
 
-  String _getScheduleDescription(RecurringTransaction rule) {
-    String freqStr = rule.frequency.name.toUpperCase();
-    final adjText = rule.adjustForHolidays ? adjForHolidaysText : "";
+  String _getScheduleDescription(
+      BuildContext context, RecurringTransaction rule) {
+    final l10n = AppLocalizations.of(context)!;
+    String freqStr = switch (rule.frequency) {
+      Frequency.daily => l10n.freqDaily,
+      Frequency.weekly => l10n.freqWeekly,
+      Frequency.monthly => l10n.freqMonthly,
+      Frequency.yearly => l10n.freqYearly, // coverage:ignore-line
+    };
+    final adjText = rule.adjustForHolidays ? l10n.adjForHolidaysLabel : "";
 
     return switch (rule.scheduleType) {
       ScheduleType.fixedDate =>
-        '$freqStr - Every ${rule.nextExecutionDate.day}${_getDaySuffix(rule.nextExecutionDate.day)}',
+        '$freqStr${l10n.everyEvery}${rule.nextExecutionDate.day}${_getDaySuffix(context, rule.nextExecutionDate.day)}',
       // coverage:ignore-start
-      ScheduleType.everyWeekend => 'Every Weekend (Sat/Sun)',
-      ScheduleType.lastWeekend => 'Last Weekend of Month',
-      ScheduleType.specificWeekday =>
-        'Every ${_getWeekdayName(rule.selectedWeekday ?? 1)}',
-      ScheduleType.lastDayOfMonth => 'Last Day of Month$adjText',
-      ScheduleType.lastWorkingDay => 'Last Working Day$adjText',
-      ScheduleType.firstWorkingDay => 'First Working Day$adjText',
+      ScheduleType.everyWeekend => l10n.everyWeekendLabel,
+      ScheduleType.lastWeekend => l10n.lastWeekendLabel,
+      ScheduleType.specificWeekday => l10n.everyWeekdayLabel(
+          _getWeekdayName(context, rule.selectedWeekday ?? 1)),
+      ScheduleType.lastDayOfMonth => '${l10n.lastDayOfMonthLabel}$adjText',
+      ScheduleType.lastWorkingDay => '${l10n.lastWorkingDayLabel}$adjText',
+      ScheduleType.firstWorkingDay => '${l10n.firstWorkingDayLabel}$adjText',
       // coverage:ignore-end
     };
   }
 
-  String _getDaySuffix(int day) {
-    if (day >= 11 && day <= 13) return 'th';
+  String _getDaySuffix(BuildContext context, int day) {
+    final l10n = AppLocalizations.of(context)!;
+    if (day >= 11 && day <= 13) return l10n.daySuffixTh;
     switch (day % 10) {
       case 1:
-        return 'st';
-      case 2: // coverage:ignore-line
-        return 'nd';
-      case 3: // coverage:ignore-line
-        return 'rd';
+        return l10n.daySuffixSt;
+      // coverage:ignore-start
+      case 2:
+        return l10n.daySuffixNd;
+      case 3:
+        return l10n.daySuffixRd;
+      // coverage:ignore-end
       default:
-        return 'th';
+        return l10n.daySuffixTh; // coverage:ignore-line
     }
   }
 
-  String _getWeekdayName(int day) {
-    // coverage:ignore-line
-    const names = [
+  // coverage:ignore-start
+  String _getWeekdayName(BuildContext context, int day) {
+    final l10n = AppLocalizations.of(context)!;
+    final names = [
+      // coverage:ignore-end
       '',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
+      // coverage:ignore-start
+      l10n.monday,
+      l10n.tuesday,
+      l10n.wednesday,
+      l10n.thursday,
+      l10n.friday,
+      l10n.saturday,
+      l10n.sunday
+      // coverage:ignore-end
     ];
     return names[day]; // coverage:ignore-line
   }
@@ -151,18 +168,18 @@ class RecurringManagerScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Delete recurring rule?'),
-              content: Text(
-                  'This will stop automatic payments for "${rule.title}". Past transactions will NOT be deleted.'),
+              title: Text(AppLocalizations.of(context)!.deleteRecurringTitle),
+              content: Text(AppLocalizations.of(context)!
+                  .deleteRecurringConfirmation(rule.title)),
               actions: [
                 TextButton(
                     onPressed: () =>
                         Navigator.pop(context, false), // coverage:ignore-line
-                    child: const Text('Cancel')),
+                    child: Text(AppLocalizations.of(context)!.cancelButton)),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Delete',
-                        style: TextStyle(color: Colors.red))),
+                    child: Text(AppLocalizations.of(context)!.deleteButton,
+                        style: const TextStyle(color: Colors.red))),
               ],
             ));
 
@@ -181,13 +198,13 @@ class RecurringManagerScreen extends ConsumerWidget {
     final updatedAmount = await showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Recurring Amount'),
+        title: Text(AppLocalizations.of(context)!.editRecurringAmountTitle),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'New Amount',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.newAmountLabel,
+            border: const OutlineInputBorder(),
           ),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegexUtils.amountExp)
@@ -197,7 +214,7 @@ class RecurringManagerScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), // coverage:ignore-line
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancelButton),
           ),
           TextButton(
             // coverage:ignore-start
@@ -208,7 +225,7 @@ class RecurringManagerScreen extends ConsumerWidget {
                 // coverage:ignore-end
               }
             },
-            child: const Text('Save'),
+            child: Text(AppLocalizations.of(context)!.saveButton),
           ),
         ],
       ),

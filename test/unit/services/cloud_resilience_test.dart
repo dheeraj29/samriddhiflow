@@ -74,6 +74,11 @@ void main() {
       when(() => mockTax.getAllRules()).thenReturn({});
       when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
       when(() => mockStorage.getLendingRecords()).thenReturn([]);
+      when(() => mockUser.getIdToken(any()))
+          .thenAnswer((_) async => 'token123');
+      when(() => mockCloud.getActiveSessionId(any()))
+          .thenAnswer((_) async => 'session123');
+      when(() => mockStorage.getSessionId()).thenReturn('session123');
     });
 
     test('syncToCloud handles "firestore/unavailable" (Prefix check)',

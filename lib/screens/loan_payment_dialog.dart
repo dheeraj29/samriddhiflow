@@ -7,6 +7,7 @@ import '../models/loan.dart';
 import '../models/transaction.dart';
 import '../utils/currency_utils.dart';
 import '../widgets/form_utils.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class RecordLoanPaymentDialog extends ConsumerStatefulWidget {
   final Loan loan;
@@ -35,15 +36,15 @@ class _RecordLoanPaymentDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Record Loan Payment'),
+      title: Text(AppLocalizations.of(context)!.recordLoanPaymentTitle),
       content: _buildPaymentForm(context),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelAction)),
         ElevatedButton(
           onPressed: () => _handlePayment(context),
-          child: const Text('Confirm'),
+          child: Text(AppLocalizations.of(context)!.confirmAction),
         ),
       ],
     );
@@ -53,105 +54,127 @@ class _RecordLoanPaymentDialogState
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        RadioGroup<LoanTransactionType>(
-          groupValue: _type,
-          onChanged: (v) => setState(() {
-            _type = v!;
-            _amountController.text = _type == LoanTransactionType.emi
-                ? widget.loan.emiAmount
-                    .toStringAsFixed(2) // coverage:ignore-line
-                : '';
-          }),
-          child: const Row(
-            children: [
-              Expanded(
-                child: RadioListTile<LoanTransactionType>.adaptive(
-                  title: Text('EMI'),
-                  value: LoanTransactionType.emi,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              Expanded(
-                child: RadioListTile<LoanTransactionType>.adaptive(
-                  title: Text('Prepayment'),
-                  value: LoanTransactionType.prepayment,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildTypeSelector(context),
         FormUtils.buildAmountField(
           controller: _amountController,
           currency: ref.watch(currencyProvider),
         ),
         const SizedBox(height: 16),
-        ref.watch(accountsProvider).when(
-              data: (accounts) {
-                final uniqueAccountsMap = <String, Account>{};
-                for (var a in accounts) {
-                  uniqueAccountsMap[a.id] = a; // coverage:ignore-line
-                }
-                final savingsAccounts = uniqueAccountsMap.values
-                    .where((a) => a.type == AccountType.savings)
-                    .toList();
-
-                return FormUtils.buildAccountSelector(
-                  value: _selectedAccountId,
-                  accounts: savingsAccounts,
-                  onChanged: (v) => setState(
-                      () => _selectedAccountId = v!), // coverage:ignore-line
-                  label: 'Payment Account (Optional)',
-                );
-              },
-              loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'), // coverage:ignore-line
-            ),
+        _buildAccountSelectorField(context),
         const SizedBox(height: 16),
         FormUtils.buildDatePickerField(
           context: context,
           selectedDate: _date,
           onDateTarget: (picked) =>
               setState(() => _date = picked), // coverage:ignore-line
-          label: 'Payment Date',
+          label: AppLocalizations.of(context)!.paymentDateLabel,
         ),
+        if (_type == LoanTransactionType.prepayment)
+          _buildPrepaymentOptions(context),
         const SizedBox(height: 8),
-        if (_type == LoanTransactionType.prepayment) ...[
-          const SizedBox(height: 8),
-          const Text('Prepayment Effect:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          RadioGroup<bool>(
-            groupValue: _reduceTenure,
-            onChanged: (v) =>
-                setState(() => _reduceTenure = v!), // coverage:ignore-line
-            child: const Row(
-              children: [
-                Expanded(
-                  child: RadioListTile<bool>.adaptive(
-                    title:
-                        Text('Reduce Tenure', style: TextStyle(fontSize: 12)),
-                    value: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                Expanded(
-                  child: RadioListTile<bool>.adaptive(
-                    title: Text('Reduce EMI', style: TextStyle(fontSize: 12)),
-                    value: false,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
+        _buildPaymentNote(context),
+      ],
+    );
+  }
+
+  Widget _buildTypeSelector(BuildContext context) {
+    return RadioGroup<LoanTransactionType>(
+      groupValue: _type,
+      onChanged: (v) => setState(() {
+        _type = v!;
+        _amountController.text = _type == LoanTransactionType.emi
+            ? widget.loan.emiAmount.toStringAsFixed(2) // coverage:ignore-line
+            : '';
+      }),
+      child: Row(
+        children: [
+          Expanded(
+            child: RadioListTile<LoanTransactionType>.adaptive(
+              title: Text(AppLocalizations.of(context)!.emiLabel),
+              value: LoanTransactionType.emi,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          Expanded(
+            child: RadioListTile<LoanTransactionType>.adaptive(
+              title: Text(AppLocalizations.of(context)!.prepaymentLabel),
+              value: LoanTransactionType.prepayment,
+              contentPadding: EdgeInsets.zero,
             ),
           ),
         ],
-        Text(
-          _type == LoanTransactionType.emi
-              ? 'Regular EMI covers Interest + Principal components.'
-              : 'Prepayment reduces Principal. Choose impact above.',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+    );
+  }
+
+  Widget _buildAccountSelectorField(BuildContext context) {
+    return ref.watch(accountsProvider).when(
+          data: (accounts) {
+            final uniqueAccountsMap = <String, Account>{};
+            for (var a in accounts) {
+              uniqueAccountsMap[a.id] = a; // coverage:ignore-line
+            }
+            final savingsAccounts = uniqueAccountsMap.values
+                .where((a) => a.type == AccountType.savings)
+                .toList();
+
+            return FormUtils.buildAccountSelector(
+              value: _selectedAccountId,
+              accounts: savingsAccounts,
+              onChanged: (v) => setState(
+                  () => _selectedAccountId = v!), // coverage:ignore-line
+              label: AppLocalizations.of(context)!.payFromAccountLabel,
+            );
+          },
+          loading: () => const CircularProgressIndicator(),
+          error: (e, s) =>
+              Text(AppLocalizations.of(context)! // coverage:ignore-line
+                  .errorLabelWithDetails(e.toString())), // coverage:ignore-line
+        );
+  }
+
+  Widget _buildPrepaymentOptions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(AppLocalizations.of(context)!.prepaymentEffectLabel,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        RadioGroup<bool>(
+          groupValue: _reduceTenure,
+          onChanged: (v) =>
+              setState(() => _reduceTenure = v!), // coverage:ignore-line
+          child: Row(
+            children: [
+              Expanded(
+                child: RadioListTile<bool>.adaptive(
+                  title: Text(AppLocalizations.of(context)!.reduceTenureLabel,
+                      style: const TextStyle(fontSize: 12)),
+                  value: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              Expanded(
+                child: RadioListTile<bool>.adaptive(
+                  title: Text(AppLocalizations.of(context)!.reduceEmiLabel,
+                      style: const TextStyle(fontSize: 12)),
+                  value: false,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPaymentNote(BuildContext context) {
+    return Text(
+      _type == LoanTransactionType.emi
+          ? AppLocalizations.of(context)!.emiNote
+          : AppLocalizations.of(context)!.prepaymentNote,
+      style: const TextStyle(fontSize: 12, color: Colors.grey),
     );
   }
 
@@ -166,13 +189,13 @@ class _RecordLoanPaymentDialogState
     // 1. Create Transaction Record
     final txn = Transaction.create(
       title:
-          '${_type == LoanTransactionType.emi ? "EMI" : "Prepayment"}: ${widget.loan.name}',
+          '${_type == LoanTransactionType.emi ? AppLocalizations.of(context)!.emiLabel : AppLocalizations.of(context)!.prepaymentLabel}: ${widget.loan.name}',
       amount: amount,
       date: _date,
       type: _selectedAccountId != 'manual'
           ? TransactionType.transfer
           : TransactionType.expense,
-      category: 'Bank loan',
+      category: AppLocalizations.of(context)!.bankLoanCategory,
       accountId: _selectedAccountId == 'manual' ? null : _selectedAccountId,
       loanId: widget.loan.id,
     );
@@ -208,8 +231,8 @@ class _RecordLoanPaymentDialogState
 
     if (!context.mounted) return;
     Navigator.pop(context);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Payment Recorded')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context)!.paymentRecordedMsg)));
   }
 
   (double interest, double principal) _applyEmiPayment(
