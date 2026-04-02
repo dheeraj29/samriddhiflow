@@ -14,6 +14,7 @@ import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/recurrence_utils.dart';
 import '../utils/billing_helper.dart';
+import '../l10n/app_localizations.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final TransactionType initialType;
@@ -101,8 +102,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return Scaffold(
       appBar: AppBar(
           title: Text(widget.transactionToEdit == null
-              ? 'Add Transaction'
-              : 'Edit Transaction')),
+              ? AppLocalizations.of(context)!.addTransactionTitle
+              : AppLocalizations.of(context)!.editTransactionTitle)),
       body: accountsAsync.when(
         data: (accounts) {
           final allTxns = transactionsAsync.asData?.value ?? [];
@@ -111,8 +112,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               sortedAccounts, sortedCategories, allTxns, accounts);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) =>
-            Center(child: Text('Error: $e')), // coverage:ignore-line
+        // coverage:ignore-start
+        error: (e, s) => Center(
+            child: Text(AppLocalizations.of(context)!
+                .errorLabelWithDetails(e.toString()))),
+        // coverage:ignore-end
       ),
     );
   }
@@ -240,15 +244,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       segments: [
         ButtonSegment(
             value: TransactionType.expense,
-            label: const Text('Expense'),
+            label: Text(AppLocalizations.of(context)!.expenseType),
             icon: PureIcons.expense()),
         ButtonSegment(
             value: TransactionType.income,
-            label: const Text('Income'),
+            label: Text(AppLocalizations.of(context)!.incomeType),
             icon: PureIcons.income()),
         ButtonSegment(
             value: TransactionType.transfer,
-            label: const Text('Transfer'),
+            label: Text(AppLocalizations.of(context)!.transferType),
             icon: PureIcons.transfer()),
       ],
       selected: {_type},
@@ -262,8 +266,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return DropdownButtonFormField<String?>(
       key: ValueKey('category_dropdown_$_type'),
       initialValue: _category,
-      decoration: const InputDecoration(
-          labelText: 'Category', border: OutlineInputBorder()),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.categoryLabel,
+          border: const OutlineInputBorder()),
       items: sortedCategories
           .map((c) => DropdownMenuItem<String?>(
               value: c.name,
@@ -286,7 +291,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        _getTagLabel(c.tag),
+                        _getTagLabel(context, c.tag),
                         style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -315,12 +320,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         TextFormField(
           initialValue: _gainAmount?.toString(),
           decoration: InputDecoration(
-            labelText: 'Gain / Profit Amount',
+            labelText: AppLocalizations.of(context)!.capitalGainProfitAmount,
             border: const OutlineInputBorder(),
             prefixText:
                 '${CurrencyUtils.getSymbol(ref.watch(currencyProvider))} ',
             prefixStyle: AppTheme.offlineSafeTextStyle,
-            helperText: _getGainHelperText(),
+            helperText: _getGainHelperText(context),
             helperStyle: TextStyle(color: _getGainHelperColor()),
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -335,11 +340,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         const SizedBox(height: 16),
         TextFormField(
           initialValue: _holdingTenureMonths?.toString(),
-          decoration: const InputDecoration(
-            labelText: 'Holding Tenure (Months)',
-            hintText: 'e.g., 12',
-            border: OutlineInputBorder(),
-            helperText: 'Enter months held (Long-term: 12+ months for stocks)',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.holdingTenureMonths,
+            hintText: AppLocalizations.of(context)!.holdingTenureHint,
+            border: const OutlineInputBorder(),
+            helperText: AppLocalizations.of(context)!.holdingTenureHelper,
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -350,16 +355,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  String _getGainHelperText() {
+  String _getGainHelperText(BuildContext context) {
     if (_amount > 0 && (_gainAmount ?? 0) != 0) {
-      final type = (_gainAmount ?? 0) > 0 ? "Profit" : "Loss";
+      final type = (_gainAmount ?? 0) > 0
+          ? AppLocalizations.of(context)!.profitLabel
+          : AppLocalizations.of(context)!.lossLabel; // coverage:ignore-line
       final amountStr = CurrencyUtils.getFormatter(ref.read(currencyProvider))
           .format(_gainAmount!.abs());
       final costStr = CurrencyUtils.getFormatter(ref.read(currencyProvider))
           .format(_amount - (_gainAmount ?? 0));
-      return '$type: $amountStr (Purchase Cost: $costStr)';
+      return '$type: $amountStr (${AppLocalizations.of(context)!.purchaseCostLabel}: $costStr)';
     }
-    return 'Enter the profit (positive) or loss (negative)';
+    return AppLocalizations.of(context)!.gainAmountHelper;
   }
 
   Color? _getGainHelperColor() {
@@ -394,11 +401,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: 'Description',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.descriptionLabel,
+            border: const OutlineInputBorder(),
           ),
-          validator: (v) => v!.isEmpty ? 'Required' : null,
+          validator: (v) =>
+              v!.isEmpty ? AppLocalizations.of(context)!.requiredError : null,
           onSaved: (v) => _title = v!,
         );
       },
@@ -442,8 +450,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       isExpanded: true,
       initialValue: _selectedAccountId,
       decoration: InputDecoration(
-        labelText:
-            _type == TransactionType.transfer ? 'From Account' : 'Account',
+        labelText: _type == TransactionType.transfer
+            ? AppLocalizations.of(context)!.fromAccountLabel
+            : AppLocalizations.of(context)!.accountLabel,
         border: const OutlineInputBorder(),
         prefixIcon: IconButton(
           icon: Icon(_hideBalance ? Icons.visibility_off : Icons.visibility),
@@ -452,8 +461,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ),
       ),
       items: <DropdownMenuItem<String?>>[
-        const DropdownMenuItem<String?>(
-            value: null, child: Text('No Account (Manual)')),
+        DropdownMenuItem<String?>(
+            value: null,
+            child: Text(AppLocalizations.of(context)!.noAccountManual)),
         ...sortedAccounts.map((a) => DropdownMenuItem<String?>(
               value: a.id,
               child: Text('${a.name} (${_formatAccountBalance(a, allTxns)})'),
@@ -478,7 +488,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       isExpanded: true,
       initialValue: _toAccountId,
       decoration: InputDecoration(
-        labelText: 'To Account',
+        labelText: AppLocalizations.of(context)!.toAccountLabel,
         border: const OutlineInputBorder(),
         prefixIcon: IconButton(
           icon: Icon(_hideBalance ? Icons.visibility_off : Icons.visibility),
@@ -488,8 +498,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       ),
       items: <DropdownMenuItem<String?>>[
         if (_toAccountId == null)
-          const DropdownMenuItem<String?>(
-              value: null, child: Text('Select Recipient')),
+          DropdownMenuItem<String?>(
+              value: null,
+              child: Text(AppLocalizations.of(context)!.selectRecipient)),
         ...sortedAccounts
             .where((a) => a.id != _selectedAccountId)
             .map((a) => DropdownMenuItem<String?>(
@@ -502,7 +513,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         FocusScope.of(context).unfocus();
         setState(() => _toAccountId = v);
       },
-      validator: (v) => v == null ? 'Required' : null,
+      validator: (v) => v == null
+          ? AppLocalizations.of(context)!.requiredError
+          : null, // coverage:ignore-line
     );
   }
 
@@ -510,7 +523,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return TextFormField(
       controller: _amountController,
       decoration: InputDecoration(
-        labelText: 'Amount',
+        labelText: AppLocalizations.of(context)!.amountLabel,
         prefixText:
             '${CurrencyUtils.getSymbol(_selectedAccountId == null || accounts.isEmpty ? "en_IN" : accounts.firstWhere((a) => a.id == _selectedAccountId, orElse: () => accounts.first).currency)} ',
         prefixStyle: AppTheme.offlineSafeTextStyle,
@@ -521,8 +534,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         FilteringTextInputFormatter.allow(RegexUtils.amountExp)
       ],
       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      validator: (v) =>
-          (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid Amount' : null,
+      validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+          ? AppLocalizations.of(context)!.invalidAmountError
+          : null,
       onSaved: (v) =>
           _amount = CurrencyUtils.roundTo2Decimals(double.parse(v!)),
     );
@@ -569,8 +583,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       children: [
         const Divider(),
         SwitchListTile(
-          title: const Text('Make Recurring'),
-          subtitle: const Text('Repeat this transaction automatically'),
+          title: Text(AppLocalizations.of(context)!.makeRecurring),
+          subtitle: Text(AppLocalizations.of(context)!.repeatAutomatically),
           value: _isRecurring,
           onChanged: (v) => setState(() => _isRecurring = v),
         ),
@@ -580,8 +594,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Recurring Action',
-                    style: TextStyle(
+                Text(AppLocalizations.of(context)!.recurringAction,
+                    style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey)),
@@ -590,11 +604,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   segments: [
                     ButtonSegment(
                         value: false,
-                        label: const Text('Pay & Schedule'),
+                        label:
+                            Text(AppLocalizations.of(context)!.payAndSchedule),
                         icon: PureIcons.income()),
                     ButtonSegment(
                         value: true,
-                        label: const Text('Just Schedule'),
+                        label: Text(AppLocalizations.of(context)!.justSchedule),
                         icon: PureIcons.calendar()),
                   ],
                   selected: {_isScheduleOnly},
@@ -638,8 +653,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           // coverage:ignore-start
           Expanded(
             child: Text(
-              "First Execution: ${DateFormat('EEE, MMM d, y').format(RecurrenceUtils.findFirstOccurrence(baseDate: _date, frequency: _frequency, scheduleType: _scheduleType, selectedWeekday: _selectedWeekday, adjustForHolidays: _adjustForHolidays, holidays: holidays))}",
-              // coverage:ignore-end
+              AppLocalizations.of(context)!.firstExecution(
+                  DateFormat('EEE, MMM d, y')
+                      .format(RecurrenceUtils.findFirstOccurrence(
+                          baseDate: _date,
+                          frequency: _frequency,
+                          scheduleType: _scheduleType,
+                          selectedWeekday: _selectedWeekday,
+                          adjustForHolidays: _adjustForHolidays,
+                          // coverage:ignore-end
+                          holidays: holidays))),
               style: const TextStyle(fontSize: 12, color: Colors.blue),
             ),
           ),
@@ -657,12 +680,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             key: const Key('frequency_dropdown'),
             isExpanded: true,
             initialValue: _frequency,
-            decoration: const InputDecoration(
-                labelText: 'Frequency', border: OutlineInputBorder()),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.frequencyDropdownLabel,
+                border: const OutlineInputBorder()),
             items: Frequency.values
                 .map((f) => DropdownMenuItem(
                       value: f,
-                      child: Text(f.name.toUpperCase()),
+                      child: Text(_getFrequencyLabel(context, f)),
                     ))
                 .toList(),
             onChanged: (v) {
@@ -679,9 +703,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           ],
           const SizedBox(height: 8),
           SwitchListTile(
-            title: const Text('Adjust for Holidays'),
-            subtitle: const Text(
-                'Schedule a day earlier if it lands on a holiday/weekend'),
+            title: Text(AppLocalizations.of(context)!.adjustForHolidays),
+            subtitle: Text(AppLocalizations.of(context)!.adjustForHolidaysDesc),
             value: _adjustForHolidays,
             onChanged: (v) =>
                 setState(() => _adjustForHolidays = v), // coverage:ignore-line
@@ -713,8 +736,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       key: const Key('schedule_type_dropdown'),
       isExpanded: true,
       initialValue: _scheduleType,
-      decoration: const InputDecoration(
-          labelText: 'Schedule Type', border: OutlineInputBorder()),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.scheduleTypeLabel,
+          border: const OutlineInputBorder()),
       items: ScheduleType.values
           .where((s) {
             return [
@@ -729,7 +753,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           })
           .map((s) => DropdownMenuItem(
                 value: s,
-                child: Text(_getScheduleLabel(s)),
+                child: Text(_getScheduleLabelLocalized(context, s)),
               ))
           .toList(),
       // coverage:ignore-start
@@ -744,16 +768,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget _buildWeekdayDropdown() {
     return DropdownButtonFormField<int>(
       initialValue: _selectedWeekday ?? 1,
-      decoration: const InputDecoration(
-          labelText: 'Select Weekday', border: OutlineInputBorder()),
-      items: const [
-        DropdownMenuItem(value: 1, child: Text('Monday')),
-        DropdownMenuItem(value: 2, child: Text('Tuesday')),
-        DropdownMenuItem(value: 3, child: Text('Wednesday')),
-        DropdownMenuItem(value: 4, child: Text('Thursday')),
-        DropdownMenuItem(value: 5, child: Text('Friday')),
-        DropdownMenuItem(value: 6, child: Text('Saturday')),
-        DropdownMenuItem(value: 7, child: Text('Sunday')),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.selectWeekdayLabel,
+          border: const OutlineInputBorder()),
+      items: [
+        DropdownMenuItem(
+            value: 1, child: Text(AppLocalizations.of(context)!.monday)),
+        DropdownMenuItem(
+            value: 2, child: Text(AppLocalizations.of(context)!.tuesday)),
+        DropdownMenuItem(
+            value: 3, child: Text(AppLocalizations.of(context)!.wednesday)),
+        DropdownMenuItem(
+            value: 4, child: Text(AppLocalizations.of(context)!.thursday)),
+        DropdownMenuItem(
+            value: 5, child: Text(AppLocalizations.of(context)!.friday)),
+        DropdownMenuItem(
+            value: 6, child: Text(AppLocalizations.of(context)!.saturday)),
+        DropdownMenuItem(
+            value: 7, child: Text(AppLocalizations.of(context)!.sunday)),
       ],
       // coverage:ignore-start
       onChanged: (v) {
@@ -774,8 +806,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       ),
       child: Text(
           widget.transactionToEdit == null
-              ? 'Save Transaction'
-              : 'Update Transaction',
+              ? AppLocalizations.of(context)!.saveTransaction
+              : AppLocalizations.of(context)!.updateTransaction,
           style: const TextStyle(fontSize: 18)),
     );
   }
@@ -821,10 +853,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (_type == TransactionType.transfer &&
         _selectedAccountId != null &&
         _selectedAccountId == _toAccountId) {
+      // coverage:ignore-start
       ScaffoldMessenger.of(context).showSnackBar(
-        // coverage:ignore-line
-        const SnackBar(
-          content: Text('Source and Target accounts cannot be the same.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.sameAccountError),
+          // coverage:ignore-end
           backgroundColor: Colors.red,
         ),
       );
@@ -843,10 +876,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _isScheduleOnly &&
         selectedDateOnly.isBefore(todayStart)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        // coverage:ignore-end
-        const SnackBar(
-          content: Text(
-              '"Just Schedule" is only allowed for Today or Future dates.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.futureScheduleOnlyError),
+          // coverage:ignore-end
           backgroundColor: Colors.orange,
         ),
       );
@@ -856,41 +888,47 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _handleCategoryChange(dynamic storage) async {
-    if (widget.transactionToEdit == null) return;
-    if (_category == null) return;
-    if (widget.transactionToEdit!.category == _category) return;
-    if (widget.transactionToEdit!.title.trim().toLowerCase() !=
-        _title.trim().toLowerCase()) {
-      return;
-    }
+    if (!_shouldShowCategoryChangeDialog()) return;
 
     final oldCount = await storage.getSimilarTransactionCount(_title,
         widget.transactionToEdit!.category, widget.transactionToEdit!.id);
     if (oldCount <= 0) return;
     if (!mounted) return;
 
-    final shouldUpdate = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Update Similar Transactions?'),
-        content: Text(
-            'Found $oldCount other transactions with title "$_title" and category "${widget.transactionToEdit!.category}". Do you want to update their category to "$_category" as well?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
-            child: const Text('NO, Just this one'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('YES, Update All'),
-          ),
-        ],
-      ),
-    );
+    final shouldUpdate = await _showCategoryChangeDialog(oldCount);
     if (shouldUpdate == true) {
       await storage.bulkUpdateCategory(
           _title, widget.transactionToEdit!.category, _category!);
     }
+  }
+
+  bool _shouldShowCategoryChangeDialog() {
+    if (widget.transactionToEdit == null) return false;
+    if (_category == null) return false;
+    if (widget.transactionToEdit!.category == _category) return false;
+    return widget.transactionToEdit!.title.trim().toLowerCase() ==
+        _title.trim().toLowerCase();
+  }
+
+  Future<bool?> _showCategoryChangeDialog(int oldCount) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.updateSimilarTitle),
+        content: Text(AppLocalizations.of(context)!.updateSimilarMessage(
+            oldCount, _title, widget.transactionToEdit!.category, _category!)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+            child: Text(AppLocalizations.of(context)!.noJustThisOne),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(AppLocalizations.of(context)!.yesUpdateAll),
+          ),
+        ],
+      ),
+    );
   }
 
   Transaction _createTransaction(DateTime dateTime, dynamic storage) {
@@ -905,7 +943,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       amount: _amount,
       date: dateTime,
       type: _type,
-      category: _type == TransactionType.transfer ? 'Transfer' : _category!,
+      category: _type == TransactionType.transfer
+          ? AppLocalizations.of(context)!.transferCategory
+          : _category!,
       accountId: _selectedAccountId,
       toAccountId: _toAccountId,
       profileId: profileId,
@@ -931,101 +971,148 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
     if (_isRecurring) {
       // coverage:ignore-start
-      final profileId = ref.read(activeProfileIdProvider);
-      final recurring = RecurringTransaction.create(
-        title: _title,
-        amount: _amount,
-        category: _type == TransactionType.transfer ? 'Transfer' : _category!,
-        accountId: _selectedAccountId,
-        frequency: _frequency,
-        byMonthDay: (_frequency == Frequency.monthly &&
-                _scheduleType == ScheduleType.fixedDate)
-            ? dateTime.day
-            // coverage:ignore-end
-            : null,
-        startDate: _isScheduleOnly // coverage:ignore-line
-            ? RecurrenceUtils.findFirstOccurrence(
-                // coverage:ignore-line
-                baseDate: dateTime,
-                // coverage:ignore-start
-                frequency: _frequency,
-                scheduleType: _scheduleType,
-                selectedWeekday: _selectedWeekday,
-                adjustForHolidays: _adjustForHolidays,
-                holidays: ref.read(holidaysProvider))
-            // coverage:ignore-end
-            : dateTime,
-        // coverage:ignore-start
-        scheduleType: _scheduleType,
-        selectedWeekday: _selectedWeekday,
-        adjustForHolidays: _adjustForHolidays,
-        // coverage:ignore-end
-        profileId: profileId,
-        type: _type, // coverage:ignore-line
-      );
-      await storage.saveRecurringTransaction(recurring); // coverage:ignore-line
+      if (!mounted) return;
+      final recurring = _createRecurringTransaction(dateTime);
+      await storage.saveRecurringTransaction(recurring);
+      // coverage:ignore-end
     }
+  }
+
+  // coverage:ignore-start
+  RecurringTransaction _createRecurringTransaction(DateTime dateTime) {
+    final profileId = ref.read(activeProfileIdProvider);
+    return RecurringTransaction.create(
+      title: _title,
+      amount: _amount,
+      category: _type == TransactionType.transfer
+          ? AppLocalizations.of(context)!.transferCategory
+          : _category!,
+      accountId: _selectedAccountId,
+      frequency: _frequency,
+      byMonthDay: (_frequency == Frequency.monthly &&
+              _scheduleType == ScheduleType.fixedDate)
+          ? dateTime.day
+          // coverage:ignore-end
+          : null,
+      startDate: _isScheduleOnly // coverage:ignore-line
+          ? RecurrenceUtils.findFirstOccurrence(
+              // coverage:ignore-line
+              baseDate: dateTime,
+              // coverage:ignore-start
+              frequency: _frequency,
+              scheduleType: _scheduleType,
+              selectedWeekday: _selectedWeekday,
+              adjustForHolidays: _adjustForHolidays,
+              holidays: ref.read(holidaysProvider))
+          // coverage:ignore-end
+          : dateTime,
+      // coverage:ignore-start
+      scheduleType: _scheduleType,
+      selectedWeekday: _selectedWeekday,
+      adjustForHolidays: _adjustForHolidays,
+      // coverage:ignore-end
+      profileId: profileId,
+      type: _type, // coverage:ignore-line
+    );
   }
 
   // --- Utility Methods ---
 
-  String _getScheduleLabel(ScheduleType type) {
-    switch (type) {
-      case ScheduleType.fixedDate:
-        return 'Exact Date Each Month';
-      case ScheduleType.everyWeekend:
-        return 'Every Weekend (Sat or Sun)';
-      case ScheduleType.lastWeekend:
-        return 'Last Weekend of Month';
-      case ScheduleType.specificWeekday:
-        return 'Specific Weekday';
-      case ScheduleType.lastDayOfMonth:
-        return 'Last Day of Month';
-      case ScheduleType.lastWorkingDay:
-        return 'Last Working Day of Month';
-      case ScheduleType.firstWorkingDay:
-        return 'First Working Day of Month';
+  String _getFrequencyLabel(BuildContext context, Frequency frequency) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (frequency) {
+      case Frequency.daily:
+        return l10n.daily;
+      case Frequency.weekly:
+        return l10n.weekly;
+      case Frequency.monthly:
+        return l10n.monthly;
+      case Frequency.yearly:
+        return l10n.yearly;
     }
   }
 
-  String _getTagLabel(CategoryTag tag) {
+  String _getScheduleLabelLocalized(BuildContext context, ScheduleType type) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (type) {
+      case ScheduleType.fixedDate:
+        return l10n.fixedDate;
+      case ScheduleType.everyWeekend:
+        return l10n.everyWeekend;
+      case ScheduleType.lastWeekend:
+        return l10n.lastWeekend;
+      case ScheduleType.specificWeekday:
+        return l10n.specificWeekday;
+      case ScheduleType.lastDayOfMonth:
+        return l10n.lastDayOfMonth;
+      case ScheduleType.lastWorkingDay:
+        return l10n.lastWorkingDay;
+      case ScheduleType.firstWorkingDay:
+        return l10n.firstWorkingDay;
+    }
+  }
+
+  String _getTagLabel(BuildContext context, CategoryTag tag) {
+    final l10n = AppLocalizations.of(context)!;
     switch (tag) {
       case CategoryTag.none:
         return '';
       case CategoryTag.capitalGain:
-        return 'Capital Gain';
-      case CategoryTag.directTax: // coverage:ignore-line
-        return 'Direct Tax';
-      case CategoryTag.budgetFree: // coverage:ignore-line
-        return 'Budget Free';
-      case CategoryTag.taxFree: // coverage:ignore-line
-        return 'Tax Free';
+        return l10n.capitalGainTag;
+      // coverage:ignore-start
+      case CategoryTag.directTax:
+        return l10n.directTaxTag;
+      case CategoryTag.budgetFree:
+        return l10n.budgetFreeTag;
+      case CategoryTag.taxFree:
+        return l10n.taxFreeTag;
+      // coverage:ignore-end
     }
   }
 
   String _formatAccountBalance(Account a, List<Transaction> allTxns) {
     if (a.type == AccountType.creditCard) {
-      // coverage:ignore-start
-      final now = DateTime.now();
-      final storage = ref.read(storageServiceProvider);
-      final unbilled = BillingHelper.calculateUnbilledAmount(a, allTxns, now);
-      final billed = BillingHelper.calculateBilledAmount(
-          a, allTxns, now, storage.getLastRollover(a.id));
-      final currentDebt = a.balance + billed + unbilled;
-      // coverage:ignore-end
-
-      // coverage:ignore-start
-      if (a.creditLimit != null && a.creditLimit! > 0) {
-        final available = a.creditLimit! - currentDebt;
-        if (_hideBalance) return 'Avail: •••';
-        return 'Avail: ${CurrencyUtils.getSmartFormat(available, a.currency)}';
-        // coverage:ignore-end
-      } else {
-        if (_hideBalance) return 'Usage: •••'; // coverage:ignore-line
-        return 'Usage: ${CurrencyUtils.getSmartFormat(currentDebt, a.currency)}'; // coverage:ignore-line
-      }
+      return _formatCreditCardBalance(a, allTxns); // coverage:ignore-line
     }
-    if (_hideBalance) return 'Bal: •••';
-    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}'; // coverage:ignore-line
+    return _formatStandardAccountBalance(a);
+  }
+
+  // coverage:ignore-start
+  String _formatCreditCardBalance(Account a, List<Transaction> allTxns) {
+    final now = DateTime.now();
+    final storage = ref.read(storageServiceProvider);
+    final unbilled = BillingHelper.calculateUnbilledAmount(a, allTxns, now);
+    final billed = BillingHelper.calculateBilledAmount(
+        a, allTxns, now, storage.getLastRollover(a.id));
+    final currentDebt = a.balance + billed + unbilled;
+    // coverage:ignore-end
+
+    // coverage:ignore-start
+    if (a.creditLimit != null && a.creditLimit! > 0) {
+      final available = a.creditLimit! - currentDebt;
+      if (_hideBalance) {
+        return AppLocalizations.of(context)!.availableShort('•••');
+        // coverage:ignore-end
+      }
+      return AppLocalizations.of(context)! // coverage:ignore-line
+          .availableShort(CurrencyUtils.getSmartFormat(
+              available, a.currency)); // coverage:ignore-line
+    } else {
+      if (_hideBalance) {
+        // coverage:ignore-line
+        return AppLocalizations.of(context)!
+            .usageShort('•••'); // coverage:ignore-line
+      }
+      return AppLocalizations.of(context)! // coverage:ignore-line
+          .usageShort(CurrencyUtils.getSmartFormat(
+              currentDebt, a.currency)); // coverage:ignore-line
+    }
+  }
+
+  String _formatStandardAccountBalance(Account a) {
+    if (_hideBalance) return AppLocalizations.of(context)!.balanceShort('•••');
+    return AppLocalizations.of(context)! // coverage:ignore-line
+        .balanceShort(CurrencyUtils.getSmartFormat(
+            a.balance, a.currency)); // coverage:ignore-line
   }
 }

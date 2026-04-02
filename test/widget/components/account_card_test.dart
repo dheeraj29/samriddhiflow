@@ -1,8 +1,14 @@
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:samriddhi_flow/models/account.dart';
+
 import 'package:samriddhi_flow/widgets/account_card.dart';
+
 import 'package:samriddhi_flow/providers.dart';
 
 void main() {
@@ -13,9 +19,11 @@ void main() {
   testWidgets('AccountCard renders savings type and handles tap',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     bool tapped = false;
+
     final account = Account(
       id: 's1',
       name: 'My Savings',
@@ -31,6 +39,8 @@ void main() {
             .overrideWith(() => CurrencyFormatNotifier()..value = false),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -48,11 +58,15 @@ void main() {
     ));
 
     await tester.pump();
+
     expect(find.text('My Savings'), findsOneWidget);
+
     // Relaxed text expectation to avoid SmartCurrencyText formatting issues during first pump
+
     expect(find.byType(AccountCard), findsOneWidget);
 
     await tester.tap(find.byType(AccountCard));
+
     expect(tapped, isTrue);
   });
 
@@ -74,6 +88,8 @@ void main() {
             .overrideWith(() => CurrencyFormatNotifier()..value = false),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -88,6 +104,7 @@ void main() {
     ));
 
     await tester.pump();
+
     expect(find.text('Cash Wallet'), findsOneWidget);
   });
 
@@ -111,6 +128,8 @@ void main() {
             .overrideWith(() => CurrencyFormatNotifier()..value = false),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -128,11 +147,14 @@ void main() {
     ));
 
     await tester.pump();
+
     expect(find.text('Credit Card'), findsOneWidget);
+
     expect(find.textContaining('Used 95%'), findsOneWidget);
 
     final indicator = tester
         .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+
     expect(indicator.color, Colors.redAccent);
   });
 
@@ -155,6 +177,8 @@ void main() {
             .overrideWith(() => CurrencyFormatNotifier()..value = false),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -169,9 +193,12 @@ void main() {
     ));
 
     await tester.pump();
+
     expect(find.textContaining('Used 0%'), findsOneWidget);
+
     final indicator = tester
         .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+
     expect(indicator.value, 0.0);
   });
 
@@ -180,6 +207,7 @@ void main() {
         'AccountCard offsets negative balance against billed AND unbilled',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final account = Account(
@@ -193,6 +221,8 @@ void main() {
 
       await tester.pumpWidget(ProviderScope(
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           home: Scaffold(
             body: Center(
@@ -214,14 +244,18 @@ void main() {
       await tester.pump();
 
       expect(find.textContaining('Billed'), findsNothing);
+
       expect(find.textContaining('Unbilled'), findsNothing);
+
       expect(find.textContaining('Balance'),
           findsOneWidget); // Shows excess credit
+
       expect(
         find.byWidgetPredicate((widget) =>
             widget is Text &&
             widget.data != null &&
             widget.data!.contains('300.00')),
+
         findsNWidgets(2), // Main title and mini-info chip
       );
     });
@@ -229,19 +263,27 @@ void main() {
     testWidgets('AccountCard offsets negative balance partially',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final account = Account(
         id: 'cc1',
+
         name: 'Test CC',
+
         type: AccountType.creditCard,
+
         balance: -500, // Excess payment of 500
+
         currency: 'INR',
+
         billingCycleDay: 15,
       );
 
       await tester.pumpWidget(ProviderScope(
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           home: Scaffold(
             body: Center(
@@ -263,28 +305,40 @@ void main() {
       await tester.pump();
 
       expect(find.text('Billed'), findsOneWidget);
+
       expect(find.textContaining('700'), findsOneWidget);
+
       expect(find.text('Unbilled'), findsOneWidget);
+
       expect(find.textContaining('500'), findsOneWidget);
+
       expect(find.textContaining('Balance'), findsNothing);
     });
 
     testWidgets('AccountCard zeros everything when exactly paid',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
+
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final account = Account(
         id: 'cc1',
+
         name: 'Test CC',
+
         type: AccountType.creditCard,
+
         balance: -1700, // Pays off 1200 billed + 500 unbilled
+
         currency: 'INR',
+
         billingCycleDay: 15,
       );
 
       await tester.pumpWidget(ProviderScope(
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           home: Scaffold(
             body: Center(
@@ -306,8 +360,11 @@ void main() {
       await tester.pump();
 
       expect(find.textContaining('Billed'), findsNothing);
+
       expect(find.textContaining('Unbilled'), findsNothing);
+
       expect(find.textContaining('Balance'), findsNothing);
+
       expect(
         find.byWidgetPredicate((widget) =>
             widget is Text &&
@@ -334,6 +391,8 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -350,7 +409,9 @@ void main() {
     await tester.pump();
 
     // Verify billing dates are shown
+
     expect(find.textContaining('Last:'), findsOneWidget);
+
     expect(find.textContaining('Next:'), findsOneWidget);
   });
 
@@ -373,6 +434,8 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -389,7 +452,9 @@ void main() {
     await tester.pump();
 
     // Verify "Calculates on" is shown instead of standard cycle info
+
     expect(find.textContaining('Calculates on'), findsOneWidget);
+
     expect(find.textContaining('25'), findsOneWidget);
   });
 
@@ -399,15 +464,22 @@ void main() {
 
     final account = Account(
       id: 'cc_credit',
+
       name: 'Credit CC',
+
       type: AccountType.creditCard,
+
       balance: -500, // Credit available
+
       billingCycleDay: 25,
+
       profileId: 'default',
     );
 
     await tester.pumpWidget(ProviderScope(
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
@@ -416,7 +488,9 @@ void main() {
               height: 250,
               child: AccountCard(
                 account: account,
+
                 billedAmount: 200, // Fully offset
+
                 unbilledAmount: 200, // Fully offset
               ),
             ),
@@ -428,14 +502,20 @@ void main() {
     await tester.pump();
 
     // With 500 credit, 200 billed and 200 unbilled are both offset to 0.
+
     // The Adjusted balance is also 0.
+
     // So the card should only show the available credit as a positive number or just 0.0.
+
     expect(find.textContaining('Billed'), findsNothing);
+
     expect(find.textContaining('Unbilled'), findsNothing);
+
     expect(
         find.textContaining('Balance'), findsOneWidget); // Shows excess credit
 
     // Remaining credit = 500 - 200 - 200 = 100
+
     expect(find.textContaining('100.00'), findsNWidgets(2));
   });
 }

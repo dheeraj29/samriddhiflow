@@ -1,7 +1,9 @@
+import 'package:samriddhi_flow/screens/taxes/tax_constants.dart';
 import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../models/taxes/insurance_policy.dart';
 import '../../models/taxes/tax_rules.dart';
 import '../../services/taxes/insurance_tax_service.dart';
@@ -13,8 +15,9 @@ import '../../models/taxes/tax_data_models.dart';
 import '../../utils/currency_utils.dart';
 import '../../widgets/pure_icons.dart';
 import '../../widgets/smart_currency_text.dart';
+import 'package:intl/intl.dart';
 
-const capitalGainsText = 'Capital Gains';
+// Removed capitalGainsText constant as it was used for localized string comparison
 
 class InsurancePortfolioScreen extends ConsumerStatefulWidget {
   final int? initialYear;
@@ -49,8 +52,8 @@ class _InsurancePortfolioScreenState
     super.initState();
     _selectedYear = widget.initialYear ??
         (DateTime.now().month < 4
-            ? DateTime.now().year - 1
-            : DateTime.now().year); // coverage:ignore-line
+            ? DateTime.now().year - 1 // coverage:ignore-line
+            : DateTime.now().year);
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initFromStorage();
@@ -125,8 +128,8 @@ class _InsurancePortfolioScreenState
     // coverage:ignore-start
     await config.saveRulesForYear(_selectedYear, updated);
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Tax Rules Updated')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.taxRulesUpdatedStatus)));
       // coverage:ignore-end
     }
   }
@@ -194,7 +197,10 @@ class _InsurancePortfolioScreenState
     required ValueChanged<DateTime?> onInstallmentStartChanged,
   }) {
     return AlertDialog(
-      title: Text(existing == null ? 'Add Policy' : 'Edit Policy'),
+      title: Text(existing == null
+          ? AppLocalizations.of(context)!.addPolicyTitle
+          : AppLocalizations.of(context)!
+              .editPolicyTitle), // coverage:ignore-line
       content: SingleChildScrollView(
         child: _buildPolicyInputs(
           nameCtrl: nameCtrl,
@@ -215,8 +221,8 @@ class _InsurancePortfolioScreenState
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel')), // coverage:ignore-line
+            onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
+            child: Text(AppLocalizations.of(context)!.cancelAction)),
         FilledButton(
             onPressed: () => _savePolicy(
                   // coverage:ignore-line
@@ -231,7 +237,7 @@ class _InsurancePortfolioScreenState
                   isInstallment,
                   installmentStart,
                 ),
-            child: const Text('Save')),
+            child: Text(AppLocalizations.of(context)!.saveAction)),
       ],
     );
   }
@@ -255,102 +261,92 @@ class _InsurancePortfolioScreenState
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-            controller: nameCtrl,
-            decoration: const InputDecoration(labelText: 'Policy Name')),
-        TextField(
-            controller: premiumCtrl,
-            decoration: InputDecoration(
-                labelText:
-                    'Annual Premium (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegexUtils.amountExp),
-            ]),
-        TextField(
-            controller: sumAssuredCtrl,
-            decoration: InputDecoration(
-                labelText:
-                    'Sum Assured (${CurrencyUtils.getSymbol(ref.watch(currencyProvider))})'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegexUtils.amountExp),
-            ]),
+        _buildTextField(
+            nameCtrl, AppLocalizations.of(context)!.policyNameLabel),
+        _buildAmountTextField(
+            premiumCtrl,
+            AppLocalizations.of(context)!.annualPremiumLabel(
+                CurrencyUtils.getSymbol(ref.watch(currencyProvider)))),
+        _buildAmountTextField(
+            sumAssuredCtrl,
+            AppLocalizations.of(context)!.sumAssuredLabel(
+                CurrencyUtils.getSymbol(ref.watch(currencyProvider)))),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            const Text('Issue Date: '),
-            TextButton(
-              onPressed: () async {
-                // coverage:ignore-line
-                final d = await showDatePicker(
-                    // coverage:ignore-line
-                    context: context,
-                    firstDate: DateTime(2000), // coverage:ignore-line
-                    lastDate: DateTime.now(), // coverage:ignore-line
-                    initialDate: selectedDate);
-                if (d != null) onStartSelected(d); // coverage:ignore-line
-              },
-              child: Text(
-                  '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-            )
-          ],
-        ),
-        Row(
-          children: [
-            const Text('Maturity Date: '),
-            TextButton(
-              onPressed: () async {
-                // coverage:ignore-line
-                final d = await showDatePicker(
-                    // coverage:ignore-line
-                    context: context,
-                    firstDate: selectedDate,
-                    lastDate: DateTime(2050), // coverage:ignore-line
-                    initialDate: maturityDate);
-                if (d != null) onMaturitySelected(d); // coverage:ignore-line
-              },
-              child: Text(
-                  '${maturityDate.day}/${maturityDate.month}/${maturityDate.year}'),
-            )
-          ],
-        ),
+        _buildPolicyDatePickerRow(AppLocalizations.of(context)!.issueDateLabel,
+            selectedDate, onStartSelected, DateTime(2000), DateTime.now()),
+        _buildPolicyDatePickerRow(
+            AppLocalizations.of(context)!.maturityDateLabel,
+            maturityDate,
+            onMaturitySelected,
+            selectedDate,
+            DateTime(2050)),
         CheckboxListTile(
-          title: const Text('Is ULIP?'),
+          title: Text(AppLocalizations.of(context)!.isUlipLabel),
           value: isUlip,
           onChanged: (v) => onUlipChanged(v ?? false), // coverage:ignore-line
         ),
         CheckboxListTile(
-          title: const Text('Enable Installment Option?'),
+          title: Text(AppLocalizations.of(context)!.enableInstallmentLabel),
           value: isInstallment,
           onChanged: (v) =>
               onInstallmentChanged(v ?? false), // coverage:ignore-line
         ),
         if (isInstallment)
-          Row(
-            // coverage:ignore-line
-            children: [
+          _buildPolicyDatePickerRow(
               // coverage:ignore-line
-              const Text('Installment Start: '),
-              // coverage:ignore-start
-              TextButton(
-                onPressed: () async {
-                  final d = await showDatePicker(
-                      // coverage:ignore-end
-                      context: context,
-                      firstDate: selectedDate,
-                      lastDate: maturityDate,
-                      initialDate: installmentStart ?? selectedDate);
-                  if (d != null) {
-                    onInstallmentStartSelected(d); // coverage:ignore-line
-                  }
-                },
-                child: Text(installmentStart == null // coverage:ignore-line
-                    ? 'Select Date'
-                    : '${installmentStart.day}/${installmentStart.month}/${installmentStart.year}'), // coverage:ignore-line
-              )
-            ],
-          ),
+              AppLocalizations.of(context)!
+                  .installmentStartLabel, // coverage:ignore-line
+              installmentStart ?? selectedDate,
+              (d) => onInstallmentStartSelected(d), // coverage:ignore-line
+              selectedDate,
+              maturityDate,
+              labelOverride: installmentStart == null
+                  ? AppLocalizations.of(context)!
+                      .selectDateAction // coverage:ignore-line
+                  : null),
+      ],
+    );
+  }
+
+  Widget _buildTextField(TextEditingController ctrl, String label) {
+    return TextField(
+      controller: ctrl,
+      decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  Widget _buildAmountTextField(TextEditingController ctrl, String label) {
+    return TextField(
+      controller: ctrl,
+      decoration: InputDecoration(labelText: label),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+      ],
+    );
+  }
+
+  Widget _buildPolicyDatePickerRow(String label, DateTime date,
+      Function(DateTime) onSelect, DateTime firstDate, DateTime lastDate,
+      {String? labelOverride}) {
+    return Row(
+      children: [
+        Text('$label: '),
+        TextButton(
+          // coverage:ignore-start
+          onPressed: () async {
+            final d = await showDatePicker(
+              context: context,
+              // coverage:ignore-end
+              firstDate: firstDate,
+              lastDate: lastDate,
+              initialDate: date,
+            );
+            if (d != null) onSelect(d); // coverage:ignore-line
+          },
+          child: Text(labelOverride ??
+              DateFormat(TaxConstants.dateFormat).format(date)),
+        )
       ],
     );
   }
@@ -400,23 +396,23 @@ class _InsurancePortfolioScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Insurance Portfolio'),
+        title: Text(AppLocalizations.of(context)!.insurancePortfolioTooltip),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Policies List'),
-            Tab(text: 'Tax Rules'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context)!.policiesListTab),
+            Tab(text: AppLocalizations.of(context)!.taxRulesTab),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
-            tooltip: 'Sync & Recalculate Status',
+            tooltip: AppLocalizations.of(context)!.syncRecalculateTooltip,
             onPressed: () => _recalculateTax(),
           ),
           IconButton(
             icon: PureIcons.add(),
-            tooltip: 'Add Policy',
+            tooltip: AppLocalizations.of(context)!.addPolicyTitle,
             onPressed: () => _addOrEditPolicy(),
           ),
         ],
@@ -443,8 +439,9 @@ class _InsurancePortfolioScreenState
           children: [
             _buildSummary(sortedEntries.map((e) => e.value).toList()),
             const Divider(height: 32),
-            const Text('Your Policies',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(AppLocalizations.of(context)!.yourPoliciesTitle,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 16),
             ...sortedEntries.map((entry) {
               final key = entry.key;
@@ -487,13 +484,22 @@ class _InsurancePortfolioScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildPolicyRow('Premium: ', p.annualPremium, suffix: ' / yr'),
-        _buildPolicyRow('Sum Assured: ', p.sumAssured),
+        _buildPolicyRow(
+            '${AppLocalizations.of(context)!.annualPremiumLabel('')}: ',
+            p.annualPremium,
+            suffix: AppLocalizations.of(context)!.perYearLabel),
+        _buildPolicyRow(
+            '${AppLocalizations.of(context)!.sumAssuredLabel('')}: ',
+            p.sumAssured),
         if (p.isTaxExempt == null)
-          const Text('Status: Pending Calc', // coverage:ignore-line
-              style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+          Text(
+              AppLocalizations.of(context)!
+                  .pendingCalcStatus, // coverage:ignore-line
+              style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
         if (p.isInstallmentEnabled)
-          Text('Installments enabled', // coverage:ignore-line
+          Text(
+              AppLocalizations.of(context)!
+                  .installmentsEnabledLabel, // coverage:ignore-line
               style: TextStyle(
                   color: Colors.blue.shade700,
                   fontSize: 12)), // coverage:ignore-line
@@ -526,7 +532,11 @@ class _InsurancePortfolioScreenState
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Chip(
-        label: Text(isTaxable ? 'Taxable' : 'Exempt',
+        label: Text(
+            isTaxable
+                ? AppLocalizations.of(context)!.taxableStatus
+                : AppLocalizations.of(context)!
+                    .exemptStatus, // coverage:ignore-line
             style: const TextStyle(fontSize: 10, color: Colors.white)),
         backgroundColor: isTaxable ? Colors.redAccent : Colors.green,
         visualDensity: VisualDensity.compact,
@@ -544,7 +554,7 @@ class _InsurancePortfolioScreenState
             service.isApplicableForYear(p, _selectedYear))
           IconButton(
             icon: const Icon(Icons.add_chart, color: Colors.orange),
-            tooltip: 'Populate income to Tax Dashboard',
+            tooltip: AppLocalizations.of(context)!.populateIncomeTooltip,
             onPressed: () => _showPopulateIncomeDialog(p, key),
           ),
         PopupMenuButton<String>(
@@ -559,19 +569,27 @@ class _InsurancePortfolioScreenState
           },
           itemBuilder: (ctx) => [
             // coverage:ignore-line
-            const PopupMenuItem(
+            PopupMenuItem(
+                // coverage:ignore-line
                 value: 'edit',
                 child: Row(children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 8),
-                  Text('Edit')
+                  // coverage:ignore-line
+                  const Icon(Icons.edit, size: 20),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!
+                      .editAction) // coverage:ignore-line
                 ])),
-            const PopupMenuItem(
+            PopupMenuItem(
+                // coverage:ignore-line
                 value: 'delete',
                 child: Row(children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red))
+                  // coverage:ignore-line
+                  const Icon(Icons.delete, size: 20, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Text(
+                      AppLocalizations.of(context)!
+                          .deleteAction, // coverage:ignore-line
+                      style: const TextStyle(color: Colors.red))
                 ])),
           ],
         ),
@@ -581,7 +599,9 @@ class _InsurancePortfolioScreenState
 
   void _showPopulateIncomeDialog(InsurancePolicy p, dynamic key) {
     int selectedYear = _selectedYear;
-    String selectedHead = p.isUnitLinked ? capitalGainsText : 'Other Income';
+    String selectedHead = p.isUnitLinked
+        ? AppLocalizations.of(context)!.capitalGainLabel // coverage:ignore-line
+        : AppLocalizations.of(context)!.otherIncomeHead;
     AssetType selectedAssetType = AssetType.other;
     bool isLTCG = true;
 
@@ -591,7 +611,7 @@ class _InsurancePortfolioScreenState
     final cost = split['costOfAcquisition']!;
 
     final saleAmountCtrl = TextEditingController(
-        text: selectedHead == capitalGainsText
+        text: selectedHead == AppLocalizations.of(context)!.capitalGainLabel
             ? saleAmount.toStringAsFixed(0) // coverage:ignore-line
             : split['taxableGain']!.toStringAsFixed(0));
     final costCtrl = TextEditingController(text: cost.toStringAsFixed(0));
@@ -600,7 +620,7 @@ class _InsurancePortfolioScreenState
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('Populate Taxable Income'),
+          title: Text(AppLocalizations.of(context)!.populateTaxableIncomeTitle),
           content: SingleChildScrollView(
             child: _buildPopulateIncomeDialogContent(
               p: p,
@@ -621,7 +641,7 @@ class _InsurancePortfolioScreenState
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
-                child: const Text('Cancel')),
+                child: Text(AppLocalizations.of(context)!.cancelAction)),
             FilledButton(
               onPressed: () => _performPopulation(
                 p: p,
@@ -634,7 +654,7 @@ class _InsurancePortfolioScreenState
                 isLTCG: isLTCG,
                 ctx: ctx,
               ),
-              child: const Text('Add to Dashboard'),
+              child: Text(AppLocalizations.of(context)!.addToDashboardAction),
             ),
           ],
         ),
@@ -654,66 +674,113 @@ class _InsurancePortfolioScreenState
     required ValueChanged<AssetType> onAssetTypeChanged,
     required ValueChanged<bool> onLtcgChanged,
   }) {
+    final isCapitalGain =
+        selectedHead == AppLocalizations.of(context)!.capitalGainLabel;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Policy: ${p.policyName}',
+        Text('${AppLocalizations.of(context)!.policyLabel}: ${p.policyName}',
             style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
-        _buildInfoField('Tax Year', 'FY $selectedYear-${selectedYear + 1}'),
+        _buildInfoField(AppLocalizations.of(context)!.taxYearLabel,
+            'FY $selectedYear-${selectedYear + 1}'),
         const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          initialValue: selectedHead,
-          decoration: const InputDecoration(labelText: 'Tax Head'),
-          items: ['Other Income', capitalGainsText]
-              .map((h) => DropdownMenuItem(value: h, child: Text(h)))
-              .toList(),
-          onChanged: (val) => onHeadChanged(val!), // coverage:ignore-line
-        ),
+        _buildTaxHeadDropdown(selectedHead, onHeadChanged),
         const SizedBox(height: 16),
-        if (selectedHead == capitalGainsText) ...[
-          DropdownButtonFormField<AssetType>(
+        if (isCapitalGain)
+          _buildCapitalGainFields(
             // coverage:ignore-line
-            initialValue: selectedAssetType,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Asset Category'),
-            items: AssetType.values
-                // coverage:ignore-start
-                .map((type) => DropdownMenuItem(
-                    value: type, child: Text(type.toHumanReadable())))
-                .toList(),
-            onChanged: (val) => onAssetTypeChanged(val!),
-            // coverage:ignore-end
-          ),
-          const SizedBox(height: 16),
-          _buildAmountField(
-              // coverage:ignore-line
-              saleAmountCtrl,
-              'Sale Consideration / Maturity Amount'),
-          const SizedBox(height: 16),
-          _buildAmountField(
-              // coverage:ignore-line
-              costCtrl,
-              'Cost of Acquisition (Historical Premiums Paid)'),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            // coverage:ignore-line
-            title: const Text('Is Long Term?', style: TextStyle(fontSize: 14)),
-            value: isLTCG,
-            onChanged: (val) => onLtcgChanged(val), // coverage:ignore-line
-            dense: true,
-          ),
-        ] else ...[
-          _buildAmountField(saleAmountCtrl, 'Taxable Gain (Profit)'),
-        ],
+            selectedAssetType: selectedAssetType,
+            saleAmountCtrl: saleAmountCtrl,
+            costCtrl: costCtrl,
+            isLTCG: isLTCG,
+            onAssetTypeChanged: onAssetTypeChanged,
+            onLtcgChanged: onLtcgChanged,
+          )
+        else
+          _buildAmountField(saleAmountCtrl,
+              AppLocalizations.of(context)!.taxableGainProfitLabel),
         const SizedBox(height: 8),
         if (p.isIncomeAddedByYear[selectedYear] == true)
-          const Text(
-            // coverage:ignore-line
-            'Note: Income already marked as added for this year.',
-            style: TextStyle(color: Colors.orange, fontSize: 12),
-          ),
+          _buildAlreadyAddedNote(), // coverage:ignore-line
       ],
+    );
+  }
+
+  Widget _buildTaxHeadDropdown(
+      String selectedHead, ValueChanged<String> onHeadChanged) {
+    return DropdownButtonFormField<String>(
+      initialValue: selectedHead,
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.taxHeadLabel),
+      items: [
+        AppLocalizations.of(context)!.otherIncomeHead,
+        AppLocalizations.of(context)!.capitalGainLabel
+      ].map((h) => DropdownMenuItem(value: h, child: Text(h))).toList(),
+      onChanged: (val) => onHeadChanged(val!), // coverage:ignore-line
+    );
+  }
+
+  Widget _buildCapitalGainFields({
+    // coverage:ignore-line
+    required AssetType selectedAssetType,
+    required TextEditingController saleAmountCtrl,
+    required TextEditingController costCtrl,
+    required bool isLTCG,
+    required ValueChanged<AssetType> onAssetTypeChanged,
+    required ValueChanged<bool> onLtcgChanged,
+  }) {
+    // coverage:ignore-start
+    return Column(
+      children: [
+        DropdownButtonFormField<AssetType>(
+          // coverage:ignore-end
+          initialValue: selectedAssetType,
+          isExpanded: true,
+          decoration: InputDecoration(
+              // coverage:ignore-line
+              labelText: AppLocalizations.of(context)!
+                  .assetCategoryLabel), // coverage:ignore-line
+          items: AssetType.values
+              // coverage:ignore-start
+              .map((type) => DropdownMenuItem(
+                  value: type, child: Text(type.toHumanReadable())))
+              .toList(),
+          onChanged: (val) => onAssetTypeChanged(val!),
+          // coverage:ignore-end
+        ),
+        const SizedBox(height: 16),
+        _buildAmountField(
+            saleAmountCtrl, // coverage:ignore-line
+            AppLocalizations.of(context)!
+                .saleMaturityAmountLabel), // coverage:ignore-line
+        const SizedBox(height: 16),
+        _buildAmountField(
+            // coverage:ignore-line
+            costCtrl,
+            AppLocalizations.of(context)!
+                .costOfAcquisitionLabel), // coverage:ignore-line
+        const SizedBox(height: 8),
+        SwitchListTile(
+          // coverage:ignore-line
+          title: Text(
+              AppLocalizations.of(context)!
+                  .isLongTermLabel, // coverage:ignore-line
+              style: const TextStyle(fontSize: 14)),
+          value: isLTCG,
+          onChanged: (val) => onLtcgChanged(val), // coverage:ignore-line
+          dense: true,
+        ),
+      ],
+    );
+  }
+
+  // coverage:ignore-start
+  Widget _buildAlreadyAddedNote() {
+    return Text(
+      AppLocalizations.of(context)!.incomeAlreadyAddedNote,
+      // coverage:ignore-end
+      style: const TextStyle(color: Colors.orange, fontSize: 12),
     );
   }
 
@@ -749,10 +816,11 @@ class _InsurancePortfolioScreenState
             DateTime(year, 4, 1); // coverage:ignore-line
 
     TaxYearData updatedData;
-    if (head == capitalGainsText) {
+    if (head == AppLocalizations.of(context)!.capitalGainLabel) {
       final entry = CapitalGainEntry(
         // coverage:ignore-line
-        description: 'Insurance: ${p.policyName}', // coverage:ignore-line
+        description:
+            '${AppLocalizations.of(context)!.insurancePrefix}: ${p.policyName}', // coverage:ignore-line
         matchAssetType: assetType,
         isLTCG: isLTCG,
         isLongTerm: isLTCG,
@@ -769,7 +837,8 @@ class _InsurancePortfolioScreenState
       ]); // coverage:ignore-line
     } else {
       final entry = OtherIncome(
-        name: 'Insurance: ${p.policyName}',
+        name:
+            '${AppLocalizations.of(context)!.insurancePrefix}: ${p.policyName}',
         amount: saleAmount, // head is Other Income, saleAmount is the income
         type: 'Other',
         subtype: 'others',
@@ -793,7 +862,9 @@ class _InsurancePortfolioScreenState
       Navigator.pop(ctx);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Income added to FY $year-${year + 1}')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .incomeAddedSuccess(year, year + 1))),
         );
       }
     }
@@ -803,79 +874,113 @@ class _InsurancePortfolioScreenState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Row(
-          children: [
-            Icon(Icons.info_outline, size: 16, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Disclaimer: These rules determine tax behavior. Changes affect all policies upon recalculation.',
-                style: TextStyle(fontSize: 12, color: Colors.blue),
-              ),
-            ),
-          ],
-        ),
+        _buildDisclaimerSection(),
         const SizedBox(height: 16),
         const Divider(),
-        SwitchListTile(
-          title: const Text('Enable Aggregate Premium Limits'),
-          subtitle:
-              const Text('Limits on total premium paid for ULIPs/Non-ULIPs'),
-          value: _isInsuranceAggregateLimitEnabled,
-          onChanged: (v) =>
-              setState(() => _isInsuranceAggregateLimitEnabled = v),
-        ),
-        if (_isInsuranceAggregateLimitEnabled) ...[
-          _buildSectionHeader('Start Dates for Aggregate Limits'),
-          _buildDatePickerRow('ULIP Limit (2.5L) Start Date', _dateUlip,
-              (d) => setState(() => _dateUlip = d)), // coverage:ignore-line
-          _buildDatePickerRow('Non-ULIP Limit (5L) Start Date', _dateNonUlip,
-              (d) => setState(() => _dateNonUlip = d)), // coverage:ignore-line
-          const Divider(),
-          _buildSectionHeader('Aggregate Premium Limits'),
-          _buildNumberField('ULIP Limit', _limitUlipCtrl, isAmount: true),
-          _buildNumberField('Non-ULIP Limit', _limitNonUlipCtrl,
-              isAmount: true),
-        ],
+        _buildAggregateLimitsToggle(),
+        if (_isInsuranceAggregateLimitEnabled) _buildAggregateLimitsConfig(),
         const Divider(),
-        SwitchListTile(
-          title: const Text('Enable Premium % Rules'),
-          subtitle: const Text('Limits based on % of Sum Assured'),
-          value: _isInsurancePremiumPercentEnabled,
-          onChanged: (v) => // coverage:ignore-line
-              setState(() => _isInsurancePremiumPercentEnabled =
-                  v), // coverage:ignore-line
+        _buildPremiumPercentRulesToggle(),
+        if (_isInsurancePremiumPercentEnabled)
+          _buildPremiumPercentRulesConfig(),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+            onPressed: _saveRules,
+            icon: const Icon(Icons.save),
+            label: Text(AppLocalizations.of(context)!.saveRulesAction))
+      ],
+    );
+  }
+
+  Widget _buildDisclaimerSection() {
+    return Row(
+      children: [
+        const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)!.disclaimerRulesTitle,
+            style: const TextStyle(fontSize: 12, color: Colors.blue),
+          ),
         ),
-        if (_isInsurancePremiumPercentEnabled) ...[
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            _buildSectionHeader('Premium % Rules Configuration'),
-            IconButton(
-                icon: const Icon(Icons.add), onPressed: _addPremiumRuleDialog),
-          ]),
-          const Text(
-              'Policies issued on/after Date must have Premium <= % of Sum Assured.'),
-          const SizedBox(height: 8),
-          ..._premiumRules.asMap().entries.map((e) {
-            final idx = e.key;
-            final rule = e.value;
-            return Card(
-                child: ListTile(
-              title: Text('${rule.limitPercentage}% Limit'),
-              subtitle: Text(
-                  'Effective from: ${rule.startDate.day}/${rule.startDate.month}/${rule.startDate.year}'),
+      ],
+    );
+  }
+
+  Widget _buildAggregateLimitsToggle() {
+    return SwitchListTile(
+      title: Text(AppLocalizations.of(context)!.enableAggregateLimitsLabel),
+      subtitle: Text(AppLocalizations.of(context)!.limitsUlipNonUlipSubtitle),
+      value: _isInsuranceAggregateLimitEnabled,
+      onChanged: (v) => setState(() => _isInsuranceAggregateLimitEnabled = v),
+    );
+  }
+
+  Widget _buildAggregateLimitsConfig() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+            AppLocalizations.of(context)!.startDatesAggregateLimitsHeader),
+        _buildDatePickerRow(AppLocalizations.of(context)!.ulipLimitStartLabel,
+            _dateUlip, (d) => setState(() => _dateUlip = d)),
+        _buildDatePickerRow(
+            AppLocalizations.of(context)!.nonUlipLimitStartLabel,
+            _dateNonUlip,
+            (d) => setState(() => _dateNonUlip = d)), // coverage:ignore-line
+        const Divider(),
+        _buildSectionHeader(
+            AppLocalizations.of(context)!.aggregatePremiumLimitsHeader),
+        _buildNumberField(
+            AppLocalizations.of(context)!.ulipLimitLabel, _limitUlipCtrl,
+            isAmount: true),
+        _buildNumberField(
+            AppLocalizations.of(context)!.nonUlipLimitLabel, _limitNonUlipCtrl,
+            isAmount: true),
+      ],
+    );
+  }
+
+  Widget _buildPremiumPercentRulesToggle() {
+    return SwitchListTile(
+      title: Text(AppLocalizations.of(context)!.enablePremiumPercentRulesLabel),
+      subtitle: Text(
+          AppLocalizations.of(context)!.limitsPercentageSumAssuredSubtitle),
+      value: _isInsurancePremiumPercentEnabled,
+      onChanged: (v) => setState(
+          () => _isInsurancePremiumPercentEnabled = v), // coverage:ignore-line
+    );
+  }
+
+  Widget _buildPremiumPercentRulesConfig() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          _buildSectionHeader(
+              AppLocalizations.of(context)!.premiumPercentRulesConfigHeader),
+          IconButton(
+              icon: const Icon(Icons.add), onPressed: _addPremiumRuleDialog),
+        ]),
+        Text(AppLocalizations.of(context)!.policiesDatePctNote),
+        const SizedBox(height: 8),
+        ..._premiumRules.asMap().entries.map((e) {
+          final idx = e.key;
+          final rule = e.value;
+          return Card(
+            child: ListTile(
+              title: Text(AppLocalizations.of(context)!
+                  .pctLimitLabel(rule.limitPercentage)),
+              subtitle: Text(AppLocalizations.of(context)!.effectiveFromLabel(
+                  DateFormat(TaxConstants.dateFormat).format(rule.startDate))),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () => setState(
                     () => _premiumRules.removeAt(idx)), // coverage:ignore-line
               ),
-            ));
-          }),
-        ],
-        const SizedBox(height: 24),
-        FilledButton.icon(
-            onPressed: _saveRules,
-            icon: const Icon(Icons.save),
-            label: const Text('Save Rules'))
+            ),
+          );
+        }),
       ],
     );
   }
@@ -902,7 +1007,7 @@ class _InsurancePortfolioScreenState
       title: Text(label),
       trailing: TextButton.icon(
         icon: const Icon(Icons.calendar_month),
-        label: Text('${date.day}/${date.month}/${date.year}'),
+        label: Text(DateFormat(TaxConstants.dateFormat).format(date)),
         // coverage:ignore-start
         onPressed: () async {
           final d = await showDatePicker(
@@ -971,8 +1076,8 @@ class _InsurancePortfolioScreenState
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tax status recalculated and saved.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.recalculateTaxSuccess)));
     }
   }
 
@@ -987,8 +1092,9 @@ class _InsurancePortfolioScreenState
         child: Column(
           children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Tax Optimization (Gains)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(AppLocalizations.of(context)!.taxOptimizationGainsTitle,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
               if (data.hasPendingCalculations)
                 const Icon(Icons.info,
                     color: Colors.orange, size: 16), // coverage:ignore-line
@@ -997,12 +1103,12 @@ class _InsurancePortfolioScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('Ann. Premium', data.totalPremium,
-                    Theme.of(context).colorScheme.onSurface),
-                _buildStat(
-                    'Current Taxable', data.currentTaxableGain, Colors.red),
-                _buildStat(
-                    'Future Taxable', data.futureTaxableGain, Colors.orange),
+                _buildStat(AppLocalizations.of(context)!.annPremiumLabel,
+                    data.totalPremium, Theme.of(context).colorScheme.onSurface),
+                _buildStat(AppLocalizations.of(context)!.currentTaxableLabel,
+                    data.currentTaxableGain, Colors.red),
+                _buildStat(AppLocalizations.of(context)!.futureTaxableLabel,
+                    data.futureTaxableGain, Colors.orange),
               ],
             ),
             const SizedBox(height: 16),
@@ -1011,16 +1117,17 @@ class _InsurancePortfolioScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('Total Taxable ULIP', data.taxableUlipTotal,
-                    Colors.deepOrange),
-                _buildStat('Total Taxable Non-ULIP', data.taxableNonUlipTotal,
+                _buildStat(AppLocalizations.of(context)!.totalTaxableUlipLabel,
+                    data.taxableUlipTotal, Colors.deepOrange),
+                _buildStat(
+                    AppLocalizations.of(context)!.totalTaxableNonUlipLabel,
+                    data.taxableNonUlipTotal,
                     Colors.redAccent),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-                'Taxable amounts above represent Profit (Maturity - Premiums)',
-                style: TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(AppLocalizations.of(context)!.taxableAmountsNote,
+                style: const TextStyle(fontSize: 10, color: Colors.grey)),
           ],
         ),
       ),
@@ -1078,15 +1185,12 @@ class _AddPremiumRuleDialogState extends State<_AddPremiumRuleDialog> {
 
   @override // coverage:ignore-line
   Widget build(BuildContext context) {
+    // coverage:ignore-start
     return AlertDialog(
-      // coverage:ignore-line
-      title: const Text('Add Premium Rule'),
+      title: Text(AppLocalizations.of(context)!.addPremiumRuleTitle),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        // coverage:ignore-line
         Row(children: [
-          // coverage:ignore-line
-          const Text('Start Date: '),
-          // coverage:ignore-start
+          Text('${AppLocalizations.of(context)!.issueDateLabel}: '),
           TextButton(
               onPressed: () async {
                 final d = await showDatePicker(
@@ -1100,13 +1204,15 @@ class _AddPremiumRuleDialogState extends State<_AddPremiumRuleDialog> {
                 // coverage:ignore-end
               },
               child: Text(// coverage:ignore-line
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}')) // coverage:ignore-line
+                  DateFormat(TaxConstants.dateFormat)
+                      .format(_selectedDate))) // coverage:ignore-line
         ]),
+        // coverage:ignore-start
         TextField(
-          // coverage:ignore-line
-          controller: _pctCtrl, // coverage:ignore-line
-          decoration:
-              const InputDecoration(labelText: 'Limit % (of Sum Assured)'),
+          controller: _pctCtrl,
+          decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.limitPctLabel('')),
+          // coverage:ignore-end
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             // coverage:ignore-line
@@ -1119,9 +1225,7 @@ class _AddPremiumRuleDialogState extends State<_AddPremiumRuleDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            // coverage:ignore-end
-            child: const Text('Cancel')),
-        // coverage:ignore-start
+            child: Text(AppLocalizations.of(context)!.cancelAction)),
         FilledButton(
           onPressed: () {
             final pct = double.tryParse(_pctCtrl.text);
@@ -1131,7 +1235,8 @@ class _AddPremiumRuleDialogState extends State<_AddPremiumRuleDialog> {
               Navigator.pop(context); // coverage:ignore-line
             }
           },
-          child: const Text('Add'),
+          child: Text(AppLocalizations.of(context)!
+              .addRuleAction), // coverage:ignore-line
         )
       ],
     );

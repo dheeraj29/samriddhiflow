@@ -19,6 +19,7 @@ import 'package:samriddhi_flow/utils/recurrence_utils.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 
 const dateFormatMmmDdYyyy = 'MMM dd, yyyy';
 
@@ -41,6 +42,7 @@ class StorageService {
   static const String boxInsurancePolicies = 'insurance_policies';
   static const String boxTaxData = 'tax_data';
   static const String boxLendingRecords = 'lending_records';
+  static const String boxInvestments = 'investments';
 
   Future<void> init() async {
     // Load default categories JSON into memory
@@ -56,6 +58,7 @@ class StorageService {
     await _safeOpenBox<InsurancePolicy>(boxInsurancePolicies);
     await _safeOpenBox<TaxYearData>(boxTaxData);
     await _safeOpenBox<LendingRecord>(boxLendingRecords);
+    await _safeOpenBox<Investment>(boxInvestments);
 
     // Initial profile
     final pBox = _hive.box<Profile>(boxProfiles);
@@ -89,6 +92,8 @@ class StorageService {
         }
       }
     }
+    await _revalidateRecurringDates();
+    await processRecurringInvestments();
   }
 
   List<Map<String, dynamic>> _defaultCategoryCache = [];
@@ -135,6 +140,24 @@ class StorageService {
   Future<void> setSmartCalculatorEnabled(bool value) async {
     final box = _hive.box(boxSettings);
     await box.put('smartCalculatorEnabled', value);
+  }
+
+  // --- Locale Management ---
+  // coverage:ignore-start
+  String? getLocale() {
+    final box = _hive.box(boxSettings);
+    return box.get('appLocale') as String?;
+    // coverage:ignore-end
+  }
+
+  Future<void> setLocale(String? localeCode) async {
+    // coverage:ignore-line
+    final box = _hive.box(boxSettings); // coverage:ignore-line
+    if (localeCode == null) {
+      await box.delete('appLocale'); // coverage:ignore-line
+    } else {
+      await box.put('appLocale', localeCode); // coverage:ignore-line
+    }
   }
 
   // --- Cloud Sync Settings ---
@@ -1258,6 +1281,15 @@ class StorageService {
         .toList();
   }
 
+  List<Investment> getAllInvestments() {
+    return _hive
+        .box<Investment>(boxInvestments)
+        .toMap()
+        .values
+        .whereType<Investment>()
+        .toList();
+  }
+
   Future<void> saveRecurringTransaction(RecurringTransaction rt) async {
     final box = _hive.box<RecurringTransaction>(boxRecurring);
     await box.put(rt.id, rt);
@@ -1562,20 +1594,70 @@ class StorageService {
 
     for (var rt in allRecurring) {
       if (rt.isActive && rt.adjustForHolidays) {
-        // Only adjust if the current scheduled date lands on a newly added holiday.
-        // We do strictly validation (ensure valid workday), not optimization (moving forward).
-        // Try to "Re-Anchor" to the original schedule rule to allow moving forward
-        // (e.g. if holiday is removed, we want to snap back to the 25th)
         DateTime idealDate = RecurrenceUtils.findIdealDate(rt, holidays);
-
         final adjusted =
             RecurrenceUtils.adjustDateForHolidays(idealDate, holidays);
-
         if (rt.nextExecutionDate != adjusted) {
           rt.nextExecutionDate = adjusted;
           await box.put(rt.id, rt);
         }
       }
+    }
+  }
+
+  Future<void> processRecurringInvestments() async {
+    final now = DateTime.now();
+    final allInvestments = getAllInvestments();
+
+    for (var inv in allInvestments) {
+      if (inv.isRecurringEnabled && inv.nextRecurringDate != null) {
+        await _processSingleRecurringInvestment(inv, now);
+      }
+    }
+  }
+
+  Future<void> _processSingleRecurringInvestment(
+      Investment inv, DateTime now) async {
+    final box = _hive.box<Investment>(boxInvestments);
+    final holidays = getHolidays();
+    bool changed = false;
+
+    // Catch-up logic: loop while nextRecurringDate is in the past or today
+    while (inv.nextRecurringDate!.isBefore(now) ||
+        inv.nextRecurringDate!.isAtSameMomentAs(now)) {
+      if (!inv.isRecurringPaused) {
+        final newPurchase = Investment.create(
+          name: inv.name,
+          type: inv.type,
+          acquisitionDate: inv.nextRecurringDate!,
+          acquisitionPrice: inv.recurringAmount ?? inv.acquisitionPrice,
+          quantity: 1.0,
+          currentPrice: inv.currentPrice,
+          mfCategory: inv.mfCategory,
+          fixedInterestRate: inv.fixedInterestRate,
+          customLongTermThresholdYears: inv.customLongTermThresholdYears,
+          profileId: inv.profileId,
+          remarks: 'Auto-added recurring investment',
+          codeName: inv.codeName,
+          isRecurringEnabled: false,
+        );
+        await box.put(newPurchase.id, newPurchase);
+      }
+
+      // Advance the next recurring date even if paused
+      inv.nextRecurringDate = RecurrenceUtils.calculateNextOccurrence(
+        lastDate: inv.nextRecurringDate!,
+        frequency: Frequency.monthly,
+        interval: 1,
+        scheduleType: ScheduleType.fixedDate,
+        adjustForHolidays: false,
+        holidays: holidays,
+      );
+      changed = true;
+    }
+
+    if (changed) {
+      await box.put(inv.id, inv);
     }
   }
 
@@ -1591,6 +1673,27 @@ class StorageService {
   Future<void> setLastLogin(DateTime date) async {
     final box = _hive.box(boxSettings);
     await box.put('lastLogin', date);
+  }
+
+  // coverage:ignore-start
+  String? getSessionId() {
+    final box = _hive.box(boxSettings);
+    return box.get('sessionId') as String?;
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  Future<void> setSessionId(String sessionId) async {
+    final box = _hive.box(boxSettings);
+    await box.put('sessionId', sessionId);
+    // coverage:ignore-end
+  }
+
+  // coverage:ignore-start
+  Future<void> clearSessionId() async {
+    final box = _hive.box(boxSettings);
+    await box.delete('sessionId');
+    // coverage:ignore-end
   }
 
   int getInactivityThresholdDays() {
@@ -2097,5 +2200,28 @@ class StorageService {
     if (spends.abs() > 0.01) {
       acc.balance = CurrencyUtils.roundTo2Decimals(acc.balance + spends);
     }
+  }
+
+  // --- Investments ---
+  List<Investment> getInvestments() {
+    // coverage:ignore-line
+    return _getByProfile<Investment>(boxInvestments); // coverage:ignore-line
+  }
+
+  // coverage:ignore-start
+  Future<void> saveInvestment(Investment investment) async {
+    final box = _hive.box<Investment>(boxInvestments);
+    if (investment.profileId.isEmpty || investment.profileId == 'default') {
+      investment.profileId = getActiveProfileId();
+      // coverage:ignore-end
+    }
+    await box.put(investment.id, investment); // coverage:ignore-line
+  }
+
+  // coverage:ignore-start
+  Future<void> deleteInvestment(String id) async {
+    final box = _hive.box<Investment>(boxInvestments);
+    await box.delete(id);
+    // coverage:ignore-end
   }
 }

@@ -2,6 +2,7 @@ import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../models/loan.dart';
 import '../../providers.dart';
@@ -34,18 +35,20 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Recalculate Loan'),
+      title: Text(AppLocalizations.of(context)!.recalculateLoanTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-              'Current Outstanding: ${NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider)).format(widget.loan.remainingPrincipal)}'),
+          Text(AppLocalizations.of(context)!.currentOutstandingLabel(
+              NumberFormat.simpleCurrency(locale: ref.watch(currencyProvider))
+                  .format(widget.loan.remainingPrincipal))),
           const SizedBox(height: 16),
           TextField(
             controller: _emiController,
-            decoration: const InputDecoration(
-                labelText: 'New EMI Amount', border: OutlineInputBorder()),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.newEmiAmountLabel,
+                border: const OutlineInputBorder()),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp)
@@ -53,9 +56,10 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
           ),
           const SizedBox(height: 16),
           CheckboxListTile(
-            title: const Text('Calculate Interest Rate?'),
-            subtitle: const Text(
-                'If checked, Tenure will be used to find the new Rate. Otherwise, Tenure is recalculated.'),
+            title:
+                Text(AppLocalizations.of(context)!.calculateInterestRateOption),
+            subtitle: Text(
+                AppLocalizations.of(context)!.calculateInterestRateSubtitle),
             value: _adjustRate,
             onChanged: (v) => setState(() => _adjustRate = v!),
           ),
@@ -63,9 +67,10 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
             const SizedBox(height: 8),
             TextField(
               controller: _tenureController,
-              decoration: const InputDecoration(
-                  labelText: 'Target Tenure (Months)',
-                  border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText:
+                      AppLocalizations.of(context)!.targetTenureMonthsLabel,
+                  border: const OutlineInputBorder()),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
@@ -75,7 +80,7 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context), // coverage:ignore-line
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         ElevatedButton(
           onPressed: () async {
             final newEmi = double.tryParse(_emiController.text) ?? 0;
@@ -86,7 +91,7 @@ class _LoanRecalculateDialogState extends ConsumerState<LoanRecalculateDialog> {
               if (context.mounted) Navigator.pop(context);
             }
           },
-          child: const Text('Update'),
+          child: Text(AppLocalizations.of(context)!.updateButton),
         ),
       ],
     );

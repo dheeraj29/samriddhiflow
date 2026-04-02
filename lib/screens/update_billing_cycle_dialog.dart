@@ -5,6 +5,7 @@ import '../utils/billing_helper.dart';
 import '../models/account.dart';
 import '../services/storage_service.dart';
 import '../providers.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class UpdateBillingCycleDialog extends ConsumerStatefulWidget {
   final Account account;
@@ -79,8 +80,9 @@ class _UpdateBillingCycleDialogState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(cycleChanged
-                  ? 'Billing cycle update initialized successfully!'
-                  : 'Payment due date updated successfully!')),
+                  ? AppLocalizations.of(context)!.billingCycleUpdateSuccess
+                  : AppLocalizations.of(context)!
+                      .paymentDueDateUpdateSuccess)), // coverage:ignore-line
         );
       }
     } catch (e) {
@@ -94,7 +96,8 @@ class _UpdateBillingCycleDialogState
 
   Future<void> _performCycleChange(StorageService storage) async {
     if (_firstStatementDate == null) {
-      throw Exception('Please select your first statement date.');
+      throw Exception(
+          AppLocalizations.of(context)!.selectFirstStatementMonthError);
     }
 
     final allTxns = ref.read(transactionsProvider).value ?? [];
@@ -121,8 +124,8 @@ class _UpdateBillingCycleDialogState
     if (data.$1 > 0.01 &&
         !(widget.account.isFrozen && !widget.account.isFrozenCalculated)) {
       // coverage:ignore-line
-      throw Exception(// coverage:ignore-line
-          'Billing cycle day can only be changed when the total debt is 0. However, you can still update your Payment Due Date.');
+      throw Exception(AppLocalizations.of(context)!
+          .debtZeroRequirementNote); // coverage:ignore-line
     }
 
     await storage.updateBillingCycle(
@@ -147,11 +150,10 @@ class _UpdateBillingCycleDialogState
   Widget build(BuildContext context) {
     final isAlreadyFrozen =
         widget.account.isFrozen && !widget.account.isFrozenCalculated;
-    final options = _calculateOptions();
-    final dateFormat = DateFormat('MMM dd, yyyy');
+    final cycleChanged = _cycleDay != widget.account.billingCycleDay;
 
     return AlertDialog(
-      title: const Text('Update Billing Cycle'),
+      title: Text(AppLocalizations.of(context)!.updateBillingCycleTitle),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -159,109 +161,24 @@ class _UpdateBillingCycleDialogState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Updating the billing cycle requires freezing the statement until your chosen start month.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Text(
+                AppLocalizations.of(context)!.updateBillingCycleNote,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                enabled: !isAlreadyFrozen,
-                title: const Text('Freeze Transactions Until'),
-                subtitle: Text(DateFormat('MMM dd, yyyy').format(_freezeDate)),
-                trailing: Icon(Icons.calendar_today,
-                    color: isAlreadyFrozen ? Colors.grey : null),
-                onTap: isAlreadyFrozen
-                    ? null
-                    : () async {
-                        // coverage:ignore-line
-                        final picked = await showDatePicker(
-                          // coverage:ignore-line
-                          context: context,
-                          // coverage:ignore-start
-                          initialDate: _freezeDate,
-                          firstDate: widget.newestTransactionDate,
-                          lastDate: DateTime.now(),
-                          // coverage:ignore-end
-                        );
-                        if (picked != null) {
-                          // coverage:ignore-start
-                          setState(() {
-                            _freezeDate = picked;
-                            _firstStatementDate =
-                                // coverage:ignore-end
-                                null; // Reset selection as options might change
-                          });
-                        }
-                      },
-              ),
+              _buildFreezeDateTile(isAlreadyFrozen),
               if (isAlreadyFrozen)
-                const Text(
-                  'Freeze date cannot be changed for an active freeze.',
-                  style: TextStyle(fontSize: 10, color: Colors.orange),
+                Text(
+                  AppLocalizations.of(context)!.freezeDateLockedNote,
+                  style: const TextStyle(fontSize: 10, color: Colors.orange),
                 ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                key: const Key('cycleDayDropdown'),
-                initialValue: _cycleDay,
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _cycleDay = val;
-                      _firstStatementDate = null; // Reset selection
-                    });
-                  }
-                },
-                decoration:
-                    const InputDecoration(labelText: 'New Billing Cycle Day'),
-                items: List.generate(28, (i) => i + 1)
-                    .map((day) => DropdownMenuItem(
-                          value: day,
-                          child: Text(day.toString()),
-                        ))
-                    .toList(),
-              ),
+              _buildCycleDayDropdown(),
               const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
-                key: const Key('dueDayDropdown'),
-                initialValue: _dueDay,
-                decoration:
-                    const InputDecoration(labelText: 'New Payment Due Day'),
-                items: List.generate(28, (i) => i + 1)
-                    .map((day) => DropdownMenuItem(
-                          value: day,
-                          child: Text(day.toString()),
-                        ))
-                    .toList(),
-                onChanged: (val) {
-                  // coverage:ignore-line
-                  if (val != null) {
-                    setState(() => _dueDay = val); // coverage:ignore-line
-                  }
-                },
-              ),
-              if (_cycleDay != widget.account.billingCycleDay) ...[
+              _buildDueDayDropdown(),
+              if (cycleChanged) ...[
                 const SizedBox(height: 24),
-                const Text(
-                  'Select First Statement Month:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                RadioGroup<DateTime>(
-                  groupValue: _firstStatementDate,
-                  onChanged: (val) {
-                    setState(() => _firstStatementDate = val);
-                  },
-                  child: Column(
-                    children: options
-                        .map((date) => RadioListTile<DateTime>(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(dateFormat.format(date)),
-                              value: date,
-                            ))
-                        .toList(),
-                  ),
-                ),
+                _buildFirstStatementMonthSection(),
               ],
             ],
           ),
@@ -270,13 +187,118 @@ class _UpdateBillingCycleDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancelAction),
         ),
         ElevatedButton(
           onPressed: _submit,
-          child: Text(_cycleDay != widget.account.billingCycleDay
-              ? 'Initialize Update'
-              : 'Save Changes'),
+          child: Text(cycleChanged
+              ? AppLocalizations.of(context)!.initializeUpdateAction
+              : AppLocalizations.of(context)!.saveButton),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFreezeDateTile(bool isAlreadyFrozen) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      enabled: !isAlreadyFrozen,
+      title: Text(AppLocalizations.of(context)!.freezeTransactionsUntil),
+      subtitle: Text(DateFormat('MMM dd, yyyy').format(_freezeDate)),
+      trailing: Icon(Icons.calendar_today,
+          color: isAlreadyFrozen ? Colors.grey : null),
+      onTap: isAlreadyFrozen
+          ? null
+          // coverage:ignore-start
+          : () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _freezeDate,
+                firstDate: widget.newestTransactionDate,
+                lastDate: DateTime.now(),
+                // coverage:ignore-end
+              );
+              if (picked != null) {
+                // coverage:ignore-start
+                setState(() {
+                  _freezeDate = picked;
+                  _firstStatementDate = null;
+                  // coverage:ignore-end
+                });
+              }
+            },
+    );
+  }
+
+  Widget _buildCycleDayDropdown() {
+    return DropdownButtonFormField<int>(
+      key: const Key('cycleDayDropdown'),
+      initialValue: _cycleDay,
+      onChanged: (val) {
+        if (val != null) {
+          setState(() {
+            _cycleDay = val;
+            _firstStatementDate = null;
+          });
+        }
+      },
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.newBillingCycleDayLabel),
+      items: List.generate(28, (i) => i + 1)
+          .map((day) => DropdownMenuItem(
+                value: day,
+                child: Text(day.toString()),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildDueDayDropdown() {
+    return DropdownButtonFormField<int>(
+      key: const Key('dueDayDropdown'),
+      initialValue: _dueDay,
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.newPaymentDueDayLabel),
+      items: List.generate(28, (i) => i + 1)
+          .map((day) => DropdownMenuItem(
+                value: day,
+                child: Text(day.toString()),
+              ))
+          .toList(),
+      onChanged: (val) {
+        // coverage:ignore-line
+        if (val != null) {
+          setState(() => _dueDay = val); // coverage:ignore-line
+        }
+      },
+    );
+  }
+
+  Widget _buildFirstStatementMonthSection() {
+    final options = _calculateOptions();
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppLocalizations.of(context)!.selectFirstStatementMonth,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        RadioGroup<DateTime>(
+          groupValue: _firstStatementDate,
+          onChanged: (val) {
+            setState(() => _firstStatementDate = val);
+          },
+          child: Column(
+            children: options
+                .map((date) => RadioListTile<DateTime>(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(dateFormat.format(date)),
+                      value: date,
+                    ))
+                .toList(),
+          ),
         ),
       ],
     );

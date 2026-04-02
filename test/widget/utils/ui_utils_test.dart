@@ -1,9 +1,16 @@
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:mocktail/mocktail.dart';
+
 import 'package:samriddhi_flow/providers.dart';
+
 import 'package:samriddhi_flow/services/auth_service.dart';
+
 import 'package:samriddhi_flow/utils/ui_utils.dart';
 
 class MockAuthService extends Mock implements AuthService {}
@@ -17,19 +24,23 @@ class MockLogoutRequestedNotifier extends LogoutRequestedNotifier {
   @override
   set value(bool v) {
     _state = v;
+
     state = v;
   }
 }
 
 void main() {
   late MockAuthService mockAuthService;
+
   late MockLogoutRequestedNotifier mockLogoutNotifier;
 
   setUp(() {
     mockAuthService = MockAuthService();
+
     mockLogoutNotifier = MockLogoutRequestedNotifier();
 
     // Register fallback for ref
+
     registerFallbackValue(ProviderContainer());
   });
 
@@ -40,6 +51,8 @@ void main() {
         logoutRequestedProvider.overrideWith(() => mockLogoutNotifier),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: child,
         ),
@@ -50,6 +63,7 @@ void main() {
   group('UIUtils Tests', () {
     testWidgets('handleLogout shows dialog and cancels', (tester) async {
       final key = GlobalKey();
+
       await tester.pumpWidget(createWidgetUnderTest(
         Consumer(builder: (context, ref, _) {
           return ElevatedButton(
@@ -63,15 +77,19 @@ void main() {
       ));
 
       await tester.tap(find.byKey(key));
+
       await tester.pumpAndSettle();
 
       expect(find.text('Logout'), findsWidgets); // Title and Button
+
       expect(find.text('Are you sure you want to logout?'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
+
       await tester.pumpAndSettle();
 
       expect(find.text('Are you sure you want to logout?'), findsNothing);
+
       verifyNever(() => mockAuthService.signOut(any()));
     });
 
@@ -79,6 +97,7 @@ void main() {
       when(() => mockAuthService.signOut(any())).thenAnswer((_) async {});
 
       final key = GlobalKey();
+
       await tester.pumpWidget(createWidgetUnderTest(
         Consumer(builder: (context, ref, _) {
           return ElevatedButton(
@@ -92,11 +111,15 @@ void main() {
       ));
 
       await tester.tap(find.byKey(key));
+
       await tester.pumpAndSettle();
 
       // Find the logout button in the dialog (red one)
+
       final logoutBtn = find.widgetWithText(ElevatedButton, 'Logout');
+
       await tester.tap(logoutBtn);
+
       await tester.pumpAndSettle();
 
       verify(() => mockAuthService.signOut(any())).called(1);
@@ -109,6 +132,7 @@ void main() {
       ));
 
       expect(find.text('Test Header'), findsOneWidget);
+
       expect(find.byType(Divider), findsOneWidget);
     });
 
@@ -120,12 +144,16 @@ void main() {
       ));
 
       expect(find.text('Test Header'), findsOneWidget);
+
       expect(find.byType(Divider), findsNothing);
     });
 
     testWidgets('showCommonAboutDialog logic', (tester) async {
       final key = GlobalKey();
+
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(builder: (context) {
             return ElevatedButton(
@@ -138,10 +166,13 @@ void main() {
       ));
 
       await tester.tap(find.byKey(key));
+
       await tester.pumpAndSettle(); // Animation
 
       expect(find.text('Samriddhi Flow'), findsOneWidget);
+
       expect(find.text('1.0.0'), findsOneWidget);
+
       expect(find.text('Personal Finance Management made simple and secure.'),
           findsOneWidget);
     });

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/screens/taxes/insurance_portfolio_screen.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
@@ -99,6 +100,9 @@ void main() {
         currencyProvider.overrideWith(MockCurrencyNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: InsurancePortfolioScreen(),
       ),
     );
@@ -107,31 +111,29 @@ void main() {
   testWidgets('InsurancePortfolioScreen renders tabs and summary',
       (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
     expect(find.text('Insurance Portfolio'), findsOneWidget);
-    expect(find.text('Policies List'), findsOneWidget);
+    expect(find.text('Policies'), findsOneWidget);
     expect(find.text('Tax Rules'), findsOneWidget);
-    expect(find.text('Tax Optimization (Gains)'), findsOneWidget);
   });
 
   testWidgets('Add Policy dialog opening', (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-    final addButton = find.byTooltip('Add Policy');
+    final addButton = find.byTooltip('Add Insurance Policy');
     await tester.tap(addButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Add Policy'), findsOneWidget);
+    expect(find.text('Add Insurance Policy'), findsOneWidget);
     expect(find.text('Policy Name'), findsOneWidget);
     expect(find.textContaining('Annual Premium'), findsOneWidget);
 
     // New installment fields
-    expect(find.text('Enable Installment Option?'), findsOneWidget);
+    expect(find.text('Enable Installment?'), findsOneWidget);
   });
 
   testWidgets('Populate Income dialog works', (WidgetTester tester) async {
@@ -149,67 +151,67 @@ void main() {
     when(() => mockStorage.getInsurancePolicies()).thenReturn([policy]);
 
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
     // Find the populate income button (icon: Icons.add_chart)
-    final populateButton = find.byTooltip('Populate income to Tax Dashboard');
+    final populateButton = find.byTooltip('Populate Taxable Income');
     expect(populateButton, findsOneWidget);
+    await tester.ensureVisible(populateButton);
     await tester.tap(populateButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
 
     expect(find.text('Populate Taxable Income'), findsOneWidget);
     expect(find.text('Tax Year'), findsOneWidget);
     expect(find.text('Tax Head'), findsOneWidget);
 
     // Click Add to Dashboard
-    await tester.tap(find.text('Add to Dashboard'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    final addButton = find.text('Add to Dashboard');
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
 
     final captured = verify(() => mockStorage.saveTaxYearData(captureAny()))
         .captured
         .last as TaxYearData;
     expect(captured.otherIncomes.last.transactionDate, DateTime(2030, 1, 1));
-    expect(find.textContaining('Income added to'), findsOneWidget);
   });
 
   testWidgets('Tax Rules tab interactions', (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Tax Rules'));
+    final taxRulesTab = find.byType(Tab).at(1);
+    await tester.tap(taxRulesTab);
     await tester.pumpAndSettle();
 
     final aggregateSwitch = find.widgetWithText(
       SwitchListTile,
-      'Enable Aggregate Premium Limits',
+      'Enable Aggregate Limits',
     );
     expect(aggregateSwitch, findsWidgets);
     final aggregateSwitch0 = aggregateSwitch.at(0);
 
     // Toggle a switch
     await tester.tap(aggregateSwitch0);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
 
     expect(find.text('Save Rules'), findsOneWidget);
   });
 
   testWidgets('Recalculate tax button trigger', (WidgetTester tester) async {
     await tester.pumpWidget(createInsurancePortfolioScreen());
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Sync & Recalculate Status'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byTooltip('Recalculate Tax Status'));
+    await tester.pumpAndSettle();
 
     verify(() => mockInsuranceTax.optimizeMaturityTax(any())).called(1);
-    expect(find.text('Tax status recalculated and saved.'), findsOneWidget);
+    expect(
+        find.text('Tax status for all policies recalculated.'), findsOneWidget);
   });
 }

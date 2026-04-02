@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:clock/clock.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../services/taxes/indian_tax_service.dart';
@@ -20,13 +19,11 @@ import '../widgets/pure_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/billing_helper.dart';
 import '../services/storage_service.dart';
+import 'package:clock/clock.dart';
+import 'package:intl/intl.dart';
 
 const dateFormatMmmDd = 'MMM dd';
-const payNowText = 'PAY NOW';
 const dateFormatMmmDdYyyy = 'MMM dd, yyyy';
-const upComingLoanEMIsText = 'Upcoming Loan EMIs';
-const creditCardBillsText = 'Credit Card Bills';
-const recurringPaymentsText = 'Recurring Payments';
 
 class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key});
@@ -41,16 +38,25 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   bool _isRecurringExpanded = false;
   bool _isTaxExpanded = false;
 
-  (Color, String, IconData) _getCCPaymentStatus(
+  (Color, String, IconData) _getCCPaymentStatus(BuildContext context,
       bool isFullyPaid, bool isPartiallyPaid, bool isOverdue) {
+    final l10n = AppLocalizations.of(context)!;
     if (isFullyPaid) {
-      return (Colors.green, 'Paid', Icons.check_circle);
+      return (
+        Colors.green,
+        l10n.paidStatus,
+        Icons.check_circle
+      ); // coverage:ignore-line
     } else if (isPartiallyPaid) {
-      return (Colors.orange, 'Partial', Icons.pie_chart);
+      return (Colors.orange, l10n.partialStatus, Icons.pie_chart);
     } else if (isOverdue) {
-      return (Colors.red, 'Overdue', Icons.warning);
+      return (Colors.red, l10n.overdueStatus, Icons.warning);
     }
-    return (Colors.grey, 'Upcoming', Icons.credit_card);
+    return (
+      Colors.grey,
+      l10n.upcomingStatus,
+      Icons.credit_card
+    ); // coverage:ignore-line
   }
 
   @override
@@ -64,8 +70,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final now = clock.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Reminders & Notifications')),
+      appBar: AppBar(title: Text(l10n.remindersTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -74,7 +81,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             loansAsync.when(
               data: (loans) => _buildExpandableSection(
                 context: context,
-                title: upComingLoanEMIsText,
+                title: l10n.upcomingLoanEMIs,
                 icon: Icons.account_balance,
                 isExpanded: _isLoanExpanded,
                 onToggle: () =>
@@ -84,7 +91,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               ),
               loading: () => _buildExpandableSection(
                 context: context,
-                title: upComingLoanEMIsText,
+                title: l10n.upcomingLoanEMIs,
                 icon: Icons.account_balance,
                 isExpanded: _isLoanExpanded,
                 onToggle: () => // coverage:ignore-line
@@ -96,7 +103,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               error: (e, s) => _buildExpandableSection(
                 // coverage:ignore-line
                 context: context,
-                title: upComingLoanEMIsText,
+                title: l10n.upcomingLoanEMIs, // coverage:ignore-line
                 icon: Icons.account_balance,
                 // coverage:ignore-start
                 isExpanded: _isLoanExpanded,
@@ -104,7 +111,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     setState(() => _isLoanExpanded = !_isLoanExpanded),
                 // coverage:ignore-end
                 pendingCount: 0,
-                child: Text('Error: $e'), // coverage:ignore-line
+                child:
+                    Text(l10n.errorLabel(e.toString())), // coverage:ignore-line
               ),
             ),
             const SizedBox(height: 24),
@@ -112,7 +120,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               data: (accounts) => transactionsAsync.when(
                 data: (txns) => _buildExpandableSection(
                   context: context,
-                  title: creditCardBillsText,
+                  title: l10n.creditCardBills,
                   icon: Icons.credit_card,
                   isExpanded: _isCCExpanded,
                   onToggle: () =>
@@ -124,7 +132,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 loading: () => _buildExpandableSection(
                   // coverage:ignore-line
                   context: context,
-                  title: creditCardBillsText,
+                  title: l10n.creditCardBills, // coverage:ignore-line
                   icon: Icons.credit_card,
                   // coverage:ignore-start
                   isExpanded: _isCCExpanded,
@@ -137,7 +145,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 error: (e, s) => _buildExpandableSection(
                   // coverage:ignore-line
                   context: context,
-                  title: creditCardBillsText,
+                  title: l10n.creditCardBills, // coverage:ignore-line
                   icon: Icons.credit_card,
                   // coverage:ignore-start
                   isExpanded: _isCCExpanded,
@@ -145,12 +153,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                       setState(() => _isCCExpanded = !_isCCExpanded),
                   // coverage:ignore-end
                   pendingCount: 0,
-                  child: Text('Error: $e'), // coverage:ignore-line
+                  child: Text(
+                      l10n.errorLabel(e.toString())), // coverage:ignore-line
                 ),
               ),
               loading: () => _buildExpandableSection(
                 context: context,
-                title: creditCardBillsText,
+                title: l10n.creditCardBills,
                 icon: Icons.credit_card,
                 isExpanded: _isCCExpanded,
                 onToggle: () => setState(() =>
@@ -161,20 +170,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               error: (e, s) => _buildExpandableSection(
                 // coverage:ignore-line
                 context: context,
-                title: creditCardBillsText,
+                title: l10n.creditCardBills, // coverage:ignore-line
                 icon: Icons.credit_card,
                 isExpanded: _isCCExpanded, // coverage:ignore-line
                 onToggle: () => setState(() =>
                     _isCCExpanded = !_isCCExpanded), // coverage:ignore-line
                 pendingCount: 0,
-                child: Text('Error: $e'), // coverage:ignore-line
+                child:
+                    Text(l10n.errorLabel(e.toString())), // coverage:ignore-line
               ),
             ),
             const SizedBox(height: 24),
             recurringAsync.when(
               data: (recurring) => _buildExpandableSection(
                 context: context,
-                title: recurringPaymentsText,
+                title: l10n.recurringPaymentsTitle,
                 icon: Icons.repeat,
                 isExpanded: _isRecurringExpanded,
                 onToggle: () => setState(
@@ -185,7 +195,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               ),
               loading: () => _buildExpandableSection(
                 context: context,
-                title: recurringPaymentsText,
+                title: l10n.recurringPaymentsTitle,
                 icon: Icons.repeat,
                 isExpanded: _isRecurringExpanded,
                 onToggle: () => setState(// coverage:ignore-line
@@ -197,7 +207,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               error: (e, s) => _buildExpandableSection(
                 // coverage:ignore-line
                 context: context,
-                title: recurringPaymentsText,
+                title: l10n.recurringPaymentsTitle, // coverage:ignore-line
                 icon: Icons.repeat,
                 // coverage:ignore-start
                 isExpanded: _isRecurringExpanded,
@@ -205,7 +215,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     () => _isRecurringExpanded = !_isRecurringExpanded),
                 // coverage:ignore-end
                 pendingCount: 0,
-                child: Text('Error: $e'), // coverage:ignore-line
+                child:
+                    Text(l10n.errorLabel(e.toString())), // coverage:ignore-line
               ),
             ),
             const SizedBox(height: 24),
@@ -299,16 +310,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     return dueDateObj;
   }
 
-  (Color, String, IconData) _getLoanPaymentStatus(
+  (Color, String, IconData) _getLoanPaymentStatus(BuildContext context,
       bool isFullyPaid, bool isPartiallyPaid, bool isOverdue) {
+    final l10n = AppLocalizations.of(context)!;
     if (isFullyPaid) {
-      return (Colors.green, 'Paid', Icons.check_circle);
+      return (
+        Colors.green,
+        l10n.paidStatus,
+        Icons.check_circle
+      ); // coverage:ignore-line
     } else if (isPartiallyPaid) {
-      return (Colors.orange, 'Partial', Icons.pie_chart);
+      return (Colors.orange, l10n.partialStatus, Icons.pie_chart);
     } else if (isOverdue) {
-      return (Colors.red, 'Overdue', Icons.warning);
+      return (Colors.red, l10n.overdueStatus, Icons.warning);
     }
-    return (Colors.grey, 'Upcoming', Icons.calendar_today);
+    return (Colors.grey, l10n.upcomingStatus, Icons.calendar_today);
   }
 
   Widget _buildLoanReminders(BuildContext context, WidgetRef ref,
@@ -321,9 +337,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }).toList();
 
     if (actionableLoans.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('No EMIs due within 7 days.'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(AppLocalizations.of(context)!.noLoanEMIsDue),
       );
     }
 
@@ -358,7 +374,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
 
     final (statusColor, statusText, statusIcon) = _getLoanPaymentStatus(
-        isFullyPaid, isPartiallyPaid, today.isAfter(dueDateObj));
+        context, isFullyPaid, isPartiallyPaid, today.isAfter(dueDateObj));
 
     final displayDueDate = isFullyPaid
         ? DateTime(dueDateObj.year, dueDateObj.month + 1,
@@ -393,10 +409,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       child: ListTile(
         leading: PureIcons.timer(color: Colors.blueGrey),
         title: Text(loan.name),
-        subtitle: Text(
-            'First EMI starts on ${DateFormat(dateFormatMmmDdYyyy).format(loan.firstEmiDate)}'),
-        trailing: const Text('Wait for Start',
-            style: TextStyle(fontSize: 10, color: Colors.grey)),
+        subtitle: Text(AppLocalizations.of(context)!.firstEMIStartsOn(
+            DateFormat(dateFormatMmmDdYyyy).format(loan.firstEmiDate))),
+        trailing: Text(AppLocalizations.of(context)!.waitForStartLabel,
+            style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ),
     );
   }
@@ -420,120 +436,174 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            Row(
-              children: [
-                PureIcons.icon(statusIcon, color: statusColor),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(loan.name,
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            decoration:
-                                isFullyPaid ? TextDecoration.lineThrough : null,
-                            color: isFullyPaid ? Colors.grey : null)),
-                    const SizedBox(height: 4),
-                    if (!isFullyPaid)
-                      Text(
-                          'Due on ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}',
-                          style: TextStyle(
-                              color: statusText == 'Overdue'
-                                  ? Colors.red
-                                  : Colors.grey[700],
-                              fontWeight: statusText == 'Overdue'
-                                  ? FontWeight.bold
-                                  : null,
-                              fontSize: 13)),
-                    if (isFullyPaid)
-                      Text(
-                          // coverage:ignore-line
-                          'Next Bill: ${DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)}', // coverage:ignore-line
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            ref.read(calendarServiceProvider).downloadExvent(
-                                  title: 'EMI Due: ${loan.name}',
-                                  description: 'Payment for ${loan.name} due.',
-                                  startTime: displayDueDate,
-                                  endTime: displayDueDate
-                                      .add(const Duration(hours: 1)),
-                                );
-                          },
-                          child: Row(
-                            children: [
-                              PureIcons.calendar(size: 14, color: Colors.blue),
-                              const SizedBox(width: 4),
-                              const Text('Add to Calendar',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.blue)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(statusText,
-                        style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
-                    if (!isFullyPaid) ...[
-                      const SizedBox(height: 2),
-                      Text(currency.format(loan.emiAmount - totalPaid),
-                          style: AppTheme.offlineSafeTextStyle
-                              .copyWith(fontWeight: FontWeight.bold)),
-                    ]
-                  ],
-                )
-              ],
+            _buildLoanCardHeader(
+              context: context,
+              ref: ref,
+              loan: loan,
+              isFullyPaid: isFullyPaid,
+              statusIcon: statusIcon,
+              statusColor: statusColor,
+              statusText: statusText,
+              displayDueDate: displayDueDate,
+              totalPaid: totalPaid,
+              currency: currency,
             ),
             if (!isFullyPaid) ...[
               const SizedBox(height: 12),
               if (isPartiallyPaid)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Paid: ${currency.format(totalPaid)} / ${currency.format(loan.emiAmount)}',
-                    style: AppTheme.offlineSafeTextStyle
-                        .copyWith(fontSize: 12, color: Colors.orange),
-                  ),
-                ),
-              SizedBox(
-                width: double.infinity,
-                height: 36,
-                child: ElevatedButton.icon(
-                  icon: PureIcons.payment(size: 16),
-                  label: const Text(payNowText),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  // coverage:ignore-start
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    showDialog(
-                        // coverage:ignore-end
-                        context: context,
-                        builder: (_) => RecordLoanPaymentDialog(
-                            loan: loan)); // coverage:ignore-line
-                  },
-                ),
-              )
+                _buildLoanPartialPaymentInfo(
+                    context, totalPaid, loan.emiAmount, currency),
+              _buildLoanPayNowButton(context, loan),
             ]
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoanCardHeader({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Loan loan,
+    required bool isFullyPaid,
+    required IconData statusIcon,
+    required Color statusColor,
+    required String statusText,
+    required DateTime displayDueDate,
+    required double totalPaid,
+    required NumberFormat currency,
+  }) {
+    return Row(
+      children: [
+        PureIcons.icon(statusIcon, color: statusColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loan.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  decoration: isFullyPaid ? TextDecoration.lineThrough : null,
+                  color: isFullyPaid ? Colors.grey : null,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _buildLoanDueDateText(
+                  context, isFullyPaid, displayDueDate, statusText),
+              const SizedBox(height: 4),
+              _buildLoanCalendarAction(context, ref, loan, displayDueDate),
+            ],
+          ),
+        ),
+        _buildLoanStatusInfo(statusText, statusColor, isFullyPaid,
+            loan.emiAmount - totalPaid, currency),
+      ],
+    );
+  }
+
+  Widget _buildLoanDueDateText(BuildContext context, bool isFullyPaid,
+      DateTime displayDueDate, String statusText) {
+    if (isFullyPaid) {
+      // coverage:ignore-start
+      return Text(
+        AppLocalizations.of(context)!.nextBillLabel(
+            DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)),
+        // coverage:ignore-end
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      );
+    }
+    final isOverdue = statusText == AppLocalizations.of(context)!.overdueStatus;
+    return Text(
+      AppLocalizations.of(context)!
+          .dueOnLabel(DateFormat(dateFormatMmmDdYyyy).format(displayDueDate)),
+      style: TextStyle(
+        color: isOverdue ? Colors.red : Colors.grey[700],
+        fontWeight: isOverdue ? FontWeight.bold : null,
+        fontSize: 13,
+      ),
+    );
+  }
+
+  Widget _buildLoanCalendarAction(
+      BuildContext context, WidgetRef ref, Loan loan, DateTime displayDueDate) {
+    return InkWell(
+      onTap: () {
+        ref.read(calendarServiceProvider).downloadExvent(
+              title:
+                  AppLocalizations.of(context)!.emiDueCalendarTitle(loan.name),
+              description: AppLocalizations.of(context)!
+                  .emiDueCalendarDescription(loan.name),
+              startTime: displayDueDate,
+              endTime: displayDueDate.add(const Duration(hours: 1)),
+            );
+      },
+      child: Row(
+        children: [
+          PureIcons.calendar(size: 14, color: Colors.blue),
+          const SizedBox(width: 4),
+          Text(
+            AppLocalizations.of(context)!.addToCalendarAction,
+            style: const TextStyle(fontSize: 11, color: Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoanStatusInfo(String statusText, Color statusColor,
+      bool isFullyPaid, double remainingDue, NumberFormat currency) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(statusText,
+            style: TextStyle(
+                color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+        if (!isFullyPaid) ...[
+          const SizedBox(height: 2),
+          Text(currency.format(remainingDue),
+              style: AppTheme.offlineSafeTextStyle
+                  .copyWith(fontWeight: FontWeight.bold)),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildLoanPartialPaymentInfo(BuildContext context, double totalPaid,
+      double emiAmount, NumberFormat currency) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        '${AppLocalizations.of(context)!.paidStatus}: ${currency.format(totalPaid)} / ${currency.format(emiAmount)}',
+        style: AppTheme.offlineSafeTextStyle
+            .copyWith(fontSize: 12, color: Colors.orange),
+      ),
+    );
+  }
+
+  Widget _buildLoanPayNowButton(BuildContext context, Loan loan) {
+    return SizedBox(
+      width: double.infinity,
+      height: 36,
+      child: ElevatedButton.icon(
+        icon: PureIcons.payment(size: 16),
+        label: Text(AppLocalizations.of(context)!.payNowAction),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        ),
+        // coverage:ignore-start
+        onPressed: () {
+          FocusScope.of(context).unfocus();
+          showDialog(
+              // coverage:ignore-end
+              context: context,
+              builder: (_) =>
+                  RecordLoanPaymentDialog(loan: loan)); // coverage:ignore-line
+        },
       ),
     );
   }
@@ -552,9 +622,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }).toList();
 
     if (actionableCCs.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('No pending credit card bills.'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(AppLocalizations.of(context)!.noCCBillsDue),
       );
     }
 
@@ -606,7 +676,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final isPartiallyPaid = !isFullyPaid && totalPaid > 0;
 
     final (statusColor, statusText, statusIcon) = _getCCPaymentStatus(
-        isFullyPaid, isPartiallyPaid, today.isAfter(dueDate));
+        context, isFullyPaid, isPartiallyPaid, today.isAfter(dueDate));
 
     final nextBillDate = today.day > acc.billingCycleDay!
         ? DateTime(today.year, today.month + 1,
@@ -649,90 +719,24 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            Row(
-              children: [
-                PureIcons.icon(statusIcon, color: statusColor),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(acc.name,
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            decoration:
-                                isFullyPaid ? TextDecoration.lineThrough : null,
-                            color: isFullyPaid ? Colors.grey : null)),
-                    const SizedBox(height: 4),
-                    if (!isFullyPaid)
-                      Text(
-                          'Due on ${DateFormat(dateFormatMmmDd).format(dueDate)}',
-                          style: TextStyle(
-                              color: statusText == 'Overdue'
-                                  ? Colors.red
-                                  : Colors.grey[700],
-                              fontWeight: statusText == 'Overdue'
-                                  ? FontWeight.bold
-                                  : null,
-                              fontSize: 13)),
-                    if (isFullyPaid)
-                      Text(
-                          // coverage:ignore-line
-                          'Next Bill: ${DateFormat(dateFormatMmmDd).format(nextBillDate)}', // coverage:ignore-line
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
-                  ],
-                )),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(statusText,
-                        style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
-                    if (!isFullyPaid) ...[
-                      const SizedBox(height: 2),
-                      Text(currency.format(totalDue),
-                          style: AppTheme.offlineSafeTextStyle
-                              .copyWith(fontWeight: FontWeight.bold)),
-                    ]
-                  ],
-                )
-              ],
+            _buildCCCardHeader(
+              context: context,
+              acc: acc,
+              isFullyPaid: isFullyPaid,
+              statusIcon: statusIcon,
+              statusColor: statusColor,
+              statusText: statusText,
+              dueDate: dueDate,
+              nextBillDate: nextBillDate,
+              totalDue: totalDue,
+              currency: currency,
             ),
             if (!isFullyPaid) ...[
               const SizedBox(height: 12),
               if (isPartiallyPaid)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Paid: ${currency.format(totalPaid)} / ${currency.format(totalDue + totalPaid)}',
-                    style: AppTheme.offlineSafeTextStyle
-                        .copyWith(fontSize: 12, color: Colors.orange),
-                  ),
-                ),
-              SizedBox(
-                width: double.infinity,
-                height: 36,
-                child: ElevatedButton.icon(
-                  icon: PureIcons.payment(size: 16),
-                  label: const Text(payNowText),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  onPressed: () => showDialog(
-                      // coverage:ignore-line
-                      context: context,
-                      builder: (_) => RecordCCPaymentDialog(
-                          // coverage:ignore-line
-                          creditCardAccount: acc,
-                          isFullyPaid: isFullyPaid)),
-                ),
-              )
+                _buildCCPartialPaymentInfo(
+                    context, totalPaid, totalDue + totalPaid, currency),
+              _buildCCPayNowButton(context, acc, isFullyPaid),
             ]
           ],
         ),
@@ -740,24 +744,146 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  (Color, String, IconData) _getRecurringStatus(DateTime dueDate) {
+  Widget _buildCCCardHeader({
+    required BuildContext context,
+    required Account acc,
+    required bool isFullyPaid,
+    required IconData statusIcon,
+    required Color statusColor,
+    required String statusText,
+    required DateTime dueDate,
+    required DateTime nextBillDate,
+    required double totalDue,
+    required NumberFormat currency,
+  }) {
+    return Row(
+      children: [
+        PureIcons.icon(statusIcon, color: statusColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                acc.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  decoration: isFullyPaid ? TextDecoration.lineThrough : null,
+                  color: isFullyPaid ? Colors.grey : null,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _buildCCDueDateText(
+                  context, isFullyPaid, dueDate, nextBillDate, statusText),
+            ],
+          ),
+        ),
+        _buildCCStatusInfo(
+            statusText, statusColor, isFullyPaid, totalDue, currency),
+      ],
+    );
+  }
+
+  Widget _buildCCDueDateText(BuildContext context, bool isFullyPaid,
+      DateTime dueDate, DateTime nextBillDate, String statusText) {
+    if (isFullyPaid) {
+      // coverage:ignore-start
+      return Text(
+        AppLocalizations.of(context)!
+            .nextBillLabel(DateFormat(dateFormatMmmDd).format(nextBillDate)),
+        // coverage:ignore-end
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      );
+    }
+    final isOverdue = statusText == AppLocalizations.of(context)!.overdueStatus;
+    return Text(
+      AppLocalizations.of(context)!
+          .dueOnLabel(DateFormat(dateFormatMmmDd).format(dueDate)),
+      style: TextStyle(
+        color: isOverdue ? Colors.red : Colors.grey[700],
+        fontWeight: isOverdue ? FontWeight.bold : null,
+        fontSize: 13,
+      ),
+    );
+  }
+
+  Widget _buildCCStatusInfo(String statusText, Color statusColor,
+      bool isFullyPaid, double totalDue, NumberFormat currency) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(statusText,
+            style: TextStyle(
+                color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+        if (!isFullyPaid) ...[
+          const SizedBox(height: 2),
+          Text(currency.format(totalDue),
+              style: AppTheme.offlineSafeTextStyle
+                  .copyWith(fontWeight: FontWeight.bold)),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildCCPartialPaymentInfo(BuildContext context, double totalPaid,
+      double totalPossible, NumberFormat currency) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        '${AppLocalizations.of(context)!.paidStatus}: ${currency.format(totalPaid)} / ${currency.format(totalPossible)}',
+        style: AppTheme.offlineSafeTextStyle
+            .copyWith(fontSize: 12, color: Colors.orange),
+      ),
+    );
+  }
+
+  Widget _buildCCPayNowButton(
+      BuildContext context, Account acc, bool isFullyPaid) {
+    return SizedBox(
+      width: double.infinity,
+      height: 36,
+      child: ElevatedButton.icon(
+        icon: PureIcons.payment(size: 16),
+        label: Text(AppLocalizations.of(context)!.payNowAction),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        ),
+        onPressed: () => showDialog(
+          // coverage:ignore-line
+          context: context,
+          builder: (_) => RecordCCPaymentDialog(
+              // coverage:ignore-line
+              creditCardAccount: acc,
+              isFullyPaid: isFullyPaid),
+        ),
+      ),
+    );
+  }
+
+  (Color, String, IconData) _getRecurringStatus(
+      BuildContext context, DateTime dueDate) {
+    final l10n = AppLocalizations.of(context)!;
     final today = clock.now();
     final todayDate = DateTime(today.year, today.month, today.day);
     final dueDateDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
     if (dueDateDate.isBefore(todayDate)) {
-      return (Colors.red, 'Overdue', Icons.warning);
+      return (Colors.red, l10n.overdueStatus, Icons.warning);
     }
-    return (Colors.grey, 'Upcoming', Icons.event_repeat);
+    return (Colors.grey, l10n.upcomingStatus, Icons.event_repeat);
   }
 
-  String _getFrequencyLabel(Frequency frequency) {
+  String _getFrequencyLabel(BuildContext context, Frequency frequency) {
+    final l10n = AppLocalizations.of(context)!;
     switch (frequency) {
       case Frequency.monthly:
-        return 'Monthly';
+        return l10n.frequencyMonthly;
       case Frequency.weekly: // coverage:ignore-line
-        return 'Weekly';
+        return l10n.frequencyWeekly; // coverage:ignore-line
       default:
-        return 'Other';
+        return l10n.frequencyOther; // coverage:ignore-line
     }
   }
 
@@ -768,7 +894,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final due = recurring
         .where((r) => r.isActive && !_isRecurringInFuture(r, today))
         .toList();
-    if (due.isEmpty) return const Text('No due recurring payments.');
+    if (due.isEmpty) {
+      return Text(AppLocalizations.of(context)!.noRecurringPaymentsDue);
+    }
 
     return Column(
       children: due.map((r) {
@@ -780,7 +908,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget _buildRecurringCard(BuildContext context, WidgetRef ref,
       RecurringTransaction r, NumberFormat currency) {
     final dueDate = r.nextExecutionDate;
-    final (statusColor, statusText, statusIcon) = _getRecurringStatus(dueDate);
+    final (statusColor, statusText, statusIcon) =
+        _getRecurringStatus(context, dueDate);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -788,156 +917,205 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            Row(
-              children: [
-                PureIcons.icon(statusIcon, color: statusColor),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.title,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(
-                        'Due on ${DateFormat(dateFormatMmmDd).format(dueDate)}',
-                        style: TextStyle(
-                            color: statusText == 'Overdue'
-                                ? Colors.red
-                                : Colors.grey[700],
-                            fontWeight: statusText == 'Overdue'
-                                ? FontWeight.bold
-                                : null,
-                            fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text(_getFrequencyLabel(r.frequency),
-                        style:
-                            const TextStyle(fontSize: 11, color: Colors.grey)),
-                    Text(r.accountId == null ? 'Manual' : 'Auto',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.blueGrey)),
-                    const SizedBox(height: 4),
-                    InkWell(
-                      onTap: () {
-                        // coverage:ignore-line
-                        ref
-                            // coverage:ignore-start
-                            .read(calendarServiceProvider)
-                            .downloadRecurringEvent(
-                              title: r.title,
-                              description: 'Recurring payment: ${r.title}',
-                              // coverage:ignore-end
-                              startDate: dueDate,
-                              occurrences: 12,
-                            );
-                      },
-                      child: Row(
-                        children: [
-                          PureIcons.calendar(size: 14, color: Colors.blue),
-                          const SizedBox(width: 4),
-                          const Text('Add to Calendar',
-                              style:
-                                  TextStyle(fontSize: 11, color: Colors.blue)),
-                        ],
-                      ),
-                    ),
-                  ],
-                )),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(statusText,
-                        style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
-                    const SizedBox(height: 2),
-                    Text(currency.format(r.amount),
-                        style: AppTheme.offlineSafeTextStyle
-                            .copyWith(fontWeight: FontWeight.bold)),
-                  ],
-                )
-              ],
+            _buildRecurringCardHeader(
+              context: context,
+              ref: ref,
+              r: r,
+              dueDate: dueDate,
+              statusIcon: statusIcon,
+              statusColor: statusColor,
+              statusText: statusText,
+              currency: currency,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      side: BorderSide(
-                          color: Theme.of(context)
-                              .primaryColor
-                              .withValues(alpha: 0.5)),
-                    ),
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Skip Cycle?'),
-                          content: Text(
-                              'Advance "${r.title}" to the next cycle without recording a transaction?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(
-                                    ctx, false), // coverage:ignore-line
-                                child: const Text('CANCEL')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('SKIP')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        await ref
-                            .read(storageServiceProvider)
-                            .advanceRecurringTransactionDate(r.id);
-                        ref.invalidate(recurringTransactionsProvider);
-                      }
-                    },
-                    child: const Text('SKIP', style: TextStyle(fontSize: 12)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    icon: PureIcons.payment(size: 16),
-                    label: const Text(payNowText),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                    ),
-                    // coverage:ignore-start
-                    onPressed: () {
-                      final txn = Transaction.create(
-                        title: r.title,
-                        amount: r.amount,
-                        date: clock.now(),
-                        type: r.type,
-                        category: r.category,
-                        accountId: r.accountId,
-                        // coverage:ignore-end
-                      );
-                      Navigator.push(
-                          // coverage:ignore-line
-                          context,
-                          // coverage:ignore-start
-                          MaterialPageRoute(
-                              builder: (_) => AddTransactionScreen(
-                                  transactionToEdit: txn, recurringId: r.id)));
-                      // coverage:ignore-end
-                    },
-                  ),
-                ),
-              ],
-            ),
+            _buildRecurringCardActions(context, ref, r),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRecurringCardHeader({
+    required BuildContext context,
+    required WidgetRef ref,
+    required RecurringTransaction r,
+    required DateTime dueDate,
+    required IconData statusIcon,
+    required Color statusColor,
+    required String statusText,
+    required NumberFormat currency,
+  }) {
+    return Row(
+      children: [
+        PureIcons.icon(statusIcon, color: statusColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(r.title,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              _buildRecurringDueDateText(context, dueDate, statusText),
+              const SizedBox(height: 2),
+              Text(_getFrequencyLabel(context, r.frequency),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(
+                r.accountId == null
+                    ? AppLocalizations.of(context)!.manualLabel
+                    : AppLocalizations.of(context)!
+                        .autoLabel, // coverage:ignore-line
+                style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
+              ),
+              const SizedBox(height: 4),
+              _buildRecurringCalendarAction(context, ref, r, dueDate),
+            ],
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(statusText,
+                style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12)),
+            const SizedBox(height: 2),
+            Text(currency.format(r.amount),
+                style: AppTheme.offlineSafeTextStyle
+                    .copyWith(fontWeight: FontWeight.bold)),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildRecurringDueDateText(
+      BuildContext context, DateTime dueDate, String statusText) {
+    final isOverdue = statusText == AppLocalizations.of(context)!.overdueStatus;
+    return Text(
+      AppLocalizations.of(context)!
+          .dueOnLabel(DateFormat(dateFormatMmmDd).format(dueDate)),
+      style: TextStyle(
+        color: isOverdue ? Colors.red : Colors.grey[700],
+        fontWeight: isOverdue ? FontWeight.bold : null,
+        fontSize: 13,
+      ),
+    );
+  }
+
+  Widget _buildRecurringCalendarAction(BuildContext context, WidgetRef ref,
+      RecurringTransaction r, DateTime dueDate) {
+    return InkWell(
+      // coverage:ignore-start
+      onTap: () {
+        ref.read(calendarServiceProvider).downloadRecurringEvent(
+              title: r.title,
+              description: AppLocalizations.of(context)!
+                  .recurringPaymentCalendarDescription(r.title),
+              // coverage:ignore-end
+              startDate: dueDate,
+              occurrences: 12,
+            );
+      },
+      child: Row(
+        children: [
+          PureIcons.calendar(size: 14, color: Colors.blue),
+          const SizedBox(width: 4),
+          Text(
+            AppLocalizations.of(context)!.addToCalendarAction,
+            style: const TextStyle(fontSize: 11, color: Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecurringCardActions(
+      BuildContext context, WidgetRef ref, RecurringTransaction r) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              side: BorderSide(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+            ),
+            onPressed: () => _handleSkipCycle(context, ref, r),
+            child: Text(AppLocalizations.of(context)!.skipAction.toUpperCase(),
+                style: const TextStyle(fontSize: 12)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: ElevatedButton.icon(
+            icon: PureIcons.payment(size: 16),
+            label: Text(AppLocalizations.of(context)!.payNowAction),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.zero,
+            ),
+            onPressed: () =>
+                _handleRecurringPayment(context, r), // coverage:ignore-line
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSkipCycle(
+      BuildContext context, WidgetRef ref, RecurringTransaction r) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.skipCycleTitle),
+        content:
+            Text(AppLocalizations.of(context)!.skipCycleConfirmation(r.title)),
+        actions: [
+          TextButton(
+              onPressed: () =>
+                  Navigator.pop(ctx, false), // coverage:ignore-line
+              child: Text(
+                  AppLocalizations.of(context)!.cancelAction.toUpperCase())),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child:
+                  Text(AppLocalizations.of(context)!.skipAction.toUpperCase())),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref
+          .read(storageServiceProvider)
+          .advanceRecurringTransactionDate(r.id);
+      ref.invalidate(recurringTransactionsProvider);
+    }
+  }
+
+  // coverage:ignore-start
+  void _handleRecurringPayment(BuildContext context, RecurringTransaction r) {
+    final txn = Transaction.create(
+      title: r.title,
+      amount: r.amount,
+      date: clock.now(),
+      type: r.type,
+      category: r.category,
+      accountId: r.accountId,
+      // coverage:ignore-end
+    );
+    Navigator.push(
+      // coverage:ignore-line
+      context,
+      // coverage:ignore-start
+      MaterialPageRoute(
+        builder: (_) =>
+            AddTransactionScreen(transactionToEdit: txn, recurringId: r.id),
+        // coverage:ignore-end
       ),
     );
   }
@@ -952,7 +1130,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     Widget child = taxDataAsync.when(
       data: (taxData) {
         if (taxData == null) {
-          return const Text('No upcoming tax installments.');
+          return Text(AppLocalizations.of(context)!.noTaxInstallmentsDue);
         }
         final rules = taxConfig.getRulesForYear(taxData.year);
         final details = service.calculateDetailedLiability(taxData, rules);
@@ -961,6 +1139,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         final double? amount = details['nextAdvanceTaxAmount'] as dynamic;
         final int? daysLeft = details['daysUntilAdvanceTax'] as dynamic;
         final bool isRequirementMet = details['isRequirementMet'] == true;
+        final double baseAmount = details['nextAdvanceTaxBase'] ?? 0.0;
+        final double cessAmount = details['nextAdvanceTaxCess'] ?? 0.0;
+        final double intAmount = details['nextAdvanceTaxInterest'] ?? 0.0;
 
         if (dueDate != null &&
             amount != null &&
@@ -968,18 +1149,30 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             _shouldShowAdvanceTaxReminder(
                 amount, daysLeft, rules, isRequirementMet)) {
           pendingCount = 1;
-          return _buildAdvanceTaxReminderCard(context, ref, taxData, currency,
-              dueDate, amount, daysLeft, rules);
+          return _buildAdvanceTaxReminderCard(
+              context,
+              ref,
+              taxData,
+              currency,
+              dueDate,
+              amount,
+              daysLeft,
+              rules,
+              baseAmount,
+              cessAmount,
+              intAmount);
         }
         return const Text('No upcoming tax installments.');
       },
       loading: () => const CircularProgressIndicator(),
-      error: (e, s) => Text('Error: $e'), // coverage:ignore-line
+      error: (e, s) => // coverage:ignore-line
+          Text(AppLocalizations.of(context)!
+              .errorLabel(e.toString())), // coverage:ignore-line
     );
 
     return _buildExpandableSection(
       context: context,
-      title: 'Upcoming Tax Installments',
+      title: AppLocalizations.of(context)!.upcomingTaxInstallments,
       icon: Icons.percent,
       isExpanded: _isTaxExpanded,
       onToggle: () => setState(() => _isTaxExpanded = !_isTaxExpanded),
@@ -1022,7 +1215,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       return false;
     }
     // Check cycle tracker
-    if (storage.isBilledAmountPaid(acc.id)) return false;
+    if (storage.isBilledAmountPaid(acc.id)) {
+      return false;
+    }
 
     // Check current due
     final lastRolloverMillis = storage.getLastRollover(acc.id);
@@ -1079,7 +1274,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       DateTime dueDate,
       double amount,
       int? daysLeft,
-      TaxRules rules) {
+      TaxRules rules,
+      double baseAmount,
+      double cessAmount,
+      double intAmount) {
     final bool isNear =
         daysLeft != null && daysLeft <= rules.advanceTaxReminderDays;
     final bool isOverdue = daysLeft != null && daysLeft < 0;
@@ -1130,18 +1328,30 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildAdvanceTaxReminderHeader(isOverdue, isNear),
+                    _buildAdvanceTaxReminderHeader(context, isOverdue, isNear),
                     const SizedBox(height: 4),
                     Text(
-                      'Next: ${currency.format(amount)} due by ${DateFormat('dd MMM').format(dueDate)}',
+                      AppLocalizations.of(context)!.nextTaxInstallmentLabel(
+                          currency.format(amount),
+                          DateFormat('dd MMM').format(dueDate)),
                       style:
                           TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    ),
+                    Text(
+                      AppLocalizations.of(context)!.advanceTaxBreakdownLabel(
+                          currency.format(baseAmount),
+                          currency.format(cessAmount),
+                          currency.format(intAmount)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               if (daysLeft != null)
-                _buildDaysLeftText(isOverdue, isNear, daysLeft),
+                _buildDaysLeftText(context, isOverdue, isNear, daysLeft),
             ],
           ),
         ),
@@ -1149,8 +1359,12 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildAdvanceTaxReminderHeader(bool isOverdue, bool isNear) {
-    final title = isOverdue ? 'Advance Tax Overdue' : 'Upcoming Advance Tax';
+  Widget _buildAdvanceTaxReminderHeader(
+      BuildContext context, bool isOverdue, bool isNear) {
+    final title = isOverdue
+        ? AppLocalizations.of(context)!
+            .advanceTaxOverdue // coverage:ignore-line
+        : AppLocalizations.of(context)!.upcomingAdvanceTax;
     final Color textColor;
     if (isOverdue) {
       textColor = Colors.red;
@@ -1165,7 +1379,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildDaysLeftText(bool isOverdue, bool isNear, int daysLeft) {
+  Widget _buildDaysLeftText(
+      BuildContext context, bool isOverdue, bool isNear, int daysLeft) {
     final Color color;
     if (isOverdue) {
       color = Colors.red;
@@ -1176,11 +1391,12 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
     final String text;
     if (isOverdue) {
-      text = '${daysLeft.abs()}d Late'; // coverage:ignore-line
+      text = AppLocalizations.of(context)!
+          .daysLate(daysLeft.abs()); // coverage:ignore-line
     } else if (daysLeft == 0) {
-      text = 'Due Today';
+      text = AppLocalizations.of(context)!.dueToday; // coverage:ignore-line
     } else {
-      text = '$daysLeft d left';
+      text = AppLocalizations.of(context)!.daysLeftLabel(daysLeft);
     }
 
     return Text(

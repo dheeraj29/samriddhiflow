@@ -9,6 +9,7 @@ import 'firebase_web_safe.dart';
 import '../utils/debug_logger.dart';
 import 'storage_service.dart';
 import '../providers.dart';
+import '../feature_providers.dart';
 import '../firebase_options.dart' as prod;
 import '../firebase_options_debug.dart' as dev;
 
@@ -149,28 +150,62 @@ class AuthService {
     if (isSignOutInProgress) return;
 
     try {
+      final uid = _auth?.currentUser?.uid;
+
       // 1. Snap UI shut immediately
       isSignOutInProgress = true;
-      ref.read(logoutRequestedProvider.notifier).value = true;
+      if (ref != null) {
+        ref.read(logoutRequestedProvider.notifier).value = true;
+      }
 
       // 2. Clear local session flag instantly
       await _setLoggedInFlag(false);
 
       // 3. Fully Decoupled Background Cleanup
-      unawaited(Future(() async {
-        try {
-          await _auth?.signOut();
-        } catch (e) {
-          DebugLogger()
-              .log("AuthService: Firebase SignOut suppressed error: $e");
-        } finally {
-          isSignOutInProgress = false;
-        }
-      }));
+      unawaited(_performBackgroundSignOutCleanup(ref, uid));
     } catch (e) {
       DebugLogger()
           .log("AuthService: SignOut Error: $e"); // coverage:ignore-line
       isSignOutInProgress = false; // coverage:ignore-line
+    }
+  }
+
+  /// Fully Decoupled Background Cleanup for SignOut
+  Future<void> _performBackgroundSignOutCleanup(
+      dynamic ref, String? uid) async {
+    try {
+      if (uid != null && _storageService != null) {
+        await _clearSessionIfMatching(ref, uid);
+      }
+      await _auth?.signOut();
+    } catch (e) {
+      DebugLogger().log("AuthService: Firebase SignOut suppressed error: $e");
+    } finally {
+      isSignOutInProgress = false;
+    }
+  }
+
+  /// Clears session Lock from Cloud if the local ID matches
+  Future<void> _clearSessionIfMatching(dynamic ref, String uid) async {
+    final storage = _storageService;
+    if (storage == null) return;
+
+    final localSessionId = storage.getSessionId();
+    if (localSessionId == null) return;
+
+    try {
+      // coverage:ignore-start
+      final cloudSync = ref.read(cloudSyncServiceProvider);
+      final cloudSessionId = await cloudSync.getCloudSessionId(uid);
+      if (cloudSessionId == localSessionId) {
+        await cloudSync.clearActiveSessionId(uid);
+        // coverage:ignore-end
+      }
+    } catch (_) {
+      // Ignore cloud failures during logout
+    } finally {
+      // Always clear local session ID
+      await storage.clearSessionId(); // coverage:ignore-line
     }
   }
 

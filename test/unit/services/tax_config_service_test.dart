@@ -117,6 +117,78 @@ void main() {
     expect(r2.profileId, 'default'); // Sanitized
   });
 
+  test('restoreAllRules handles complex parsed rules safely', () async {
+    final complexRules = TaxRules.fromMap({
+      'currencyLimit10_10D': 500000,
+      'stdDeductionSalary': 75000,
+      'slabs': [
+        {'upto': 400000.0, 'rate': 0.0},
+        {'upto': 800000, 'rate': 5}
+      ],
+      'tagMappings': {'Shop': 'Business'},
+      'customExemptions': [
+        {
+          'name': 'Test Exempt',
+          'incomeHead': 'Salary',
+          'limit': 1000,
+          'isPercentage': false,
+          'isEnabled': true,
+        }
+      ],
+      'unknown_field_from_future_version': 'ignored',
+      'profileId': 'wrong',
+    });
+
+    await service.restoreAllRules({
+      2024: complexRules,
+      2025: TaxRules(),
+    });
+
+    final restored2024 = service.getRulesForYear(2024);
+    expect(restored2024.stdDeductionSalary, 75000);
+    expect(restored2024.slabs.length, 2);
+    expect(restored2024.tagMappings['Shop'], 'Business');
+    expect(restored2024.customExemptions.single.name, 'Test Exempt');
+    expect(restored2024.profileId, 'default');
+  });
+
+  test('saveRulesForYear persists nested tax rules cleanly', () async {
+    final rules = TaxRules.fromMap({
+      'currencyLimit10_10D': 500000,
+      'stdDeductionSalary': 75000,
+      'slabs': [
+        {'upto': 400000, 'rate': 0},
+        {'upto': 800000, 'rate': 5}
+      ],
+      'tagMappings': {'Shop': 'Business'},
+      'customExemptions': [
+        {
+          'name': 'Test Exempt',
+          'incomeHead': 'Salary',
+          'limit': 1000,
+          'isPercentage': false,
+          'isEnabled': true,
+        }
+      ],
+      'insurancePremiumRules': [
+        {'startDate': '2000-01-01T00:00:00.000', 'limitPercentage': 10.0}
+      ],
+      'advancedTagMappings': [
+        {'categoryName': 'Test', 'taxHead': 'Salary'}
+      ],
+    });
+
+    await service.saveRulesForYear(2025, rules);
+
+    final stored = Hive.box<TaxRules>('tax_rules_v2').get('default_2025');
+    expect(stored, isNotNull);
+    expect(stored!.slabs.length, 2);
+    expect(stored.tagMappings['Shop'], 'Business');
+    expect(stored.customExemptions.single.name, 'Test Exempt');
+    expect(stored.insurancePremiumRules.single.limitPercentage, 10.0);
+    expect(stored.advancedTagMappings.single.categoryName, 'Test');
+  });
+
   test('saveRulesForYear sanitizes profileId', () async {
     final rules = TaxRules(profileId: 'wrong');
     await service.saveRulesForYear(2025, rules);

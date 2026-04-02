@@ -86,6 +86,10 @@ void main() {
 
     when(() => mockAuth.currentUser).thenReturn(mockUser);
     when(() => mockUser.uid).thenReturn('user123');
+    when(() => mockUser.getIdToken(any())).thenAnswer((_) async => 'token123');
+    when(() => mockCloudStorage.getActiveSessionId(any()))
+        .thenAnswer((_) async => 'session123');
+    when(() => mockStorageService.getSessionId()).thenReturn('session123');
 
     cloudSyncService = CloudSyncService(
         mockCloudStorage, mockStorageService, mockTaxConfigService,

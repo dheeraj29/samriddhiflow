@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
 import '../services/auth_service.dart';
 import '../providers.dart';
+import '../feature_providers.dart';
 import '../widgets/pure_icons.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -27,6 +29,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          PopupMenuButton<String?>(
+            icon: const Icon(Icons.language),
+            tooltip: AppLocalizations.of(context)!.languageLabel,
+            onSelected: (String? newValue) {
+              ref.read(localeProvider.notifier).setLocale(newValue);
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: null,
+                child: Text(AppLocalizations.of(context)!.systemDefault),
+              ),
+              PopupMenuItem(
+                value: 'en',
+                child: Text(AppLocalizations.of(context)!.englishLanguage),
+              ),
+            ],
+          ),
+        ],
+      ),
+      extendBodyBehindAppBar: true,
       body: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 400),
@@ -94,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     final isDark =
                         Theme.of(context).brightness == Brightness.dark;
                     return Text(
-                      'Continue with Google',
+                      AppLocalizations.of(context)!.continueWithGoogle,
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -115,7 +141,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           true; // coverage:ignore-line
                     },
                     icon: PureIcons.cloudOff(size: 20),
-                    label: const Text('Continue Offline / Use Locally'),
+                    label: Text(
+                        AppLocalizations.of(context)!.continueOfflineAction),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey.shade700,
                     ),
@@ -150,7 +177,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // coverage:ignore-start
         if (response.message != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login Status: ${response.message}')),
+            SnackBar(
+                content: Text(AppLocalizations.of(context)!
+                    .loginStatusMsg(response.message!))),
             // coverage:ignore-end
           );
         }

@@ -18,6 +18,7 @@ import 'package:samriddhi_flow/models/taxes/tax_data_models.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 
 import 'services/auth_service.dart';
 import 'services/file_service.dart';
@@ -130,6 +131,11 @@ void _registerAdapter<T>(TypeAdapter<T> a) {
 }
 
 void _registerHiveAdapters() {
+  // Investment Adapters (Priority)
+  _registerAdapter(InvestmentAdapter());
+  _registerAdapter(InvestmentTypeAdapter());
+  _registerAdapter(MutualFundCategoryAdapter());
+
   _registerAdapter(AccountAdapter());
   _registerAdapter(AccountTypeAdapter());
   _registerAdapter(AssetTypeAdapter());

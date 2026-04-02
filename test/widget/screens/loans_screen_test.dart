@@ -1,15 +1,26 @@
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:mocktail/mocktail.dart';
+
 import 'package:samriddhi_flow/providers.dart';
+
 import 'package:samriddhi_flow/screens/loans_screen.dart';
+
 import 'package:samriddhi_flow/screens/add_loan_screen.dart';
+
 import 'package:samriddhi_flow/screens/loan_details_screen.dart';
+
 import 'package:samriddhi_flow/models/loan.dart';
+
 import 'package:samriddhi_flow/services/loan_service.dart';
 
 // Mocks
+
 class MockLoanService extends Mock implements LoanService {}
 
 class MockCurrencyNotifier extends CurrencyNotifier {
@@ -28,10 +39,13 @@ void main() {
 
   setUp(() {
     mockLoanService = MockLoanService();
+
     // Default Stub
+
     when(() => mockLoanService.calculateAmortizationSchedule(any())).thenReturn(
       List<Map<String, dynamic>>.empty(),
     );
+
     when(() => mockLoanService.calculateRemainingTenure(any())).thenReturn(
       (months: 0.0, days: 0),
     );
@@ -50,6 +64,9 @@ void main() {
         loanServiceProvider.overrideWithValue(mockLoanService),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: LoansScreen(),
       ),
     );
@@ -58,10 +75,13 @@ void main() {
   testWidgets('LoansScreen shows empty state when no loans', (tester) async {
     await tester.pumpWidget(
         createWidgetUnderTest(overrideValue: const AsyncValue.data([])));
+
     await tester.pumpAndSettle();
 
-    expect(find.text('No active loans.'), findsOneWidget);
+    expect(find.text('No active loans found.'), findsOneWidget);
+
     expect(find.text('Add Loan'), findsOneWidget);
+
     expect(find.byType(FloatingActionButton), findsOneWidget);
   });
 
@@ -90,6 +110,7 @@ void main() {
                 'balance': 200000.0 - (index * 4900.0),
               }),
     );
+
     when(() => mockLoanService.calculateRemainingTenure(any())).thenReturn(
       (months: 60.0, days: 1800),
     );
@@ -105,36 +126,51 @@ void main() {
         loanServiceProvider.overrideWithValue(mockLoanService),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: LoansScreen(),
       ),
     ));
 
     // Manual pumps for initial list load
+
     await tester.pump();
+
     await tester.pump();
+
     await tester.pump();
 
     expect(find.text('Detail Loan'), findsOneWidget);
-    expect(find.textContaining('60m Left'), findsOneWidget);
+
+    expect(find.textContaining('60 months left'), findsOneWidget);
+    expect(find.textContaining('9.0% Int.'), findsOneWidget);
 
     // Test Navigation to Details
+
     await tester.tap(find.text('Detail Loan'));
 
     // Manual pumps for navigation and animation (FlChart)
+
     await tester.pump();
+
     await tester.pump();
+
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(LoanDetailsScreen), findsOneWidget);
+
     expect(find.text('Detail Loan'), findsOneWidget);
   });
 
   testWidgets('LoansScreen FAB opens AddLoanScreen', (tester) async {
     await tester.pumpWidget(
         createWidgetUnderTest(overrideValue: const AsyncValue.data([])));
+
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(FloatingActionButton));
+
     await tester.pumpAndSettle();
 
     expect(find.byType(AddLoanScreen), findsOneWidget);

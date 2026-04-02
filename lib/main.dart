@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme/app_theme.dart';
@@ -9,6 +10,7 @@ import 'navigator_key.dart';
 import 'widgets/auth_wrapper.dart';
 import 'widgets/global_overlay.dart';
 import 'feature_providers.dart';
+import 'screens/investments_screen.dart';
 
 void main() {
   // Ensure Flutter binding is initialized
@@ -82,18 +84,23 @@ class BudgetApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'Samriddhi Flow',
+      themeMode: themeMode,
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
-      themeMode: themeMode,
       navigatorObservers: [ClearFocusObserver()],
       routes: {
         '/settings': (context) => const SettingsScreen(),
         '/taxes': (context) => const TaxDashboardScreen(),
+        '/investments': (context) => const InvestmentsScreen(),
       },
       builder: (context, child) {
         return LockWrapper(

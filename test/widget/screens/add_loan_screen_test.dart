@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/screens/add_loan_screen.dart';
 import 'package:samriddhi_flow/models/loan.dart';
@@ -14,7 +15,7 @@ class MockStorageService extends Mock implements StorageService {}
 
 class MockCurrencyNotifier extends CurrencyNotifier {
   @override
-  String build() => 'en_US';
+  String build() => 'en';
 }
 
 class FakeLoan extends Fake implements Loan {}
@@ -57,6 +58,9 @@ void main() {
         activeProfileIdProvider.overrideWith(MockProfileNotifier.new),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
         home: AddLoanScreen(),
       ),
     );
@@ -69,7 +73,9 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.pumpAndSettle();
 
-    final createButton = find.widgetWithText(ElevatedButton, 'Create Loan');
+    expect(find.text('Add Loan'), findsOneWidget); // Verify title
+
+    final createButton = find.widgetWithText(ElevatedButton, 'CREATE');
     if (createButton.evaluate().isEmpty) {
       debugPrint('Create Loan button NOT found. Tree dump:');
       // debugDumpApp();
@@ -85,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Required'), findsOneWidget); // Name
-    expect(find.text('Invalid'), findsWidgets); // Principal, Rate
+    expect(find.textContaining('Invalid'), findsWidgets); // Principal, Rate
 
     addTearDown(() => tester.view.resetPhysicalSize());
   });
@@ -104,27 +110,28 @@ void main() {
     // Fill Name
     await tester.enterText(
         find.ancestor(
-            of: find.text('Loan Name'), matching: find.byType(TextFormField)),
+            of: find.textContaining('Loan Name'),
+            matching: find.byType(TextFormField)),
         'New Car');
 
     // Fill Principal
     await tester.enterText(
         find.ancestor(
-            of: find.text('Principal Amount'),
+            of: find.textContaining('Initial Principal'),
             matching: find.byType(TextFormField)),
         '10000');
 
     // Fill Rate
     await tester.enterText(
         find.ancestor(
-            of: find.text('Interest Rate (Annual)'),
+            of: find.textContaining('Interest Rate (Annual)'),
             matching: find.byType(TextFormField)),
         '10');
 
     // Fill Tenure
     await tester.enterText(
         find.ancestor(
-            of: find.text('Tenure (Months)'),
+            of: find.textContaining('Tenure (Months)'),
             matching: find.byType(TextFormField)),
         '60');
     await tester.pumpAndSettle(); // Trigger calculation
@@ -135,7 +142,7 @@ void main() {
     expect(find.text('212.47'), findsOneWidget); // Calculated EMI Field
 
     // Create
-    final createButton = find.widgetWithText(ElevatedButton, 'Create Loan');
+    final createButton = find.widgetWithText(ElevatedButton, 'CREATE');
     await tester.ensureVisible(createButton);
     await tester.tap(createButton);
     await tester.pumpAndSettle();
@@ -156,16 +163,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // 1. Change Loan Type
-    await tester.tap(find.text('PERSONAL'));
+    await tester.tap(find.text('PERSONAL LOAN'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('HOME').last);
+    await tester.tap(find.text('HOME LOAN').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('HOME'), findsWidgets);
+    expect(find.text('HOME LOAN'), findsWidgets);
 
     // 2. Change EMI Date
-    final emiDateText = find.text('1st EMI Date');
+    final emiDateText = find.textContaining('Next EMI');
     await tester.dragUntilVisible(
         emiDateText, find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();

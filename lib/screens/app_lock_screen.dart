@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../widgets/pure_icons.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 class AppLockScreen extends ConsumerStatefulWidget {
   final VoidCallback onUnlocked;
@@ -43,7 +44,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     if (storage.isPinLocked()) {
       setState(() {
         _pin = "";
-        _error = "Too many attempts. Try again later.";
+        _error = AppLocalizations.of(context)!.tooManyAttemptsMsg;
       });
       return;
     }
@@ -59,7 +60,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         final attemptsLeft = storage.getRemainingPinAttempts();
         setState(() {
           _pin = "";
-          _error = "Incorrect PIN ($attemptsLeft attempts left)";
+          _error = AppLocalizations.of(context)!
+              .incorrectPinWithAttempts(attemptsLeft);
         });
       }
     }
@@ -81,15 +83,15 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                         height: 48), // Padding at top for small scrolls
                     PureIcons.lockOutline(size: 64, color: Colors.teal),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Enter PIN',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    Text(
+                      AppLocalizations.of(context)!.enterPinHeader,
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      '4-6 digits',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    Text(
+                      AppLocalizations.of(context)!.pinDigitsHint,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     const SizedBox(height: 32),
                     // PIN Dots
@@ -123,7 +125,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: widget.onFallback,
-                      child: const Text('Forgot PIN? / Use Password'),
+                      child:
+                          Text(AppLocalizations.of(context)!.forgotPinAction),
                     ),
                     const SizedBox(height: 32),
                   ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../../models/loan.dart';
 import '../../providers.dart';
 
@@ -22,18 +23,25 @@ class _LoanRenameDialogState extends ConsumerState<LoanRenameDialog> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Rename Loan'),
+      title: Text(AppLocalizations.of(context)!.renameLoanTitle),
       content: TextField(
         controller: _controller,
-        decoration: const InputDecoration(labelText: 'Loan Name'),
+        decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.loanNameLabel),
         autofocus: true,
       ),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context), // coverage:ignore-line
-            child: const Text('Cancel')),
+            child: Text(AppLocalizations.of(context)!.cancelButton)),
         ElevatedButton(
           onPressed: () async {
             if (_controller.text.isNotEmpty) {
@@ -46,7 +54,7 @@ class _LoanRenameDialogState extends ConsumerState<LoanRenameDialog> {
               }
             }
           },
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context)!.saveButton),
         ),
       ],
     );

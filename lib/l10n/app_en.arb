@@ -1,0 +1,3398 @@
+{
+  "appTitle": "Samriddhi Flow",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "mySamriddhi": "My Samriddhi",
+  "@mySamriddhi": {
+    "description": "Dashboard title"
+  },
+  "defaultVal": "Default",
+  "@defaultVal": {
+    "description": "Default value label"
+  },
+  "profileLabel": "Profile: {name}",
+  "@profileLabel": {
+    "description": "Profile label with name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remindersTooltip": "Reminders",
+  "@remindersTooltip": {
+    "description": "Reminders icon tooltip"
+  },
+  "lockAppTooltip": "Lock App",
+  "@lockAppTooltip": {
+    "description": "Lock icon tooltip"
+  },
+  "logoutTooltip": "Logout",
+  "@logoutTooltip": {
+    "description": "Logout icon tooltip"
+  },
+  "quickActionsHeader": "Quick Actions",
+  "@quickActionsHeader": {
+    "description": "Quick Actions section header"
+  },
+  "recentTransactionsHeader": "Recent Transactions",
+  "@recentTransactionsHeader": {
+    "description": "Recent Transactions section header"
+  },
+  "viewAllButton": "View All",
+  "@viewAllButton": {
+    "description": "View All button text"
+  },
+  "totalNetWorthLabel": "Total Net Worth",
+  "@totalNetWorthLabel": {
+    "description": "Total Net Worth label"
+  },
+  "currentSavingsLabel": "Current Savings: ",
+  "@currentSavingsLabel": {
+    "description": "Current Savings label"
+  },
+  "ccBillUnpaidLabel": "CC Bill (Unpaid)",
+  "@ccBillUnpaidLabel": {
+    "description": "Credit Card Bill Unpaid label"
+  },
+  "ccUnbilledLabel": "CC Unbilled",
+  "@ccUnbilledLabel": {
+    "description": "Credit Card Unbilled label"
+  },
+  "ccUsageLabel": "CC Usage",
+  "@ccUsageLabel": {
+    "description": "Credit Card Usage label"
+  },
+  "totalLoanLiabilityLabel": "Total Loan Liability",
+  "@totalLoanLiabilityLabel": {
+    "description": "Total Loan Liability label"
+  },
+  "debtFreeIn": "Debt Free in ~{months} months ({days} days)",
+  "@debtFreeIn": {
+    "description": "Debt free estimation text",
+    "placeholders": {
+      "months": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "incomeMonthLabel": "Income (Month)",
+  "@incomeMonthLabel": {
+    "description": "Income for current month label"
+  },
+  "budgetExpenseLabel": "Budget Expense",
+  "@budgetExpenseLabel": {
+    "description": "Budgeted expense label"
+  },
+  "monthlyBudgetProgress": "Monthly Budget Progress",
+  "@monthlyBudgetProgress": {
+    "description": "Monthly Budget Progress header"
+  },
+  "expLabel": "Exp: ",
+  "@expLabel": {
+    "description": "Expense shorthand label"
+  },
+  "remLabel": "Rem: ",
+  "@remLabel": {
+    "description": "Remaining shorthand label"
+  },
+  "incomeAction": "Income",
+  "@incomeAction": {
+    "description": "Quick action Income"
+  },
+  "transferAction": "Transfer",
+  "@transferAction": {
+    "description": "Quick action Transfer"
+  },
+  "payBillAction": "Pay Bill",
+  "@payBillAction": {
+    "description": "Action label"
+  },
+  "loansAction": "Loans",
+  "@loansAction": {
+    "description": "Quick action Loans"
+  },
+  "taxesAction": "Taxes",
+  "@taxesAction": {
+    "description": "Quick action Taxes"
+  },
+  "lendingAction": "Lending",
+  "@lendingAction": {
+    "description": "Quick action Lending"
+  },
+  "noTransactionsYet": "No transactions yet.",
+  "@noTransactionsYet": {
+    "description": "Empty state for transactions"
+  },
+  "unsavedDataTitle": "Unsaved Data: {count} transactions recorded since last backup.",
+  "@unsavedDataTitle": {
+    "description": "Backup reminder title",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "goToBackupButton": "Go to Backup",
+  "@goToBackupButton": {
+    "description": "Button to go to backup settings"
+  },
+  "dismissButton": "Dismiss",
+  "@dismissButton": {
+    "description": "Dismiss button text"
+  },
+  "homeTooltip": "Home",
+  "@homeTooltip": {
+    "description": "Bottom nav Home tooltip"
+  },
+  "accountsTooltip": "Accounts",
+  "@accountsTooltip": {
+    "description": "Bottom nav Accounts tooltip"
+  },
+  "reportsTooltip": "Reports",
+  "@reportsTooltip": {
+    "description": "Bottom nav Reports tooltip"
+  },
+  "settingsTooltip": "Settings",
+  "@settingsTooltip": {
+    "description": "Bottom nav Settings tooltip"
+  },
+  "privacyPolicyTitle": "Samriddhi Flow — Privacy Policy",
+  "@privacyPolicyTitle": {
+    "description": "Privacy policy title"
+  },
+  "privacyPolicyIntro": "Your privacy is important to us. Here is how Samriddhi Flow handles your data:",
+  "@privacyPolicyIntro": {
+    "description": "Privacy policy introductory text"
+  },
+  "localFirstTitle": "Local-First Storage",
+  "@localFirstTitle": {
+    "description": "Policy item title"
+  },
+  "localFirstDesc": "All your financial data is stored locally on your device by default. Nothing leaves your device unless you choose to back up.",
+  "@localFirstDesc": {
+    "description": "Policy item description"
+  },
+  "cloudBackupTitle": "Cloud Backup",
+  "@cloudBackupTitle": {
+    "description": "Policy item title"
+  },
+  "cloudBackupDesc": "Secure your sensitive financial data (accounts, transactions, etc.) with a passcode. This passcode is NEVER stored and is required to restore.",
+  "@cloudBackupDesc": {
+    "description": "Policy item description"
+  },
+  "optionalEncryptionTitle": "Optional Encryption",
+  "@optionalEncryptionTitle": {
+    "description": "Policy item title"
+  },
+  "optionalEncryptionDesc": "When backing up to the cloud, you can encrypt your data with a passcode of your choice. This passcode is NEVER stored anywhere — only you know it. Without the passcode, your cloud data cannot be read.",
+  "@optionalEncryptionDesc": {
+    "description": "Policy item description"
+  },
+  "noTrackingTitle": "No Tracking or Analytics",
+  "@noTrackingTitle": {
+    "description": "Policy item title"
+  },
+  "noTrackingDesc": "Samriddhi Flow does not collect, track, or transmit any usage analytics, personal information, or behavioral data.",
+  "@noTrackingDesc": {
+    "description": "Policy item description"
+  },
+  "dataControlTitle": "Your Data, Your Control",
+  "@dataControlTitle": {
+    "description": "Policy item title"
+  },
+  "dataControlDesc": "You can export, restore, or delete all your data at any time from the Settings screen. We believe you should have full ownership of your financial information.",
+  "@dataControlDesc": {
+    "description": "Policy item description"
+  },
+  "closeButton": "Close",
+  "@closeButton": {
+    "description": "Close button text"
+  },
+  "switchProfileTooltip": "Switch Profile ({name})",
+  "@switchProfileTooltip": {
+    "description": "Tooltip for profile switcher",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "myAccounts": "My Accounts",
+  "@myAccounts": {
+    "description": "Accounts screen title"
+  },
+  "extendedNumbersTooltip": "Switch to Extended Numbers",
+  "@extendedNumbersTooltip": {
+    "description": "Tooltip to toggle number format"
+  },
+  "compactNumbersTooltip": "Switch to Compact Numbers",
+  "@compactNumbersTooltip": {
+    "description": "Tooltip to toggle number format"
+  },
+  "noAccountsFound": "No accounts found.",
+  "@noAccountsFound": {
+    "description": "Empty state message"
+  },
+  "addAccountButton": "Add Account",
+  "@addAccountButton": {
+    "description": "Button to add account"
+  },
+  "pinnedAccountsHeader": "Pinned Accounts",
+  "@pinnedAccountsHeader": {
+    "description": "Section header"
+  },
+  "savingsAccountsHeader": "Savings Accounts",
+  "@savingsAccountsHeader": {
+    "description": "Section header"
+  },
+  "creditCardsHeader": "Credit Cards",
+  "@creditCardsHeader": {
+    "description": "Section header"
+  },
+  "walletsHeader": "Wallets",
+  "@walletsHeader": {
+    "description": "Section header"
+  },
+  "noAccountsInSection": "No accounts in this section.",
+  "@noAccountsInSection": {
+    "description": "Empty section message"
+  },
+  "addNewAccountButton": "Add New Account",
+  "@addNewAccountButton": {
+    "description": "Button to add new account"
+  },
+  "savingsAccountType": "Savings Account",
+  "@savingsAccountType": {
+    "description": "Account type label"
+  },
+  "walletType": "Wallet",
+  "@walletType": {
+    "description": "Account type label"
+  },
+  "limitLabel": "Credit Limit: {value}",
+  "@limitLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "limitShort": "Limit: {value}",
+  "@limitShort": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "availableLabel": "Available: {value}",
+  "@availableLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "availableShort": "Avail: {value}",
+  "@availableShort": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "billedChip": "Billed",
+  "@billedChip": {
+    "description": "Chip label"
+  },
+  "balanceChip": "Balance",
+  "@balanceChip": {
+    "description": "Chip label"
+  },
+  "unbilledChip": "Unbilled",
+  "@unbilledChip": {
+    "description": "Chip label"
+  },
+  "calculatesOn": "Calculates on",
+  "@calculatesOn": {
+    "description": "Date label"
+  },
+  "initialBillOn": "Initial bill on",
+  "@initialBillOn": {
+    "description": "Date label"
+  },
+  "percentUsed": "{value}% used",
+  "@percentUsed": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "unpinAccount": "Unpin Account",
+  "@unpinAccount": {
+    "description": "Menu option"
+  },
+  "pinAccount": "Pin Account",
+  "@pinAccount": {
+    "description": "Menu option"
+  },
+  "viewTransactions": "View Transactions",
+  "@viewTransactions": {
+    "description": "Menu option"
+  },
+  "editAccount": "Edit Account",
+  "@editAccount": {
+    "description": "Menu option"
+  },
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {
+    "description": "Menu option"
+  },
+  "lastBillDate": "Last Bill Date: {date}",
+  "@lastBillDate": {
+    "description": "Billing info label",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "nextBillDate": "Next Bill Date: {date}",
+  "@nextBillDate": {
+    "description": "Billing info label",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateBillingCycle": "Update Billing Cycle",
+  "@updateBillingCycle": {
+    "description": "Menu option title"
+  },
+  "updateBillingCycleDesc": "Move to a new cycle day or due date safely",
+  "@updateBillingCycleDesc": {
+    "description": "Menu option subtitle"
+  },
+  "selectAllTooltip": "Select All (Filtered)",
+  "@selectAllTooltip": {
+    "description": "Tooltip"
+  },
+  "allTransactionsTitle": "All Transactions",
+  "@allTransactionsTitle": {
+    "description": "Screen title"
+  },
+  "selectedCount": "{count} Selected",
+  "@selectedCount": {
+    "description": "Selection count label",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectTransactionsTooltip": "Select Transactions",
+  "@selectTransactionsTooltip": {
+    "description": "Tooltip"
+  },
+  "noAccountManual": "No Account (Manual)",
+  "@noAccountManual": {
+    "description": "Dropdown option"
+  },
+  "noMatchesFilter": "No matches for this filter.",
+  "@noMatchesFilter": {
+    "description": "Empty state message"
+  },
+  "deleteSelectedTitle": "Delete {count} Transactions?",
+  "@deleteSelectedTitle": {
+    "description": "Dialog title",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemsMoveToRecycleBin": "Items will be moved to Recycle Bin.",
+  "@itemsMoveToRecycleBin": {
+    "description": "Dialog content"
+  },
+  "transactionsMovedToRecycleBin": "Transactions moved to Recycle Bin",
+  "@transactionsMovedToRecycleBin": {
+    "description": "Snackbar message"
+  },
+  "deleteTransactionTitle": "Delete Transaction?",
+  "@deleteTransactionTitle": {
+    "description": "Dialog title"
+  },
+  "movedToRecycleBin": "Moved to Recycle Bin",
+  "@movedToRecycleBin": {
+    "description": "Snackbar message"
+  },
+  "cancelButton": "Cancel",
+  "@cancelButton": {
+    "description": "Button text"
+  },
+  "deleteAction": "Delete",
+  "@deleteAction": {},
+  "salaryTab": "Salary",
+  "@salaryTab": {},
+  "housePropTab": "House Prop",
+  "@housePropTab": {},
+  "businessTab": "Business",
+  "@businessTab": {},
+  "capGainsTab": "Cap Gains",
+  "@capGainsTab": {},
+  "dividendTab": "Dividend",
+  "@dividendTab": {},
+  "taxPaidTab": "Tax Paid",
+  "@taxPaidTab": {},
+  "giftsTab": "Gifts",
+  "@giftsTab": {},
+  "agriTab": "Agri",
+  "@agriTab": {},
+  "otherTab": "Other",
+  "@otherTab": {},
+  "categoryDataClearedStatus": "{category} data cleared.",
+  "@categoryDataClearedStatus": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "taxDataClearedStatus": "All tax data for the fiscal year has been cleared.",
+  "@taxDataClearedStatus": {},
+  "switchCategoryTitle": "Switch Category",
+  "@switchCategoryTitle": {},
+  "approxGrossIncomeLabel": "Approx. Gross Income",
+  "@approxGrossIncomeLabel": {},
+  "unsavedChangesTitle": "Unsaved Changes",
+  "@unsavedChangesTitle": {},
+  "unsavedChangesContent": "You have unsaved changes. Do you want to discard them and leave?",
+  "@unsavedChangesContent": {},
+  "discardAction": "Discard",
+  "@discardAction": {
+    "description": "Discard action label"
+  },
+  "dividendIncomeBreakdownTitle": "Dividend Income Breakdown",
+  "@dividendIncomeBreakdownTitle": {},
+  "totalDividendIncomeLabel": "Total Dividend Income",
+  "@totalDividendIncomeLabel": {},
+  "salaryStructuresTitle": "Salary Structures",
+  "@salaryStructuresTitle": {},
+  "addStructureAction": "Add Structure",
+  "@addStructureAction": {},
+  "effectiveLabel": "Effective",
+  "@effectiveLabel": {},
+  "exemptionsDeductionsTitle": "Exemptions & Deductions (Yearly)",
+  "@exemptionsDeductionsTitle": {},
+  "independentAllowancesTitle": "Independent Allowances",
+  "@independentAllowancesTitle": {},
+  "noIndependentAllowancesNote": "No independent allowances added.",
+  "@noIndependentAllowancesNote": {},
+  "addIndependentAllowanceAction": "Add Independent Allowance",
+  "@addIndependentAllowanceAction": {},
+  "independentDeductionsTitle": "Independent Deductions",
+  "@independentDeductionsTitle": {},
+  "noIndependentDeductionsNote": "No independent deductions added.",
+  "@noIndependentDeductionsNote": {},
+  "addIndependentDeductionAction": "Add Independent Deduction",
+  "@addIndependentDeductionAction": {},
+  "netMonthlyLabel": "NET MONTHLY",
+  "@netMonthlyLabel": {},
+  "monthlyTakeHomeBreakdownTitle": "Monthly Take-home Breakdown",
+  "@monthlyTakeHomeBreakdownTitle": {},
+  "housePropertiesTitle": "House Properties",
+  "@housePropertiesTitle": {},
+  "addPropertyAction": "Add Property",
+  "@addPropertyAction": {},
+  "totalRentReceivedLabel": "Total Rent Received",
+  "@totalRentReceivedLabel": {},
+  "totalInterestOnLoanLabel": "Total Interest on Loan",
+  "@totalInterestOnLoanLabel": {},
+  "noHousePropertiesNote": "No house properties found for this year.",
+  "@noHousePropertiesNote": {},
+  "projectedAnnualIncomeTitle": "Projected Annual Income (Interactive Summary)",
+  "@projectedAnnualIncomeTitle": {},
+  "totalGrossSalaryLabel": "Total Gross Salary",
+  "@totalGrossSalaryLabel": {},
+  "lessStandardDeductionLabel": "Less: Standard Deduction",
+  "@lessStandardDeductionLabel": {},
+  "lessStatutoryExemptionsLabel": "Less: Statutory Exemptions",
+  "@lessStatutoryExemptionsLabel": {},
+  "totalTaxableSalaryIncomeLabel": "Total Taxable Salary Income",
+  "@totalTaxableSalaryIncomeLabel": {},
+  "selfOccupiedLabel": "Self Occupied",
+  "@selfOccupiedLabel": {},
+  "businessProfessionTitle": "Business & Profession",
+  "@businessProfessionTitle": {},
+  "addBusinessAction": "Add Business",
+  "@addBusinessAction": {},
+  "totalTurnoverLabel": "Total Turnover",
+  "@totalTurnoverLabel": {},
+  "totalNetIncomeLabel": "Total Net Income",
+  "@totalNetIncomeLabel": {},
+  "taxableBusinessIncomeLabel": "Taxable Business Income",
+  "@taxableBusinessIncomeLabel": {},
+  "noBusinessIncomeNote": "No business income found for this year.",
+  "@noBusinessIncomeNote": {},
+  "businessNameLabel": "Business Name",
+  "@businessNameLabel": {},
+  "grossTurnoverReceiptsLabel": "Gross Turnover / Receipts",
+  "@grossTurnoverReceiptsLabel": {},
+  "netIncomeProfitLabel": "Net Income / Profit",
+  "@netIncomeProfitLabel": {},
+  "actualProfitHelper": "Actual net profit from business",
+  "@actualProfitHelper": {},
+  "taxationTypeLabel": "Taxation Type",
+  "@taxationTypeLabel": {},
+  "presumptiveTaxationHelper": "Presumptive taxation allows computing tax on a percentage of turnover.",
+  "@presumptiveTaxationHelper": {},
+  "turnoverExceedsLimitWarning": "Turnover exceeds limit of {limit} for presumptive taxation.",
+  "@turnoverExceedsLimitWarning": {
+    "placeholders": {
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "capitalGainsTitle": "Capital Gains",
+  "@capitalGainsTitle": {},
+  "netCapitalGainsSummaryTitle": "Net Capital Gains Summary",
+  "@netCapitalGainsSummaryTitle": {},
+  "longTermEquityLabel": "Long Term (Equity)",
+  "@longTermEquityLabel": {},
+  "longTermOtherLabel": "Long Term (Other)",
+  "@longTermOtherLabel": {},
+  "assetSoldLabel": "Asset Sold",
+  "@assetSoldLabel": {},
+  "saleAmountLabel": "Sale Amount",
+  "@saleAmountLabel": {},
+  "gainDateLabel": "Gain Date",
+  "@gainDateLabel": {},
+  "intendToReinvestLabel": "Intend to Reinvest?",
+  "@intendToReinvestLabel": {},
+  "reinvestmentExemptionsSubtitle": "Section 54/54F/54EC exemptions",
+  "@reinvestmentExemptionsSubtitle": {},
+  "reinvestmentDetailsTitle": "Reinvestment Details",
+  "@reinvestmentDetailsTitle": {},
+  "pendingNotDecidedLabel": "Pending / Not Decided",
+  "@pendingNotDecidedLabel": {},
+  "amountInvestedLabel": "Amount Invested",
+  "@amountInvestedLabel": {},
+  "reinvestDateLabel": "Reinvest Date",
+  "@reinvestDateLabel": {},
+  "deleteButton": "Delete",
+  "@deleteButton": {
+    "description": "Button text"
+  },
+  "otherSourcesTitle": "Other Sources",
+  "addOtherIncomeAction": "Add Other Income",
+  "dividendsLabel": "Dividends",
+  "taxableOtherIncomeLabel": "Taxable Other Income",
+  "noOtherIncomeNote": "No Other Income added.",
+  "incomeTypeLabel": "Income Type",
+  "grossAmountCurrencyLabel": "Gross Amount ({symbol})",
+  "@grossAmountCurrencyLabel": {
+    "placeholders": {
+      "symbol": {
+        "type": "String"
+      }
+    }
+  },
+  "linkExemptionOptionalLabel": "Link Exemption (Optional)",
+  "allFilterLabel": "All",
+  "manualFilterLabel": "Manual",
+  "syncedFilterLabel": "Synced",
+  "advanceTaxScheduleHintsTitle": "Advance Tax Schedule Hints",
+  "advanceTaxBreakdownLabel": "Base: {base} • Cess: {cess} • Interest: {interest}",
+  "@advanceTaxBreakdownLabel": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "cess": {
+        "type": "String"
+      },
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "advanceTaxBreakdownLabelNoInterest": "Base: {base} • Cess: {cess}",
+  "@advanceTaxBreakdownLabelNoInterest": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "cess": {
+        "type": "String"
+      }
+    }
+  },
+  "noEntriesFoundNote": "No entries found.",
+  "sourceLabel": "Source: {source}",
+  "@sourceLabel": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "sourceDescriptionLabel": "Source/Description",
+  "cashGiftsTotalTitle": "Cash Gifts (Total)",
+  "addGiftAction": "Add Gift",
+  "totalGiftsReceivedLabel": "Total Gifts Received",
+  "taxablePortionLabel": "Taxable Portion",
+  "giftDescriptionSourceLabel": "Gift Description / Source",
+  "giftTypeLabel": "Gift Type",
+  "netAgriIncomeLabel": "Net Agricultural Income",
+  "noEntriesMatchFilteringNote": "No entries match the current filters.",
+  "payoutMonthLabel": "Payout Month",
+  "startMonthLabel": "Start Month",
+  "deductionNameLabel": "Deduction Name",
+  "allowanceNameLabel": "Allowance Name",
+  "annualDeductionAmountLabel": "Annual Deduction Amount",
+  "annualPayoutAmountLabel": "Annual Payout Amount",
+  "exemptionLimitLabel": "Exemption Limit",
+  "monthlyAmountsLabel": "Monthly Amounts",
+  "noPayoutMonthsSelectedNote": "No payout months selected.",
+  "unemploymentNoSalaryTitle": "Unemployment / No Salary Periods",
+  "effectiveDateLabel": "Effective Date",
+  "annualBasicPayLabel": "Annual Basic Pay (CTC)",
+  "annualFixedAllowancesLabel": "Annual Fixed Allowances (CTC)",
+  "annualPerformancePayLabel": "Annual Performance Pay",
+  "annualVariablePayLabel": "Annual Variable Pay",
+  "payoutLabel": "Payout",
+  "annualEmployeePFLabel": "Annual Employee PF",
+  "annualGratuityContributionLabel": "Annual Gratuity Contribution",
+  "customAllowancesTitle": "Custom Allowances",
+  "noCustomAllowancesNote": "No custom allowances",
+  "addTransactionTitle": "Add Transaction",
+  "@addTransactionTitle": {
+    "description": "Screen title"
+  },
+  "editTransactionTitle": "Edit Transaction",
+  "@editTransactionTitle": {
+    "description": "Screen title"
+  },
+  "expenseType": "Expense",
+  "@expenseType": {
+    "description": "Transaction type"
+  },
+  "incomeType": "Income",
+  "@incomeType": {
+    "description": "Transaction type"
+  },
+  "transferType": "Transfer",
+  "@transferType": {
+    "description": "Transaction type"
+  },
+  "categoryLabel": "Category",
+  "@categoryLabel": {
+    "description": "Field label"
+  },
+  "descriptionLabel": "Description",
+  "@descriptionLabel": {
+    "description": "Field label"
+  },
+  "requiredError": "Required",
+  "@requiredError": {
+    "description": "Validation error"
+  },
+  "fromAccountLabel": "From Account",
+  "@fromAccountLabel": {
+    "description": "Field label"
+  },
+  "accountLabel": "Account",
+  "@accountLabel": {
+    "description": "Field label"
+  },
+  "toAccountLabel": "To Account",
+  "@toAccountLabel": {
+    "description": "Field label"
+  },
+  "selectRecipient": "Select Recipient",
+  "@selectRecipient": {
+    "description": "Field hint"
+  },
+  "amountLabel": "Amount",
+  "@amountLabel": {
+    "description": "Field label"
+  },
+  "invalidAmountError": "Invalid Amount",
+  "@invalidAmountError": {
+    "description": "Validation error"
+  },
+  "makeRecurring": "Make Recurring",
+  "@makeRecurring": {
+    "description": "Switch label"
+  },
+  "repeatAutomatically": "Repeat this transaction automatically",
+  "@repeatAutomatically": {
+    "description": "Switch subtitle"
+  },
+  "recurringAction": "Recurring Action",
+  "@recurringAction": {
+    "description": "Section header"
+  },
+  "payAndSchedule": "Pay & Schedule",
+  "@payAndSchedule": {
+    "description": "Segment button option"
+  },
+  "justSchedule": "Just Schedule",
+  "@justSchedule": {
+    "description": "Segment button option"
+  },
+  "firstExecution": "First Execution: {date}",
+  "@firstExecution": {
+    "description": "Recurrence info",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "frequencyLabel": "Frequency: {label}",
+  "@frequencyLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleTypeLabel": "Schedule Type",
+  "@scheduleTypeLabel": {
+    "description": "Dropdown label"
+  },
+  "adjustForHolidays": "Adjust for Holidays",
+  "@adjustForHolidays": {
+    "description": "Switch label"
+  },
+  "adjustForHolidaysDesc": "Schedule a day earlier if it lands on a holiday/weekend",
+  "@adjustForHolidaysDesc": {
+    "description": "Switch subtitle"
+  },
+  "selectWeekdayLabel": "Select Weekday",
+  "@selectWeekdayLabel": {
+    "description": "Dropdown label"
+  },
+  "monday": "Monday",
+  "@monday": {
+    "description": "Weekday"
+  },
+  "tuesday": "Tuesday",
+  "@tuesday": {
+    "description": "Weekday"
+  },
+  "wednesday": "Wednesday",
+  "@wednesday": {
+    "description": "Weekday"
+  },
+  "thursday": "Thursday",
+  "@thursday": {
+    "description": "Weekday"
+  },
+  "friday": "Friday",
+  "@friday": {
+    "description": "Weekday"
+  },
+  "saturday": "Saturday",
+  "@saturday": {
+    "description": "Weekday"
+  },
+  "sunday": "Sunday",
+  "@sunday": {
+    "description": "Weekday"
+  },
+  "saveTransaction": "Save Transaction",
+  "@saveTransaction": {
+    "description": "Button text"
+  },
+  "updateTransaction": "Update Transaction",
+  "@updateTransaction": {
+    "description": "Button text"
+  },
+  "capitalGainProfitAmount": "Gain / Profit Amount",
+  "@capitalGainProfitAmount": {
+    "description": "Field label"
+  },
+  "holdingTenureMonths": "Holding Tenure (Months)",
+  "@holdingTenureMonths": {
+    "description": "Field label"
+  },
+  "holdingTenureHint": "e.g., 12",
+  "@holdingTenureHint": {
+    "description": "Field hint"
+  },
+  "holdingTenureHelper": "Enter months held (Long-term: 12+ months for stocks)",
+  "@holdingTenureHelper": {
+    "description": "Field helper"
+  },
+  "profitLabel": "Profit",
+  "@profitLabel": {
+    "description": "Label"
+  },
+  "lossLabel": "Loss",
+  "@lossLabel": {
+    "description": "Label"
+  },
+  "purchaseCostLabel": "Purchase Cost",
+  "@purchaseCostLabel": {
+    "description": "Label"
+  },
+  "gainAmountHelper": "Enter the profit (positive) or loss (negative)",
+  "@gainAmountHelper": {
+    "description": "Field helper"
+  },
+  "noTransactionsFound": "No transactions found.",
+  "@noTransactionsFound": {
+    "description": "Empty state message"
+  },
+  "daily": "Daily",
+  "@daily": {
+    "description": "Frequency"
+  },
+  "weekly": "Weekly",
+  "@weekly": {
+    "description": "Frequency"
+  },
+  "monthly": "Monthly",
+  "@monthly": {
+    "description": "Frequency"
+  },
+  "yearly": "Yearly",
+  "@yearly": {
+    "description": "Frequency"
+  },
+  "fixedDate": "Fixed Date",
+  "@fixedDate": {
+    "description": "Schedule type"
+  },
+  "everyWeekend": "Every Weekend",
+  "@everyWeekend": {
+    "description": "Schedule type"
+  },
+  "lastWeekend": "Last Weekend",
+  "@lastWeekend": {
+    "description": "Schedule type"
+  },
+  "lastDayOfMonth": "Last Day of Month",
+  "@lastDayOfMonth": {
+    "description": "Schedule type"
+  },
+  "lastWorkingDay": "Last Working Day",
+  "@lastWorkingDay": {
+    "description": "Schedule type"
+  },
+  "firstWorkingDay": "First Working Day",
+  "@firstWorkingDay": {
+    "description": "Schedule type"
+  },
+  "specificWeekday": "Specific Weekday",
+  "@specificWeekday": {
+    "description": "Schedule type"
+  },
+  "capitalGainTag": "Capital Gain",
+  "@capitalGainTag": {
+    "description": "Category tag"
+  },
+  "directTaxTag": "Direct Tax",
+  "@directTaxTag": {
+    "description": "Category tag"
+  },
+  "budgetFreeTag": "Budget Free",
+  "@budgetFreeTag": {
+    "description": "Category tag"
+  },
+  "taxFreeTag": "Tax Free",
+  "@taxFreeTag": {
+    "description": "Category tag"
+  },
+  "usageShort": "Usage: {amount}",
+  "@usageShort": {
+    "description": "Account usage shorthand",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceShort": "Bal: {amount}",
+  "@balanceShort": {
+    "description": "Account balance shorthand",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "financialReportsTitle": "Financial Reports",
+  "@financialReportsTitle": {
+    "description": "Screen title"
+  },
+  "noDataAvailable": "No data available.",
+  "@noDataAvailable": {
+    "description": "Empty state message"
+  },
+  "noDataSelectedCriteria": "No data for selected criteria.",
+  "@noDataSelectedCriteria": {
+    "description": "Empty state message"
+  },
+  "spendingReport": "Spending",
+  "@spendingReport": {
+    "description": "Report type"
+  },
+  "incomeReport": "Income",
+  "@incomeReport": {
+    "description": "Report type"
+  },
+  "loanReport": "Loan",
+  "@loanReport": {
+    "description": "Report type"
+  },
+  "periodLabel": "Period",
+  "@periodLabel": {
+    "description": "Dropdown label"
+  },
+  "days30": "30 Days",
+  "@days30": {
+    "description": "Time period"
+  },
+  "days90": "90 Days",
+  "@days90": {
+    "description": "Time period"
+  },
+  "lastYear": "Last Year",
+  "@lastYear": {
+    "description": "Time period"
+  },
+  "monthOption": "Month",
+  "@monthOption": {
+    "description": "Time period"
+  },
+  "yearOption": "Year",
+  "@yearOption": {
+    "description": "Time period"
+  },
+  "allTime": "All Time",
+  "@allTime": {
+    "description": "Time period"
+  },
+  "loanLabel": "Loan",
+  "@loanLabel": {
+    "description": "Filter label"
+  },
+  "allLoans": "All Loans",
+  "@allLoans": {
+    "description": "Filter option"
+  },
+  "typeLabel": "Type",
+  "@typeLabel": {
+    "description": "Filter label"
+  },
+  "allOption": "All",
+  "@allOption": {
+    "description": "Filter option"
+  },
+  "allAccounts": "All Accounts",
+  "@allAccounts": {
+    "description": "Filter option"
+  },
+  "manualNoAccount": "Manual (No Account)",
+  "@manualNoAccount": {
+    "description": "Filter option"
+  },
+  "filterCategories": "Filter Categories",
+  "@filterCategories": {
+    "description": "Action label"
+  },
+  "categoriesExcluded": "{count} Categories Excluded",
+  "@categoriesExcluded": {
+    "description": "Status label",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectMonthLabel": "Select Month",
+  "@selectMonthLabel": {
+    "description": "Dropdown label"
+  },
+  "selectYearLabel": "Select Year",
+  "@selectYearLabel": {
+    "description": "Dropdown label"
+  },
+  "totalLiability": "Total Liability",
+  "@totalLiability": {
+    "description": "Field label"
+  },
+  "emiPaid": "EMI Paid",
+  "@emiPaid": {
+    "description": "Field label"
+  },
+  "prepayment": "Prepayment",
+  "@prepayment": {
+    "description": "Field label"
+  },
+  "totalPaid": "Total Paid",
+  "@totalPaid": {
+    "description": "Field label"
+  },
+  "totalLabel": "Total",
+  "@totalLabel": {
+    "description": "Field label"
+  },
+  "othersCategory": "Others",
+  "@othersCategory": {
+    "description": "Category name for grouped small items"
+  },
+  "capitalGainsRealized": "Capital Gains (Realized)",
+  "@capitalGainsRealized": {
+    "description": "Card title"
+  },
+  "capitalLossesRealized": "Capital Losses (Realized)",
+  "@capitalLossesRealized": {
+    "description": "Card title"
+  },
+  "expandCollapseTooltip": "Expand/Collapse All",
+  "@expandCollapseTooltip": {
+    "description": "Tooltip"
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Screen title"
+  },
+  "appearanceSection": "Appearance",
+  "@appearanceSection": {
+    "description": "Section header"
+  },
+  "dashboardCustomizationSection": "Dashboard Customization",
+  "@dashboardCustomizationSection": {
+    "description": "Section header"
+  },
+  "cloudSyncSection": "Cloud & Sync",
+  "@cloudSyncSection": {
+    "description": "Section header"
+  },
+  "dataManagementSection": "Data Management",
+  "@dataManagementSection": {
+    "description": "Section header"
+  },
+  "featureManagementSection": "Feature Management",
+  "@featureManagementSection": {
+    "description": "Section header"
+  },
+  "profileManagementSection": "Profile Management",
+  "@profileManagementSection": {
+    "description": "Section header"
+  },
+  "preferencesSection": "Preferences",
+  "@preferencesSection": {
+    "description": "Section header"
+  },
+  "authSection": "Authentication",
+  "@authSection": {
+    "description": "Section header"
+  },
+  "securitySection": "Security",
+  "@securitySection": {
+    "description": "Section header"
+  },
+  "appInfoSection": "App Info",
+  "@appInfoSection": {
+    "description": "Section header"
+  },
+  "themeModeLabel": "Theme Mode",
+  "@themeModeLabel": {
+    "description": "Tile title"
+  },
+  "systemTheme": "System",
+  "@systemTheme": {
+    "description": "Theme mode"
+  },
+  "lightTheme": "Light",
+  "@lightTheme": {
+    "description": "Theme mode"
+  },
+  "darkTheme": "Dark",
+  "@darkTheme": {
+    "description": "Theme mode"
+  },
+  "showIncomeExpenseLabel": "Show Income & Expense",
+  "@showIncomeExpenseLabel": {
+    "description": "Switch title"
+  },
+  "showIncomeExpenseDesc": "Display monthly summary cards",
+  "@showIncomeExpenseDesc": {
+    "description": "Switch subtitle"
+  },
+  "showBudgetLabel": "Show Budget Indicator",
+  "@showBudgetLabel": {
+    "description": "Switch title"
+  },
+  "showBudgetDesc": "Display monthly budget progress bar",
+  "@showBudgetDesc": {
+    "description": "Switch subtitle"
+  },
+  "cloudSyncIndiaOnly": "Cloud Synchronization is only available for users in India due to data residency compliance.",
+  "@cloudSyncIndiaOnly": {
+    "description": "Restriction message"
+  },
+  "serverRegionLabel": "Server Region (Database)",
+  "@serverRegionLabel": {
+    "description": "Tile title"
+  },
+  "serverRegionDesc": "Country where your data is stored",
+  "@serverRegionDesc": {
+    "description": "Tile subtitle"
+  },
+  "connectionPaused": "Connection Paused",
+  "@connectionPaused": {
+    "description": "Card title"
+  },
+  "offlineModeDesc": "You are in Offline Mode. Cloud Sync is deferred.",
+  "@offlineModeDesc": {
+    "description": "Card description"
+  },
+  "retryConnection": "Retry Connection",
+  "@retryConnection": {
+    "description": "Button text"
+  },
+  "retryingConnection": "Retrying connection...",
+  "@retryingConnection": {
+    "description": "Snackbar message"
+  },
+  "internetRestored": "Internet restored! Ready to sync.",
+  "@internetRestored": {
+    "description": "Snackbar message"
+  },
+  "stillOffline": "Still offline. Check connection.",
+  "@stillOffline": {
+    "description": "Snackbar message"
+  },
+  "enableCloudSync": "Enable Cloud Sync",
+  "@enableCloudSync": {
+    "description": "Card title"
+  },
+  "enableCloudSyncDesc": "Securely back up your data to the cloud and sync across devices.",
+  "@enableCloudSyncDesc": {
+    "description": "Card description"
+  },
+  "loginToSetupCloud": "Login to Setup Cloud",
+  "@loginToSetupCloud": {
+    "description": "Button text"
+  },
+  "accountLabelWithEmail": "Account: {email}",
+  "@accountLabelWithEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudSyncActive": "Cloud Sync Active",
+  "@cloudSyncActive": {
+    "description": "Status message"
+  },
+  "categoriesEncryptionWarning": "Note: Categories aren't encrypted in cloud currently.",
+  "@categoriesEncryptionWarning": {
+    "description": "Warning message"
+  },
+  "migrateSyncNow": "Migrate/Sync Now",
+  "@migrateSyncNow": {
+    "description": "Button text"
+  },
+  "recycleBinDesc": "Restore deleted transactions",
+  "@recycleBinDesc": {
+    "description": "Tile subtitle"
+  },
+  "backupDataZipDesc": "Export all data to a ZIP file",
+  "@backupDataZipDesc": {
+    "description": "Tile subtitle"
+  },
+  "restoreDataZipDesc": "Import data from a ZIP file",
+  "@restoreDataZipDesc": {
+    "description": "Tile subtitle"
+  },
+  "repairDataLabel": "Repair Data",
+  "@repairDataLabel": {
+    "description": "Tile title"
+  },
+  "repairDataDesc": "Fix data consistency issues",
+  "@repairDataDesc": {
+    "description": "Tile subtitle"
+  },
+  "dataRepairTitle": "Data Repair",
+  "@dataRepairTitle": {
+    "description": "Dialog title"
+  },
+  "runningRepair": "Running repair...",
+  "@runningRepair": {
+    "description": "Snackbar message"
+  },
+  "manageRecurringPaymentsDesc": "View or delete automated payments",
+  "@manageRecurringPaymentsDesc": {
+    "description": "Tile subtitle"
+  },
+  "holidayManagerDesc": "Configure non-working days",
+  "@holidayManagerDesc": {
+    "description": "Tile subtitle"
+  },
+  "manageCategoriesDesc": "Add, edit, or delete categories",
+  "@manageCategoriesDesc": {
+    "description": "Tile subtitle"
+  },
+  "smartCalculatorLabel": "Smart Calculator",
+  "@smartCalculatorLabel": {
+    "description": "Switch title"
+  },
+  "smartCalculatorDesc": "Enable Quick Sum Tracker on transactions",
+  "@smartCalculatorDesc": {
+    "description": "Switch subtitle"
+  },
+  "taxDashboardTitle": "Tax Dashboard",
+  "@taxDashboardTitle": {},
+  "taxYearLabel": "Tax Year",
+  "@taxYearLabel": {},
+  "capitalGains": "Capital Gains",
+  "@capitalGains": {
+    "description": "Field label"
+  },
+  "cessLabel": "Cess",
+  "@cessLabel": {},
+  "tdsTcsLabel": "TDS / TCS Tracked",
+  "@tdsTcsLabel": {},
+  "advanceTaxOverdue": "Advance Tax Overdue!",
+  "@advanceTaxOverdue": {
+    "description": "Reminder title"
+  },
+  "manualLabel": "Manual",
+  "@manualLabel": {
+    "description": "Label for manual execution"
+  },
+  "autoLabel": "Auto",
+  "@autoLabel": {
+    "description": "Label for automatic execution"
+  },
+  "recurringPaymentCalendarDescription": "Recurring payment: {title}",
+  "@recurringPaymentCalendarDescription": {
+    "description": "Calendar event description",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "skipCycleTitle": "Skip Cycle?",
+  "@skipCycleTitle": {
+    "description": "Dialog title"
+  },
+  "skipCycleConfirmation": "Advance \"{title}\" to the next cycle without recording a transaction?",
+  "@skipCycleConfirmation": {
+    "description": "Dialog content",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "skipAction": "Skip",
+  "@skipAction": {
+    "description": "Button text"
+  },
+  "noTaxInstallmentsDue": "No upcoming tax installments.",
+  "@noTaxInstallmentsDue": {
+    "description": "Empty state message"
+  },
+  "upcomingTaxInstallments": "Upcoming Tax Installments",
+  "@upcomingTaxInstallments": {
+    "description": "Section header"
+  },
+  "daysLate": "{days}d Late",
+  "@daysLate": {
+    "description": "Badge text",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dueToday": "Due Today",
+  "@dueToday": {
+    "description": "Badge text"
+  },
+  "daysLeftLabel": "{days} d left",
+  "@daysLeftLabel": {
+    "description": "Days remaining",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "nextTaxInstallmentLabel": "Next: {amount} due by {date}",
+  "@nextTaxInstallmentLabel": {
+    "description": "Tax reminder detail",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLabel": "Error: {message}",
+  "@errorLabel": {
+    "description": "Error message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "upcomingAdvanceTax": "Upcoming Advance Tax",
+  "@upcomingAdvanceTax": {
+    "description": "Reminder title"
+  },
+  "insurancePortfolioTooltip": "Insurance Portfolio",
+  "@insurancePortfolioTooltip": {},
+  "activeLabel": "Active",
+  "tapToSwitchLabel": "Tap to switch",
+  "copyCategoriesTooltip": "Copy Categories from another profile",
+  "createProfileTitle": "Create Profile",
+  "profileNameLabel": "Profile Name",
+  "createButton": "CREATE",
+  "currencyLabel": "Currency",
+  "monthlyBudgetLabel": "Monthly Budget",
+  "setMonthlyBudgetTitle": "Set Monthly Budget",
+  "backupIntervalTitle": "Backup Interval",
+  "updateApplicationDesc": "Clear cache and reload latest version",
+  "installAppDesc": "Add to Home Screen for Offline use",
+  "clearCloudDataDesc": "Remove cloud backup, keep account active",
+  "internetRequiredForUpdates": "Internet connection required to check for updates.",
+  "checkingForUpdates": "Checking for updates...",
+  "upToDateTitle": "Up to Date",
+  "cloudSyncSuccess": "Cloud Sync Success!",
+  "syncErrorLabel": "Sync Error: {error}",
+  "@syncErrorLabel": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupFailedLabel": "Backup Failed: {error}",
+  "@backupFailedLabel": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoringFromZipTitle": "Restoring from ZIP",
+  "areYouSure": "Are you sure?",
+  "restoreZipWarning": "This will PERMANENTLY WIPE all local data and replace it with the backup content.",
+  "restoreCompleteTitle": "Restore Complete",
+  "restoredItemsLabel": "Restored items:",
+  "okReloadButton": "OK, Reload",
+  "restoreFailedLabel": "Restore Failed: {error}",
+  "@restoreFailedLabel": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudRestoreTitle": "Cloud Restore",
+  "criticalWarningTitle": "Critical Warning",
+  "useCloudRestoreQuestion": "Use Cloud Restore?",
+  "clearCloudDataTitle": "Clear Cloud Data (Keep Account)",
+  "clearButton": "CLEAR",
+  "includePinInCloudBackup": "Enter PIN to include it in your secure cloud backup.",
+  "includePinInZip": "Enter PIN to include it in your backup ZIP.",
+  "backupReminderTitle": "Backup Reminder",
+  "selectCreditCardTitle": "Select Credit Card",
+  "allCreditCardsLabel": "All Credit Cards",
+  "loansScreenTitle": "Loans",
+  "monthsLeft": "{count, plural, =1{1 month left} other{{count} months left}}",
+  "@monthsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "taxInitializationError": "Error initializing tax services: {error}",
+  "@taxInitializationError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taxableInsuranceAlertTitle": "Taxable Insurance Payouts Detected",
+  "@taxableInsuranceAlertTitle": {},
+  "taxableInsuranceAlertMessage": "Insurance policies crossing the 5L tax limit in FY {year}-{nextYear} have been detected. Ensure they are tracked for capital gains.",
+  "@taxableInsuranceAlertMessage": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "nextYear": {
+        "type": "int"
+      }
+    }
+  },
+  "viewPoliciesAction": "View Policies",
+  "@viewPoliciesAction": {},
+  "syncingStatus": "Syncing data...",
+  "@syncingStatus": {},
+  "syncCompleteStatus": "Data synchronized successfully!",
+  "@syncCompleteStatus": {},
+  "syncFailedStatus": "Sync failed: {error}",
+  "@syncFailedStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "capitalGainLabel": "Capital Gain",
+  "@capitalGainLabel": {},
+  "expiredStatus": "Expired",
+  "@expiredStatus": {},
+  "addReinvestmentTooltip": "Add Reinvestment",
+  "@addReinvestmentTooltip": {},
+  "capitalGainsTrackerTitle": "Capital Gains Tracker",
+  "@capitalGainsTrackerTitle": {},
+  "capitalGainsTrackerSubtitle": "Tracking reinvestment deadlines for gains within {years} years.",
+  "@capitalGainsTrackerSubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "double"
+      }
+    }
+  },
+  "projectedTaxLiabilityTitle": "Projected Tax Liability",
+  "@projectedTaxLiabilityTitle": {},
+  "grossIncomeLabel": "Gross Income",
+  "@grossIncomeLabel": {},
+  "capitalGainsLabel": "Capital Gains",
+  "@capitalGainsLabel": {},
+  "capitalGainsDeductionsLabel": "Capital Gains Exemptions",
+  "@capitalGainsDeductionsLabel": {},
+  "deductionsLabel": "Deductions",
+  "@deductionsLabel": {},
+  "taxableIncomeLabel": "Taxable Income",
+  "@taxableIncomeLabel": {},
+  "taxOnIncomeSlabLabel": "Tax on Income (Slab)",
+  "@taxOnIncomeSlabLabel": {},
+  "taxOnCapitalGainsLabel": "Tax on Capital Gains",
+  "@taxOnCapitalGainsLabel": {},
+  "totalTaxLiabilityLabel": "Total Tax Liability",
+  "@totalTaxLiabilityLabel": {},
+  "cessOnSalaryTdsLabel": "Cess included in Salary TDS",
+  "@cessOnSalaryTdsLabel": {},
+  "cessOnOtherSlabLabel": "Cess on Other Slab Tax",
+  "@cessOnOtherSlabLabel": {},
+  "cessOnSlabLabel": "Total Cess on Slab Tax",
+  "@cessOnSlabLabel": {},
+  "cessOnSpecialLabel": "Capital Gains Cess",
+  "@cessOnSpecialLabel": {},
+  "advanceTaxPaidLabel": "Advance Tax Paid",
+  "@advanceTaxPaidLabel": {},
+  "taxShortfallInterestLabel": "Tax Shortfall Interest",
+  "@taxShortfallInterestLabel": {},
+  "netTaxPayableLabel": "Net Tax Payable",
+  "@netTaxPayableLabel": {},
+  "suggestedItrLabel": "Suggested ITR form: {form}",
+  "@suggestedItrLabel": {
+    "placeholders": {
+      "form": {
+        "type": "String"
+      }
+    }
+  },
+  "advanceTaxOverdueTitle": "Advance Tax OVERDUE",
+  "@advanceTaxOverdueTitle": {},
+  "actionRequiredAdvanceTaxTitle": "Action Required: Advance Tax",
+  "@actionRequiredAdvanceTaxTitle": {},
+  "upcomingAdvanceTaxTitle": "Upcoming Advance Tax",
+  "@upcomingAdvanceTaxTitle": {},
+  "advanceTaxNextDueMessage": "Next due: {amount} by {date}",
+  "@advanceTaxNextDueMessage": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "lateStatusDays": "{days} days late",
+  "@lateStatusDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dueTodayStatus": "DUE TODAY",
+  "@dueTodayStatus": {},
+  "daysLeftStatus": "{days} days left",
+  "@daysLeftStatus": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "taxRulesUpdatedStatus": "Tax rules updated successfully.",
+  "@taxRulesUpdatedStatus": {},
+  "addPolicyTitle": "Add Insurance Policy",
+  "@addPolicyTitle": {},
+  "editPolicyTitle": "Edit Insurance Policy",
+  "@editPolicyTitle": {},
+  "policyNameLabel": "Policy Name",
+  "@policyNameLabel": {},
+  "annualPremiumLabel": "Annual Premium ({currency})",
+  "@annualPremiumLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "sumAssuredLabel": "Sum Assured ({currency})",
+  "@sumAssuredLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "issueDateLabel": "Issue Date",
+  "@issueDateLabel": {},
+  "isUlipLabel": "Is ULIP?",
+  "@isUlipLabel": {},
+  "enableInstallmentLabel": "Enable Installment?",
+  "@enableInstallmentLabel": {},
+  "installmentStartLabel": "Installment Start",
+  "@installmentStartLabel": {},
+  "addToDashboardAction": "Add to Dashboard",
+  "@addToDashboardAction": {},
+  "policiesListTab": "Policies",
+  "@policiesListTab": {},
+  "taxRulesTab": "Tax Rules",
+  "@taxRulesTab": {},
+  "syncRecalculateTooltip": "Recalculate Tax Status",
+  "@syncRecalculateTooltip": {},
+  "yourPoliciesTitle": "Your Policies",
+  "@yourPoliciesTitle": {},
+  "pendingCalcStatus": "Pending Calculation",
+  "@pendingCalcStatus": {},
+  "installmentsEnabledLabel": "Installments Enabled",
+  "@installmentsEnabledLabel": {},
+  "taxableStatus": "Taxable",
+  "@taxableStatus": {},
+  "exemptStatus": "Exempt",
+  "@exemptStatus": {},
+  "populateIncomeTooltip": "Populate Taxable Income",
+  "@populateIncomeTooltip": {},
+  "populateTaxableIncomeTitle": "Populate Taxable Income",
+  "@populateTaxableIncomeTitle": {},
+  "taxHeadLabel": "Tax Head",
+  "@taxHeadLabel": {},
+  "otherIncomeHead": "Other Income",
+  "@otherIncomeHead": {},
+  "assetCategoryLabel": "Asset Category",
+  "@assetCategoryLabel": {},
+  "saleMaturityAmountLabel": "Sale / Maturity Amount",
+  "@saleMaturityAmountLabel": {},
+  "costOfAcquisitionLabel": "Cost of Acquisition",
+  "@costOfAcquisitionLabel": {},
+  "isLongTermLabel": "Is Long Term?",
+  "@isLongTermLabel": {},
+  "incomeAlreadyAddedNote": "Warning: Income for this year may already be present in Dashboard.",
+  "@incomeAlreadyAddedNote": {},
+  "incomeAddedSuccess": "Income for FY {year}-{nextYear} added to Dashboard targets.",
+  "@incomeAddedSuccess": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "nextYear": {
+        "type": "int"
+      }
+    }
+  },
+  "selectMonthsAction": "Select Payout Months",
+  "@selectMonthsAction": {},
+  "transactionDateLabel": "Transaction Date",
+  "@transactionDateLabel": {},
+  "addEntryAction": "Add Entry",
+  "@addEntryAction": {},
+  "adhocExemptionsLabel": "Less: Ad-hoc Exemptions",
+  "@adhocExemptionsLabel": {
+    "description": "Ad-hoc Exemptions label"
+  },
+  "clearCategoryDataTitle": "Clear {category} Data?",
+  "@clearCategoryDataTitle": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetailsAction": "Edit Details",
+  "@editDetailsAction": {},
+  "syncDataAction": "Sync Data",
+  "@syncDataAction": {},
+  "taxConfigAction": "Tax Config",
+  "@taxConfigAction": {},
+  "syncTaxDataTitle": "Sync Tax Data",
+  "@syncTaxDataTitle": {},
+  "lastSyncedLabel": "Last synced: {date}",
+  "@lastSyncedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPeriodYtdLabel": "Sync Period (YTD)",
+  "@syncPeriodYtdLabel": {},
+  "fromLabel": "From",
+  "@fromLabel": {},
+  "toLabel": "To",
+  "@toLabel": {},
+  "syncNowAction": "Sync Now",
+  "@syncNowAction": {},
+  "smartSyncTitle": "Smart Sync (Merge)",
+  "@smartSyncTitle": {},
+  "smartSyncSubtitle": "Updates existing data without overwriting manual changes.",
+  "@smartSyncSubtitle": {},
+  "forceResetTitle": "Force Reset (Overwrite)",
+  "@forceResetTitle": {},
+  "forceResetSubtitle": "Overwrites all current fiscal year data with fresh synced data.",
+  "@forceResetSubtitle": {},
+  "interestRateShort": "{rate}% Int.",
+  "@interestRateShort": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "addLoanTitle": "Add Loan",
+  "loanNameLabel": "Loan Name",
+  "loanAmountLabel": "Initial Principal",
+  "loanTenureLabel": "Tenure (Months)",
+  "loanStartDateLabel": "Start Date",
+  "loanTypeLabel": "Loan Type",
+  "emiLabel": "EMI",
+  "personalLoan": "Personal Loan",
+  "homeLoan": "Home Loan",
+  "carLoan": "Car Loan",
+  "goldLoan": "Gold Loan",
+  "educationLoan": "Education Loan",
+  "businessLoan": "Business Loan",
+  "otherLoan": "Other",
+  "noActiveLoans": "No active loans found.",
+  "remainingPrincipal": "Remaining Principal",
+  "nextEmiDate": "Next EMI",
+  "amountPaidLabel": "Amount Paid",
+  "@amountPaidLabel": {
+    "description": "Label for amount paid input"
+  },
+  "paymentDateLabel": "Payment Date",
+  "principalComponent": "Principal Component",
+  "interestComponent": "Interest Component",
+  "renameLoanTitle": "Rename Loan",
+  "calculateRateFromEmi": "Calculate Rate from EMI?",
+  "interestRateAnnual": "Interest Rate (Annual)",
+  "monthlyEmi": "Monthly EMI",
+  "emiDay": "EMI Day",
+  "defaultPaymentAccount": "Default Payment Account (Optional)",
+  "selectSavingsAccountHelper": "Select a savings account for EMI payments",
+  "maturityDate": "Maturity Date",
+  "estimatedEmi": "Estimated EMI",
+  "totalInterestLabel": "Total Interest: {amount}",
+  "@totalInterestLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "projectedInterestSimple": "Projected Interest (Simple)",
+  "interestPayableMaturity": "Interest payable at maturity or renewal",
+  "availLabel": "Avail: {amount}",
+  "@availLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "balLabel": "Bal: {amount}",
+  "@balLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "topUpLoanTooltip": "Top-up Loan",
+  "moreOptionsTooltip": "More options",
+  "renameLoanAction": "Rename Loan",
+  "deleteLoanAction": "Delete Loan",
+  "amortizationTab": "Amortization",
+  "simulatorTab": "Simulator",
+  "ledgerTab": "Ledger",
+  "payAction": "Pay",
+  "renewAction": "Renew",
+  "partPayAction": "Part Pay",
+  "rateAction": "Rate",
+  "closeAction": "Close",
+  "amortizationCurveTitle": "Amortization Curve (Yearly)",
+  "totalInterestPayableLabel": "Total Interest Payable: {amount}  •  ",
+  "@totalInterestPayableLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedYearlyInterestLabel": "Estimated Yearly Interest: {amount}",
+  "@estimatedYearlyInterestLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "extraPaymentAmountLabel": "Extra Payment Amount",
+  "reduceTenureLabel": "Reduce Tenure",
+  "reduceEmiLabel": "Reduce EMI",
+  "newTenureLabel": "New Tenure",
+  "newEmiLabel": "New EMI",
+  "interestSavedLabel": "Interest Saved",
+  "tenureReducedLabel": "Tenure Reduced",
+  "recordedPaymentsSuccess": "Recorded {count} payments successfully.",
+  "@recordedPaymentsSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteLoanConfirmTitle": "Delete Loan?",
+  "deleteLoanConfirmMessage": "This will remove the loan tracking. Existing transactions will NOT be deleted.",
+  "bulkRecordPaymentsTitle": "Bulk Record Payments",
+  "monthsCount": "{count} months",
+  "@monthsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "outstandingPrincipalLabel": "Outstanding Principal",
+  "bulkPayAction": "Bulk Pay",
+  "interestRateLabel": "Interest Rate",
+  "daysAccruedLabel": "Days Accrued",
+  "estAccruedInterestLabel": "Est. Accrued Interest (To Date)",
+  "maturityLabel": "Maturity: {date}",
+  "@maturityLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "addToSystemCalendarTooltip": "Add to System Calendar",
+  "loanMaturityEventTitle": "Loan Maturity: {name}",
+  "@loanMaturityEventTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanMaturityEventDescription": "Maturity date for Gold Loan: {name}. Principal and Interest due.",
+  "@loanMaturityEventDescription": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rateLabel": "Rate",
+  "paidLabel": "Paid",
+  "leftLabel": "Left",
+  "percentPaidLabel": "{percent}% Paid",
+  "@percentPaidLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "closureProgressLabel": "Closure Progress",
+  "daysCount": "{count} days",
+  "@daysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "monthsShort": "{count}m",
+  "@monthsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysShort": "{count}d",
+  "@daysShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "payInterestAndRenewTitle": "Pay Interest & Renew",
+  "payInterestAndRenewDescription": "Pay the interest due to renew the loan tenure or simply clear dues. Principal will NOT be reduced.",
+  "payAndRenewAction": "Pay & Renew",
+  "loanInterestTitle": "Loan Interest: {name}",
+  "@loanInterestTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "closeGoldLoanTitle": "Close Gold Loan",
+  "closeGoldLoanDescription": "Pay Principal ({principal}) + Interest ({interest}) to close this loan.",
+  "@closeGoldLoanDescription": {
+    "placeholders": {
+      "principal": {
+        "type": "String"
+      },
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "closeLoanAction": "Close Loan",
+  "loanClosureTitle": "Loan Closure: {name}",
+  "@loanClosureTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentAmountLabel": "Payment Amount",
+  "dateEffectiveLabel": "Date Effective",
+  "paidFromAccountLabel": "Paid From Account",
+  "noTransactionsMatchFilters": "No transactions match the filters.",
+  "loanLedgerTitle": "Loan Ledger",
+  "switchToExtendedTooltip": "Switch to Extended Numbers",
+  "switchToCompactTooltip": "Switch to Compact Numbers",
+  "filterByTypeTooltip": "Filter by Type",
+  "filterByDateTooltip": "Filter by Date",
+  "clearFiltersTooltip": "Clear Filters",
+  "emiPaymentTitle": "EMI Payment",
+  "prepaymentTitle": "Prepayment",
+  "interestRateUpdatedTitle": "Interest Rate Updated",
+  "loanTopUpTitle": "Loan Top-up",
+  "emiPaymentSubtitle": "Prin: {principal} • Int: {interest}",
+  "@emiPaymentSubtitle": {
+    "placeholders": {
+      "principal": {
+        "type": "String"
+      },
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "prepaymentSubtitle": "Direct reduction of principal",
+  "newRateSubtitle": "New Rate: {rate}%",
+  "@newRateSubtitle": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "loanTopUpSubtitle": "Increased principal amount",
+  "balanceLabel": "Balance: ",
+  "deleteEntryConfirmTitle": "Delete Entry?",
+  "deleteEntryConfirmMessage": "Deleting this will attempt to reverse the principal impact, but won't perfectly recalculate interest history.",
+  "areYouSureLabel": "Are you sure?",
+  "partPrincipalPaymentTitle": "Part Principal Payment",
+  "partPaymentDescription": "Reduce the outstanding principal. Interest on the reduced amount will decrease from the payment date.",
+  "payPrincipalAction": "Pay Principal",
+  "partPaymentSuccessMessage": "Part principal payment successful.",
+  "loanPartPayTitle": "Loan Part Pay: {name}",
+  "@loanPartPayTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recalculateLoanTitle": "Recalculate Loan",
+  "currentOutstandingLabel": "Current Outstanding: {amount}",
+  "@currentOutstandingLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newEmiAmountLabel": "New EMI Amount",
+  "calculateInterestRateOption": "Calculate Interest Rate?",
+  "calculateInterestRateSubtitle": "If checked, Tenure will be used to find the new Rate. Otherwise, Tenure is recalculated.",
+  "targetTenureMonthsLabel": "Target Tenure (Months)",
+  "loanTopUpDialogTitle": "Loan Top-up",
+  "borrowMoreDescription": "Borrow more money on this loan.",
+  "topUpAmountLabel": "Top-up Amount",
+  "creditToAccountLabel": "Credit to Account",
+  "recalculationModeLabel": "Recalculation Mode:",
+  "adjustEmiOption": "Adjust EMI",
+  "adjustEmiSubtitle": "Keep Tenure constant. EMI will increase.",
+  "adjustTenureOption": "Adjust Tenure",
+  "adjustTenureSubtitle": "Keep EMI constant. Tenure will increase.",
+  "borrowAction": "Borrow",
+  "loanTopUpSuccessMessage": "Loan topped up successfully.",
+  "updateInterestRateTitle": "Update Interest Rate",
+  "enterNewRateDescription": "Enter new annual interest rate.",
+  "newAnnualRateLabel": "New Annual Rate (%)",
+  "adjustEmiSubtitleLong": "Keep Tenure constant.\nMonthly payment will change.",
+  "adjustTenureSubtitleLong": "Keep EMI constant.\nLoan duration will change.",
+  "rateUpdatedSuccessMessage": "Rate updated and loan recalibrated.",
+  "@rateUpdatedSuccessMessage": {
+    "description": "Success message after updating interest rate"
+  },
+  "lendingBorrowingTitle": "Lending & Borrowing",
+  "@lendingBorrowingTitle": {
+    "description": "Title for Lending & Borrowing screen"
+  },
+  "totalLentLabel": "Total Lent",
+  "@totalLentLabel": {
+    "description": "Label for total lent summary card"
+  },
+  "totalBorrowedLabel": "Total Borrowed",
+  "@totalBorrowedLabel": {
+    "description": "Label for total borrowed summary card"
+  },
+  "noLendingRecords": "No records found.",
+  "@noLendingRecords": {
+    "description": "Empty state message for lending records"
+  },
+  "addRecordAction": "Add Record",
+  "@addRecordAction": {
+    "description": "Action text to add a lending record"
+  },
+  "deleteLendingRecordTitle": "Delete Record?",
+  "@deleteLendingRecordTitle": {
+    "description": "Title for delete lending record dialog"
+  },
+  "deleteLendingRecordConfirmation": "Are you sure you want to delete this record? This action cannot be undone.",
+  "@deleteLendingRecordConfirmation": {
+    "description": "Confirmation message for deleting a lending record"
+  },
+  "paidSubtitle": "Paid: {amount} ({count} txn)",
+  "@paidSubtitle": {
+    "description": "Subtitle showing paid amount and transaction count",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "closedOnSubtitle": "Closed on {date}",
+  "@closedOnSubtitle": {
+    "description": "Subtitle showing closing date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceTrailing": "Bal: {amount}",
+  "@balanceTrailing": {
+    "description": "Trailing text showing remaining balance",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "recordPaymentAction": "Record Payment",
+  "@recordPaymentAction": {
+    "description": "Action text to record a payment"
+  },
+  "paymentHistoryAction": "Payment History",
+  "@paymentHistoryAction": {
+    "description": "Action text to view payment history"
+  },
+  "settleFullAction": "Settle Full",
+  "@settleFullAction": {
+    "description": "Action text to settle the full amount"
+  },
+  "markAsSettledTitle": "Mark as Settled?",
+  "@markAsSettledTitle": {
+    "description": "Title for marking a record as settled dialog"
+  },
+  "settleLentConfirmation": "Has the amount of {amount} been received back from {person}?",
+  "@settleLentConfirmation": {
+    "description": "Confirmation message for settling a lent record",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "settleBorrowedConfirmation": "Has the amount of {amount} been paid back to {person}?",
+  "@settleBorrowedConfirmation": {
+    "description": "Confirmation message for settling a borrowed record",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "yesSettleAction": "Yes, Settle",
+  "@yesSettleAction": {
+    "description": "Action text to confirm settlement"
+  },
+  "remainingLabel": "Remaining: {amount}",
+  "@remainingLabel": {
+    "description": "Label showing remaining amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "savePaymentAction": "Save Payment",
+  "@savePaymentAction": {
+    "description": "Action text to save a payment"
+  },
+  "addLendingRecordTitle": "Add Lending Record",
+  "@addLendingRecordTitle": {
+    "description": "Title for adding a lending record"
+  },
+  "editLendingRecordTitle": "Edit Lending Record",
+  "@editLendingRecordTitle": {
+    "description": "Title for editing a lending record"
+  },
+  "lentLabel": "Lent (Given)",
+  "@lentLabel": {
+    "description": "Label for lent lending type"
+  },
+  "borrowedLabel": "Borrowed (Taken)",
+  "@borrowedLabel": {
+    "description": "Label for borrowed lending type"
+  },
+  "personNameLabel": "Person Name",
+  "@personNameLabel": {
+    "description": "Label for person name input"
+  },
+  "enterNameError": "Please enter a name",
+  "@enterNameError": {
+    "description": "Error message for missing person name"
+  },
+  "amountLabelSimplified": "Amount",
+  "@amountLabelSimplified": {
+    "description": "Simplified amount label"
+  },
+  "enterAmountError": "Enter amount",
+  "@enterAmountError": {
+    "description": "Error message for missing amount"
+  },
+  "invalidNumberError": "Invalid number",
+  "@invalidNumberError": {
+    "description": "Error message for invalid numeric input"
+  },
+  "reasonDescriptionLabel": "Reason / Description",
+  "@reasonDescriptionLabel": {
+    "description": "Label for reason/description input"
+  },
+  "markAsClosedOption": "Mark as Closed / SETTLED",
+  "@markAsClosedOption": {
+    "description": "Option to mark a record as closed"
+  },
+  "addRecordButton": "Add Record",
+  "@addRecordButton": {
+    "description": "Button text to add a record"
+  },
+  "editRecordButton": "Edit Record",
+  "@editRecordButton": {
+    "description": "Button text to edit a record"
+  },
+  "noPaymentsRecorded": "No payments recorded.",
+  "@noPaymentsRecorded": {
+    "description": "Empty state message for payment history"
+  },
+  "totalAmountLabel": "Total Amount",
+  "@totalAmountLabel": {
+    "description": "Label for total amount summary item"
+  },
+  "remainingSummaryLabel": "Remaining",
+  "@remainingSummaryLabel": {
+    "description": "Label for remaining amount summary item"
+  },
+  "deletePaymentTitle": "Delete Payment?",
+  "@deletePaymentTitle": {
+    "description": "Title for delete payment dialog"
+  },
+  "deletePaymentConfirmation": "This will permanently remove this payment record.",
+  "@deletePaymentConfirmation": {
+    "description": "Confirmation message for deleting a payment"
+  },
+  "paymentDeletedMessage": "Payment deleted",
+  "@paymentDeletedMessage": {
+    "description": "Message shown when a payment is deleted"
+  },
+  "holidayManagerTitle": "Holiday Manager",
+  "@holidayManagerTitle": {
+    "description": "Title for the Holiday Manager screen"
+  },
+  "holidayInfoText": "Recurring transactions can be configured to avoid these dates by scheduling them a day earlier.",
+  "@holidayInfoText": {
+    "description": "Information text in Holiday Manager"
+  },
+  "noHolidaysAdded": "No holidays added yet.",
+  "@noHolidaysAdded": {
+    "description": "Message when no holidays are added"
+  },
+  "recurringPaymentsTitle": "Recurring Payments",
+  "@recurringPaymentsTitle": {
+    "description": "Title for the Recurring Payments screen"
+  },
+  "noRecurringPayments": "No recurring payments set up.",
+  "@noRecurringPayments": {
+    "description": "Message when no recurring payments are set up"
+  },
+  "nextExecutionLabel": "Next: {date}",
+  "@nextExecutionLabel": {
+    "description": "Label for next execution date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "addToCalendarTooltip": "Add to System Calendar",
+  "@addToCalendarTooltip": {
+    "description": "Tooltip for adding to calendar"
+  },
+  "recurringEventDescription": "Recurring payment: {title} for {amount}",
+  "@recurringEventDescription": {
+    "description": "Description for recurring calendar event",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "everyWeekendLabel": "Every Weekend (Sat/Sun)",
+  "@everyWeekendLabel": {
+    "description": "Label for every weekend schedule"
+  },
+  "lastWeekendLabel": "Last Weekend of Month",
+  "@lastWeekendLabel": {
+    "description": "Label for last weekend schedule"
+  },
+  "everyWeekdayLabel": "Every {weekday}",
+  "@everyWeekdayLabel": {
+    "description": "Label for specific weekday schedule",
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "lastDayOfMonthLabel": "Last Day of Month",
+  "@lastDayOfMonthLabel": {
+    "description": "Label for last day of month schedule"
+  },
+  "lastWorkingDayLabel": "Last Working Day",
+  "@lastWorkingDayLabel": {
+    "description": "Label for last working day schedule"
+  },
+  "firstWorkingDayLabel": "First Working Day",
+  "@firstWorkingDayLabel": {
+    "description": "Label for first working day schedule"
+  },
+  "adjForHolidaysLabel": " (Adj. for Holidays)",
+  "@adjForHolidaysLabel": {
+    "description": "Suffix for holiday adjustment"
+  },
+  "deleteRecurringTitle": "Delete recurring rule?",
+  "@deleteRecurringTitle": {
+    "description": "Title for delete recurring rule dialog"
+  },
+  "deleteRecurringConfirmation": "This will stop automatic payments for \"{title}\". Past transactions will NOT be deleted.",
+  "@deleteRecurringConfirmation": {
+    "description": "Confirmation message for deleting recurring rule",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "editRecurringAmountTitle": "Edit Recurring Amount",
+  "@editRecurringAmountTitle": {
+    "description": "Title for editing recurring amount dialog"
+  },
+  "newAmountLabel": "New Amount",
+  "@newAmountLabel": {
+    "description": "Label for new amount field"
+  },
+  "recycleBinTitle": "Recycle Bin",
+  "@recycleBinTitle": {
+    "description": "Title for the Recycle Bin screen"
+  },
+  "recycleBinEmptyMessage": "Recycle Bin is empty",
+  "@recycleBinEmptyMessage": {
+    "description": "Message when recycle bin is empty"
+  },
+  "restoreTooltip": "Restore",
+  "@restoreTooltip": {
+    "description": "Tooltip for restoring an item"
+  },
+  "deletePermanentlyTooltip": "Delete Permanently",
+  "@deletePermanentlyTooltip": {
+    "description": "Tooltip for permanently deleting an item"
+  },
+  "remindersTitle": "Reminders & Notifications",
+  "@remindersTitle": {
+    "description": "Title for the Reminders screen"
+  },
+  "upcomingLoanEMIs": "Upcoming Loan EMIs",
+  "@upcomingLoanEMIs": {
+    "description": "Section title for upcoming loan EMIs"
+  },
+  "creditCardBills": "Credit Card Bills",
+  "@creditCardBills": {
+    "description": "Section title for credit card bills"
+  },
+  "paidStatus": "Paid",
+  "@paidStatus": {
+    "description": "Status label for paid item"
+  },
+  "partialStatus": "Partial",
+  "@partialStatus": {
+    "description": "Status label for partially paid item"
+  },
+  "overdueStatus": "Overdue",
+  "@overdueStatus": {
+    "description": "Status label for overdue item"
+  },
+  "upcomingStatus": "Upcoming",
+  "@upcomingStatus": {
+    "description": "Status label for upcoming item"
+  },
+  "noLoanEMIsDue": "No EMIs due within 7 days.",
+  "@noLoanEMIsDue": {
+    "description": "Message when no loan EMIs are due"
+  },
+  "dueOnLabel": "Due on {date}",
+  "@dueOnLabel": {
+    "description": "Label for due date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "nextBillLabel": "Next Bill: {date}",
+  "@nextBillLabel": {
+    "description": "Label for next bill date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "addToCalendarAction": "Add to Calendar",
+  "@addToCalendarAction": {
+    "description": "Button to add an event to calendar"
+  },
+  "emiDueCalendarTitle": "EMI Due: {name}",
+  "@emiDueCalendarTitle": {
+    "description": "Title for EMI due calendar event",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "emiDueCalendarDescription": "Payment for {name} due.",
+  "@emiDueCalendarDescription": {
+    "description": "Description for EMI due calendar event",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "firstEMIStartsOn": "First EMI starts on {date}",
+  "@firstEMIStartsOn": {
+    "description": "Message for loan first EMI date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "waitForStartLabel": "Wait for Start",
+  "@waitForStartLabel": {
+    "description": "Label for loan waiting to start"
+  },
+  "payNowAction": "PAY NOW",
+  "@payNowAction": {
+    "description": "Button to pay a bill now"
+  },
+  "noCCBillsDue": "No pending credit card bills.",
+  "@noCCBillsDue": {
+    "description": "Message when no CC bills are due"
+  },
+  "noRecurringPaymentsDue": "No due recurring payments.",
+  "@noRecurringPaymentsDue": {
+    "description": "Message when no recurring payments are due"
+  },
+  "frequencyMonthly": "Monthly",
+  "@frequencyMonthly": {
+    "description": "Label for monthly frequency"
+  },
+  "frequencyWeekly": "Weekly",
+  "@frequencyWeekly": {
+    "description": "Label for weekly frequency"
+  },
+  "frequencyOther": "Other",
+  "selectStoppedMonthsAction": "Select Stopped Months",
+  "presumptiveProfitHelper": "Presumptive profit based on turnover",
+  "taxationTypeTooltip": "Section 44AD/ADA allows presumptive taxation. Consult a professional for eligibility.",
+  "equitySharesTooltip": "LTCG on equity shares above 1.25L is taxed at 12.5%.",
+  "reinvestmentPendingLabel": "Reinvestment Pending",
+  "reinvestedDetailsLabel": "Reinvested {amount} via {type}",
+  "@reinvestedDetailsLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "otherIncomeTooltip": "Fixed income (No loss possible) like bank interest, chit fund profit, etc. Do not include gifts here.",
+  "stcgLabel": "STCG",
+  "ltcgLabel": "LTCG",
+  "gainLabel": "Gain",
+  "editAction": "Edit",
+  "cancelAction": "Cancel",
+  "saveAction": "Save",
+  "addIncomeAction": "Add Income",
+  "noneLabel": "None",
+  "nameLabel": "Name",
+  "updatedPrefix": "Upd",
+  "transactionPrefix": "Txn",
+  "noCapitalGainsFoundNote": "No capital gains found for this year.",
+  "policyLabel": "Policy",
+  "taxableGainProfitLabel": "Taxable Gain / Profit",
+  "insurancePrefix": "Insurance",
+  "taxConfigurationTitle": "Tax Configuration",
+  "copyPreviousYearTooltip": "Copy Rules from Previous Year",
+  "restoreDefaultsTooltip": "Restore System Defaults",
+  "taxJurisdictionLabel": "Tax Jurisdiction",
+  "@taxJurisdictionLabel": {
+    "description": "Tax Jurisdiction label"
+  },
+  "countryNameLabel": "Country Name",
+  "fyStartMonthLabel": "Financial Year Start Month",
+  "fyStartMonthHelper": "Determines the start of the financial year (e.g. April 1st). Affects tax calculations.",
+  "taxRatesSlabsHeader": "Tax Rates & Slabs",
+  "enableRebateLabel": "Enable Rebate",
+  "rebateLimitLabel": "Rebate Limit",
+  "enableCessLabel": "Enable Health & Edu Cess",
+  "cessRateLabel": "Cess Rate (%)",
+  "enableCashGiftExemptLabel": "Enable Cash Gift Exemption",
+  "cashGiftExemptLimitLabel": "Cash Gift Exemption Limit",
+  "selectTaxableGiftTypesLabel": "Select Taxable Gift Types:",
+  "incomeSlabsLabel": "Income Slabs",
+  "unlimitedLabel": "Unlimited",
+  "addMappingAction": "Add Mapping",
+  "noMappingsFoundNote": "No mappings defined.",
+  "mappingsInstructionNote": "Map Transaction Tags or Descriptions to Tax Heads for auto-assignment.",
+  "standardDeductionsHeader": "Standard Deductions",
+  "stdDedSalaryLabel": "Standard Deduction (Salary)",
+  "retirementExemptionsHeader": "Retirement Exemptions",
+  "enableRetirementExemptLabel": "Enable Retirement / Resignation Exemptions",
+  "leaveEncashLimitLabel": "Leave Encashment Limit",
+  "employerGiftsHeader": "Employer Gifts",
+  "giftExemptLimitLabel": "Gift Exemption Limit",
+  "presumptiveIncomeHeader": "Presumptive Income",
+  "enableBusinessExemptLabel": "Enable Business exemption",
+  "housePropConfigHeader": "House Property Configuration",
+  "capGainsRatesHeader": "Capital Gains Rates",
+  "enableSpecialCGRatesLabel": "Enable Special CG Rates",
+  "ltcgRateEquityLabel": "LTCG Rate (Equity) %",
+  "stcgRateEquityLabel": "STCG Rate (Equity) %",
+  "stdExemptLTCGLabel": "Standard Exemption (LTCG)",
+  "reinvestmentRulesHeader": "Reinvestment Rules",
+  "maxCGReinvestLimitLabel": "Max Capital Gain Reinvest Limit",
+  "agriIncomeConfigHeader": "Agriculture Income Configuration",
+  "enablePartialIntegrationLabel": "Enable Partial Integration",
+  "partialIntegrationSubtitle": "Determines tax using partial integration method",
+  "agriThresholdLabel": "Agriculture Income Threshold",
+  "customGeneralExemptionsHeader": "Custom General Exemptions",
+  "addCustomExemptionAction": "Add Custom Exemption",
+  "advanceTaxConfigHeader": "Advance Tax Configurations",
+  "enableAdvanceTaxInterestLabel": "Enable Advance Tax Interest Calculation",
+  "interestTillPaymentDateLabel": "Interest till Payment Date",
+  "interestTillPaymentDateSubtitle": "If missed installment, calculate interest till payment date instead of next installment.",
+  "includeCGInAdvanceTaxLabel": "Include Capital Gains in Advance Tax Base",
+  "includeCGInAdvanceTaxSubtitle": "If enabled, STCG/LTCG tax is included in required installments. If disabled, ONLY Normal Income (Salary, Business, etc.) is considered for installment matching.",
+  "interestRateMonthlyLabel": "Interest Rate % (Monthly)",
+  "addCustomExemptionTitle": "Add Custom Exemption",
+  "cliffExemptionSubtitle": "If checked, income above limit becomes fully taxable.",
+  "restoreAction": "Restore",
+  "@restoreAction": {
+    "description": "Restore action label"
+  },
+  "taxRulesSavedStatus": "Tax Rules Saved Successfully",
+  "@taxRulesSavedStatus": {
+    "description": "Success message when tax rules are saved"
+  },
+  "taxRulesResetStatus": "Tax Rules reset for FY.",
+  "@taxRulesResetStatus": {
+    "description": "Status message after resetting tax rules"
+  },
+  "monthJan": "January",
+  "monthFeb": "February",
+  "monthMar": "March",
+  "monthApr": "April",
+  "monthMay": "May",
+  "monthJun": "June",
+  "monthJul": "July",
+  "monthAug": "August",
+  "monthSep": "September",
+  "monthOct": "October",
+  "monthNov": "November",
+  "monthDec": "December",
+  "generalTab": "General",
+  "agriIncomeTab": "Agri Income",
+  "advanceTaxTab": "Advance Tax",
+  "mappingsTab": "Mappings",
+  "enableStdDedSalaryLabel": "Enable Standard Deduction",
+  "retirementExemptSubtitle": "Gratuity & Leave Encashment",
+  "gratuityLimitLabel": "Gratuity Exemption Limit",
+  "enableEmployerGiftLabel": "Enable Gifts from Employer Rule",
+  "employerGiftSubtitle": "Exempt up to a limit",
+  "defaultGiftLimitHint": "Default: 5000",
+  "businessExemptSubtitle": "Presumptive income for Businesses",
+  "limit44ADLabel": "Turnover Limit for 44AD",
+  "rate44ADLabel": "Presumptive Profit Rate (%)",
+  "enableProfessionalExemptLabel": "Enable Professional exemption",
+  "professionalExemptSubtitle": "Presumptive income for Professionals",
+  "limit44ADALabel": "Gross Receipts Limit for 44ADA",
+  "rate44ADALabel": "Presumptive Profit Rate (%)",
+  "cancelBtnLabel": "Cancel",
+  "enableStdDedHPLabel": "Enable 30% Standard Deduction",
+  "stdDedHPRateLabel": "Standard Deduction Rate (%)",
+  "stdDedHPSubtitle": "Usually 30%",
+  "enableHPMaxInterestLabel": "Enable Interest Deduction Cap",
+  "hpMaxInterestSubtitle": "Limit max interest deduction for self-occupied",
+  "maxHPInterestDedLabel": "Max Interest Deduction (Self-Occ)",
+  "specialCGRatesSubtitle": "Use special rates instead of normal slabs",
+  "enableLTCGExemptionLabel": "Enable LTCG Exemption",
+  "enableReinvestmentExemptLabel": "Enable Reinvestment Exemptions",
+  "reinvestWindowLabel": "Reinvestment Window (Years)",
+  "agriIncomeMethodDesc": "Partial Integration Method determines tax on Agriculture Income if it exceeds the threshold and non-agri income exceeds basic exemption.",
+  "agriThresholdSubtitle": "Default: {amount}",
+  "@agriThresholdSubtitle": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "agriBasicLimitLabel": "Agri Basic Exemption Limit",
+  "agriBasicLimitSubtitle": "Default: {amount} (Used for Partial Integration)",
+  "@agriBasicLimitSubtitle": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noCustomExemptionsMsg": "No custom exemptions defined.",
+  "advanceTaxConfigDesc": "Define the installment schedule, required percentages, and interest rates for advance tax calculations.",
+  "advanceTaxInterestSubtitle": "Calculate interest based on shortfalls",
+  "reminderDaysLabel": "Reminder Days Before Deadline",
+  "interestThresholdLabel": "Interest Calculation Base Threshold (Fixed)",
+  "interestThresholdSubtitle": "Advance tax interest applies only if tax liability after TDS exceeds this amount.",
+  "installmentScheduleHeader": "Installment Schedule",
+  "addInstallmentBtn": "Add Installment",
+  "noInstallmentsMsg": "No installments configured.",
+  "installmentNumberLabel": "Installment #{number}",
+  "@installmentNumberLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "limitFieldLabel": "Limit",
+  "isCliffExemptionLabel": "Is Cliff Exemption?",
+  "addBtnLabel": "Add",
+  "incomeHeadLabel": "Income Head",
+  "requiredPercentageLabel": "Required %",
+  "endMonthLabel": "End Month",
+  "saveButton": "Save",
+  "editIndependentDeductionAction": "Edit Independent Deduction",
+  "editIndependentAllowanceAction": "Edit Independent Allowance",
+  "payoutFrequencyLabel": "Payout Frequency",
+  "payoutFrequencyTrimesterLabel": "Trimester (4 Months)",
+  "monthsSelectedCountLabel": "{count} Months Selected",
+  "@monthsSelectedCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "isPartialIrregularTitle": "Partial/Irregular Payouts",
+  "isPartialIrregularSubtitle": "Enter different amounts for each payout month",
+  "enterAmountsForPayoutMonthsNote": "Enter amounts for selected payout months:",
+  "unemploymentNoSalarySubtitle": "Select months where no salary was received",
+  "monthsStoppedCountLabel": "{count} Months Stopped",
+  "@monthsStoppedCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "annualFixedAllowancesHelperText": "HRA, Special, etc. (Fully Taxable)",
+  "maxAmountPerYearLabel": "Max amount per year",
+  "totalAmountPerYearLabel": "Total amount per year",
+  "partialPayoutTaxableFactorTitle": "Partial Payout / Taxable Factor?",
+  "defaultEqualDistributionSubtitle": "Default: Equal distribution",
+  "annualPayoutLabel": "Annual Payout",
+  "perPayoutLabel": "Per Payout",
+  "annualTotalLabel": "Annual Total",
+  "addCapitalGainAction": "Add Capital Gain",
+  "editEntryAction": "Edit Entry",
+  "selectButton": "Select",
+  "agriculturalIncomeTitle": "Agricultural Income",
+  "frequencyDropdownLabel": "Frequency",
+  "addSalaryStructureAction": "Add Salary Structure",
+  "editSalaryStructureAction": "Edit Salary Structure",
+  "noSalaryDataPreviousYearNote": "No salary data found for the previous year.",
+  "copiedStructuresCountNote": "{count} salary structures copied.",
+  "@copiedStructuresCountNote": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "noHousePropertiesPreviousYearNote": "No house properties found for the previous year.",
+  "copiedPropertiesCountNote": "{count} house properties copied.",
+  "@copiedPropertiesCountNote": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "isCliffExemptionTitle": "Is Cliff Exemption?",
+  "exemptionLimitHelperText": "Income above this limit is fully taxable (no exemption applies).",
+  "taxDetailsSavedStatus": "Tax details saved successfully.",
+  "clearCategoryDataContent": "Are you sure you want to clear all {category} data for FY {year}?",
+  "@clearCategoryDataContent": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFiscalYearDataTitle": "Clear ALL Data for FY {year}?",
+  "@clearAllFiscalYearDataTitle": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFiscalYearDataContent": "This will permanently delete all tax data for this financial year. This action cannot be undone.",
+  "deleteAllButton": "Delete All",
+  "housePropertyTab": "House Property",
+  "capitalGainsTab": "Capital Gains",
+  "fiscalYearPrefix": "FY",
+  "filterByDateRangeLabel": "Filter by Date Range",
+  "clearDateFilterLabel": "Clear Date Filter",
+  "clearAllFiscalYearDataLabel": "Clear ALL Fiscal Year Data",
+  "clearCategoryDataLabel": "Clear Category Data",
+  "copyPreviousYearDataLabel": "Copy from Previous Year",
+  "estimatedTaxLiabilityLabel": "Est. Tax Liability",
+  "keepEditingButton": "Keep Editing",
+  "discardButton": "Discard",
+  "lastUpdatedLabel": "Last Updated",
+  "fullYearLabel": "Full Year",
+  "dividendBreakdownNote": "Dividend income is tracked by advance tax installment periods for precise interest calculation.",
+  "dividendUpdatedStatus": "Dividend income updated.",
+  "updateTotalButton": "Update Total",
+  "noSalaryStructureDefinedNote": "No salary structure defined for this period.",
+  "basicLabel": "Basic",
+  "allowancesLabel": "Allowances",
+  "employerNPSLabel": "Employer NPS Contribution",
+  "leaveEncashmentTitleLabel": "Leave Encashment",
+  "gratuityTitleLabel": "Gratuity",
+  "customAdHocExemptionsTitle": "Custom Ad-hoc Exemptions",
+  "noAdHocExemptionsNote": "No ad-hoc exemptions added.",
+  "addAdHocExemptionAction": "Add Ad-hoc Exemption",
+  "tdsTaxesPaidTitle": "TDS / Taxes Paid (Salary)",
+  "detailedEstCurrentMonthLabel": "DETAILED EST. (CURRENT MONTH)",
+  "taxShortLabel": "Tax",
+  "dedShortLabel": "Ded",
+  "detailedLinkLabel": "Show Detailed Amounts",
+  "bonusTaxNote": "Note: Bonuses and variable pay are taxed in the month of receipt.",
+  "taxableHPIncomeLabel": "Taxable House Property Income",
+  "interestLabel": "Interest",
+  "letOutLabel": "Let Out",
+  "lessEmployerNPSLabel": "Less: Employer NPS Contribution",
+  "taxableBeforeAdHocExemptionsLabel": "Taxable Before Ad-hoc Exemptions",
+  "lessCustomAdHocExemptionsLabel": "Less: Custom Ad-hoc Exemptions",
+  "editPropertyAction": "Edit Property",
+  "grossShortLabel": "Gross",
+  "netShortLabel": "Net",
+  "editBusinessAction": "Edit Business",
+  "shortTermSTCGLabel": "Short Term (STCG)",
+  "otherAssetsTooltip": "LTCG on other assets is taxed at 20% with indexation.",
+  "amountCurrencyLabel": "Amount ({currency})",
+  "@amountCurrencyLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "giftRelativesExemptNote": "Note: Gifts from relatives are fully exempt from tax.",
+  "addAgriIncomeAction": "Add Agri Income",
+  "editAgriIncomeAction": "Edit Agri Income",
+  "dateLabel": "Date",
+  "agriIncomeNote": "Agricultural income is exempt but used for rate purposes if it exceeds 5000 and total income exceeds basic exemption.",
+  "noAgriIncomeNote": "No agricultural income found for this year.",
+  "totalNetAgriIncomeLabel": "Total Net Agri Income",
+  "maturityDateLabel": "Maturity Date",
+  "selectDateAction": "Select Date",
+  "disclaimerRulesTitle": "Disclaimer: These rules are based on current Indian Tax Laws. Review with a professional for your specific case.",
+  "enableAggregateLimitsLabel": "Enable Aggregate Limits",
+  "limitsUlipNonUlipSubtitle": "Section 10(10D) limits for ULIP and Non-ULIP policies.",
+  "startDatesAggregateLimitsHeader": "Start Dates for Aggregate Limits",
+  "ulipLimitStartLabel": "ULIP Limit Start",
+  "nonUlipLimitStartLabel": "Non-ULIP Limit Start",
+  "aggregatePremiumLimitsHeader": "Aggregate Premium Limits",
+  "ulipLimitLabel": "ULIP Annual Limit",
+  "nonUlipLimitLabel": "Non-ULIP Annual Limit",
+  "enablePremiumPercentRulesLabel": "Enable Premium % Rules",
+  "limitsPercentageSumAssuredSubtitle": "Tax exemption based on premium as a percentage of sum assured.",
+  "premiumPercentRulesConfigHeader": "Premium % Rules Configuration",
+  "policiesDatePctNote": "Note: Rule applied based on the latest startDate <= policy issue date.",
+  "pctLimitLabel": "{pct}% Limit",
+  "@pctLimitLabel": {
+    "placeholders": {
+      "pct": {
+        "type": "double"
+      }
+    }
+  },
+  "effectiveFromLabel": "Effective From: {date}",
+  "@effectiveFromLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "saveRulesAction": "Save Rules",
+  "recalculateTaxSuccess": "Tax status for all policies recalculated.",
+  "taxOptimizationGainsTitle": "Tax Optimization & Gains",
+  "annPremiumLabel": "Ann. Premium",
+  "currentTaxableLabel": "Curr. Taxable",
+  "futureTaxableLabel": "Future Taxable",
+  "totalTaxableUlipLabel": "Total Taxable ULIP",
+  "totalTaxableNonUlipLabel": "Total Taxable Non-ULIP",
+  "taxableAmountsNote": "Note: Taxable amounts are the sum of annual premiums for policies that have lost 10(10D) exemption.",
+  "addPremiumRuleTitle": "Add Premium Rule",
+  "limitPctLabel": "Limit % ({symbol})",
+  "@limitPctLabel": {
+    "placeholders": {
+      "symbol": {
+        "type": "String"
+      }
+    }
+  },
+  "addRuleAction": "Add Rule",
+  "requiredLabel": "Required",
+  "noteLabel": "Note",
+  "principalShort": "Principal",
+  "interestShort": "Interest",
+  "loanEmiTitle": "Loan EMIs",
+  "updateButton": "Update",
+  "monthLabel": "Month",
+  "selectReinvestmentTypeNote": "Select reinvestment type to see details.",
+  "descriptionAssetLabel": "Description / Asset",
+  "isLTCGLabel": "Is LTCG?",
+  "editOtherIncomeAction": "Edit Other Income",
+  "advanceTaxTitle": "Advance Tax",
+  "tdsTitle": "TDS",
+  "tcsTitle": "TCS",
+  "advanceTaxInstallmentNote": "{month} {day}: {percent}% of total tax (approx {amount})",
+  "@advanceTaxInstallmentNote": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "addEntryTypeAction": "Add {type}",
+  "@addEntryTypeAction": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "editEntryTypeAction": "Edit {type}",
+  "@editEntryTypeAction": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "addButton": "Add",
+  "giftThresholdNote": "Note: Aggregate cash gifts above {limit} in a year are fully taxable.",
+  "@giftThresholdNote": {
+    "placeholders": {
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "noCashGiftsNote": "No cash gifts found for this year.",
+  "editGiftAction": "Edit Gift",
+  "errorLabelWithDetails": "Error: {error}",
+  "@errorLabelWithDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resetButton": "Reset",
+  "doneButton": "Done",
+  "confirmAction": "Confirm",
+  "okButton": "OK",
+  "verifyAction": "Verify",
+  "saveEnableAction": "Save & Enable",
+  "useExistingPinAction": "Use Existing PIN",
+  "clearCloudDataAction": "CLEAR CLOUD DATA",
+  "wipeDeactivateAction": "WIPE & DEACTIVATE",
+  "yesRestoreAction": "Yes, Restore",
+  "updateAndReloadAction": "Update & Reload",
+  "forceReloadAction": "Force Reload",
+  "encryptBackupAction": "ENCRYPT & BACKUP",
+  "backupUnencryptedAction": "Backup Unencrypted",
+  "createAction": "CREATE",
+  "deleteActionCap": "DELETE",
+  "cancelActionCap": "CANCEL",
+  "restoreActionCap": "RESTORE",
+  "clearActionCap": "CLEAR",
+  "enterPinHeader": "Enter PIN",
+  "pinDigitsHint": "4-6 digits",
+  "tooManyAttemptsMsg": "Too many attempts. Try again later.",
+  "incorrectPinWithAttempts": "Incorrect PIN ({count} attempts left)",
+  "@incorrectPinWithAttempts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forgotPinAction": "Forgot PIN? / Use Password",
+  "continueWithGoogle": "Continue with Google",
+  "continueOfflineAction": "Continue Offline / Use Locally",
+  "loginStatusMsg": "Login Status: {message}",
+  "@loginStatusMsg": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "recordLoanPaymentTitle": "Record Loan Payment",
+  "emiNote": "Regular EMI covers Interest + Principal components.",
+  "prepaymentNote": "Prepayment reduces Principal. Choose impact above.",
+  "paymentRecordedMsg": "Payment Recorded",
+  "payBillTitle": "Pay {name} Bill",
+  "@payBillTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "billAlreadyPaidNote": "Bill is already marked as paid.",
+  "roundOffLabel": "Round Off",
+  "roundToNearestNote": "Round to nearest number",
+  "errorLoadingAccounts": "Error loading accounts",
+  "updateBillingCycleNote": "Updating the billing cycle requires freezing the statement until your chosen start month.",
+  "freezeDateLockedNote": "Freeze date cannot be changed for an active freeze.",
+  "debtZeroRequirementNote": "Billing cycle day can only be changed when the total debt is 0. However, you can still update your Payment Due Date.",
+  "selectFirstStatementMonth": "Select First Statement Month:",
+  "initializeUpdateAction": "Initialize Update",
+  "updateBillingCycleTitle": "Update Billing Cycle",
+  "freezeTransactionsUntil": "Freeze Transactions Until",
+  "newBillingCycleDayLabel": "New Billing Cycle Day",
+  "newPaymentDueDayLabel": "New Payment Due Day",
+  "billingCycleUpdateSuccess": "Billing cycle update initialized successfully!",
+  "paymentDueDateUpdateSuccess": "Payment due date updated successfully!",
+  "selectFirstStatementMonthError": "Please select your first statement date.",
+  "payFromAccountLabel": "Payment Account (Optional)",
+  "prepaymentEffectLabel": "Prepayment Effect:",
+  "errorTitle": "Error",
+  "upToDateMessage": "You are consistent with the latest version ({version}).",
+  "@upToDateMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "forceReloadNote": "If you don't see expected changes, you can force a reload.",
+  "updateApplicationConfirmMessage": "This will clear the application cache and reload the latest version. Your local data (Hive) will remain safe. Do you want to proceed?",
+  "updateNotAvailableError": "Update not available for this platform.",
+  "requestTimeoutError": "Request timed out. Please check your connection.",
+  "restoreCloudWarning": "This will PERMANENTLY WIPE all local data and replace it with your cloud data.",
+  "restoreCompleteStatus": "Restore Complete! Reloading...",
+  "deactivateAccountQuestion": "Deactivate Cloud Account?",
+  "deactivateWipeWarning": "This will PERMANENTLY WIPE all your data from both the cloud and your local device.",
+  "localDataSafeNote": "Your account will be deleted, and you will be completely logged out with a blank slate.",
+  "accountDeactivatedStatus": "Account Deactivated and All Data Wiped.",
+  "deactivationFailedStatus": "Deactivation Failed: {error}",
+  "@deactivationFailedStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCloudDataQuestion": "Clear Cloud Data?",
+  "clearCloudWarning": "This will PERMANENTLY DELETE all your data from the cloud server.",
+  "localDataSafeLabel": "Your Local Data will be SAFE.",
+  "accountActiveLabel": "Your Account will remain ACTIVE.",
+  "proceedQuestion": "Proceed?",
+  "authFailedStatus": "Authentication Failed: {error}",
+  "@authFailedStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudDataClearedStatus": "Cloud Data Cleared Successfully.",
+  "clearFailedStatus": "Clear Failed: {error}",
+  "@clearFailedStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectCurrencyTitle": "Select Currency",
+  "encryptionPasscodeLabel": "Encryption Passcode",
+  "pleaseEnterPasscodeError": "Please enter a passcode",
+  "verifyAppPinTitle": "Verify App PIN",
+  "verifyPinReasonDefault": "Enter your 4-6 digit PIN to continue.",
+  "pinLengthError": "PIN must be 4-6 digits long.",
+  "tooManyAttemptsError": "Too many attempts. Try again later.",
+  "incorrectPinError": "Incorrect PIN",
+  "setAppPinTitle": "Set App PIN",
+  "setupAppLockTitle": "Setup App Lock",
+  "enterPinToSecureNote": "Enter a 4-6 digit PIN to secure the app.",
+  "existingPinNote": "You have an existing PIN. Do you want to use it or set a new one?",
+  "newPinHint": "NEW PIN",
+  "appLockEnabledStatus": "App Lock Enabled",
+  "pinSavedLockedStatus": "PIN Saved & Locked",
+  "deleteProfileQuestion": "Delete Profile?",
+  "deleteProfileWarning": "This will PERMANENTLY delete the profile '{name}' and ALL its associated data (Accounts, Transactions, Loans, Taxes, Lending, Categories). This cannot be undone.",
+  "@deleteProfileWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noOtherProfilesError": "No other profiles to copy from.",
+  "copyCategoriesTitle": "Copy Categories",
+  "categoriesCopiedStatus": "Categories copied to {name}",
+  "@categoriesCopiedStatus": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "updateApplicationTitle": "Update Application",
+  "aboutTitle": "About",
+  "installAppTitle": "Install App",
+  "dangerZoneHeader": "Danger Zone",
+  "deactivateWipeCloudTitle": "Deactivate & Wipe Cloud Data",
+  "deactivateWipeCloudDesc": "Move back to Local-Only mode",
+  "offlineUpdateError": "Offline: Unable to check for updates.",
+  "cloudRestoreWarning": "If your cloud backup was encrypted, please enter the passcode. If it was not encrypted, leave this blank and continue.",
+  "encryptBackupQuestion": "Encrypt Backup?",
+  "noteCategoriesEncryption": "Note: Categories are stored as metadata and are NOT encrypted.",
+  "frozenLabel": "FROZEN",
+  "notCalculatedYet": "Not calculated yet",
+  "tbdLabel": "TBD",
+  "clearBilledAmountTitle": "Clear Billed Amount",
+  "clearBilledAmountDesc": "Mark current bill as paid/cleared",
+  "clearBilledConfirmMessage": "This will set the current \"Billed Amount\" to 0 without recording a payment transaction.",
+  "billedAmountClearedStatus": "Billed amount cleared.",
+  "recalculateBillTitle": "Recalculate Bill",
+  "recalculateBillDesc": "Refreshes billing cycle display",
+  "recalculatingBillStatus": "Recalculating bill...",
+  "billRecalculatedStatus": "Bill recalculated for {name}.",
+  "@billRecalculatedStatus": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "usedAvailableShort": "{used} / {avail}",
+  "@usedAvailableShort": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "avail": {
+        "type": "String"
+      }
+    }
+  },
+  "usedAvailableLabel": "{used} / {avail}",
+  "@usedAvailableLabel": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "avail": {
+        "type": "String"
+      }
+    }
+  },
+  "requiredShortLabel": "Req",
+  "deleteAccountQuestion": "Delete Account?",
+  "deleteAccountConfirmMessage": "Are you sure you want to delete \"{name}\"?",
+  "@deleteAccountConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountWarning": "Existing transactions will NOT be deleted but will no longer be linked to this account.",
+  "accountDeletedStatus": "Account \"{name}\" deleted.",
+  "@accountDeletedStatus": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newAccountTitle": "New Account",
+  "editAccountTitle": "Edit Account",
+  "accountNameLabel": "Account Name",
+  "reservedNameError": "Reserved name",
+  "currentBalanceLabel": "Current Balance",
+  "createAccountAction": "Create Account",
+  "updateAccountAction": "Update Account",
+  "creditLimitLabel": "Credit Limit",
+  "billGenDayLabel": "Bill Gen. Day",
+  "paymentDueDayLabel": "Payment Due Day",
+  "dayOfMonthHelper": "Day of month",
+  "indiaRegion": "India",
+  "defaultRegion": "Default",
+  "indianRupeeLabel": "Indian Rupee (₹)",
+  "britishPoundLabel": "British Pound (£)",
+  "euroLabel": "Euro (€)",
+  "usDollarLabel": "US Dollar ($)",
+  "freqDaily": "DAILY",
+  "freqWeekly": "WEEKLY",
+  "freqMonthly": "MONTHLY",
+  "freqYearly": "YEARLY",
+  "daySuffixSt": "st",
+  "daySuffixNd": "nd",
+  "daySuffixRd": "rd",
+  "daySuffixTh": "th",
+  "everyEvery": " - Every ",
+  "prepaymentLabel": "Prepayment",
+  "loanTypePersonal": "Personal",
+  "loanTypeHome": "Home",
+  "loanTypeEducation": "Education",
+  "loanTypeCar": "Car",
+  "loanTypeGold": "Gold",
+  "loanTypeBusiness": "Business",
+  "loanTypeOther": "Other",
+  "bankLoanCategory": "Bank loan",
+  "ccBillPaymentTitle": "CC Bill Payment: {name}",
+  "creditCardBillCategory": "Credit Card Bill",
+  "roundingAdjustmentTitle": "Rounding Adjustment",
+  "adjustmentCategory": "Adjustment",
+  "timeoutError": "Request timed out. Please check your connection.",
+  "restoreButton": "Restore",
+  "backupDataZipLabel": "Backup Data (ZIP)",
+  "restoreDataZipLabel": "Restore Data (ZIP)",
+  "repairSuccessStatus": "{name}: Successfully repaired {count} items.",
+  "@repairSuccessStatus": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "repairFailedStatus": "Repair Failed: {error}",
+  "@repairFailedStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "manageRecurringPaymentsAction": "Manage Recurring Payments",
+  "manageCategoriesAction": "Manage Categories",
+  "switchedToProfileStatus": "Switched to profile: {name}",
+  "@switchedToProfileStatus": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addNewProfileAction": "Add New Profile",
+  "enterNameHint": "Enter name",
+  "amountLabelText": "Amount",
+  "numTransactionsLabel": "Number of Transactions",
+  "defaultIntervalNote": "Default interval between backups",
+  "logoutActionLabel": "Logout",
+  "appLockPinTitle": "App Lock PIN",
+  "appLockPinDesc": "Secure the app with a PIN",
+  "changePinTitle": "Change PIN",
+  "sameAccountError": "Source and Target accounts cannot be the same.",
+  "futureScheduleOnlyError": "\"Just Schedule\" is only allowed for Today or Future dates.",
+  "updateSimilarTitle": "Update Similar Transactions?",
+  "updateSimilarMessage": "Found {count} other transactions with title \"{title}\" and category \"{oldCategory}\". Do you want to update their category to \"{newCategory}\" as well?",
+  "@updateSimilarMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      },
+      "oldCategory": {
+        "type": "String"
+      },
+      "newCategory": {
+        "type": "String"
+      }
+    }
+  },
+  "noJustThisOne": "NO, Just this one",
+  "yesUpdateAll": "YES, Update All",
+  "transferCategory": "Transfer",
+  "day15Hint": "e.g. 15",
+  "day5Hint": "e.g. 5",
+  "japaneseYenLabel": "Japanese Yen (¥)",
+  "chineseYuanLabel": "Chinese Yuan (¥)",
+  "uaeDirhamLabel": "UAE Dirham (د.إ)",
+  "bulkRecordDesc": "Record EMI payments for a date range automatically. Assumes paid on time.",
+  "startDateLabel": "Start Date",
+  "endDateLabel": "End Date",
+  "recordPaymentsAction": "Record Payments",
+  "rateChangeLabel": "Rate Change",
+  "topupLabel": "Top-up",
+  "loanTopUpCategory": "Loan Top-up",
+  "perYearLabel": " / yr",
+  "@perYearLabel": {
+    "description": "Suffix for annual amounts"
+  },
+  "indiaLabel": "India",
+  "@indiaLabel": {
+    "description": "India jurisdiction label"
+  },
+  "customLabel": "Custom",
+  "@customLabel": {
+    "description": "Custom jurisdiction label"
+  },
+  "fyLabel": "FY {year}-{nextYear}",
+  "@fyLabel": {
+    "description": "Financial Year label",
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "nextYear": {
+        "type": "int"
+      }
+    }
+  },
+  "unsavedChangesSwitchYearContent": "You have unsaved changes. Switching years will discard them. Continue?",
+  "@unsavedChangesSwitchYearContent": {
+    "description": "Content for unsaved changes warning when switching years"
+  },
+  "restoreSystemDefaultsTitle": "Restore System Defaults?",
+  "@restoreSystemDefaultsTitle": {
+    "description": "Title for restore defaults dialog"
+  },
+  "restoreSystemDefaultsContent": "This will delete custom tax rules for this year and revert to system defaults (or previous year). Continue?",
+  "@restoreSystemDefaultsContent": {
+    "description": "Content for restore defaults dialog"
+  },
+  "copiedFromPreviousYearStatus": "Values copied from previous year. Click Save to apply.",
+  "@copiedFromPreviousYearStatus": {
+    "description": "Status message after copying rules from previous year"
+  },
+  "mapsToLabel": "Maps to: {target}",
+  "@mapsToLabel": {
+    "description": "Label for mapping targets",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "advancedMappingsHeader": "Advanced Mappings (CG / Filters)",
+  "@advancedMappingsHeader": {
+    "description": "Header for advanced mappings section"
+  },
+  "calculatedRateLabel": "Calculated Rate",
+  "invalidLabel": "Invalid",
+  "continueAction": "Continue",
+  "@continueAction": {
+    "description": "Continue action label"
+  }
+,
+  "languageLabel": "Language",
+  "@languageLabel": {
+    "description": "Language selection label"
+  },
+  "systemDefault": "System Default",
+  "@systemDefault": {
+    "description": "System default language option"
+  },
+  "englishLanguage": "English",
+  "@englishLanguage": {
+    "description": "English language option"
+  },
+  "investmentsAction": "Investments",
+  "investmentsTitle": "Investments",
+  "investmentDashboard": "Dashboard",
+  "investmentManagement": "Manage",
+  "totalValueLabel": "Total Value",
+  "investedLabel": "Invested",
+  "unrealizedGainLabel": "Unrealized Gain",
+  "readyToSellLT": "{count} Long-term ready",
+  "@readyToSellLT": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "valueLabel": "Value",
+  "addInvestment": "Add Investment",
+  "editInvestment": "Edit Investment",
+  "investmentName": "Investment Name",
+  "investmentType": "Type",
+  "acquisitionDate": "Acquisition Date",
+  "acquisitionPrice": "Acquisition Price",
+  "quantityLabel": "Quantity",
+  "currentPriceLabel": "Current Price",
+  "sellDateLabel": "Sell Date",
+  "sellPriceLabel": "Sell Price",
+  "isSoldLabel": "Is Sold",
+  "mfCategoryLabel": "MF Category",
+  "interestRateLabel": "Interest Rate (%)",
+  "thresholdLabel": "LT Threshold (Years)",
+  "fixedRateInfo": "Rate: {rate}% (Info only)",
+  "notAutoCalculated": "(Not auto-calculated)",
+  "remarksLabel": "Remarks",
+  "exportTemplate": "Export Tickers",
+  "importPrices": "Import Prices",
+  "updatePricesSuccess": "Prices updated for {count} items",
+  "@updatePricesSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "investmentCodeName": "Ticker / Code Name",
+  "investmentType_stock": "Stocks",
+  "investmentType_mutualFund": "Mutual Funds",
+  "investmentType_fixedSavings": "Fixed Savings (FD/RD)",
+  "investmentType_nps": "NPS",
+  "investmentType_pf": "PF / EPF / VPF",
+  "investmentType_moneyMarket": "Money Market",
+  "investmentType_overnight": "Overnight Fund",
+  "investmentType_otherRecord": "Other (Variable Value)",
+  "investmentType_otherFixed": "Other (Fixed Interest)",
+  "mfCategory_flexi": "Flexi Cap",
+  "mfCategory_largeCap": "Large Cap",
+  "mfCategory_midCap": "Mid Cap",
+  "mfCategory_smallCap": "Small Cap",
+  "mfCategory_debt": "Debt",
+  "mfCategory_mfIndex": "Index Fund",
+  "mfCategory_industry": "Sectoral / Industry",
+  "mfCategory_others": "Others",
+  "profitLabel": "Profit",
+  "lossLabel": "Loss",
+  "exportFileSuccess": "Investment template saved to downloads",
+  "importFileError": "Invalid JSON or missing codeName/name",
+  "lastPriceUpdated": "Last: {price}",
+  "@lastPriceUpdated": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionExpiredLogoutMessage": "You were logged out because another device logged into this account.",
+  "sessionExpiredDeactivateMessage": "Account deactivated locally. Cloud session was already expired.",
+  "sessionVerificationFailed": "Session verification failed. Sync paused.",
+  "connectionFailedOffline": "Connection failed. Switching to Offline Mode.",
+  "autoRestoreRegionWarning": "Auto-restore skipped: Cloud functions are only available in India.",
+  "encryptedBackupPromptTitle": "Encrypted Backup Found",
+  "encryptedBackupPromptBody": "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
+  "incorrectPasscodeError": "Incorrect passcode. Please try again.",
+  "passcodeLabel": "Passcode",
+  "skipAction": "SKIP",
+  "allTypesLabel": "All Types",
+  "sortByOldestFirst": "Sort by Oldest First",
+  "sortByHighestGain": "Sort by Highest Gain",
+  "deleteInvestmentTitle": "Delete Investment?",
+  "deleteInvestmentConfirmation": "This will permanently remove this investment record.",
+  "filterByTypeLabel": "Filter by Type",
+  "searchLabel": "Search Investments",
+  "copyToClipboard": "Copy to Clipboard",
+  "exportJsonTitle": "Export Tickers (JSON)",
+  "importJsonTitle": "Import Prices (JSON)",
+  "importJsonHint": "Paste JSON here...",
+  "invalidJsonError": "Invalid JSON format",
+  "importAction": "Import",
+  "copiedToClipboard": "Copied to clipboard!",
+  "cancelAction": "Cancel",
+  "loadMoreAction": "Load More",
+  "noMoreItems": "All investments loaded",
+  "addInvestmentTitle": "Add Investment",
+  "editInvestmentTitle": "Edit Investment",
+  "closeAction": "Close",
+  "acquisitionDateLabel": "Acquisition Date",
+  "acquisitionPriceLabel": "Acquisition Price",
+  "invalidPriceError": "Invalid Price",
+  "invalidQuantityError": "Invalid Quantity",
+  "longTermInLabel": "LT in {duration}",
+  "@longTermInLabel": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "saveAction": "Save",
+  "updateAction": "Update",
+  "recurringInvestmentHeader": "Recurring Investment",
+  "@recurringInvestmentHeader": {
+    "description": "Section header in Add Investment"
+  },
+  "enableRecurringLabel": "Enable Monthly Recurring",
+  "@enableRecurringLabel": {
+    "description": "Label for recurring switch"
+  },
+  "recurringAmountLabel": "Monthly Recurring Amount",
+  "@recurringAmountLabel": {
+    "description": "Label for recurring amount field"
+  },
+  "nextRecurringDateLabel": "Next Recurring Date",
+  "@nextRecurringDateLabel": {
+    "description": "Label for next recurring date picker"
+  },
+  "pauseRecurringLabel": "Pause Recurring Payments",
+  "@pauseRecurringLabel": {
+    "description": "Label for pause recurring switch"
+  },
+  "upcomingCommitmentsHeader": "Upcoming Commitments",
+  "@upcomingCommitmentsHeader": {
+    "description": "Header for upcoming investments dashboard"
+  },
+  "noUpcomingCommitments": "No upcoming recurring investments.",
+  "@noUpcomingCommitments": {
+    "description": "Empty state message"
+  }
+}
+

@@ -1,14 +1,15 @@
-import 'package:samriddhi_flow/utils/regex_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:samriddhi_flow/utils/regex_utils.dart';
 import '../providers.dart';
 import '../models/loan.dart';
 import '../models/account.dart';
 import '../utils/currency_utils.dart';
 import '../services/loan_service.dart';
 import '../theme/app_theme.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 
 const dateFormatYyyyMmDd = 'yyyy-MM-dd';
 
@@ -64,7 +65,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     final isGoldLoan = _type == LoanType.gold;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Loan')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.addLoanTitle)),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -72,31 +73,9 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
           children: [
             _buildLoanTypeSelector(isGoldLoan),
             const SizedBox(height: 16),
-            TextFormField(
-              decoration: const InputDecoration(
-                  labelText: 'Loan Name', border: OutlineInputBorder()),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-              onSaved: (v) => _name = v!,
-            ),
+            _buildNameField(),
             const SizedBox(height: 16),
-            if (!isGoldLoan) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CheckboxListTile(
-                      title: const Text('Calculate Rate from EMI?',
-                          style: TextStyle(fontSize: 14)),
-                      value: _calculateRateFromEMI,
-                      onChanged: (v) => // coverage:ignore-line
-                          setState(() => _calculateRateFromEMI =
-                              v!), // coverage:ignore-line
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            if (!isGoldLoan) _buildCalculateRateCheckbox(),
             const SizedBox(height: 16),
             _buildPrincipalRateRow(currency, isGoldLoan, loanService),
             const SizedBox(height: 16),
@@ -105,88 +84,150 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
             _buildDateRow(context, isGoldLoan),
             const SizedBox(height: 16),
             if (!isGoldLoan) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _emiDay,
-                      decoration: const InputDecoration(
-                          labelText: 'EMI Day', border: OutlineInputBorder()),
-                      items: List.generate(31, (i) => i + 1)
-                          .map((d) => DropdownMenuItem(
-                                value: d,
-                                child: Text(d.toString()),
-                              ))
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _emiDay = v!), // coverage:ignore-line
-                    ),
-                  ),
-                ],
-              ),
+              _buildEmiDaySelector(),
               const SizedBox(height: 16),
             ],
-            ref.watch(accountsProvider).when(
-                  data: (accounts) => DropdownButtonFormField<String?>(
-                    initialValue: _selectedAccountId,
-                    decoration: InputDecoration(
-                        labelText: 'Default Payment Account (Optional)',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: IconButton(
-                          icon: Icon(_hideBalance
-                              ? Icons.visibility_off
-                              : Icons.visibility),
-                          onPressed: () => // coverage:ignore-line
-                              setState(() => _hideBalance =
-                                  !_hideBalance), // coverage:ignore-line
-                        ),
-                        helperText:
-                            'Select a savings account for EMI payments'),
-                    items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text('No Account (Manual)')),
-                      ...accounts
-                          .where((a) => a.type == AccountType.savings)
-                          .map((a) => DropdownMenuItem<String?>(
-                              // coverage:ignore-start
-                              value: a.id,
-                              child: Text(
-                                  '${a.name} (${_formatAccountBalance(a)})'))),
-                      // coverage:ignore-end
-                    ],
-                    onChanged: (v) => setState(
-                        () => _selectedAccountId = v), // coverage:ignore-line
-                  ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, s) => Text('Error: $e'),
-                ),
+            _buildAccountSelector(),
             const SizedBox(height: 24),
             _buildPreviewCard(currency, isGoldLoan),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text('Create Loan'),
-            ),
+            _buildSaveButton(),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildNameField() {
+    return TextFormField(
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.loanNameLabel,
+          border: const OutlineInputBorder()),
+      validator: (v) =>
+          v!.isEmpty ? AppLocalizations.of(context)!.requiredLabel : null,
+      onSaved: (v) => _name = v!,
+    );
+  }
+
+  Widget _buildCalculateRateCheckbox() {
+    return Row(
+      children: [
+        Expanded(
+          child: CheckboxListTile(
+            title: Text(AppLocalizations.of(context)!.calculateRateFromEmi,
+                style: const TextStyle(fontSize: 14)),
+            value: _calculateRateFromEMI,
+            onChanged: (v) => setState(
+                () => _calculateRateFromEMI = v!), // coverage:ignore-line
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmiDaySelector() {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            initialValue: _emiDay,
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.emiDay,
+                border: const OutlineInputBorder()),
+            items: List.generate(31, (i) => i + 1)
+                .map((d) => DropdownMenuItem(
+                      value: d,
+                      child: Text(d.toString()),
+                    ))
+                .toList(),
+            onChanged: (v) =>
+                setState(() => _emiDay = v!), // coverage:ignore-line
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountSelector() {
+    return Consumer(
+      builder: (context, ref, _) => ref.watch(accountsProvider).when(
+            data: (accounts) => DropdownButtonFormField<String?>(
+              initialValue: _selectedAccountId,
+              decoration: InputDecoration(
+                  labelText:
+                      AppLocalizations.of(context)!.defaultPaymentAccount,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: IconButton(
+                    icon: Icon(
+                        _hideBalance ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => // coverage:ignore-line
+                        setState(() => _hideBalance =
+                            !_hideBalance), // coverage:ignore-line
+                  ),
+                  helperText:
+                      AppLocalizations.of(context)!.selectSavingsAccountHelper),
+              items: [
+                DropdownMenuItem(
+                    value: null,
+                    child: Text(AppLocalizations.of(context)!.noAccountManual)),
+                ...accounts.where((a) => a.type == AccountType.savings).map(
+                    (a) => DropdownMenuItem<String?>(
+                        // coverage:ignore-line
+                        value: a.id, // coverage:ignore-line
+                        child: Text(
+                            '${a.name} (${_formatAccountBalance(a)})'))), // coverage:ignore-line
+              ],
+              onChanged: (v) => setState(
+                  () => _selectedAccountId = v), // coverage:ignore-line
+            ),
+            loading: () => const LinearProgressIndicator(),
+            error: (e, s) =>
+                Text('${AppLocalizations.of(context)!.errorLabel}: $e'),
+          ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return ElevatedButton(
+      onPressed: _save,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF6C63FF),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: Text(AppLocalizations.of(context)!.createButton),
+    );
+  }
+
   Widget _buildLoanTypeSelector(bool isGoldLoan) {
     return DropdownButtonFormField<LoanType>(
       initialValue: _type,
-      decoration: const InputDecoration(
-          labelText: 'Loan Type', border: OutlineInputBorder()),
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.loanTypeLabel,
+          border: const OutlineInputBorder()),
       items: LoanType.values
           .map((t) => DropdownMenuItem<LoanType>(
                 value: t,
-                child: Text(t.name.toUpperCase()),
+                child: Text((() {
+                  switch (t) {
+                    case LoanType.personal:
+                      return AppLocalizations.of(context)!.personalLoan;
+                    case LoanType.home:
+                      return AppLocalizations.of(context)!.homeLoan;
+                    case LoanType.car:
+                      return AppLocalizations.of(context)!.carLoan;
+                    case LoanType.education:
+                      return AppLocalizations.of(context)!.educationLoan;
+                    case LoanType.business:
+                      return AppLocalizations.of(context)!.businessLoan;
+                    case LoanType.gold:
+                      return AppLocalizations.of(context)!.goldLoan;
+                    case LoanType.other:
+                      return AppLocalizations.of(context)!.otherLoan;
+                  }
+                })()
+                    .toUpperCase()),
               ))
           .toList(),
       onChanged: (v) {
@@ -211,7 +252,7 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
         Expanded(
           child: TextFormField(
             decoration: InputDecoration(
-                labelText: 'Principal Amount',
+                labelText: AppLocalizations.of(context)!.loanAmountLabel,
                 prefixText: '${currency.currencySymbol} ',
                 prefixStyle: AppTheme.offlineSafeTextStyle,
                 border: const OutlineInputBorder()),
@@ -219,8 +260,9 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegexUtils.amountExp)
             ],
-            validator: (v) =>
-                (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid' : null,
+            validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+                ? AppLocalizations.of(context)!.invalidLabel
+                : null,
             onChanged: (v) {
               setState(() {
                 _principal =
@@ -246,26 +288,29 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
 
   Widget _buildRateField(bool isGoldLoan, LoanService loanService) {
     if (_calculateRateFromEMI && !isGoldLoan) {
+      // coverage:ignore-start
       return TextFormField(
-        // coverage:ignore-line
-        controller: _rateController, // coverage:ignore-line
-        decoration: const InputDecoration(
-            labelText: 'Calculated Rate',
+        controller: _rateController,
+        decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.calculatedRateLabel,
+            // coverage:ignore-end
             suffixText: '%',
-            border: OutlineInputBorder()),
+            border: const OutlineInputBorder()),
         readOnly: true,
       );
     }
     return TextFormField(
-      decoration: const InputDecoration(
-          labelText: 'Interest Rate (Annual)',
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.interestRateAnnual,
           suffixText: '%',
-          border: OutlineInputBorder()),
+          border: const OutlineInputBorder()),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegexUtils.amountExp)
       ],
-      validator: (v) => (double.tryParse(v ?? '') ?? -1) < 0 ? 'Invalid' : null,
+      validator: (v) => (double.tryParse(v ?? '') ?? -1) < 0
+          ? AppLocalizations.of(context)!.invalidLabel
+          : null,
       onChanged: (v) {
         setState(() {
           _rate = CurrencyUtils.roundTo2Decimals(double.tryParse(v) ?? 0);
@@ -281,63 +326,66 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
     return Row(
       children: [
         Expanded(
-          child: TextFormField(
-            controller: _tenureController,
-            decoration: const InputDecoration(
-                labelText: 'Tenure (Months)', border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) {
-              setState(() {
-                _tenure = int.tryParse(v) ?? 0;
-                if (!isGoldLoan) {
-                  if (_calculateRateFromEMI) {
-                    _updateRate(loanService); // coverage:ignore-line
-                  } else {
-                    _updateEMI(loanService, excludeTenure: true);
-                  }
-                }
-              });
-            },
-            onSaved: (v) => _tenure = int.tryParse(v ?? '') ?? 0,
-          ),
+          child: _buildTenureField(isGoldLoan, loanService),
         ),
         const SizedBox(width: 16),
         if (!isGoldLoan)
           Expanded(
-            child: TextFormField(
-              controller: _emiController,
-              decoration: InputDecoration(
-                  labelText: 'Monthly EMI',
-                  prefixText: '${currency.currencySymbol} ',
-                  prefixStyle: AppTheme.offlineSafeTextStyle,
-                  border: const OutlineInputBorder()),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-              ],
-              // coverage:ignore-start
-              onChanged: (v) {
-                setState(() {
-                  _calculatedEMI =
-                      CurrencyUtils.roundTo2Decimals(double.tryParse(v) ?? 0);
-                  if (_calculateRateFromEMI) {
-                    _updateRate(loanService);
-                    // coverage:ignore-end
-                  } else {
-                    _updateTenure(loanService,
-                        excludeEMI: true); // coverage:ignore-line
-                  }
-                });
-              },
-              onSaved: (v) => _calculatedEMI =
-                  CurrencyUtils.roundTo2Decimals(double.tryParse(v ?? '') ?? 0),
-            ),
+            child: _buildEmiField(currency, loanService),
           )
         else
           const Spacer(), // coverage:ignore-line
       ],
+    );
+  }
+
+  Widget _buildTenureField(bool isGoldLoan, LoanService loanService) {
+    return TextFormField(
+      controller: _tenureController,
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.loanTenureLabel,
+          border: const OutlineInputBorder()),
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (v) {
+        setState(() {
+          _tenure = int.tryParse(v) ?? 0;
+          if (!isGoldLoan) {
+            _calculateRateFromEMI
+                ? _updateRate(loanService) // coverage:ignore-line
+                : _updateEMI(loanService, excludeTenure: true);
+          }
+        });
+      },
+      onSaved: (v) => _tenure = int.tryParse(v ?? '') ?? 0,
+    );
+  }
+
+  Widget _buildEmiField(NumberFormat currency, LoanService loanService) {
+    return TextFormField(
+      controller: _emiController,
+      decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.monthlyEmi,
+          prefixText: '${currency.currencySymbol} ',
+          prefixStyle: AppTheme.offlineSafeTextStyle,
+          border: const OutlineInputBorder()),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+      ],
+      // coverage:ignore-start
+      onChanged: (v) {
+        setState(() {
+          _calculatedEMI =
+              CurrencyUtils.roundTo2Decimals(double.tryParse(v) ?? 0);
+          _calculateRateFromEMI
+              ? _updateRate(loanService)
+              : _updateTenure(loanService, excludeEMI: true);
+          // coverage:ignore-end
+        });
+      },
+      onSaved: (v) => _calculatedEMI =
+          CurrencyUtils.roundTo2Decimals(double.tryParse(v ?? '') ?? 0),
     );
   }
 
@@ -359,8 +407,9 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
               // coverage:ignore-end
             },
             child: InputDecorator(
-              decoration: const InputDecoration(
-                  labelText: 'Start Date', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.loanStartDateLabel,
+                  border: const OutlineInputBorder()),
               child: Text(DateFormat(dateFormatYyyyMmDd).format(_startDate)),
             ),
           ),
@@ -378,20 +427,22 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                 if (d != null) setState(() => _firstEmiDate = d);
               },
               child: InputDecorator(
-                decoration: const InputDecoration(
-                    labelText: '1st EMI Date', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.nextEmiDate,
+                    border: const OutlineInputBorder()),
                 child:
                     Text(DateFormat(dateFormatYyyyMmDd).format(_firstEmiDate)),
               ),
             ),
           )
         else
+          // coverage:ignore-start
           Expanded(
-            // coverage:ignore-line
             child: InputDecorator(
-              // coverage:ignore-line
-              decoration: const InputDecoration(
-                  labelText: 'Maturity Date', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.maturityDate,
+                  // coverage:ignore-end
+                  border: const OutlineInputBorder()),
               child: Text(DateFormat(dateFormatYyyyMmDd) // coverage:ignore-line
                   .format(_startDate.add(
                       Duration(days: _tenure * 30)))), // coverage:ignore-line
@@ -409,8 +460,8 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
         child: Column(
           children: [
             if (!isGoldLoan) ...[
-              const Text('Estimated EMI',
-                  style: TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context)!.estimatedEmi,
+                  style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 8),
               Text(
                 currency.format(_calculatedEMI),
@@ -421,13 +472,16 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Total Interest: ${currency.format((_calculatedEMI * _tenure) - _principal)}',
+                AppLocalizations.of(context)!.totalInterestLabel(
+                    currency.format((_calculatedEMI * _tenure) - _principal)),
                 style: const TextStyle(color: Colors.white54),
               ),
             ] else ...[
               // coverage:ignore-line
-              const Text('Projected Interest (Simple)',
-                  style: TextStyle(color: Colors.white70)),
+              Text(
+                  AppLocalizations.of(context)!
+                      .projectedInterestSimple, // coverage:ignore-line
+                  style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 8),
               Text(
                 // coverage:ignore-line
@@ -439,9 +493,11 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Interest payable at maturity or renewal',
-                style: TextStyle(color: Colors.white54),
+              Text(
+                // coverage:ignore-line
+                AppLocalizations.of(context)!
+                    .interestPayableMaturity, // coverage:ignore-line
+                style: const TextStyle(color: Colors.white54),
               ),
             ]
           ],
@@ -567,11 +623,15 @@ class _AddLoanScreenState extends ConsumerState<AddLoanScreen> {
   String _formatAccountBalance(Account a) {
     if (a.type == AccountType.creditCard && a.creditLimit != null) {
       final avail = a.creditLimit! - a.balance;
-      if (_hideBalance) return 'Avail: •••';
-      return 'Avail: ${CurrencyUtils.getSmartFormat(avail, a.currency)}';
+      if (_hideBalance) return AppLocalizations.of(context)!.availLabel('•••');
+      return AppLocalizations.of(context)!
+          .availLabel(CurrencyUtils.getSmartFormat(avail, a.currency));
       // coverage:ignore-end
     }
-    if (_hideBalance) return 'Bal: •••'; // coverage:ignore-line
-    return 'Bal: ${CurrencyUtils.getSmartFormat(a.balance, a.currency)}'; // coverage:ignore-line
+    // coverage:ignore-start
+    if (_hideBalance) return AppLocalizations.of(context)!.balLabel('•••');
+    return AppLocalizations.of(context)!
+        .balLabel(CurrencyUtils.getSmartFormat(a.balance, a.currency));
+    // coverage:ignore-end
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import '../providers.dart';
 import '../models/transaction.dart';
 import '../widgets/pure_icons.dart';
@@ -23,7 +24,8 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: const Text('Recycle Bin')),
+      appBar:
+          AppBar(title: Text(AppLocalizations.of(context)!.recycleBinTitle)),
       body: FutureBuilder<List<Transaction>>(
         future: Future.value(storage.getDeletedTransactions()),
         builder: (context, snapshot) {
@@ -33,7 +35,9 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
 
           final deleted = snapshot.data!;
           if (deleted.isEmpty) {
-            return const Center(child: Text('Recycle Bin is empty'));
+            return Center(
+                child:
+                    Text(AppLocalizations.of(context)!.recycleBinEmptyMessage));
           }
 
           return ListView.builder(
@@ -53,7 +57,7 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
                   children: [
                     IconButton(
                       icon: PureIcons.restore(color: Colors.green),
-                      tooltip: 'Restore',
+                      tooltip: AppLocalizations.of(context)!.restoreTooltip,
                       onPressed: () async {
                         await storage.restoreTransaction(txn.id);
                         ref.invalidate(transactionsProvider);
@@ -63,7 +67,8 @@ class _RecycleBinScreenState extends ConsumerState<RecycleBinScreen> {
                     ),
                     IconButton(
                       icon: PureIcons.deleteForever(color: Colors.red),
-                      tooltip: 'Delete Permanently',
+                      tooltip: AppLocalizations.of(context)!
+                          .deletePermanentlyTooltip,
                       onPressed: () async {
                         await storage.permanentlyDeleteTransaction(txn.id);
                         setState(() {});

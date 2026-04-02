@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/screens/add_transaction_screen.dart';
+import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/models/transaction.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
@@ -100,6 +101,9 @@ void main() {
               .overrideWith(() => MockCategoriesNotifier(categories)),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         home: AddTransactionScreen(
           initialType: initialType,
           transactionToEdit: transactionToEdit,
@@ -399,19 +403,19 @@ void main() {
       await tester.tap(recurringSwitch);
       await tester.pumpAndSettle();
 
-      expect(find.text('MONTHLY'), findsOneWidget);
+      expect(find.text('Monthly'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('MONTHLY'),
+        find.text('Monthly'),
         100,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('MONTHLY').last);
+      await tester.tap(find.text('Monthly').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('WEEKLY').last, findsOneWidget);
-      expect(find.text('DAILY').last, findsOneWidget);
-      await tester.tap(find.text('WEEKLY').last);
+      expect(find.text('Weekly').last, findsOneWidget);
+      expect(find.text('Daily').last, findsOneWidget);
+      await tester.tap(find.text('Weekly').last);
       await tester.pumpAndSettle();
     });
   });
