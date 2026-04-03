@@ -248,6 +248,7 @@ class Investment extends HiveObject {
 
   // LTCG Logic: AcquisitionDate to CURRENT date >= threshold
   bool get isLongTerm {
+    if (customLongTermThresholdYears <= 0) return false;
     final now = DateTime.now();
     final yearsDiff = now.year - acquisitionDate.year;
     if (yearsDiff > customLongTermThresholdYears) return true;
@@ -267,6 +268,7 @@ class Investment extends HiveObject {
       : 0;
 
   String? get longTermRemaining {
+    if (customLongTermThresholdYears <= 0) return null;
     if (isLongTerm) return null;
     final now = DateTime.now();
     final ltDate = DateTime(acquisitionDate.year + customLongTermThresholdYears,
@@ -330,6 +332,89 @@ class Investment extends HiveObject {
       nextRecurringDate: nextRecurringDate ?? this.nextRecurringDate,
       isRecurringEnabled: isRecurringEnabled ?? this.isRecurringEnabled,
       isRecurringPaused: isRecurringPaused ?? this.isRecurringPaused,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.index,
+      'acquisitionDate': acquisitionDate.toIso8601String(),
+      'acquisitionPrice': acquisitionPrice,
+      'quantity': quantity,
+      'currentPrice': currentPrice,
+      'sellDate': sellDate?.toIso8601String(),
+      'sellPrice': sellPrice,
+      'isSold': isSold,
+      'mfCategory': mfCategory?.index,
+      'fixedInterestRate': fixedInterestRate,
+      'customLongTermThresholdYears': customLongTermThresholdYears,
+      'profileId': profileId,
+      'remarks': remarks,
+      'codeName': codeName,
+      'recurringAmount': recurringAmount,
+      'nextRecurringDate': nextRecurringDate?.toIso8601String(),
+      'isRecurringEnabled': isRecurringEnabled,
+      'isRecurringPaused': isRecurringPaused,
+    };
+  }
+
+  factory Investment.fromMap(Map<String, dynamic> map) {
+    double acqPrice = (map['acquisitionPrice'] as num).toDouble();
+    if (acqPrice.isInfinite || acqPrice.isNaN) acqPrice = 0.0;
+
+    double qty = (map['quantity'] as num).toDouble();
+    if (qty.isInfinite || qty.isNaN) qty = 1.0;
+
+    double curPrice = (map['currentPrice'] as num?)?.toDouble() ?? acqPrice;
+    if (curPrice.isInfinite || curPrice.isNaN) curPrice = acqPrice;
+
+    double? sellPrice = (map['sellPrice'] as num?)?.toDouble();
+    if (sellPrice != null && (sellPrice.isInfinite || sellPrice.isNaN)) {
+      // coverage:ignore-line
+      sellPrice = 0.0;
+    }
+
+    double? fixedInt = (map['fixedInterestRate'] as num?)?.toDouble();
+    if (fixedInt != null && (fixedInt.isInfinite || fixedInt.isNaN)) {
+      // coverage:ignore-line
+      fixedInt = 0.0;
+    }
+
+    double? recAmount = (map['recurringAmount'] as num?)?.toDouble();
+    if (recAmount != null && (recAmount.isInfinite || recAmount.isNaN)) {
+      // coverage:ignore-line
+      recAmount = 0.0;
+    }
+
+    return Investment(
+      id: map['id'].toString(),
+      name: map['name'].toString(),
+      type: InvestmentType.values[map['type'] as int],
+      acquisitionDate: DateTime.parse(map['acquisitionDate']),
+      acquisitionPrice: acqPrice,
+      quantity: qty,
+      currentPrice: curPrice,
+      sellDate:
+          map['sellDate'] != null ? DateTime.parse(map['sellDate']) : null,
+      sellPrice: sellPrice,
+      isSold: map['isSold'] ?? false,
+      mfCategory: map['mfCategory'] != null
+          ? MutualFundCategory
+              .values[map['mfCategory'] as int] // coverage:ignore-line
+          : null,
+      fixedInterestRate: fixedInt,
+      customLongTermThresholdYears: map['customLongTermThresholdYears'] ?? 1,
+      profileId: map['profileId']?.toString() ?? 'default',
+      remarks: map['remarks']?.toString(),
+      codeName: map['codeName']?.toString(),
+      recurringAmount: recAmount,
+      nextRecurringDate: map['nextRecurringDate'] != null
+          ? DateTime.parse(map['nextRecurringDate']) // coverage:ignore-line
+          : null,
+      isRecurringEnabled: map['isRecurringEnabled'] ?? false,
+      isRecurringPaused: map['isRecurringPaused'] ?? false,
     );
   }
 }

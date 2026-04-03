@@ -103,8 +103,11 @@ class BudgetApp extends ConsumerWidget {
         '/investments': (context) => const InvestmentsScreen(),
       },
       builder: (context, child) {
-        return LockWrapper(
-          child: GlobalOverlay(child: child),
+        return PopScope(
+          canPop: false,
+          child: LockWrapper(
+            child: GlobalOverlay(child: child),
+          ),
         );
       },
       home: const AuthWrapper(),

@@ -1058,9 +1058,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           Text(AppLocalizations.of(context)!.noIndependentAllowancesNote,
               style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
-          ..._independentAllowances // coverage:ignore-line
-              .map((a) =>
-                  _buildIndependentAllowanceTile(a)), // coverage:ignore-line
+          ..._independentAllowances
+              .map((a) => _buildIndependentAllowanceTile(a)),
         TextButton.icon(
           onPressed: () => _handleEditAllowance(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
@@ -1072,35 +1071,27 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildIndependentAllowanceTile(CustomAllowance a) {
-    // coverage:ignore-line
     return Card(
-      // coverage:ignore-line
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 2,
-      // coverage:ignore-start
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.2)
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
               : Colors.black.withValues(alpha: 0.1),
-          // coverage:ignore-end
         ),
       ),
-      // coverage:ignore-start
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.grey.withValues(alpha: 0.1),
           child: Icon(Icons.add_task_outlined,
               color: Theme.of(context).colorScheme.primary, size: 20),
-          // coverage:ignore-end
         ),
         title:
-            // coverage:ignore-start
             Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(_formatAllowanceSubtitle(a)),
         trailing: IconButton(
-          // coverage:ignore-end
           icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
           // coverage:ignore-start
           onPressed: () {
@@ -1154,9 +1145,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           Text(AppLocalizations.of(context)!.noAdHocExemptionsNote,
               style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
-          ..._independentExemptions // coverage:ignore-line
-              .map((e) =>
-                  _buildIndependentExemptionTile(e)), // coverage:ignore-line
+          ..._independentExemptions
+              .map((e) => _buildIndependentExemptionTile(e)),
         TextButton.icon(
           onPressed: () => _handleEditExemption(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
@@ -1167,36 +1157,28 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildIndependentExemptionTile(CustomExemption e) {
-    // coverage:ignore-line
     return Card(
-      // coverage:ignore-line
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 2,
-      // coverage:ignore-start
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.2)
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
               : Colors.black.withValues(alpha: 0.1),
-          // coverage:ignore-end
         ),
       ),
-      // coverage:ignore-start
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.grey.withValues(alpha: 0.1),
           child: Icon(Icons.verified_outlined,
               color: Theme.of(context).colorScheme.primary, size: 20),
-          // coverage:ignore-end
         ),
         title:
-            // coverage:ignore-start
             Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(CurrencyUtils.formatCurrency(
             e.amount, ref.watch(currencyProvider))),
         trailing: IconButton(
-          // coverage:ignore-end
           icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
           // coverage:ignore-start
           onPressed: () {
@@ -1249,9 +1231,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           Text(AppLocalizations.of(context)!.noIndependentDeductionsNote,
               style: const TextStyle(color: Colors.grey, fontSize: 12))
         else
-          ..._independentDeductions // coverage:ignore-line
-              .map((d) =>
-                  _buildIndependentDeductionTile(d)), // coverage:ignore-line
+          ..._independentDeductions
+              .map((d) => _buildIndependentDeductionTile(d)),
         TextButton.icon(
           onPressed: () => _handleEditDeduction(null), // coverage:ignore-line
           icon: const Icon(Icons.add),
@@ -1263,36 +1244,28 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   Widget _buildIndependentDeductionTile(CustomDeduction d) {
-    // coverage:ignore-line
     return Card(
-      // coverage:ignore-line
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 2,
-      // coverage:ignore-start
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.2)
+              ? Colors.white.withValues(alpha: 0.2) // coverage:ignore-line
               : Colors.black.withValues(alpha: 0.1),
-          // coverage:ignore-end
         ),
       ),
-      // coverage:ignore-start
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.grey.withValues(alpha: 0.1),
           child: Icon(Icons.remove_circle_outline,
               color: Theme.of(context).colorScheme.primary, size: 20),
-          // coverage:ignore-end
         ),
         title:
-            // coverage:ignore-start
             Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(
             '${CurrencyUtils.formatCurrency(d.amount, ref.watch(currencyProvider))} (${d.frequency.name})'),
         trailing: IconButton(
-          // coverage:ignore-end
           icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
           // coverage:ignore-start
           onPressed: () {
@@ -2177,16 +2150,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         if (data.customExemptions > 0) ...[
           const Divider(),
           _buildSummaryRow(
-              // coverage:ignore-line
-              AppLocalizations.of(context)!
-                  .taxableBeforeAdHocExemptionsLabel, // coverage:ignore-line
+              AppLocalizations.of(context)!.taxableBeforeAdHocExemptionsLabel,
               data.baseTaxableIncome,
               isBold: true,
               fontSize: 13),
           _buildSummaryRow(
-              // coverage:ignore-line
-              AppLocalizations.of(context)!
-                  .lessCustomAdHocExemptionsLabel, // coverage:ignore-line
+              AppLocalizations.of(context)!.lessCustomAdHocExemptionsLabel,
               data.customExemptions,
               isDeduction: true,
               color: deductColor),
@@ -5251,7 +5220,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     final prevData =
         ref.read(storageServiceProvider).getTaxYearData(_currentData.year - 1);
     if (prevData == null || prevData.salary.history.isEmpty) {
-      // coverage:ignore-line
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -5263,26 +5231,40 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     }
 
     // Map to new IDs to avoid conflicts
-    // coverage:ignore-start
     final newHistory = prevData.salary.history.map((s) {
       return s.copyWith(
           id: DateTime.now().millisecondsSinceEpoch.toString() + s.id);
     }).toList();
-    // coverage:ignore-end
+
+    final newAllowances = prevData.salary.independentAllowances.map((a) {
+      return a.copyWith(id: const Uuid().v4());
+    }).toList();
+
+    final newExemptions = prevData.salary.independentExemptions.map((e) {
+      return e.copyWith(id: const Uuid().v4());
+    }).toList();
+
+    final newDeductions = prevData.salary.independentDeductions.map((d) {
+      return d.copyWith(id: const Uuid().v4());
+    }).toList();
 
     setState(() {
-      // coverage:ignore-line
-      _salaryHistory.addAll(newHistory); // coverage:ignore-line
+      _salaryHistory.addAll(newHistory);
+      _independentAllowances.addAll(newAllowances);
+      _independentExemptions.addAll(newExemptions);
+      _independentDeductions.addAll(newDeductions);
+
+      _salaryNpsEmployerCtrl.text = prevData.salary.npsEmployer.toString();
+      _salaryLeaveEncashCtrl.text = prevData.salary.leaveEncashment.toString();
+      _salaryGratuityCtrl.text = prevData.salary.gratuity.toString();
     });
 
-    // coverage:ignore-start
     _updateSummary();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .copiedStructuresCountNote(newHistory.length.toString()))),
-        // coverage:ignore-end
       );
     }
   }
@@ -6464,36 +6446,30 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   }
 
   String _formatAllowanceSubtitle(CustomAllowance a) {
-    // coverage:ignore-line
-    final locale = ref.watch(currencyProvider); // coverage:ignore-line
-    final payoutFormatted = CurrencyUtils.formatCurrency(
-        a.payoutAmount, locale); // coverage:ignore-line
+    final locale = ref.watch(currencyProvider);
+    final payoutFormatted =
+        CurrencyUtils.formatCurrency(a.payoutAmount, locale);
 
-    final totalAmount =
-        _calculateAllowanceAnnualTotal(a); // coverage:ignore-line
-    final totalFormatted = CurrencyUtils.formatCurrency(
-        totalAmount, locale); // coverage:ignore-line
+    final totalAmount = _calculateAllowanceAnnualTotal(a);
+    final totalFormatted = CurrencyUtils.formatCurrency(totalAmount, locale);
 
     if (a.frequency == PayoutFrequency.annually && !a.isPartial) {
-      // coverage:ignore-line
       return '${AppLocalizations.of(context)!.annualPayoutLabel}: $payoutFormatted'; // coverage:ignore-line
     }
 
-    return '${AppLocalizations.of(context)!.perPayoutLabel}: $payoutFormatted • ${AppLocalizations.of(context)!.annualTotalLabel}: $totalFormatted'; // coverage:ignore-line
+    return '${AppLocalizations.of(context)!.perPayoutLabel}: $payoutFormatted • ${AppLocalizations.of(context)!.annualTotalLabel}: $totalFormatted';
   }
 
   double _calculateAllowanceAnnualTotal(CustomAllowance a) {
-    // coverage:ignore-line
     double total = 0;
-    // coverage:ignore-start
     for (int m = 1; m <= 12; m++) {
       if (SalaryStructure.isPayoutMonth(
           m, a.frequency, a.startMonth, a.customMonths)) {
         if (a.isPartial) {
-          total += a.partialAmounts[m] ?? a.payoutAmount;
-          // coverage:ignore-end
+          total +=
+              a.partialAmounts[m] ?? a.payoutAmount; // coverage:ignore-line
         } else {
-          total += a.payoutAmount; // coverage:ignore-line
+          total += a.payoutAmount;
         }
       }
     }

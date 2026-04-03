@@ -239,6 +239,9 @@ class StorageService {
     // 10. Delete Tax Data
     await _deleteItemsByProfile<TaxYearData>(boxTaxData, profileId);
 
+    // 11. Delete Investments
+    await _deleteItemsByProfile<Investment>(boxInvestments, profileId);
+
     // 8. If active profile was deleted, switch to another one
     if (getActiveProfileId() == profileId) {
       // coverage:ignore-start
@@ -1905,7 +1908,8 @@ class StorageService {
         value is Transaction ||
         value is Category ||
         value is Loan ||
-        value is Profile;
+        value is Profile ||
+        value is Investment;
   }
 
   /// Bulk-save settings from a map (used during restore).
@@ -2017,6 +2021,18 @@ class StorageService {
         .toList();
     for (var c in catsToDelete) {
       await catBox.delete(c.id); // coverage:ignore-line
+    }
+
+    // Clear Investments
+    final invBox = _hive.box<Investment>(boxInvestments);
+    final invToDelete = invBox
+        .toMap()
+        .values
+        .whereType<Investment>()
+        .where((i) => i.profileId == profileId)
+        .toList();
+    for (var i in invToDelete) {
+      await invBox.delete(i.id); // coverage:ignore-line
     }
 
     // Reset backup counter

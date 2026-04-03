@@ -566,7 +566,7 @@ class __InvestmentManagementTabState
         Expanded(
           child: _buildList(paginated, currency, l10n),
         ),
-        if (totalPages > 1) _buildPaginationBar(safeCurrentPage, totalPages),
+        _buildPaginationBar(safeCurrentPage, totalPages),
       ],
     );
   }

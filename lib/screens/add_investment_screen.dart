@@ -7,6 +7,7 @@ import '../providers.dart';
 import '../models/investment.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/regex_utils.dart';
+import '../utils/currency_utils.dart';
 
 class AddInvestmentScreen extends ConsumerStatefulWidget {
   final Investment? investmentToEdit;
@@ -70,7 +71,8 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
       _type == InvestmentType.stock || _type == InvestmentType.mutualFund;
   bool get _showQuantity =>
       _type != InvestmentType.fixedSavings &&
-      _type != InvestmentType.otherFixed;
+      _type != InvestmentType.otherFixed &&
+      _type != InvestmentType.pf;
 
   // coverage:ignore-start
   void _save() {
@@ -129,6 +131,8 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final currencyLocale = ref.watch(currencyProvider);
+    final currencySymbol = CurrencyUtils.getSymbol(currencyLocale);
 
     return Scaffold(
       appBar: AppBar(
@@ -151,9 +155,9 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
             _buildTypeSpecificFields(l10n),
             _buildDateSection(l10n),
             const SizedBox(height: 16),
-            _buildFinancialFields(l10n),
+            _buildFinancialFields(l10n, currencySymbol),
             const SizedBox(height: 16),
-            _buildRecurringSection(l10n),
+            _buildRecurringSection(l10n, currencySymbol),
             const SizedBox(height: 32),
             _buildActionButtons(l10n),
           ],
@@ -245,7 +249,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
     );
   }
 
-  Widget _buildFinancialFields(AppLocalizations l10n) {
+  Widget _buildFinancialFields(AppLocalizations l10n, String currencySymbol) {
     return Column(
       children: [
         Row(
@@ -256,6 +260,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
                 decoration: InputDecoration(
                   labelText: l10n.acquisitionPriceLabel,
                   border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                   isDense: true,
                 ),
                 keyboardType:
@@ -279,6 +284,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
                 decoration: InputDecoration(
                   labelText: l10n.currentPriceLabel,
                   border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                   isDense: true,
                 ),
                 keyboardType:
@@ -403,12 +409,12 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
     );
   }
 
-  Widget _buildRecurringSection(AppLocalizations l10n) {
+  Widget _buildRecurringSection(AppLocalizations l10n, String currencySymbol) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildRecurringHeader(l10n),
-        if (_isRecurringEnabled) _buildRecurringForm(l10n),
+        if (_isRecurringEnabled) _buildRecurringForm(l10n, currencySymbol),
       ],
     );
   }
@@ -434,7 +440,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
     );
   }
 
-  Widget _buildRecurringForm(AppLocalizations l10n) {
+  Widget _buildRecurringForm(AppLocalizations l10n, String currencySymbol) {
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -443,7 +449,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
           decoration: InputDecoration(
             labelText: l10n.recurringAmountLabel,
             border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.currency_rupee),
+            prefixText: '$currencySymbol ',
             isDense: true,
             helperText: 'Amount to be added every month',
           ),

@@ -1412,8 +1412,8 @@ class CustomExemption {
   }) {
     return CustomExemption(
       id: id ?? this.id,
-      name: name ?? this.name, // coverage:ignore-line
-      amount: amount ?? this.amount, // coverage:ignore-line
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
       isCliffExemption: isCliffExemption ?? this.isCliffExemption,
       exemptionLimit: exemptionLimit ?? this.exemptionLimit,
     );

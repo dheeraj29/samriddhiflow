@@ -765,4 +765,76 @@ void main() {
     expect(find.textContaining('85,000', skipOffstage: false), findsWidgets);
     expect(find.textContaining('1,00,000', skipOffstage: false), findsWidgets);
   });
+
+  testWidgets('Salary Tab: Copy previous year copies all components',
+      (tester) async {
+    final rules = TaxRules(slabs: const [TaxSlab(300000, 0)]);
+    const data = TaxYearData(year: 2025);
+    final previousYearData = TaxYearData(
+      year: 2024,
+      salary: SalaryDetails(
+        history: [
+          SalaryStructure(
+            id: 'old_struct',
+            effectiveDate: DateTime(2024, 4, 1),
+            monthlyBasic: 50000,
+          ),
+        ],
+        independentDeductions: [
+          const CustomDeduction(
+              id: 'old_ded', name: 'Old Deduction', amount: 1234),
+        ],
+        independentExemptions: [
+          const CustomExemption(
+              id: 'old_ex', name: 'Old Exemption', amount: 567),
+        ],
+        independentAllowances: [
+          const CustomAllowance(
+              id: 'old_all', name: 'Old Allowance', payoutAmount: 890),
+        ],
+        npsEmployer: 10000,
+        leaveEncashment: 5000,
+        gratuity: 15000,
+      ),
+    );
+
+    when(() => mockConfig.getRulesForYear(2025)).thenReturn(rules);
+    when(() => mockTaxService.getGeneratedSalaryTds(any(), any()))
+        .thenReturn([]);
+    when(() => mockStorage.getTaxYearData(2024)).thenReturn(previousYearData);
+
+    await pumpScreen(tester, data);
+
+    // Initial check: shouldn't have the data
+    expect(find.textContaining('1,234'), findsNothing);
+
+    // Trigger copy
+    await tester.ensureVisible(find.byTooltip('Copy from Previous Year'));
+    await tester.tap(find.byTooltip('Copy from Previous Year'));
+    await tester.pumpAndSettle();
+
+    // Verify history copied
+    expect(find.textContaining('1 salary structures copied.'), findsOneWidget);
+
+    // Scroll to check independent components
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+    await tester.pumpAndSettle();
+
+    // Verify individual components
+    expect(find.text('Old Deduction'), findsOneWidget);
+    expect(find.textContaining('1,234'), findsWidgets);
+    expect(find.text('Old Exemption'), findsOneWidget);
+    expect(find.textContaining('567'), findsWidgets);
+    expect(find.text('Old Allowance'), findsOneWidget);
+    expect(find.textContaining('890'), findsWidgets);
+
+    // Verify static values (Static figures section)
+    await tester.ensureVisible(find.text('Employer NPS Contribution'));
+    expect(find.text('Employer NPS Contribution'), findsOneWidget);
+
+    // Find the TextField next to the label (usually the one containing the controller with the value 10000.0)
+    expect(find.text('10000.0'), findsOneWidget);
+    expect(find.text('5000.0'), findsOneWidget);
+    expect(find.text('15000.0'), findsOneWidget);
+  });
 }

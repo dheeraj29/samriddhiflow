@@ -11,6 +11,7 @@ import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
@@ -64,7 +65,14 @@ class JsonDataService {
         archive, 'profiles.json', profiles.map((e) => e.toMap()).toList());
 
     // 8. Settings
-    final settings = _storageService.getAllSettings();
+    final settings =
+        Map<String, dynamic>.from(_storageService.getAllSettings());
+    settings.remove('sessionId');
+    settings.remove('isLoggedIn');
+    settings.remove('lastLogin');
+    settings.remove('last_sync');
+    settings.remove('txnsSinceBackup');
+
     if (appPin != null) {
       settings['appPin'] = appPin; // coverage:ignore-line
     }
@@ -90,6 +98,11 @@ class JsonDataService {
     final lending = _storageService.getLendingRecords();
     _addToArchive(archive, 'lending_records.json',
         lending.map((e) => e.toMap()).toList());
+
+    // 13. Investments
+    final investments = _storageService.getAllInvestments();
+    _addToArchive(archive, 'investments.json',
+        investments.map((e) => e.toMap()).toList());
 
     // Encode to ZIP
     final encoder = ZipEncoder();
@@ -201,6 +214,14 @@ class JsonDataService {
             await _storageService.saveLendingRecord(
                 LendingRecord.fromMap(l))); // coverage:ignore-line
 
+    await _restoreEntityList(
+        getJson,
+        'investments.json',
+        stats,
+        'investments',
+        (i) async =>
+            await _storageService.saveInvestment(Investment.fromMap(i)));
+
     // G. Settings already restored above
 
     // H. Insurance Policies (bulk save)
@@ -235,7 +256,10 @@ class JsonDataService {
 
     if (settingsMap is Map) {
       settingsMap.remove('isLoggedIn');
+      settingsMap.remove('sessionId');
+      settingsMap.remove('lastLogin');
       settingsMap.remove('last_sync');
+      settingsMap.remove('txnsSinceBackup');
 
       // Ensure restored plaintext PINs are hashed via StorageService setter
       if (settingsMap.containsKey('appPin') && settingsMap['appPin'] != null) {

@@ -14,6 +14,7 @@ import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
@@ -79,6 +80,13 @@ void main() {
         reason: 'r',
         date: DateTime.now(),
         type: LendingType.lent));
+    registerFallbackValue(Investment(
+        id: 'i',
+        name: 'i',
+        type: InvestmentType.stock,
+        acquisitionDate: DateTime.now(),
+        acquisitionPrice: 0,
+        quantity: 0));
   });
 
   test('createBackupPackage collects all data and returns a ZIP', () async {
@@ -94,6 +102,7 @@ void main() {
     when(() => mockTaxConfigService.getAllRules()).thenReturn({});
     when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
     when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+    when(() => mockStorageService.getAllInvestments()).thenReturn([]);
 
     // Run
     final zipBytes = await jsonDataService.createBackupPackage();
@@ -113,6 +122,13 @@ void main() {
     expect(archive.findFile('tax_rules.json'), isNotNull);
     expect(archive.findFile('tax_data.json'), isNotNull);
     expect(archive.findFile('lending_records.json'), isNotNull);
+    expect(archive.findFile('investments.json'), isNotNull);
+
+    // Verify settings.json content
+    final settingsFile = archive.findFile('settings.json')!;
+    final settings = jsonDecode(utf8.decode(settingsFile.content));
+    expect(settings.containsKey('sessionId'), isFalse);
+    expect(settings.containsKey('isLoggedIn'), isFalse);
   });
 
   test('restoreFromPackage clears and restores data', () async {
@@ -156,6 +172,16 @@ void main() {
     add('tax_rules.json', {});
     add('tax_data.json', []);
     add('lending_records.json', []);
+    add('investments.json', [
+      Investment(
+              id: 'inv1',
+              name: 'Inv1',
+              type: InvestmentType.stock,
+              acquisitionDate: DateTime(2025),
+              acquisitionPrice: 100,
+              quantity: 10)
+          .toMap()
+    ]);
 
     final zipBytes = ZipEncoder().encode(archive);
 
@@ -180,6 +206,8 @@ void main() {
         .thenAnswer((_) async {});
     when(() => mockStorageService.saveLendingRecord(any()))
         .thenAnswer((_) async {});
+    when(() => mockStorageService.saveInvestment(any()))
+        .thenAnswer((_) async {});
 
     // Run
     final stats = await jsonDataService.restoreFromPackage(zipBytes);
@@ -197,6 +225,7 @@ void main() {
     expect(stats['profiles'], 1);
     expect(stats['accounts'], 1);
     expect(stats['transactions'], 1);
+    expect(stats['investments'], 1);
   });
 
   test('restoreFromPackage strips isLoggedIn and last_sync from settings',
@@ -265,6 +294,7 @@ void main() {
     when(() => mockTaxConfigService.getAllRules()).thenReturn({});
     when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
     when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+    when(() => mockStorageService.getAllInvestments()).thenReturn([]);
 
     // Run
     final zipBytes = await jsonDataService.createBackupPackage();

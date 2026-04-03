@@ -11,6 +11,7 @@ import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/lending_record.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 import 'package:samriddhi_flow/utils/billing_helper.dart';
 
 class MockHive extends Mock implements HiveInterface {}
@@ -39,6 +40,7 @@ void main() {
   late MockBox<InsurancePolicy> mockInsuranceBox;
   late MockBox<TaxYearData> mockTaxBox;
   late MockBox<LendingRecord> mockLendingBox;
+  late MockBox<Investment> mockInvestmentBox;
 
   setUpAll(() {
     registerFallbackValue(ProfileFake());
@@ -90,6 +92,12 @@ void main() {
       startDate: DateTime.now(),
       maturityDate: DateTime.now(),
     ));
+    registerFallbackValue(Investment.create(
+        name: 'f',
+        type: InvestmentType.stock,
+        acquisitionDate: DateTime.now(),
+        acquisitionPrice: 0,
+        quantity: 0));
   });
 
   setUp(() {
@@ -104,6 +112,7 @@ void main() {
     mockInsuranceBox = MockBox<InsurancePolicy>();
     mockTaxBox = MockBox<TaxYearData>();
     mockLendingBox = MockBox<LendingRecord>();
+    mockInvestmentBox = MockBox<Investment>();
 
     when(() => mockHive.box<Profile>(StorageService.boxProfiles))
         .thenReturn(mockProfileBox);
@@ -126,6 +135,8 @@ void main() {
         .thenReturn(mockTaxBox);
     when(() => mockHive.box<LendingRecord>(StorageService.boxLendingRecords))
         .thenReturn(mockLendingBox);
+    when(() => mockHive.box<Investment>(StorageService.boxInvestments))
+        .thenReturn(mockInvestmentBox);
 
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
 
@@ -147,6 +158,7 @@ void main() {
     when(() => mockInsuranceBox.put(any(), any())).thenAnswer((_) async {});
     when(() => mockTaxBox.put(any(), any())).thenAnswer((_) async {});
     when(() => mockLendingBox.put(any(), any())).thenAnswer((_) async {});
+    when(() => mockInvestmentBox.put(any(), any())).thenAnswer((_) async {});
 
     when(() => mockSettingsBox.delete(any())).thenAnswer((_) async {});
     when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
@@ -194,6 +206,7 @@ void main() {
       when(() => mockProfileBox.toMap()).thenReturn({});
       when(() => mockInsuranceBox.toMap()).thenReturn({});
       when(() => mockTaxBox.toMap()).thenReturn({});
+      when(() => mockInvestmentBox.toMap()).thenReturn({});
 
       when(() => mockAccountBox.delete(any())).thenAnswer((_) async {});
       when(() => mockTransactionBox.delete(any())).thenAnswer((_) async {});

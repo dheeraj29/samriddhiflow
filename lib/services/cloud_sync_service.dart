@@ -15,6 +15,7 @@ import '../models/taxes/tax_rules.dart';
 import '../models/taxes/tax_data.dart';
 import 'taxes/tax_config_service.dart';
 import '../models/lending_record.dart';
+import '../models/investment.dart';
 import 'dart:convert';
 import 'encryption_service.dart';
 
@@ -127,8 +128,14 @@ class CloudSyncService {
 
     final settings = _storageService.getAllSettings();
     final lastSync = settings['last_sync'];
+
+    // Scrub local-only / device-specific settings
     final Map<String, dynamic> settingsToEncrypt = Map.from(settings);
     settingsToEncrypt.remove('last_sync');
+    settingsToEncrypt.remove('sessionId');
+    settingsToEncrypt.remove('isLoggedIn');
+    settingsToEncrypt.remove('lastLogin');
+    settingsToEncrypt.remove('txnsSinceBackup');
 
     // Inject plaintext appPin for backup if provided
     if (appPin != null) {
@@ -179,10 +186,12 @@ class CloudSyncService {
           _taxConfigService.getAllRules(), encryptor),
       'tax_data_v2': _preparePartitionedTaxData(
           _storageService.getAllTaxYearData(), encryptor),
-      'lending_records': encryptor(
-          _storageService.getLendingRecords().map((e) => e.toMap()).toList()),
+      'lending_records': _preparePartitionedLendingRecords(
+          _storageService.getLendingRecords(), encryptor),
       'is_encrypted': isEncrypted,
       'sync_format_version': 2,
+      'investments_v2': _preparePartitionedInvestments(
+          _storageService.getAllInvestments(), encryptor),
     };
   }
 
@@ -234,6 +243,28 @@ class CloudSyncService {
   Map<String, dynamic> _preparePartitionedTaxData(
       List<TaxYearData> taxData, dynamic Function(dynamic) encryptor) {
     return {for (var td in taxData) td.year.toString(): encryptor(td.toMap())};
+  }
+
+  Map<String, dynamic> _preparePartitionedInvestments(
+      List<Investment> investments, dynamic Function(dynamic) encryptor) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var i in investments) {
+      final bucket =
+          "${i.acquisitionDate.year}-${i.acquisitionDate.month.toString().padLeft(2, '0')}";
+      grouped.putIfAbsent(bucket, () => []).add(i.toMap());
+    }
+    return grouped.map((k, v) => MapEntry(k, encryptor(v)));
+  }
+
+  Map<String, dynamic> _preparePartitionedLendingRecords(
+      List<LendingRecord> records, dynamic Function(dynamic) encryptor) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var r in records) {
+      final bucket =
+          "${r.date.year}-${r.date.month.toString().padLeft(2, '0')}";
+      grouped.putIfAbsent(bucket, () => []).add(r.toMap());
+    }
+    return grouped.map((k, v) => MapEntry(k, encryptor(v)));
   }
 
   void _handleSyncError(FirebaseException e) {
@@ -313,6 +344,7 @@ class CloudSyncService {
     final restoredTaxYears = await _restoreTaxData(data, decrypt);
     await _mergeLocalTaxSafety(localTaxData, restoredTaxYears);
     await _restoreLendingRecords(data, decrypt);
+    await _restoreInvestments(data, decrypt);
   }
 
   Future<Map<String, dynamic>?> _validateAuthAndFetchData() async {
@@ -506,11 +538,31 @@ class CloudSyncService {
 
   Future<void> _restoreLendingRecords(
       Map<String, dynamic> data, Function(dynamic) decrypt) async {
-    if (data['lending_records'] == null) return;
-    final lendings = decrypt(data['lending_records']);
-    for (var l in (lendings as List)) {
-      await _storageService.saveLendingRecord(
-          LendingRecord.fromMap(Map<String, dynamic>.from(l)));
+    final lendingData = data['lending_records'];
+    if (lendingData == null || lendingData is! Map) return;
+
+    // Partitioned Format
+    for (var bucketValue in lendingData.values) {
+      final records = decrypt(bucketValue);
+      if (records == null || records is! List) continue;
+      for (var r in records) {
+        await _storageService.saveLendingRecord(
+            LendingRecord.fromMap(Map<String, dynamic>.from(r)));
+      }
+    }
+  }
+
+  Future<void> _restoreInvestments(
+      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+    final v2Data = data['investments_v2'];
+    if (v2Data == null || v2Data is! Map) return;
+
+    for (var bucketValue in v2Data.values) {
+      final invs = decrypt(bucketValue);
+      for (var i in (invs as List)) {
+        await _storageService
+            .saveInvestment(Investment.fromMap(Map<String, dynamic>.from(i)));
+      }
     }
   }
 
