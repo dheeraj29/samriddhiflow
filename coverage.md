@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-04-03T22:33:06.837754**
+> **Generated on: 2026-04-03T22:41:25.444185**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 93.8%**
@@ -46,7 +46,6 @@
 | screens/loan/loan_ledger_view.dart | 95.3% | 162/170 | PASS |
 | utils/network_utils.dart | 95.5% | 21/22 | PASS |
 | services/cloud_sync_service.dart | 95.5% | 253/265 | PASS |
-| models/investment.dart | 95.8% | 115/120 | PASS |
 | services/json_data_service.dart | 96.0% | 119/124 | PASS |
 | screens/lending/add_lending_screen.dart | 96.0% | 96/100 | PASS |
 | widgets/transaction_list_item.dart | 96.0% | 97/101 | PASS |
@@ -67,6 +66,7 @@
 | screens/loan/loan_topup_dialog.dart | 98.0% | 99/101 | PASS |
 | screens/reports_screen.dart | 98.1% | 404/412 | PASS |
 | screens/loan/loan_gold_dialogs.dart | 98.1% | 106/108 | PASS |
+| models/investment.dart | 98.3% | 117/119 | PASS |
 | models/taxes/tax_data.dart | 98.9% | 88/89 | PASS |
 | screens/loan/loan_update_rate_dialog.dart | 98.9% | 90/91 | PASS |
 | screens/lending/lending_history_screen.dart | 99.1% | 107/108 | PASS |

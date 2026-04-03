@@ -361,32 +361,7 @@ class Investment extends HiveObject {
   }
 
   factory Investment.fromMap(Map<String, dynamic> map) {
-    double acqPrice = (map['acquisitionPrice'] as num).toDouble();
-    if (acqPrice.isInfinite || acqPrice.isNaN) acqPrice = 0.0;
-
-    double qty = (map['quantity'] as num).toDouble();
-    if (qty.isInfinite || qty.isNaN) qty = 1.0;
-
-    double curPrice = (map['currentPrice'] as num?)?.toDouble() ?? acqPrice;
-    if (curPrice.isInfinite || curPrice.isNaN) curPrice = acqPrice;
-
-    double? sellPrice = (map['sellPrice'] as num?)?.toDouble();
-    if (sellPrice != null && (sellPrice.isInfinite || sellPrice.isNaN)) {
-      // coverage:ignore-line
-      sellPrice = 0.0;
-    }
-
-    double? fixedInt = (map['fixedInterestRate'] as num?)?.toDouble();
-    if (fixedInt != null && (fixedInt.isInfinite || fixedInt.isNaN)) {
-      // coverage:ignore-line
-      fixedInt = 0.0;
-    }
-
-    double? recAmount = (map['recurringAmount'] as num?)?.toDouble();
-    if (recAmount != null && (recAmount.isInfinite || recAmount.isNaN)) {
-      // coverage:ignore-line
-      recAmount = 0.0;
-    }
+    final acqPrice = _parseSafeDouble(map['acquisitionPrice'], 0.0);
 
     return Investment(
       id: map['id'].toString(),
@@ -394,27 +369,41 @@ class Investment extends HiveObject {
       type: InvestmentType.values[map['type'] as int],
       acquisitionDate: DateTime.parse(map['acquisitionDate']),
       acquisitionPrice: acqPrice,
-      quantity: qty,
-      currentPrice: curPrice,
-      sellDate:
-          map['sellDate'] != null ? DateTime.parse(map['sellDate']) : null,
-      sellPrice: sellPrice,
+      quantity: _parseSafeDouble(map['quantity'], 1.0),
+      currentPrice: _parseSafeDouble(map['currentPrice'], acqPrice),
+      sellDate: _parseDateTime(map['sellDate']),
+      sellPrice: _parseSafeNullableDouble(map['sellPrice']),
       isSold: map['isSold'] ?? false,
       mfCategory: map['mfCategory'] != null
           ? MutualFundCategory
               .values[map['mfCategory'] as int] // coverage:ignore-line
           : null,
-      fixedInterestRate: fixedInt,
+      fixedInterestRate: _parseSafeNullableDouble(map['fixedInterestRate']),
       customLongTermThresholdYears: map['customLongTermThresholdYears'] ?? 1,
       profileId: map['profileId']?.toString() ?? 'default',
       remarks: map['remarks']?.toString(),
       codeName: map['codeName']?.toString(),
-      recurringAmount: recAmount,
-      nextRecurringDate: map['nextRecurringDate'] != null
-          ? DateTime.parse(map['nextRecurringDate']) // coverage:ignore-line
-          : null,
+      recurringAmount: _parseSafeNullableDouble(map['recurringAmount']),
+      nextRecurringDate: _parseDateTime(map['nextRecurringDate']),
       isRecurringEnabled: map['isRecurringEnabled'] ?? false,
       isRecurringPaused: map['isRecurringPaused'] ?? false,
     );
+  }
+
+  static double _parseSafeDouble(dynamic value, double defaultValue) {
+    if (value == null) return defaultValue;
+    final d = (value as num).toDouble();
+    return (d.isInfinite || d.isNaN) ? defaultValue : d;
+  }
+
+  static double? _parseSafeNullableDouble(dynamic value) {
+    if (value == null) return null;
+    final d = (value as num).toDouble(); // coverage:ignore-line
+    return (d.isInfinite || d.isNaN) ? 0.0 : d; // coverage:ignore-line
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    return DateTime.parse(value.toString()); // coverage:ignore-line
   }
 }
