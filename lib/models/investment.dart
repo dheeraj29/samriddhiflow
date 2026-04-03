@@ -248,6 +248,7 @@ class Investment extends HiveObject {
 
   // LTCG Logic: AcquisitionDate to CURRENT date >= threshold
   bool get isLongTerm {
+    if (customLongTermThresholdYears <= 0) return false;
     final now = DateTime.now();
     final yearsDiff = now.year - acquisitionDate.year;
     if (yearsDiff > customLongTermThresholdYears) return true;
@@ -267,6 +268,7 @@ class Investment extends HiveObject {
       : 0;
 
   String? get longTermRemaining {
+    if (customLongTermThresholdYears <= 0) return null;
     if (isLongTerm) return null;
     final now = DateTime.now();
     final ltDate = DateTime(acquisitionDate.year + customLongTermThresholdYears,
@@ -331,5 +333,77 @@ class Investment extends HiveObject {
       isRecurringEnabled: isRecurringEnabled ?? this.isRecurringEnabled,
       isRecurringPaused: isRecurringPaused ?? this.isRecurringPaused,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.index,
+      'acquisitionDate': acquisitionDate.toIso8601String(),
+      'acquisitionPrice': acquisitionPrice,
+      'quantity': quantity,
+      'currentPrice': currentPrice,
+      'sellDate': sellDate?.toIso8601String(),
+      'sellPrice': sellPrice,
+      'isSold': isSold,
+      'mfCategory': mfCategory?.index,
+      'fixedInterestRate': fixedInterestRate,
+      'customLongTermThresholdYears': customLongTermThresholdYears,
+      'profileId': profileId,
+      'remarks': remarks,
+      'codeName': codeName,
+      'recurringAmount': recurringAmount,
+      'nextRecurringDate': nextRecurringDate?.toIso8601String(),
+      'isRecurringEnabled': isRecurringEnabled,
+      'isRecurringPaused': isRecurringPaused,
+    };
+  }
+
+  factory Investment.fromMap(Map<String, dynamic> map) {
+    final acqPrice = _parseSafeDouble(map['acquisitionPrice'], 0.0);
+
+    return Investment(
+      id: map['id'].toString(),
+      name: map['name'].toString(),
+      type: InvestmentType.values[map['type'] as int],
+      acquisitionDate: DateTime.parse(map['acquisitionDate']),
+      acquisitionPrice: acqPrice,
+      quantity: _parseSafeDouble(map['quantity'], 1.0),
+      currentPrice: _parseSafeDouble(map['currentPrice'], acqPrice),
+      sellDate: _parseDateTime(map['sellDate']),
+      sellPrice: _parseSafeNullableDouble(map['sellPrice']),
+      isSold: map['isSold'] ?? false,
+      mfCategory: map['mfCategory'] != null
+          ? MutualFundCategory
+              .values[map['mfCategory'] as int] // coverage:ignore-line
+          : null,
+      fixedInterestRate: _parseSafeNullableDouble(map['fixedInterestRate']),
+      customLongTermThresholdYears: map['customLongTermThresholdYears'] ?? 1,
+      profileId: map['profileId']?.toString() ?? 'default',
+      remarks: map['remarks']?.toString(),
+      codeName: map['codeName']?.toString(),
+      recurringAmount: _parseSafeNullableDouble(map['recurringAmount']),
+      nextRecurringDate: _parseDateTime(map['nextRecurringDate']),
+      isRecurringEnabled: map['isRecurringEnabled'] ?? false,
+      isRecurringPaused: map['isRecurringPaused'] ?? false,
+    );
+  }
+
+  static double _parseSafeDouble(dynamic value, double defaultValue) {
+    if (value == null) return defaultValue;
+    final d = (value as num).toDouble();
+    return (d.isInfinite || d.isNaN) ? defaultValue : d;
+  }
+
+  static double? _parseSafeNullableDouble(dynamic value) {
+    if (value == null) return null;
+    final d = (value as num).toDouble(); // coverage:ignore-line
+    return (d.isInfinite || d.isNaN) ? 0.0 : d; // coverage:ignore-line
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    return DateTime.parse(value.toString()); // coverage:ignore-line
   }
 }

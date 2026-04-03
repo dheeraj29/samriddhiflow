@@ -84,6 +84,14 @@ void main() {
     expect(find.text('Ticker / Code Name'), findsNothing);
     expect(find.text('Quantity'), findsNothing);
     expect(find.text('Interest Rate (%)'), findsOneWidget);
+
+    // Switch to PF
+    await tester.tap(find.text('PF / EPF / VPF'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ticker / Code Name'), findsNothing);
+    expect(find.text('Quantity'), findsNothing);
+    expect(find.text('Interest Rate (%)'), findsOneWidget);
   });
 
   testWidgets('Pre-fills data when editing an investment', (tester) async {

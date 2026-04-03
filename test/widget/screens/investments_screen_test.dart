@@ -109,6 +109,28 @@ void main() {
     expect(find.text('Page 1 of 2'), findsOneWidget);
   });
 
+  testWidgets('InvestmentsScreen shows pagination even with a single item',
+      (tester) async {
+    final inv = Investment.create(
+      name: 'Single Inv',
+      type: InvestmentType.stock,
+      acquisitionDate: DateTime.now(),
+      acquisitionPrice: 100,
+      quantity: 1,
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(createTestWidget(investments: [inv]));
+    await tester.pumpAndSettle();
+
+    // Switch to Manage tab
+    await tester.tap(find.text('Manage'));
+    await tester.pumpAndSettle();
+
+    // Check PaginationBar is present even if there is only 1 page
+    expect(find.byType(PaginationBar), findsOneWidget);
+    expect(find.text('Page 1 of 1'), findsOneWidget);
+  });
   testWidgets('Dashboard displays type breakdown', (tester) async {
     final stock = Investment.create(
       name: 'Apple',
@@ -123,5 +145,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Stocks'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('InvestmentsScreen hides LT badge for threshold 0',
+      (tester) async {
+    final inv = Investment.create(
+      name: 'Disabled LT',
+      type: InvestmentType.stock,
+      acquisitionDate: DateTime.now().subtract(const Duration(days: 100)),
+      acquisitionPrice: 100,
+      quantity: 1,
+      customLongTermThresholdYears: 0, // DISABLED
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(createTestWidget(investments: [inv]));
+    await tester.pumpAndSettle();
+
+    // Switch to Manage tab
+    await tester.tap(find.text('Manage'));
+    await tester.pumpAndSettle();
+
+    // Check Long Term In... badge is NOT present
+    expect(find.textContaining('Long Term In'), findsNothing);
+
+    // Switch to Dashboard tab
+    await tester.tap(find.text('Dashboard'));
+    await tester.pumpAndSettle();
+
+    // Check Ready to Sell LT alert is NOT present
+    expect(find.textContaining('Ready to Sell (LT)'), findsNothing);
   });
 }

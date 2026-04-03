@@ -74,6 +74,7 @@ void main() {
       when(() => mockTax.getAllRules()).thenReturn({});
       when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
       when(() => mockStorage.getLendingRecords()).thenReturn([]);
+      when(() => mockStorage.getAllInvestments()).thenReturn([]);
       when(() => mockUser.getIdToken(any()))
           .thenAnswer((_) async => 'token123');
       when(() => mockCloud.getActiveSessionId(any()))

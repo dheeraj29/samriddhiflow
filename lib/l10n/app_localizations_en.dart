@@ -2849,10 +2849,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get annualPayoutLabel => 'Annual Payout';
 
-  @override // coverage:ignore-line
+  @override
   String get perPayoutLabel => 'Per Payout';
 
-  @override // coverage:ignore-line
+  @override
   String get annualTotalLabel => 'Annual Total';
 
   @override
@@ -2880,9 +2880,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noSalaryDataPreviousYearNote =>
       'No salary data found for the previous year.';
 
-  @override // coverage:ignore-line
+  @override
   String copiedStructuresCountNote(String count) {
-    return '$count salary structures copied.'; // coverage:ignore-line
+    return '$count salary structures copied.';
   }
 
   @override // coverage:ignore-line
@@ -3029,11 +3029,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lessEmployerNPSLabel => 'Less: Employer NPS Contribution';
 
-  @override // coverage:ignore-line
+  @override
   String get taxableBeforeAdHocExemptionsLabel =>
       'Taxable Before Ad-hoc Exemptions';
 
-  @override // coverage:ignore-line
+  @override
   String get lessCustomAdHocExemptionsLabel => 'Less: Custom Ad-hoc Exemptions';
 
   @override // coverage:ignore-line

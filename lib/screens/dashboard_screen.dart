@@ -581,9 +581,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               style: const TextStyle(color: Colors.white70, fontSize: 11)),
           const SizedBox(height: 2),
           Text(
-            _isPrivacyMode
-                ? '••%'
-                : '${(usagePercent * 100).toStringAsFixed(1)}%',
+            '${(usagePercent * 100).toStringAsFixed(1)}%',
             style: const TextStyle(
                 color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
           ),

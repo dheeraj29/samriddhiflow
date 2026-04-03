@@ -12,6 +12,7 @@ import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
+import 'package:samriddhi_flow/models/investment.dart';
 
 class MockHive extends Mock implements HiveInterface {}
 
@@ -41,6 +42,7 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
   late MockBox<RecurringTransaction> mockRecurringBox;
   late MockBox<InsurancePolicy> mockInsuranceBox;
   late MockBox<TaxYearData> mockTaxBox;
+  late MockBox<Investment> mockInvestmentBox;
   late Map<String, dynamic> settingsMap;
 
   setUpAll(() {
@@ -68,6 +70,12 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
     registerFallbackValue(LoanFake());
     registerFallbackValue(RecurringTransactionFake());
     registerFallbackValue(InsurancePolicyFake());
+    registerFallbackValue(Investment.create(
+        name: 'f',
+        type: InvestmentType.stock,
+        acquisitionDate: testDate,
+        acquisitionPrice: 0,
+        quantity: 0));
     registerFallbackValue(testDate);
   });
 
@@ -83,6 +91,7 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
     mockRecurringBox = MockBox<RecurringTransaction>();
     mockInsuranceBox = MockBox<InsurancePolicy>();
     mockTaxBox = MockBox<TaxYearData>();
+    mockInvestmentBox = MockBox<Investment>();
 
     when(() => mockHive.box<Account>(StorageService.boxAccounts))
         .thenReturn(mockAccountBox);
@@ -107,6 +116,8 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
         .thenReturn(mockInsuranceBox);
     when(() => mockHive.box<TaxYearData>(StorageService.boxTaxData))
         .thenReturn(mockTaxBox);
+    when(() => mockHive.box<Investment>(StorageService.boxInvestments))
+        .thenReturn(mockInvestmentBox);
 
     when(() => mockHive.isBoxOpen(any())).thenReturn(true);
 
@@ -147,6 +158,7 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
     configureBox(mockLendingBox);
     configureBox(mockInsuranceBox);
     configureBox(mockTaxBox);
+    configureBox(mockInvestmentBox);
 
     // Initial default settings
     settingsMap['activeProfileId'] = 'default';
