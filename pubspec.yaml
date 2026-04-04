@@ -28,7 +28,7 @@ dependencies:
   
   # Data Handling
 
-  file_picker: ^10.3.10
+  file_picker: ^11.0.0
   web: ^1.1.1
   archive: ^4.0.7
   
