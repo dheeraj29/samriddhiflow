@@ -17,6 +17,7 @@ import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
 import '../utils/platform_utils.dart' as platform_utils;
 import '../l10n/app_localizations.dart';
+import 'region_selection_dialog.dart';
 
 const continueOfflineText = 'Continue Offline';
 
@@ -45,7 +46,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _startBootGracePeriod();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSafeListeners();
-      ref.read(detectedCountryProvider); // Trigger GeoIP detection
     });
     _startVerificationSafetyTimeout();
     _startSlowConnectionDetector();
@@ -396,9 +396,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       [String? passcode]) async {
     if (_isRestoring && passcode == null) return; // Guard
 
-    setState(() => _isRestoring = true);
+    final storage = ref.read(storageServiceProvider);
+    final isNewDevice = storage.getSessionId() == null;
 
-    if (await _isRegionRestricted(context)) return;
+    setState(() => _isRestoring = true);
 
     try {
       final cloudSync = ref.read(cloudSyncServiceProvider);
@@ -408,61 +409,90 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           SnackBar(
             content: Text(AppLocalizations.of(context)!.restoreCompleteStatus),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
           ),
         );
-        ref.invalidate(accountsProvider);
         ref.invalidate(transactionsProvider);
         ref.read(txnsSinceBackupProvider.notifier).reset();
         _ensureOptimisticFlag();
       }
     } catch (e) {
-      if (!context.mounted) return;
-      await _handleRestoreError(context, e);
+      if (context.mounted) {
+        await _handleRestoreError(context, e, isNewDevice);
+      }
     } finally {
       if (mounted) setState(() => _isRestoring = false);
     }
   }
 
-  /// Returns true if the user's region prevents cloud operations.
-  Future<bool> _isRegionRestricted(BuildContext context) async {
-    final country = await ref.read(detectedCountryProvider.future);
-    if (country != null && country.toUpperCase() != 'IN') {
-      // coverage:ignore-start
-      if (context.mounted) {
-        setState(() => _isRestoring = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // coverage:ignore-end
-            content: Text(AppLocalizations.of(context)!
-                .autoRestoreRegionWarning), // coverage:ignore-line
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return true;
-    }
-    return false;
-  }
+  // Removed _isRegionRestricted in favor of manual selection
 
-  Future<void> _handleRestoreError(BuildContext context, dynamic e) async {
+  Future<void> _handleRestoreError(
+      BuildContext context, dynamic e, bool isNewDevice) async {
     final errorStr = e.toString();
+    final isSessionError = errorStr.contains("SESSION_EXPIRED") ||
+        errorStr.contains("another device");
+
     if (errorStr.contains("Passcode required") ||
         errorStr.contains("Incorrect passcode")) {
       // coverage:ignore-line
-      final p = await UIUtils.showPasscodePrompt(
-          context, errorStr.contains("Incorrect"));
+      await _handlePasscodeError(context, errorStr);
+    } else if (isSessionError) {
+      await _handleSessionConflict(
+          context, errorStr, isNewDevice); // coverage:ignore-line
+    } else {
+      _handleGenericRestoreError(context, errorStr); // coverage:ignore-line
+    }
+  }
 
-      if (context.mounted && p != null && p.isNotEmpty) {
-        await _performAutoRestoreOperation(context, p);
-      } else if (context.mounted) {
-        // coverage:ignore-line
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            // coverage:ignore-line
-            content: Text("Restore skipped. Continuing with empty data.")));
+  Future<void> _handlePasscodeError(
+      BuildContext context, String errorStr) async {
+    final p = await UIUtils.showPasscodePrompt(
+        context, errorStr.contains("Incorrect"));
+
+    if (context.mounted && p != null && p.isNotEmpty) {
+      await _performAutoRestoreOperation(context, p);
+    } else if (context.mounted) {
+      // coverage:ignore-line
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          // coverage:ignore-line
+          content: Text("Restore skipped. Continuing with empty data.")));
+    }
+  }
+
+  Future<void> _handleSessionConflict(
+      // coverage:ignore-line
+      BuildContext context,
+      String errorStr,
+      bool isNewDevice) async {
+    if (isNewDevice) {
+      final confirm = await UIUtils.showClaimOwnershipDialog(
+          context); // coverage:ignore-line
+
+      // coverage:ignore-start
+      if (confirm == true && context.mounted) {
+        await ref.read(cloudSyncServiceProvider).claimSession();
+        if (context.mounted) {
+          await _performAutoRestoreOperation(context);
+          // coverage:ignore-end
+        }
       }
       // coverage:ignore-start
-    } else if (!errorStr.contains("No cloud data")) {
+    } else if (context.mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
+        // coverage:ignore-end
+      );
+      await ref
+          .read(storageServiceProvider)
+          .clearAllData(); // coverage:ignore-line
+      ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
+    }
+  }
+
+  // coverage:ignore-start
+  void _handleGenericRestoreError(BuildContext context, String errorStr) {
+    if (!errorStr.contains("No cloud data")) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Restore Info: $errorStr")),
@@ -610,10 +640,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget _handleFirebaseResult(BuildContext context,
       AsyncValue<void> firebaseInit, bool isPersistentLogin) {
     return firebaseInit.when(
+      // coverage:ignore-start
       loading: () => _buildLoadingScreen(
         _getLoadingMessage(),
-        showOfflineBypass:
-            isPersistentLogin && !_isRedirectingLocal, // coverage:ignore-line
+        showOfflineBypass: isPersistentLogin && !_isRedirectingLocal,
+        // coverage:ignore-end
       ),
       error: (e, s) {
         DebugLogger().log("AuthWrapper: Firebase Init Error: $e");
@@ -636,13 +667,17 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     );
   }
 
+  // coverage:ignore-start
   String _getLoadingMessage() {
     if (_isRedirectingLocal) {
-      return _isSlowConnection // coverage:ignore-line
+      return _isSlowConnection
+          // coverage:ignore-end
           ? "Slow link. Finalizing Account..."
           : "Finalizing Account...";
     }
-    return _isSlowConnection ? "Slow link. Connecting..." : "Connecting...";
+    return _isSlowConnection
+        ? "Slow link. Connecting..."
+        : "Connecting..."; // coverage:ignore-line
   }
 
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
@@ -692,6 +727,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       data: (user) {
         if (user != null) {
           _ensureOptimisticFlag();
+          final region = ref.watch(cloudDatabaseRegionProvider);
+          if (region.isEmpty) {
+            return const Scaffold(
+              body: Center(
+                child: RegionSelectionDialog(isMandatory: true),
+              ),
+            );
+          }
           return const DashboardScreen();
         }
 

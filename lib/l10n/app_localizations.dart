@@ -2017,13 +2017,13 @@ abstract class AppLocalizations {
   /// Tile title
   ///
   /// In en, this message translates to:
-  /// **'Server Region (Database)'**
+  /// **'Cloud Backup Region'**
   String get serverRegionLabel;
 
   /// Tile subtitle
   ///
   /// In en, this message translates to:
-  /// **'Country where your data is stored'**
+  /// **'Manual selection of backup storage zone'**
   String get serverRegionDesc;
 
   /// Card title
@@ -2377,7 +2377,7 @@ abstract class AppLocalizations {
   /// No description provided for @clearCloudDataDesc.
   ///
   /// In en, this message translates to:
-  /// **'Remove cloud backup, keep account active'**
+  /// **'Wipe current cloud backup while keeping your account connected for future syncs.'**
   String get clearCloudDataDesc;
 
   /// No description provided for @internetRequiredForUpdates.
@@ -2511,6 +2511,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Credit Card'**
   String get selectCreditCardTitle;
+
+  /// No description provided for @claimOwnershipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Ownership?'**
+  String get claimOwnershipTitle;
+
+  /// No description provided for @claimOwnershipDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is currently active on another device. Taking ownership will allow you to Backup or Restore here, but will lock the other device out.'**
+  String get claimOwnershipDesc;
+
+  /// No description provided for @claimOwnershipAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Ownership'**
+  String get claimOwnershipAction;
 
   /// No description provided for @allCreditCardsLabel.
   ///
@@ -6584,7 +6602,7 @@ abstract class AppLocalizations {
   /// No description provided for @deactivateWipeCloudDesc.
   ///
   /// In en, this message translates to:
-  /// **'Move back to Local-Only mode'**
+  /// **'Delete all cloud data and sign out of cloud sync. This cannot be undone.'**
   String get deactivateWipeCloudDesc;
 
   /// No description provided for @offlineUpdateError.
@@ -7805,6 +7823,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No upcoming recurring investments.'**
   String get noUpcomingCommitments;
+
+  /// No description provided for @premiumSectionTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Features'**
+  String get premiumSectionTile;
+
+  /// No description provided for @subscriptionStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription Status'**
+  String get subscriptionStatusLabel;
+
+  /// No description provided for @premiumActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Active'**
+  String get premiumActive;
+
+  /// No description provided for @freeTierActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Tier'**
+  String get freeTierActive;
+
+  /// No description provided for @upgradeButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade'**
+  String get upgradeButtonLabel;
+
+  /// No description provided for @selectRegionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Cloud Region'**
+  String get selectRegionTitle;
+
+  /// No description provided for @selectRegionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where your data will be stored. This choice won\'t change after the first sync.'**
+  String get selectRegionDescription;
+
+  /// No description provided for @premiumFeaturesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Features'**
+  String get premiumFeaturesTitle;
+
+  /// No description provided for @premiumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Premium'**
+  String get premiumTitle;
+
+  /// No description provided for @premiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock the full potential of Samriddhi Flow'**
+  String get premiumSubtitle;
+
+  /// No description provided for @featureCloudSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup & Sync'**
+  String get featureCloudSyncTitle;
+
+  /// No description provided for @featureCloudSyncDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Securely back up your data and sync across multiple devices.'**
+  String get featureCloudSyncDesc;
+
+  /// No description provided for @featureAdFreeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad-Free experience'**
+  String get featureAdFreeTitle;
+
+  /// No description provided for @featureAdFreeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on your finances without any interruptions.'**
+  String get featureAdFreeDesc;
+
+  /// No description provided for @upgradeToPremiumAction.
+  ///
+  /// In en, this message translates to:
+  /// **'UPGRADE TO PREMIUM'**
+  String get upgradeToPremiumAction;
+
+  /// No description provided for @noThanksButton.
+  ///
+  /// In en, this message translates to:
+  /// **'No, thanks'**
+  String get noThanksButton;
+
+  /// No description provided for @confirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmButton;
 }
 
 class _AppLocalizationsDelegate

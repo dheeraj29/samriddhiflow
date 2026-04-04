@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:samriddhi_flow/services/subscription_service.dart';
 
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/category.dart';
@@ -24,6 +26,8 @@ class MockUser extends Mock implements User {}
 class MockCloudStorage extends Mock implements CloudStorageInterface {}
 
 class MockTaxConfigService extends Mock implements TaxConfigService {}
+
+class MockSubscriptionService extends Mock implements SubscriptionService {}
 
 class ProfileFake extends Fake implements Profile {}
 
@@ -52,6 +56,7 @@ void main() {
   late MockCloudStorage mockCloudStorage;
   late MockStorageService mockStorage;
   late MockTaxConfigService mockTaxConfig;
+  late MockSubscriptionService mockSubscription;
 
   setUp(() {
     mockAuth = MockFirebaseAuth();
@@ -59,6 +64,7 @@ void main() {
     mockCloudStorage = MockCloudStorage();
     mockStorage = MockStorageService();
     mockTaxConfig = MockTaxConfigService();
+    mockSubscription = MockSubscriptionService();
 
     when(() => mockUser.uid).thenReturn('test-uid');
     when(() => mockUser.getIdToken(true)).thenAnswer((_) async => 'fake-token');
@@ -72,6 +78,9 @@ void main() {
     when(() => mockStorage.getProfiles()).thenReturn([]);
     when(() => mockStorage.saveProfile(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveSettings(any())).thenAnswer((_) async {});
+    when(() => mockStorage.getCloudDatabaseRegion())
+        .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
   });
 
   group('Session Hardening Logic', () {
@@ -84,6 +93,7 @@ void main() {
         mockCloudStorage,
         mockStorage,
         mockTaxConfig,
+        mockSubscription,
         firebaseAuth: mockAuth,
       );
 

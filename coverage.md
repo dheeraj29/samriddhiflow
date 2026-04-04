@@ -2,20 +2,21 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-04-03T22:41:25.444185**
+> **Generated on: 2026-04-04T23:01:26.990366**
 > based on `lcov.info` from `flutter test --coverage`
 
-### **Total Project Coverage: 93.8%**
+### **Total Project Coverage: 93.7%**
 
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
 | screens/taxes/tax_constants.dart | 0.0% | 0/1 | FAIL |
-| widgets/auth_wrapper.dart | 77.9% | 243/312 | WARN |
-| screens/investments_screen.dart | 81.0% | 230/284 | PASS |
-| services/location_service.dart | 85.7% | 6/7 | PASS |
+| services/ad_service.dart | 0.0% | 0/3 | FAIL |
+| screens/premium_promo_screen.dart | 3.7% | 1/27 | FAIL |
+| services/subscription_service.dart | 50.0% | 3/6 | FAIL |
+| widgets/auth_wrapper.dart | 76.4% | 240/314 | WARN |
+| screens/investments_screen.dart | 83.0% | 259/312 | PASS |
 | screens/taxes/tax_dashboard_screen.dart | 87.7% | 372/424 | PASS |
 | services/auth_service.dart | 88.6% | 70/79 | PASS |
-| utils/billing_helper.dart | 88.8% | 103/116 | PASS |
 | screens/taxes/tax_details_screen.dart | 88.8% | 2098/2362 | PASS |
 | screens/taxes/insurance_portfolio_screen.dart | 89.1% | 385/432 | PASS |
 | screens/accounts_screen.dart | 89.9% | 472/525 | PASS |
@@ -28,9 +29,10 @@
 | screens/taxes/tax_rules_screen.dart | 91.6% | 691/754 | PASS |
 | screens/cc_payment_dialog.dart | 92.3% | 120/130 | PASS |
 | widgets/charts/reports_pie_chart.dart | 92.6% | 25/27 | PASS |
-| screens/settings_screen.dart | 92.7% | 832/898 | PASS |
+| screens/settings_screen.dart | 92.7% | 831/896 | PASS |
 | screens/lending/lending_dashboard_screen.dart | 92.9% | 208/224 | PASS |
 | widgets/common_dialogs.dart | 93.1% | 27/29 | PASS |
+| utils/billing_helper.dart | 93.2% | 109/117 | PASS |
 | screens/add_transaction_screen.dart | 93.6% | 467/499 | PASS |
 | screens/reminders_screen.dart | 93.6% | 497/531 | PASS |
 | screens/add_loan_screen.dart | 93.6% | 250/267 | PASS |
@@ -40,12 +42,12 @@
 | providers.dart | 93.9% | 292/311 | PASS |
 | widgets/pagination_bar.dart | 94.1% | 16/17 | PASS |
 | widgets/quick_sum_tracker.dart | 94.3% | 164/174 | PASS |
+| feature_providers.dart | 94.5% | 103/109 | PASS |
 | screens/recurring_manager_screen.dart | 94.6% | 87/92 | PASS |
-| feature_providers.dart | 94.8% | 110/116 | PASS |
 | services/storage_service.dart | 95.0% | 781/822 | PASS |
 | screens/loan/loan_ledger_view.dart | 95.3% | 162/170 | PASS |
 | utils/network_utils.dart | 95.5% | 21/22 | PASS |
-| services/cloud_sync_service.dart | 95.5% | 253/265 | PASS |
+| services/cloud_sync_service.dart | 95.7% | 265/277 | PASS |
 | services/json_data_service.dart | 96.0% | 119/124 | PASS |
 | screens/lending/add_lending_screen.dart | 96.0% | 96/100 | PASS |
 | widgets/transaction_list_item.dart | 96.0% | 97/101 | PASS |
@@ -57,6 +59,7 @@
 | widgets/bell_animation.dart | 96.6% | 28/29 | PASS |
 | providers/sum_tracker_provider.dart | 96.7% | 88/91 | PASS |
 | screens/add_investment_screen.dart | 96.7% | 178/184 | PASS |
+| widgets/region_selection_dialog.dart | 96.9% | 31/32 | PASS |
 | screens/loan/loan_part_payment_dialog.dart | 97.0% | 64/66 | PASS |
 | screens/loan/loan_header_card.dart | 97.4% | 113/116 | PASS |
 | services/taxes/tax_data_fetcher.dart | 97.5% | 157/161 | PASS |
@@ -73,7 +76,7 @@
 | models/taxes/tax_data_models.dart | 99.4% | 536/539 | PASS |
 | services/taxes/indian_tax_service.dart | 99.5% | 588/591 | PASS |
 | l10n/app_localizations.dart | 100.0% | 13/13 | PASS |
-| l10n/app_localizations_en.dart | 100.0% | 1087/1087 | PASS |
+| l10n/app_localizations_en.dart | 100.0% | 1093/1093 | PASS |
 | models/account.dart | 100.0% | 61/61 | PASS |
 | models/category.dart | 100.0% | 20/20 | PASS |
 | models/dashboard_config.dart | 100.0% | 13/13 | PASS |

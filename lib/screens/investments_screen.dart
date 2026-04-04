@@ -69,17 +69,6 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen>
           _InvestmentManagementTab(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddInvestment(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _showAddInvestment(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
     );
   }
 
@@ -248,6 +237,23 @@ class _InvestmentDashboardTab extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSummaryCard(context, summary, currency, l10n),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addInvestment),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           _buildUpcomingCommitments(context, ref, currency, l10n),
           const SizedBox(height: 24),
@@ -303,13 +309,49 @@ class _InvestmentDashboardTab extends ConsumerWidget {
               children: [
                 _buildSubStat(
                     l10n.investedLabel, summary.totalInvested, currency),
-                _buildSubStat(l10n.unrealizedGainLabel,
-                    summary.totalCurrent - summary.totalInvested, currency),
+                _buildGainStat(
+                    context,
+                    summary.totalCurrent - summary.totalInvested,
+                    summary.totalInvested,
+                    currency,
+                    l10n),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGainStat(BuildContext context, double gain, double invested,
+      String currency, AppLocalizations l10n) {
+    final gainPercent = invested > 0 ? (gain / invested) * 100 : 0.0;
+    final isProfit = gain >= 0;
+    final color = isProfit ? Colors.greenAccent : Colors.redAccent;
+
+    return Column(
+      children: [
+        Text(l10n.unrealizedGainLabel,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SmartCurrencyText(
+              value: gain,
+              locale: currency,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              "(${isProfit ? '+' : ''}${gainPercent.toStringAsFixed(1)}%)",
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -634,6 +676,26 @@ class __InvestmentManagementTabState
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addInvestment),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                foregroundColor:
+                    Theme.of(context).colorScheme.onPrimaryContainer,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -711,8 +773,7 @@ class __InvestmentManagementTabState
       List<Investment> investments, String currency, AppLocalizations l10n) {
     if (investments.isEmpty) {
       return Center(
-        // coverage:ignore-line
-        child: Text(_searchQuery.isEmpty // coverage:ignore-line
+        child: Text(_searchQuery.isEmpty
             ? "No investments found."
             : "No matching results."),
       );

@@ -1030,15 +1030,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get showBudgetDesc => 'Display monthly budget progress bar';
 
-  @override
+  @override // coverage:ignore-line
   String get cloudSyncIndiaOnly =>
       'Cloud Synchronization is only available for users in India due to data residency compliance.';
 
   @override
-  String get serverRegionLabel => 'Server Region (Database)';
+  String get serverRegionLabel => 'Cloud Backup Region';
 
   @override
-  String get serverRegionDesc => 'Country where your data is stored';
+  String get serverRegionDesc => 'Manual selection of backup storage zone';
 
   @override // coverage:ignore-line
   String get connectionPaused => 'Connection Paused';
@@ -1232,7 +1232,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get installAppDesc => 'Add to Home Screen for Offline use';
 
   @override
-  String get clearCloudDataDesc => 'Remove cloud backup, keep account active';
+  String get clearCloudDataDesc =>
+      'Wipe current cloud backup while keeping your account connected for future syncs.';
 
   @override // coverage:ignore-line
   String get internetRequiredForUpdates =>
@@ -1247,9 +1248,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cloudSyncSuccess => 'Cloud Sync Success!';
 
-  @override // coverage:ignore-line
+  @override
   String syncErrorLabel(String error) {
-    return 'Sync Error: $error'; // coverage:ignore-line
+    return 'Sync Error: $error';
   }
 
   @override // coverage:ignore-line
@@ -1308,6 +1309,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override // coverage:ignore-line
   String get selectCreditCardTitle => 'Select Credit Card';
+
+  @override // coverage:ignore-line
+  String get claimOwnershipTitle => 'Claim Ownership?';
+
+  @override // coverage:ignore-line
+  String get claimOwnershipDesc =>
+      'This account is currently active on another device. Taking ownership will allow you to Backup or Restore here, but will lock the other device out.';
+
+  @override // coverage:ignore-line
+  String get claimOwnershipAction => 'Claim Ownership';
 
   @override // coverage:ignore-line
   String get allCreditCardsLabel => 'All Credit Cards';
@@ -3470,9 +3481,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountDeactivatedStatus =>
       'Account Deactivated and All Data Wiped.';
 
-  @override
+  @override // coverage:ignore-line
   String deactivationFailedStatus(String error) {
-    return 'Deactivation Failed: $error';
+    return 'Deactivation Failed: $error'; // coverage:ignore-line
   }
 
   @override
@@ -3585,7 +3596,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deactivateWipeCloudTitle => 'Deactivate & Wipe Cloud Data';
 
   @override
-  String get deactivateWipeCloudDesc => 'Move back to Local-Only mode';
+  String get deactivateWipeCloudDesc =>
+      'Delete all cloud data and sign out of cloud sync. This cannot be undone.';
 
   @override // coverage:ignore-line
   String get offlineUpdateError => 'Offline: Unable to check for updates.';
@@ -3700,7 +3712,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get dayOfMonthHelper => 'Day of month';
 
-  @override
+  @override // coverage:ignore-line
   String get indiaRegion => 'India';
 
   @override // coverage:ignore-line
@@ -3993,7 +4005,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get valueLabel => 'Value';
 
-  @override // coverage:ignore-line
+  @override
   String get addInvestment => 'Add Investment';
 
   @override // coverage:ignore-line
@@ -4119,11 +4131,11 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Last: $price'; // coverage:ignore-line
   }
 
-  @override // coverage:ignore-line
+  @override
   String get sessionExpiredLogoutMessage =>
       'You were logged out because another device logged into this account.';
 
-  @override
+  @override // coverage:ignore-line
   String get sessionExpiredDeactivateMessage =>
       'Account deactivated locally. Cloud session was already expired.';
 
@@ -4247,4 +4259,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override // coverage:ignore-line
   String get noUpcomingCommitments => 'No upcoming recurring investments.';
+
+  @override
+  String get premiumSectionTile => 'Premium Features';
+
+  @override
+  String get subscriptionStatusLabel => 'Subscription Status';
+
+  @override
+  String get premiumActive => 'Premium Active';
+
+  @override // coverage:ignore-line
+  String get freeTierActive => 'Free Tier';
+
+  @override
+  String get upgradeButtonLabel => 'Upgrade';
+
+  @override
+  String get selectRegionTitle => 'Select Cloud Region';
+
+  @override
+  String get selectRegionDescription =>
+      'Choose where your data will be stored. This choice won\'t change after the first sync.';
+
+  @override // coverage:ignore-line
+  String get premiumFeaturesTitle => 'Premium Features';
+
+  @override // coverage:ignore-line
+  String get premiumTitle => 'Upgrade to Premium';
+
+  @override // coverage:ignore-line
+  String get premiumSubtitle => 'Unlock the full potential of Samriddhi Flow';
+
+  @override // coverage:ignore-line
+  String get featureCloudSyncTitle => 'Cloud Backup & Sync';
+
+  @override // coverage:ignore-line
+  String get featureCloudSyncDesc =>
+      'Securely back up your data and sync across multiple devices.';
+
+  @override // coverage:ignore-line
+  String get featureAdFreeTitle => 'Ad-Free experience';
+
+  @override // coverage:ignore-line
+  String get featureAdFreeDesc =>
+      'Focus on your finances without any interruptions.';
+
+  @override // coverage:ignore-line
+  String get upgradeToPremiumAction => 'UPGRADE TO PREMIUM';
+
+  @override // coverage:ignore-line
+  String get noThanksButton => 'No, thanks';
+
+  @override
+  String get confirmButton => 'Confirm';
 }

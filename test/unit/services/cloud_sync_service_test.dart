@@ -16,7 +16,9 @@ import 'package:samriddhi_flow/models/investment.dart';
 import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
+import 'package:samriddhi_flow/services/subscription_service.dart';
 
 class MockCloudStorage extends Mock implements CloudStorageInterface {}
 
@@ -28,6 +30,8 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockUser extends Mock implements User {}
 
+class MockSubscriptionService extends Mock implements SubscriptionService {}
+
 void main() {
   late CloudSyncService cloudSyncService;
   late MockCloudStorage mockCloudStorage;
@@ -35,6 +39,7 @@ void main() {
   late MockTaxConfigService mockTaxConfigService;
   late MockFirebaseAuth mockAuth;
   late MockUser mockUser;
+  late MockSubscriptionService mockSubscriptionService;
 
   setUp(() {
     mockCloudStorage = MockCloudStorage();
@@ -42,6 +47,7 @@ void main() {
     mockTaxConfigService = MockTaxConfigService();
     mockAuth = MockFirebaseAuth();
     mockUser = MockUser();
+    mockSubscriptionService = MockSubscriptionService();
 
     registerFallbackValue(Profile(id: 'f', name: 'f'));
     registerFallbackValue(
@@ -98,9 +104,13 @@ void main() {
     when(() => mockCloudStorage.getActiveSessionId(any()))
         .thenAnswer((_) async => 'session123');
     when(() => mockStorageService.getSessionId()).thenReturn('session123');
+    when(() => mockStorageService.setSessionId(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.getCloudDatabaseRegion())
+        .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockSubscriptionService.isCloudSyncEnabled()).thenReturn(true);
 
-    cloudSyncService = CloudSyncService(
-        mockCloudStorage, mockStorageService, mockTaxConfigService,
+    cloudSyncService = CloudSyncService(mockCloudStorage, mockStorageService,
+        mockTaxConfigService, mockSubscriptionService,
         firebaseAuth: mockAuth);
   });
 
@@ -670,6 +680,45 @@ void main() {
       expect((captured['tax_rules_v2'] as Map).containsKey('2025'), isTrue);
       expect(captured['tax_data_v2'], isA<Map>());
       expect((captured['tax_data_v2'] as Map).containsKey('2025'), isTrue);
+    });
+  });
+
+  group('CloudSyncService - Device Ownership', () {
+    test('claimSession updates cloud session ID without verification',
+        () async {
+      when(() => mockStorageService.getSessionId()).thenReturn('new-session');
+      when(() => mockCloudStorage.setActiveSessionId(any(), any()))
+          .thenAnswer((_) async {});
+
+      await cloudSyncService.claimSession();
+
+      verify(() =>
+              mockCloudStorage.setActiveSessionId('user123', 'new-session'))
+          .called(1);
+    });
+
+    test('restoreFromCloud throws Exception if local session is missing',
+        () async {
+      // Local session is null initially
+      when(() => mockStorageService.getSessionId()).thenReturn(null);
+
+      // cloud status is fine
+      final cloudData = {'settings': {}};
+      when(() => mockCloudStorage.fetchData('user123'))
+          .thenAnswer((_) async => cloudData);
+      when(() => mockCloudStorage.getActiveSessionId(any()))
+          .thenAnswer((_) async => null);
+
+      // Should throw Exception because local session is null
+      expect(() => cloudSyncService.restoreFromCloud(), throwsException);
+    });
+
+    test('syncToCloud throws Exception if local session is missing', () async {
+      // Local session is null initially
+      when(() => mockStorageService.getSessionId()).thenReturn(null);
+
+      // Should throw Exception because local session is null
+      expect(() => cloudSyncService.syncToCloud(), throwsException);
     });
   });
 }

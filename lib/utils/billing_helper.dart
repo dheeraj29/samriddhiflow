@@ -226,10 +226,9 @@ class BillingHelper {
       return t.amount;
     }
     if (_isDirectIncomeToAccount(t, accountId)) {
-      // coverage:ignore-line
       return t.amount; // coverage:ignore-line
     }
-    return _getRoundingPaymentImpact(t, accountId); // coverage:ignore-line
+    return _getRoundingPaymentImpact(t, accountId);
   }
 
   static bool _isIncomingTransfer(Transaction t, String accountId) {
@@ -237,15 +236,11 @@ class BillingHelper {
   }
 
   static bool _isDirectIncomeToAccount(Transaction t, String accountId) {
-    // coverage:ignore-line
-    return t.type == TransactionType.income &&
-        t.accountId == accountId; // coverage:ignore-line
+    return t.type == TransactionType.income && t.accountId == accountId;
   }
 
   static double _getRoundingPaymentImpact(Transaction t, String accountId) {
-    // coverage:ignore-line
     if (!isRoundingAdjustment(t) || t.accountId != accountId) {
-      // coverage:ignore-line
       return 0;
     }
     return t.type == TransactionType.income
