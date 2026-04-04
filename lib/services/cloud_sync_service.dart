@@ -14,10 +14,12 @@ import '../models/taxes/insurance_policy.dart';
 import '../models/taxes/tax_rules.dart';
 import '../models/taxes/tax_data.dart';
 import 'taxes/tax_config_service.dart';
+import 'subscription_service.dart';
 import '../models/lending_record.dart';
 import '../models/investment.dart';
 import 'dart:convert';
 import 'encryption_service.dart';
+import 'package:uuid/uuid.dart';
 
 const errUserNotLoggedIn = 'User not logged in';
 const errFirebaseNotInit = 'Firebase not initialized';
@@ -26,10 +28,11 @@ class CloudSyncService {
   final CloudStorageInterface _cloudStorage;
   final StorageService _storageService;
   final TaxConfigService _taxConfigService;
+  final SubscriptionService _subscriptionService;
   final FirebaseAuth? _firebaseAuth;
 
-  CloudSyncService(
-      this._cloudStorage, this._storageService, this._taxConfigService,
+  CloudSyncService(this._cloudStorage, this._storageService,
+      this._taxConfigService, this._subscriptionService,
       {FirebaseAuth? firebaseAuth})
       : _firebaseAuth = firebaseAuth;
 
@@ -45,11 +48,17 @@ class CloudSyncService {
   }
 
   void _checkRegionLock() {
-    final country = _storageService.getDetectedCountry();
-    if (country != null && country.toUpperCase() != 'IN') {
-      // coverage:ignore-line
+    final region = _storageService.getCloudDatabaseRegion();
+    if (region.toUpperCase() != 'INDIA') {
       throw Exception(// coverage:ignore-line
-          'Cloud Synchronization is only available for users in India.');
+          'Cloud Synchronization is currently only available for the India region.');
+    }
+  }
+
+  void _verifySubscription() {
+    if (!_subscriptionService.isCloudSyncEnabled()) {
+      throw Exception(// coverage:ignore-line
+          "Premium Subscription required for Cloud Backup & Restore.");
     }
   }
 
@@ -93,15 +102,55 @@ class CloudSyncService {
     final cloudSessionId = await _cloudStorage.getActiveSessionId(user.uid);
     final localSessionId = _storageService.getSessionId();
 
-    if (cloudSessionId != null &&
-        localSessionId != null &&
-        cloudSessionId != localSessionId) {
-      throw Exception(
-          "SESSION_EXPIRED:Logged in from another device."); // coverage:ignore-line
+    if (localSessionId == null ||
+        (cloudSessionId != null && cloudSessionId != localSessionId)) {
+      throw Exception("SESSION_EXPIRED:Logged in from another device.");
     }
   }
 
+  /// Explicitly claims the cloud session for the current device.
+  /// This bypasses the match check and effectively takes over ownership.
+  Future<void> claimSession() async {
+    final auth = _auth;
+    if (auth == null) {
+      throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    }
+    final user = auth.currentUser;
+    if (user == null) {
+      throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    }
+
+    // Generate local ID if missing
+    var localSessionId = _storageService.getSessionId();
+    if (localSessionId == null) {
+      localSessionId = const Uuid().v4(); // coverage:ignore-line
+      await _storageService
+          .setSessionId(localSessionId); // coverage:ignore-line
+    }
+
+    await updateActiveSessionId(localSessionId);
+  }
+
+  Future<void> deactivateAndCleanCloud() async {
+    // coverage:ignore-line
+    _verifySubscription(); // coverage:ignore-line
+
+    final auth = _auth; // coverage:ignore-line
+    if (auth == null) {
+      throw Exception(errFirebaseNotInit); // coverage:ignore-line
+    }
+
+    final user = auth.currentUser; // coverage:ignore-line
+    if (user == null) {
+      throw Exception(errUserNotLoggedIn); // coverage:ignore-line
+    }
+
+    await _cloudStorage.clearActiveSessionId(user.uid); // coverage:ignore-line
+    await _cloudStorage.deleteData(user.uid); // coverage:ignore-line
+  }
+
   Future<void> syncToCloud({String? passcode, String? appPin}) async {
+    _verifySubscription();
     _checkRegionLock();
     final auth = _auth;
     if (auth == null) {
@@ -297,6 +346,7 @@ class CloudSyncService {
   }
 
   Future<void> restoreFromCloud({String? passcode}) async {
+    _verifySubscription();
     _checkRegionLock();
     final rawData = await _validateAuthAndFetchData();
     if (rawData == null) {
@@ -567,6 +617,7 @@ class CloudSyncService {
   }
 
   Future<void> deleteCloudData() async {
+    _verifySubscription();
     final auth = _auth;
     if (auth == null) {
       throw Exception(errFirebaseNotInit); // coverage:ignore-line

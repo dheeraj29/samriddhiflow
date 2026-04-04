@@ -1146,14 +1146,6 @@
   "@cloudSyncIndiaOnly": {
     "description": "Restriction message"
   },
-  "serverRegionLabel": "Server Region (Database)",
-  "@serverRegionLabel": {
-    "description": "Tile title"
-  },
-  "serverRegionDesc": "Country where your data is stored",
-  "@serverRegionDesc": {
-    "description": "Tile subtitle"
-  },
   "connectionPaused": "Connection Paused",
   "@connectionPaused": {
     "description": "Card title"
@@ -1377,7 +1369,7 @@
   "backupIntervalTitle": "Backup Interval",
   "updateApplicationDesc": "Clear cache and reload latest version",
   "installAppDesc": "Add to Home Screen for Offline use",
-  "clearCloudDataDesc": "Remove cloud backup, keep account active",
+  "clearCloudDataDesc": "Wipe current cloud backup while keeping your account connected for future syncs.",
   "internetRequiredForUpdates": "Internet connection required to check for updates.",
   "checkingForUpdates": "Checking for updates...",
   "upToDateTitle": "Up to Date",
@@ -1421,6 +1413,9 @@
   "includePinInZip": "Enter PIN to include it in your backup ZIP.",
   "backupReminderTitle": "Backup Reminder",
   "selectCreditCardTitle": "Select Credit Card",
+  "claimOwnershipTitle": "Claim Ownership?",
+  "claimOwnershipDesc": "This account is currently active on another device. Taking ownership will allow you to Backup or Restore here, but will lock the other device out.",
+  "claimOwnershipAction": "Claim Ownership",
   "allCreditCardsLabel": "All Credit Cards",
   "loansScreenTitle": "Loans",
   "monthsLeft": "{count, plural, =1{1 month left} other{{count} months left}}",
@@ -2997,7 +2992,7 @@
   "installAppTitle": "Install App",
   "dangerZoneHeader": "Danger Zone",
   "deactivateWipeCloudTitle": "Deactivate & Wipe Cloud Data",
-  "deactivateWipeCloudDesc": "Move back to Local-Only mode",
+  "deactivateWipeCloudDesc": "Delete all cloud data and sign out of cloud sync. This cannot be undone.",
   "offlineUpdateError": "Offline: Unable to check for updates.",
   "cloudRestoreWarning": "If your cloud backup was encrypted, please enter the passcode. If it was not encrypted, leave this blank and continue.",
   "encryptBackupQuestion": "Encrypt Backup?",
@@ -3072,8 +3067,6 @@
   "billGenDayLabel": "Bill Gen. Day",
   "paymentDueDayLabel": "Payment Due Day",
   "dayOfMonthHelper": "Day of month",
-  "indiaRegion": "India",
-  "defaultRegion": "Default",
   "indianRupeeLabel": "Indian Rupee (₹)",
   "britishPoundLabel": "British Pound (£)",
   "euroLabel": "Euro (€)",
@@ -3393,6 +3386,25 @@
   "noUpcomingCommitments": "No upcoming recurring investments.",
   "@noUpcomingCommitments": {
     "description": "Empty state message"
-  }
+  },
+  "premiumSectionTile": "Premium Features",
+  "subscriptionStatusLabel": "Subscription Status",
+  "premiumActive": "Premium Active",
+  "freeTierActive": "Free Tier",
+  "upgradeButtonLabel": "Upgrade",
+  "selectRegionTitle": "Select Cloud Region",
+  "selectRegionDescription": "Choose where your data will be stored. This choice won't change after the first sync.",
+  "premiumFeaturesTitle": "Premium Features",
+  "premiumTitle": "Upgrade to Premium",
+  "premiumSubtitle": "Unlock the full potential of Samriddhi Flow",
+  "featureCloudSyncTitle": "Cloud Backup & Sync",
+  "featureCloudSyncDesc": "Securely back up your data and sync across multiple devices.",
+  "featureAdFreeTitle": "Ad-Free experience",
+  "featureAdFreeDesc": "Focus on your finances without any interruptions.",
+  "upgradeToPremiumAction": "UPGRADE TO PREMIUM",
+  "noThanksButton": "No, thanks",
+  "confirmButton": "Confirm",
+  "serverRegionLabel": "Cloud Backup Region",
+  "serverRegionDesc": "Manual selection of backup storage zone"
 }
 

@@ -63,12 +63,6 @@ class AppTheme {
             fontFamilyFallback: globalFontFallbacks,
           ),
       fontFamily: 'AppFont',
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
-        },
-      ),
     );
   }
 
@@ -107,12 +101,6 @@ class AppTheme {
             fontFamilyFallback: globalFontFallbacks,
           ),
       fontFamily: 'AppFont',
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
-        },
-      ),
     );
   }
 }

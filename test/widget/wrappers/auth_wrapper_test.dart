@@ -30,8 +30,11 @@ import 'package:samriddhi_flow/widgets/auth_wrapper.dart';
 import 'package:samriddhi_flow/models/category.dart';
 
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
+import 'package:samriddhi_flow/services/subscription_service.dart';
+import 'package:samriddhi_flow/services/ad_service.dart' hide adServiceProvider;
 
 import 'package:samriddhi_flow/models/dashboard_config.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 
 // Mocks
 
@@ -205,6 +208,8 @@ void main() {
 
     when(() => mockUser.uid).thenReturn('user123');
     when(() => mockUser.getIdToken(any())).thenAnswer((_) async => 'token123');
+    when(() => mockStorageService.getCloudDatabaseRegion())
+        .thenReturn(CloudDatabaseRegion.india);
   });
 
   Widget createAuthWrapper({
@@ -214,7 +219,6 @@ void main() {
     bool isLoggedIn = false,
     bool isOffline = false,
     CloudSyncService? cloudSync,
-    String? detectedCountry = 'IN',
   }) {
     mockIsLoggedInNotifier.setInitial(isLoggedIn);
 
@@ -233,8 +237,9 @@ void main() {
         if (cloudSync != null)
           cloudSyncServiceProvider.overrideWithValue(cloudSync),
 
-        detectedCountryProvider
-            .overrideWithValue(AsyncValue.data(detectedCountry)),
+        subscriptionServiceProvider
+            .overrideWithValue(MockSubscriptionService()..stubDefaults()),
+        adServiceProvider.overrideWithValue(MockAdService()),
 
         isLoggedInProvider.overrideWith(() => mockIsLoggedInNotifier),
 
@@ -773,3 +778,12 @@ void main() {
 }
 
 class MockCloudSyncService extends Mock implements CloudSyncService {}
+
+class MockSubscriptionService extends Mock implements SubscriptionService {
+  void stubDefaults() {
+    when(() => isCloudSyncEnabled()).thenReturn(true);
+    when(() => isAdFree()).thenReturn(true);
+  }
+}
+
+class MockAdService extends Mock implements AdService {}

@@ -123,4 +123,27 @@ class UIUtils {
       );
     });
   }
+
+  // coverage:ignore-start
+  static Future<bool?> showClaimOwnershipDialog(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<bool>(
+      // coverage:ignore-end
+      context: context,
+      // coverage:ignore-start
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.claimOwnershipTitle),
+        content: Text(l10n.claimOwnershipDesc),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancelButton)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.claimOwnershipAction)),
+          // coverage:ignore-end
+        ],
+      ),
+    );
+  }
 }

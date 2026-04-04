@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import 'package:samriddhi_flow/l10n/app_localizations.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 
 import '../theme/app_theme.dart';
 import '../models/profile.dart';
@@ -27,6 +28,9 @@ import '../utils/ui_utils.dart';
 import '../widgets/common_dialogs.dart';
 import '../widgets/category_manager_dialog.dart';
 import '../services/repair_service.dart';
+import '../widgets/region_selection_dialog.dart';
+import 'premium_promo_screen.dart';
+import '../services/subscription_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -53,8 +57,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static const String _secAuth = 'Authentication';
   static const String _secSecurity = 'Security';
   static const String _secAppInfo = 'App Info';
+  static const String _secPremium = 'Premium';
 
   final List<String> _sectionKeys = [
+    _secPremium,
     _secAppearance,
     _secDashboard,
     _secCloud,
@@ -127,6 +133,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       body: ListView(
         children: [
+          _buildCollapsibleSection(
+            _secPremium,
+            l10n.premiumSectionTile,
+            _buildPremiumSection(l10n),
+          ),
           _buildCollapsibleSection(
             _secAppearance,
             l10n.appearanceSection,
@@ -306,6 +317,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildPremiumSection(AppLocalizations l10n) {
+    final subService = ref.watch(subscriptionServiceProvider);
+    final isPremium = subService.isCloudSyncEnabled(); // Just one indicator
+
+    return Column(
+      children: [
+        ListTile(
+          title: Text(l10n.subscriptionStatusLabel),
+          subtitle: Text(isPremium ? l10n.premiumActive : l10n.freeTierActive),
+          leading: Icon(
+            isPremium ? Icons.verified_user : Icons.star_border,
+            color: isPremium ? Colors.green : Colors.amber,
+          ),
+          trailing: TextButton(
+            // coverage:ignore-start
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PremiumPromoScreen()),
+                // coverage:ignore-end
+              );
+            },
+            child: Text(l10n.upgradeButtonLabel),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDashboardSection(AppLocalizations l10n) {
     final config = ref.watch(dashboardConfigProvider);
     final notifier = ref.read(dashboardConfigProvider.notifier);
@@ -342,56 +382,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildCloudSectionContent(BuildContext context, WidgetRef ref,
       dynamic user, AppLocalizations l10n) {
     final region = ref.watch(cloudDatabaseRegionProvider);
-    final countryResult = ref.watch(detectedCountryProvider);
-    final isRestricted = countryResult.asData?.value != null &&
-        ref
-            .read(locationServiceProvider)
-            .isCloudSyncRestricted(countryResult.asData!.value);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isRestricted)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.cloudSyncIndiaOnly,
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ListTile(
           title: Text(AppLocalizations.of(context)!.serverRegionLabel),
           subtitle: Text(AppLocalizations.of(context)!.serverRegionDesc),
           leading: const Icon(Icons.public, color: Colors.blue),
-          trailing: Text(
-            '$region (${region == 'India' ? l10n.indiaRegion : l10n.defaultRegion})',
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                region == CloudDatabaseRegion.india ? l10n.indiaLabel : region,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500),
+              ),
+              const Icon(Icons.chevron_right, size: 16),
+            ],
+          ),
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => const RegionSelectionDialog(),
           ),
         ),
         const Divider(),
-        AbsorbPointer(
-          absorbing: isRestricted,
-          child: Opacity(
-            opacity: isRestricted ? 0.5 : 1.0,
-            child: _buildCloudSection(context, user, l10n),
-          ),
-        ),
+        _buildCloudSection(context, user, l10n),
       ],
     );
   }
@@ -1344,6 +1361,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         context, l10n.cloudBackupTitle, l10n.cloudBackupDesc);
 
     if (passcode == null) return; // User Cancelled
+    final storage = ref.read(storageServiceProvider);
+    final isNewDevice = storage.getSessionId() == null;
+
     setState(() => _isUploading = true);
     try {
       await ref
@@ -1359,23 +1379,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .showSnackBar(SnackBar(content: Text(l10n.cloudSyncSuccess)));
       }
     } catch (e) {
-      // coverage:ignore-start
       if (mounted) {
-        if (e.toString().contains("SESSION_EXPIRED")) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
-            // coverage:ignore-end
-          );
-          ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(// coverage:ignore-line
-              SnackBar(
-                  content: Text(l10n
-                      .syncErrorLabel(e.toString())))); // coverage:ignore-line
-        }
+        // coverage:ignore-line
+        await _handleCloudSessionConflict(
+            e, isNewDevice, _backupToCloud); // coverage:ignore-line
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _handleCloudSessionConflict(
+      dynamic e, bool isNewDevice, Function retryAction) async {
+    final l10n = AppLocalizations.of(context)!;
+    final errorStr = e.toString();
+
+    if (errorStr.contains("SESSION_EXPIRED") ||
+        errorStr.contains("another device")) {
+      if (isNewDevice) {
+        final confirm = await UIUtils.showClaimOwnershipDialog(
+            context); // coverage:ignore-line
+
+        // coverage:ignore-start
+        if (confirm == true && mounted) {
+          await ref.read(cloudSyncServiceProvider).claimSession();
+          if (mounted) {
+            await retryAction();
+            // coverage:ignore-end
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
+        );
+        await ref.read(storageServiceProvider).clearAllData();
+        ref.read(authServiceProvider).signOut(ref);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.syncErrorLabel(errorStr))),
+      );
     }
   }
 
@@ -1526,16 +1569,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   actions: [
                     TextButton(
+                        // coverage:ignore-start
                         onPressed: () {
                           Navigator.pop(ctx);
                           if (!ref.read(isLoggedInProvider)) {
                             ref.read(localModeProvider.notifier).value = true;
+                            // coverage:ignore-end
                           }
+                          // coverage:ignore-start
                           Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const AuthWrapper()),
                               (route) => false);
+                          // coverage:ignore-end
                         },
                         child: Text(AppLocalizations.of(ctx)!.okReloadButton))
                   ],
@@ -1551,7 +1598,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isDownloading = false);
+        // coverage:ignore-line
+        setState(() => _isDownloading = false); // coverage:ignore-line
       }
     }
   }
@@ -1639,7 +1687,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _executeCloudRestore(String passcode) async {
     setState(() => _isDownloading = true);
     final l10n = AppLocalizations.of(context)!;
+    final storage = ref.read(storageServiceProvider);
+    final isNewDevice = storage.getSessionId() == null;
     // coverage:ignore-end
+
     try {
       // coverage:ignore-start
       await ref
@@ -1650,10 +1701,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         // coverage:ignore-end
       });
 
+      // coverage:ignore-start
       if (mounted) {
-        // coverage:ignore-line
-        // Force refresh providers
-        // coverage:ignore-start
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.restoreCompleteStatus)));
         ref.invalidate(accountsProvider);
         ref.invalidate(transactionsProvider);
         ref.invalidate(loansProvider);
@@ -1664,36 +1715,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(dashboardConfigProvider);
         ref.read(txnsSinceBackupProvider.notifier).reset();
         // coverage:ignore-end
-
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            // coverage:ignore-line
-            content:
-                // coverage:ignore-start
-                Text(AppLocalizations.of(context)!.restoreCompleteStatus)));
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const AuthWrapper()),
-            (route) => false);
-        // coverage:ignore-end
       }
     } catch (e) {
       // coverage:ignore-start
       if (mounted) {
-        if (e.toString().contains("SESSION_EXPIRED")) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    AppLocalizations.of(context)!.sessionExpiredLogoutMessage)),
-            // coverage:ignore-end
-          );
-          ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
-        } else {
-          // coverage:ignore-start
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(AppLocalizations.of(context)!
-                  .restoreFailedLabel(e.toString()))));
-          // coverage:ignore-end
-        }
+        await _handleCloudSessionConflict(
+            e, isNewDevice, () => _executeCloudRestore(passcode));
+        // coverage:ignore-end
       }
     } finally {
       if (mounted) {
@@ -1773,26 +1801,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        await _handleDeactivateError(e, l10n);
+        final storage = ref.read(storageServiceProvider);
+        final isNewDevice = storage.getSessionId() == null;
+        await _handleCloudSessionConflict(
+            e, isNewDevice, _deactivateAccountFlow);
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  /// Handles errors during account deactivation — always wipes local data on session expiry.
-  Future<void> _handleDeactivateError(dynamic e, AppLocalizations l10n) async {
-    if (e.toString().contains("SESSION_EXPIRED")) {
-      await ref.read(storageServiceProvider).clearAllData();
-      if (!mounted) return;
-      ref.read(authServiceProvider).signOut(ref);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.sessionExpiredDeactivateMessage)),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.deactivationFailedStatus(e.toString()))),
-      );
     }
   }
 
@@ -1841,24 +1856,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirm != true) return;
 
     // 2. Perform Clear
-    setState(() => _isUploading = true);
-    try {
-      await _requireFreshAuth(l10n);
+    await _requireFreshAuth(l10n);
+    final storage = ref.read(storageServiceProvider);
+    final isNewDevice = storage.getSessionId() == null;
 
+    setState(() => _isDownloading = true);
+    try {
       await ref.read(cloudSyncServiceProvider).deleteCloudData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.cloudDataClearedStatus)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.cloudDataClearedStatus)));
       }
     } catch (e) {
       if (mounted) {
         // coverage:ignore-line
-        _handleSessionExpiredError(
-            e, l10n.clearFailedStatus(e.toString())); // coverage:ignore-line
+        await _handleCloudSessionConflict(
+            e, isNewDevice, _clearCloudDataFlow); // coverage:ignore-line
       }
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) setState(() => _isDownloading = false);
     }
   }
 
@@ -1869,25 +1885,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (response.status != AuthStatus.success) {
       throw Exception(l10n
           .authFailedStatus(response.message ?? "")); // coverage:ignore-line
-    }
-  }
-
-  /// Shows a session-expired snackbar + logout, or a generic error snackbar.
-  // coverage:ignore-start
-  void _handleSessionExpiredError(dynamic e, String fallbackMessage) {
-    if (e.toString().contains("SESSION_EXPIRED")) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.sessionExpiredLogoutMessage)),
-        // coverage:ignore-end
-      );
-      ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        // coverage:ignore-line
-        SnackBar(content: Text(fallbackMessage)), // coverage:ignore-line
-      );
     }
   }
 

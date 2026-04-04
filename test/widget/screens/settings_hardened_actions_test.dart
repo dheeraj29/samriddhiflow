@@ -10,6 +10,7 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/l10n/app_localizations.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MockAuthService extends Mock implements AuthService {}
@@ -51,7 +52,8 @@ void main() {
     when(() => mockStorageService.getDashboardConfig())
         .thenReturn(const DashboardVisibilityConfig());
     when(() => mockStorageService.isSmartCalculatorEnabled()).thenReturn(true);
-    when(() => mockStorageService.getCloudDatabaseRegion()).thenReturn('India');
+    when(() => mockStorageService.getCloudDatabaseRegion())
+        .thenReturn(CloudDatabaseRegion.india);
     when(() => mockStorageService.getAuthFlag()).thenReturn(true);
     when(() => mockStorageService.getBackupThreshold()).thenReturn(10);
     when(() => mockStorageService.getHolidays()).thenReturn([]);
@@ -79,12 +81,17 @@ void main() {
     // 1. Setup: Throw SESSION_EXPIRED on sync/auth
     when(() => mockAuthService.signInWithGoogle(any()))
         .thenAnswer((_) async => AuthResponse(status: AuthStatus.success));
+    when(() => mockStorageService.getSessionId())
+        .thenReturn('existing-session');
     when(() => mockAuthService.deleteAccount())
         .thenThrow(Exception("SESSION_EXPIRED"));
     when(() => mockCloudSync.deleteCloudData())
         .thenAnswer((_) async {}); // Stub missing call!
     when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
     when(() => mockAuthService.signOut(any())).thenAnswer((_) async {});
+
+    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -114,7 +121,6 @@ void main() {
     final deactivateTile = find.text(l10n.deactivateWipeCloudTitle);
 
     await tester.scrollUntilVisible(deactivateTile, 500.0);
-    expect(deactivateTile, findsOneWidget);
     await tester.tap(deactivateTile);
     await tester.pumpAndSettle(); // Show dialog
 

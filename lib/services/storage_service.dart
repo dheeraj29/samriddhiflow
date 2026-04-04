@@ -175,21 +175,6 @@ class StorageService {
     // coverage:ignore-end
   }
 
-  // --- GeoIP Detection ---
-  // coverage:ignore-start
-  String? getDetectedCountry() {
-    final box = _hive.box(boxSettings);
-    return box.get('detectedCountry') as String?;
-    // coverage:ignore-end
-  }
-
-  // coverage:ignore-start
-  Future<void> setDetectedCountry(String countryCode) async {
-    final box = _hive.box(boxSettings);
-    await box.put('detectedCountry', countryCode);
-    // coverage:ignore-end
-  }
-
   List<Profile> getProfiles() {
     return _hive
         .box<Profile>(boxProfiles)

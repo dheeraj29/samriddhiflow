@@ -24,6 +24,7 @@ import 'package:samriddhi_flow/services/notification_service.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 
 import 'package:samriddhi_flow/widgets/auth_wrapper.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
 
 import 'package:samriddhi_flow/models/profile.dart';
 
@@ -210,6 +211,9 @@ void main() {
 
     when(() => mockTaxConfigService.getRulesForYear(any()))
         .thenReturn(TaxRules(profileId: 'default'));
+
+    when(() => mockStorageService.getCloudDatabaseRegion())
+        .thenReturn(CloudDatabaseRegion.india);
   });
 
   Widget buildTestWidget() {

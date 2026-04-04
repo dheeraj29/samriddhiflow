@@ -5,6 +5,8 @@ import 'package:samriddhi_flow/services/cloud_sync_service.dart';
 import 'package:samriddhi_flow/services/cloud_storage_interface.dart';
 import 'package:samriddhi_flow/services/taxes/tax_config_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/core/cloud_config.dart';
+import 'package:samriddhi_flow/services/subscription_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -16,6 +18,8 @@ class MockCloudStorage extends Mock implements CloudStorageInterface {}
 class MockStorageService extends Mock implements StorageService {}
 
 class MockTaxConfig extends Mock implements TaxConfigService {}
+
+class MockSubscriptionService extends Mock implements SubscriptionService {}
 
 void main() {
   group('AuthService Resilience', () {
@@ -49,6 +53,7 @@ void main() {
     late MockTaxConfig mockTax;
     late MockFirebaseAuth mockAuth;
     late MockUser mockUser;
+    late MockSubscriptionService mockSubscription;
     late CloudSyncService syncService;
 
     setUp(() {
@@ -57,7 +62,9 @@ void main() {
       mockTax = MockTaxConfig();
       mockAuth = MockFirebaseAuth();
       mockUser = MockUser();
-      syncService = CloudSyncService(mockCloud, mockStorage, mockTax,
+      mockSubscription = MockSubscriptionService();
+      syncService = CloudSyncService(
+          mockCloud, mockStorage, mockTax, mockSubscription,
           firebaseAuth: mockAuth);
 
       when(() => mockAuth.currentUser).thenReturn(mockUser);
@@ -80,6 +87,9 @@ void main() {
       when(() => mockCloud.getActiveSessionId(any()))
           .thenAnswer((_) async => 'session123');
       when(() => mockStorage.getSessionId()).thenReturn('session123');
+      when(() => mockStorage.getCloudDatabaseRegion())
+          .thenReturn(CloudDatabaseRegion.india);
+      when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
     });
 
     test('syncToCloud handles "firestore/unavailable" (Prefix check)',

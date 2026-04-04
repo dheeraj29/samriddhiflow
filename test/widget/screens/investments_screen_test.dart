@@ -56,24 +56,43 @@ void main() {
     );
   }
 
-  testWidgets('InvestmentsScreen renders tabs and FAB', (tester) async {
+  testWidgets('InvestmentsScreen renders tabs', (tester) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Manage'), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('FAB navigates to AddInvestmentScreen', (tester) async {
+  testWidgets('Dashboard tab has Add Investment button', (tester) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FloatingActionButton));
+    final addButton = find.widgetWithText(ElevatedButton, 'Add Investment');
+    expect(addButton, findsAtLeastNWidgets(1));
+
+    await tester.tap(addButton.first);
     await tester.pumpAndSettle();
 
     expect(find.byType(AddInvestmentScreen), findsOneWidget);
-    expect(find.text('Add Investment'), findsOneWidget);
+  });
+
+  testWidgets('Management tab has Add Investment button', (tester) async {
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    // Switch to Manage tab
+    await tester.tap(find.text('Manage'));
+    await tester.pumpAndSettle();
+
+    final addButton = find.widgetWithText(ElevatedButton, 'Add Investment');
+    expect(addButton, findsAtLeastNWidgets(1));
+
+    await tester.tap(addButton.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddInvestmentScreen), findsOneWidget);
   });
 
   testWidgets('InvestmentsScreen filtering, search and pagination UI',
@@ -131,13 +150,14 @@ void main() {
     expect(find.byType(PaginationBar), findsOneWidget);
     expect(find.text('Page 1 of 1'), findsOneWidget);
   });
-  testWidgets('Dashboard displays type breakdown', (tester) async {
+  testWidgets('Dashboard displays type breakdown and Gain%', (tester) async {
     final stock = Investment.create(
       name: 'Apple',
       type: InvestmentType.stock,
       acquisitionDate: DateTime.now(),
       acquisitionPrice: 100,
       quantity: 1,
+      currentPrice: 150, // 50% gain
       profileId: 'default',
     );
 
@@ -145,6 +165,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Stocks'), findsAtLeastNWidgets(1));
+
+    // Verify Gain% is displayed (regex handles potential symbols or spaces)
+    expect(find.textContaining(RegExp(r'\+50\.0%')), findsOneWidget);
+    // Use a simpler check for absolute gain value
+    expect(find.textContaining('50'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('InvestmentsScreen hides LT badge for threshold 0',
