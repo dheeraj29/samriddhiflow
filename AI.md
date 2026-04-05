@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Samriddhi Flow** is a premium personal finance and smart budgeting PWA designed for the Indian market (and global applicability). It emphasizes aesthetic excellence ("wow" factor), data privacy (local-first), and comprehensive financial tracking.
 
-**Current Version:** v4.0.2
+**Current Version:** v4.0.3
 
 ## 2. Architecture
 
@@ -126,7 +126,7 @@ Run: `build_pwa.bat`
 
 ## 6. Testing
 Execute: `test_pwa.bat`
-*   **Baseline Coverage:** **77.5%**. Core logic and critical UI screens must maintain or improve coverage.
+*   **Baseline Coverage:** **77.9%**. Core logic and critical UI screens must maintain or improve coverage.
 *   **Consolidated Tests**: Unit tests are consolidated to avoid fragmentation. Use `test_mocks.dart` for shared service mocks.
 
 ---

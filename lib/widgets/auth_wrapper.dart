@@ -338,8 +338,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     final storage = ref.read(storageServiceProvider);
     var sessionId = storage.getSessionId();
     if (sessionId == null) {
-      sessionId = const Uuid().v4();
-      await storage.setSessionId(sessionId);
+      sessionId = const Uuid().v4(); // coverage:ignore-line
+      await storage.setSessionId(sessionId); // coverage:ignore-line
     }
     // Optimization: Don't hit Firestore on startup.
     // Defer session claim to syncToCloud/restoreFromCloud.
@@ -434,11 +434,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
     if (errorStr.contains("Passcode required") ||
         errorStr.contains("Incorrect passcode")) {
-      // coverage:ignore-line
       await _handlePasscodeError(context, errorStr);
     } else if (isSessionError) {
-      await _handleSessionConflict(
-          context, errorStr, isNewDevice); // coverage:ignore-line
+      await _handleSessionConflict(context, errorStr, isNewDevice);
     } else {
       _handleGenericRestoreError(context, errorStr); // coverage:ignore-line
     }
@@ -460,10 +458,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Future<void> _handleSessionConflict(
-      // coverage:ignore-line
-      BuildContext context,
-      String errorStr,
-      bool isNewDevice) async {
+      BuildContext context, String errorStr, bool isNewDevice) async {
     if (isNewDevice) {
       final confirm = await UIUtils.showClaimOwnershipDialog(
           context); // coverage:ignore-line
@@ -476,17 +471,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           // coverage:ignore-end
         }
       }
-      // coverage:ignore-start
     } else if (context.mounted) {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
-        // coverage:ignore-end
       );
-      await ref
-          .read(storageServiceProvider)
-          .clearAllData(); // coverage:ignore-line
-      ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
+      await ref.read(storageServiceProvider).clearAllData();
+      ref.read(authServiceProvider).signOut(ref);
     }
   }
 

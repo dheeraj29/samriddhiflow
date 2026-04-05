@@ -214,6 +214,12 @@ void main() {
 
     when(() => mockStorageService.getCloudDatabaseRegion())
         .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockStorageService.setCloudDatabaseRegion(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorageService.getSessionId()).thenReturn('session123');
+    when(() => mockStorageService.setSessionId(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.setActiveProfileId(any()))
+        .thenAnswer((_) async {});
   });
 
   Widget buildTestWidget() {

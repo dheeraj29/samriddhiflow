@@ -26,6 +26,7 @@ import 'package:samriddhi_flow/services/auth_service.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
 
 import 'package:samriddhi_flow/widgets/auth_wrapper.dart';
+import 'package:samriddhi_flow/widgets/region_selection_dialog.dart';
 
 import 'package:samriddhi_flow/models/category.dart';
 
@@ -135,6 +136,15 @@ class MockDashboardConfigNotifier extends DashboardConfigNotifier {
   DashboardVisibilityConfig build() => const DashboardVisibilityConfig();
 }
 
+class TestCloudDatabaseRegionNotifier extends CloudDatabaseRegionNotifier {
+  TestCloudDatabaseRegionNotifier(this._region);
+
+  final String _region;
+
+  @override
+  String build() => _region;
+}
+
 void main() {
   // Mocks
 
@@ -210,6 +220,13 @@ void main() {
     when(() => mockUser.getIdToken(any())).thenAnswer((_) async => 'token123');
     when(() => mockStorageService.getCloudDatabaseRegion())
         .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockStorageService.setCloudDatabaseRegion(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorageService.getSessionId()).thenReturn('session123');
+    when(() => mockStorageService.setSessionId(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.setActiveProfileId(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
   });
 
   Widget createAuthWrapper({
@@ -219,6 +236,7 @@ void main() {
     bool isLoggedIn = false,
     bool isOffline = false,
     CloudSyncService? cloudSync,
+    String cloudRegion = CloudDatabaseRegion.india,
   }) {
     mockIsLoggedInNotifier.setInitial(isLoggedIn);
 
@@ -240,6 +258,8 @@ void main() {
         subscriptionServiceProvider
             .overrideWithValue(MockSubscriptionService()..stubDefaults()),
         adServiceProvider.overrideWithValue(MockAdService()),
+        cloudDatabaseRegionProvider
+            .overrideWith(() => TestCloudDatabaseRegionNotifier(cloudRegion)),
 
         isLoggedInProvider.overrideWith(() => mockIsLoggedInNotifier),
 
@@ -708,6 +728,58 @@ void main() {
     // Instead, we 'poke' the session in the background. initCalls should remain 1.
 
     expect(initCalls, 1);
+  });
+
+  testWidgets(
+      'AuthWrapper shows mandatory region selection when region is empty',
+      (tester) async {
+    await tester.pumpWidget(createAuthWrapper(
+      authStream: Stream.value(mockUser),
+      cloudRegion: '',
+    ));
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(RegionSelectionDialog), findsOneWidget);
+    expect(find.text('India'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.byType(DashboardScreen), findsNothing);
+  });
+
+  testWidgets(
+      'AuthWrapper signs out and clears local data on existing-device restore conflict',
+      (tester) async {
+    final mockCloudSync = MockCloudSyncService();
+    final streamController = StreamController<User?>();
+    when(() => mockStorageService.getSessionId())
+        .thenReturn('existing-session');
+
+    when(() => mockCloudSync.restoreFromCloud(passcode: any(named: 'passcode')))
+        .thenThrow(
+      Exception('SESSION_EXPIRED: another device owns this session'),
+    );
+    when(() => mockAuthService.signOut(any())).thenAnswer((_) async {});
+
+    addTearDown(() => streamController.close());
+
+    await tester.pumpWidget(createAuthWrapper(
+      isLoggedIn: true,
+      authStream: streamController.stream,
+      cloudSync: mockCloudSync,
+    ));
+
+    await tester.pump(const Duration(seconds: 6));
+    streamController.add(mockUser);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(seconds: 1));
+
+    verify(() =>
+            mockCloudSync.restoreFromCloud(passcode: any(named: 'passcode')))
+        .called(1);
+    verify(() => mockStorageService.clearAllData()).called(1);
+    verify(() => mockAuthService.signOut(any())).called(1);
   });
 
   group('Offline Session Expiration', () {

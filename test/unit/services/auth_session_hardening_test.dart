@@ -78,9 +78,18 @@ void main() {
     when(() => mockStorage.getProfiles()).thenReturn([]);
     when(() => mockStorage.saveProfile(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveSettings(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setSessionId(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setAuthFlag(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setLastLogin(any())).thenAnswer((_) async {});
+    when(() => mockStorage.setCloudDatabaseRegion(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorage.setActiveProfileId(any())).thenAnswer((_) async {});
     when(() => mockStorage.getCloudDatabaseRegion())
         .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockStorage.getActiveProfileId()).thenReturn('default');
     when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
+    when(() => mockSubscription.getTier()).thenReturn(SubscriptionTier.premium);
+    when(() => mockSubscription.getExpiryDate()).thenReturn(null);
   });
 
   group('Session Hardening Logic', () {

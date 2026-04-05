@@ -3390,8 +3390,19 @@
   "premiumSectionTile": "Premium Features",
   "subscriptionStatusLabel": "Subscription Status",
   "premiumActive": "Premium Active",
+  "liteActive": "Lite Active (Ad-Free)",
   "freeTierActive": "Free Tier",
   "upgradeButtonLabel": "Upgrade",
+  "upgradeToPremiumLabel": "Upgrade to Premium",
+  "expiresOnLabel": "Expires on: {date}",
+  "@expiresOnLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresNever": "Never",
   "selectRegionTitle": "Select Cloud Region",
   "selectRegionDescription": "Choose where your data will be stored. This choice won't change after the first sync.",
   "premiumFeaturesTitle": "Premium Features",
@@ -3402,9 +3413,19 @@
   "featureAdFreeTitle": "Ad-Free experience",
   "featureAdFreeDesc": "Focus on your finances without any interruptions.",
   "upgradeToPremiumAction": "UPGRADE TO PREMIUM",
+  "buyLiteAction": "GET LITE (AD-FREE)",
+  "buyPremiumAction": "GET PREMIUM (FULL ACCESS)",
+  "alreadyPremiumTitle": "You are a Premium User!",
+  "alreadyPremiumSubtitle": "Thank you for your support. You have access to all features.",
   "noThanksButton": "No, thanks",
   "confirmButton": "Confirm",
   "serverRegionLabel": "Cloud Backup Region",
-  "serverRegionDesc": "Manual selection of backup storage zone"
+  "serverRegionDesc": "Manual selection of backup storage zone",
+  "cloudSyncSection": "Cloud Sync",
+  "appearanceSection": "Appearance",
+  "dashboardCustomizationSection": "Dashboard Customization",
+  "dataManagementSection": "Data Management",
+  "featureManagementSection": "Feature Management",
+  "profileManagementSection": "Profile Management"
 }
 

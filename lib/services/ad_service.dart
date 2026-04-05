@@ -12,20 +12,17 @@ class AdService {
 
   /// Returns a banner widget for display in the UI.
   /// If the user is ad-free, it returns a zero-height sized box.
-  // coverage:ignore-start
   Widget showBanner(WidgetRef ref) {
     final subService = ref.read(subscriptionServiceProvider);
     if (subService.isAdFree()) {
-      // coverage:ignore-end
       return const SizedBox.shrink();
     }
 
     // In future: AdBanner widget implementation here
     return Container(
-      // coverage:ignore-line
       height: 60,
       width: double.infinity,
-      color: Colors.grey.withAlpha(50), // coverage:ignore-line
+      color: Colors.grey.withAlpha(50),
       child: const Center(child: Text("Ad Placeholder")),
     );
   }
