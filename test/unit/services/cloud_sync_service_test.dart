@@ -107,6 +107,15 @@ void main() {
     when(() => mockStorageService.setSessionId(any())).thenAnswer((_) async {});
     when(() => mockStorageService.getCloudDatabaseRegion())
         .thenReturn(CloudDatabaseRegion.india);
+    when(() => mockStorageService.getActiveProfileId()).thenReturn('default');
+    when(() => mockStorageService.getAuthFlag()).thenReturn(true);
+    when(() => mockStorageService.getLastLogin()).thenReturn(DateTime.now());
+    when(() => mockStorageService.setActiveProfileId(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorageService.setAuthFlag(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.setLastLogin(any())).thenAnswer((_) async {});
+    when(() => mockStorageService.setCloudDatabaseRegion(any()))
+        .thenAnswer((_) async {});
     when(() => mockSubscriptionService.isCloudSyncEnabled()).thenReturn(true);
 
     cloudSyncService = CloudSyncService(mockCloudStorage, mockStorageService,

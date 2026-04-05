@@ -107,6 +107,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.watch(isOfflineProvider);
 
     final l10n = AppLocalizations.of(context)!;
+    final subService = ref.watch(subscriptionServiceProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -148,11 +149,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             l10n.dashboardCustomizationSection,
             _buildDashboardSection(l10n),
           ),
-          _buildCollapsibleSection(
-            _secCloud,
-            l10n.cloudSyncSection,
-            _buildCloudSectionContent(context, ref, user, l10n),
-          ),
+          if (subService.isCloudSyncEnabled())
+            _buildCollapsibleSection(
+              _secCloud,
+              l10n.cloudSyncSection,
+              _buildCloudSectionContent(context, ref, user, l10n),
+            ),
           _buildCollapsibleSection(
             _secData,
             l10n.dataManagementSection,
@@ -173,7 +175,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             l10n.preferencesSection,
             _buildPreferencesSection(context, l10n),
           ),
-          if (user != null && !ref.watch(isOfflineProvider))
+          if (user != null &&
+              !ref.watch(isOfflineProvider) &&
+              subService.isCloudSyncEnabled())
             _buildCollapsibleSection(
               _secAuth,
               l10n.authSection,
@@ -319,28 +323,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildPremiumSection(AppLocalizations l10n) {
     final subService = ref.watch(subscriptionServiceProvider);
-    final isPremium = subService.isCloudSyncEnabled(); // Just one indicator
+    final tier = subService.getTier();
+    final isPremium = tier == SubscriptionTier.premium;
+    final isLite = tier == SubscriptionTier.lite;
+    final isFree = tier == SubscriptionTier.free;
+
+    String statusText;
+    IconData statusIcon;
+    Color statusColor;
+
+    if (isPremium) {
+      statusText = l10n.premiumActive;
+      statusIcon = Icons.verified_user_rounded;
+      statusColor = Colors.green;
+    } else if (isLite) {
+      statusText = l10n.liteActive;
+      statusIcon = Icons.star_rounded;
+      statusColor = Colors.blue;
+    } else {
+      statusText = l10n.freeTierActive;
+      statusIcon = Icons.star_border_rounded;
+      statusColor = Colors.amber;
+    }
+
+    final expiryDate = subService.getExpiryDate();
+    final expiryText =
+        expiryDate == null ? l10n.expiresNever : "TBD"; // use dummy for now
+
+    final upgradeLabel =
+        isLite ? l10n.upgradeToPremiumLabel : l10n.upgradeButtonLabel;
 
     return Column(
       children: [
         ListTile(
           title: Text(l10n.subscriptionStatusLabel),
-          subtitle: Text(isPremium ? l10n.premiumActive : l10n.freeTierActive),
-          leading: Icon(
-            isPremium ? Icons.verified_user : Icons.star_border,
-            color: isPremium ? Colors.green : Colors.amber,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(statusText),
+              if (!isFree)
+                Text(
+                  l10n.expiresOnLabel(expiryText),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+            ],
           ),
-          trailing: TextButton(
-            // coverage:ignore-start
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PremiumPromoScreen()),
-                // coverage:ignore-end
-              );
-            },
-            child: Text(l10n.upgradeButtonLabel),
-          ),
+          leading: Icon(statusIcon, color: statusColor, size: 28),
+          trailing: (!isPremium)
+              ? TextButton(
+                  // coverage:ignore-start
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const PremiumPromoScreen()),
+                      // coverage:ignore-end
+                    );
+                  },
+                  child: Text(upgradeLabel),
+                )
+              : null,
         ),
       ],
     );
@@ -1170,26 +1214,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildDangerZone(BuildContext context) {
+    final subService = ref.watch(subscriptionServiceProvider);
+    final hasCloud = subService.isCloudSyncEnabled();
+
     return Column(
       children: [
         const Divider(),
         UIUtils.buildSectionHeader(
             AppLocalizations.of(context)!.dangerZoneHeader,
             showDivider: false),
-        ListTile(
-          title: Text(AppLocalizations.of(context)!.clearCloudDataTitle,
-              style: const TextStyle(color: Colors.orange)),
-          subtitle: Text(AppLocalizations.of(context)!.clearCloudDataDesc),
-          leading: PureIcons.cloudOff(size: 20, color: Colors.orange),
-          onTap: _clearCloudDataFlow,
-        ),
-        ListTile(
-          title: Text(AppLocalizations.of(context)!.deactivateWipeCloudTitle,
-              style: const TextStyle(color: Colors.red)),
-          subtitle: Text(AppLocalizations.of(context)!.deactivateWipeCloudDesc),
-          leading: PureIcons.deleteForever(color: Colors.red),
-          onTap: _deactivateAccountFlow,
-        ),
+        if (hasCloud)
+          ListTile(
+            title: Text(AppLocalizations.of(context)!.clearCloudDataTitle,
+                style: const TextStyle(color: Colors.orange)),
+            subtitle: Text(AppLocalizations.of(context)!.clearCloudDataDesc),
+            leading: PureIcons.cloudOff(size: 20, color: Colors.orange),
+            onTap: _clearCloudDataFlow,
+          ),
+        if (hasCloud)
+          ListTile(
+            title: Text(AppLocalizations.of(context)!.deactivateWipeCloudTitle,
+                style: const TextStyle(color: Colors.red)),
+            subtitle:
+                Text(AppLocalizations.of(context)!.deactivateWipeCloudDesc),
+            leading: PureIcons.deleteForever(color: Colors.red),
+            onTap: _deactivateAccountFlow,
+          ),
+        // If not cloud, we might still want a local wipe option?
+        // But for now, user asked to hide these.
       ],
     );
   }
@@ -1874,7 +1926,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             e, isNewDevice, _clearCloudDataFlow); // coverage:ignore-line
       }
     } finally {
-      if (mounted) setState(() => _isDownloading = false);
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
     }
   }
 
@@ -2053,7 +2107,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return AppLocalizations.of(context)!
           .restoreActionCap; // coverage:ignore-line
     }
-    if (usePasscode) return AppLocalizations.of(context)!.encryptBackupAction;
+    if (usePasscode) {
+      return AppLocalizations.of(context)!.encryptBackupAction;
+    }
     return AppLocalizations.of(context)!.backupUnencryptedAction;
   }
 

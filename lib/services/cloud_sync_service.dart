@@ -377,10 +377,22 @@ class CloudSyncService {
       passcode: passcode,
     );
 
-    // Cache local Tax Data before wiping
+    // Cache local Tax Data and critical Session state before wiping
     final localTaxData = _storageService.getAllTaxYearData();
+    final pId = _storageService.getActiveProfileId();
+    final sId = _storageService.getSessionId();
+    final isLog = _storageService.getAuthFlag();
+    final lLog = _storageService.getLastLogin();
+    final reg = _storageService.getCloudDatabaseRegion();
 
     await _storageService.clearAllData();
+
+    // Immediately restore Session identity to prevent verification failures
+    if (sId != null) await _storageService.setSessionId(sId);
+    await _storageService.setAuthFlag(isLog);
+    if (lLog != null) await _storageService.setLastLogin(lLog);
+    await _storageService.setCloudDatabaseRegion(reg);
+    await _storageService.setActiveProfileId(pId);
 
     await _restoreProfiles(data, decrypt);
     await _restoreCategories(data);

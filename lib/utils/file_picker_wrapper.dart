@@ -7,7 +7,7 @@ class FilePickerWrapper {
     List<String>? allowedExtensions,
     bool withData = false,
   }) async {
-    return FilePicker.platform.pickFiles(
+    return FilePicker.pickFiles(
       type: type,
       allowedExtensions: allowedExtensions,
       withData: withData,

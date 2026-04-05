@@ -74,9 +74,15 @@ void main() {
       verify(() => mockSettingsBox.put('other', 'value')).called(1);
     });
 
-    test('saveSettings preserves existing hashed PIN (Idempotency)', () async {
-      // If we pass something that looks like a hash (64 chars), we should ideally NOT double hash it.
-      // However, current implementation of saveSettings calls setAppPin which ALWAYS hashes.
+    test('saveSettings currently re-hashes hash-like appPin values', () async {
+      const existingHash =
+          '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+
+      await storageService.saveSettings({'appPin': existingHash});
+
+      expect(settingsStore['appPin'], isA<String>());
+      expect(settingsStore['appPin'], isNot(existingHash));
+      expect((settingsStore['appPin'] as String).length, 64);
     });
   });
 

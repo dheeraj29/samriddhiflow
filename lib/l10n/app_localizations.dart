@@ -1915,7 +1915,7 @@ abstract class AppLocalizations {
   /// Section header
   ///
   /// In en, this message translates to:
-  /// **'Cloud & Sync'**
+  /// **'Cloud Sync'**
   String get cloudSyncSection;
 
   /// Section header
@@ -2013,18 +2013,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud Synchronization is only available for users in India due to data residency compliance.'**
   String get cloudSyncIndiaOnly;
-
-  /// Tile title
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud Backup Region'**
-  String get serverRegionLabel;
-
-  /// Tile subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Manual selection of backup storage zone'**
-  String get serverRegionDesc;
 
   /// Card title
   ///
@@ -6803,18 +6791,6 @@ abstract class AppLocalizations {
   /// **'Day of month'**
   String get dayOfMonthHelper;
 
-  /// No description provided for @indiaRegion.
-  ///
-  /// In en, this message translates to:
-  /// **'India'**
-  String get indiaRegion;
-
-  /// No description provided for @defaultRegion.
-  ///
-  /// In en, this message translates to:
-  /// **'Default'**
-  String get defaultRegion;
-
   /// No description provided for @indianRupeeLabel.
   ///
   /// In en, this message translates to:
@@ -7842,6 +7818,12 @@ abstract class AppLocalizations {
   /// **'Premium Active'**
   String get premiumActive;
 
+  /// No description provided for @liteActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Lite Active (Ad-Free)'**
+  String get liteActive;
+
   /// No description provided for @freeTierActive.
   ///
   /// In en, this message translates to:
@@ -7853,6 +7835,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upgrade'**
   String get upgradeButtonLabel;
+
+  /// No description provided for @upgradeToPremiumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Premium'**
+  String get upgradeToPremiumLabel;
+
+  /// No description provided for @expiresOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires on: {date}'**
+  String expiresOnLabel(String date);
+
+  /// No description provided for @expiresNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get expiresNever;
 
   /// No description provided for @selectRegionTitle.
   ///
@@ -7914,6 +7914,30 @@ abstract class AppLocalizations {
   /// **'UPGRADE TO PREMIUM'**
   String get upgradeToPremiumAction;
 
+  /// No description provided for @buyLiteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'GET LITE (AD-FREE)'**
+  String get buyLiteAction;
+
+  /// No description provided for @buyPremiumAction.
+  ///
+  /// In en, this message translates to:
+  /// **'GET PREMIUM (FULL ACCESS)'**
+  String get buyPremiumAction;
+
+  /// No description provided for @alreadyPremiumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You are a Premium User!'**
+  String get alreadyPremiumTitle;
+
+  /// No description provided for @alreadyPremiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your support. You have access to all features.'**
+  String get alreadyPremiumSubtitle;
+
   /// No description provided for @noThanksButton.
   ///
   /// In en, this message translates to:
@@ -7925,6 +7949,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm'**
   String get confirmButton;
+
+  /// No description provided for @serverRegionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup Region'**
+  String get serverRegionLabel;
+
+  /// No description provided for @serverRegionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual selection of backup storage zone'**
+  String get serverRegionDesc;
 }
 
 class _AppLocalizationsDelegate

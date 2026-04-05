@@ -983,7 +983,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardCustomizationSection => 'Dashboard Customization';
 
   @override
-  String get cloudSyncSection => 'Cloud & Sync';
+  String get cloudSyncSection => 'Cloud Sync';
 
   @override
   String get dataManagementSection => 'Data Management';
@@ -1033,12 +1033,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get cloudSyncIndiaOnly =>
       'Cloud Synchronization is only available for users in India due to data residency compliance.';
-
-  @override
-  String get serverRegionLabel => 'Cloud Backup Region';
-
-  @override
-  String get serverRegionDesc => 'Manual selection of backup storage zone';
 
   @override // coverage:ignore-line
   String get connectionPaused => 'Connection Paused';
@@ -3712,12 +3706,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get dayOfMonthHelper => 'Day of month';
 
-  @override // coverage:ignore-line
-  String get indiaRegion => 'India';
-
-  @override // coverage:ignore-line
-  String get defaultRegion => 'Default';
-
   @override
   String get indianRupeeLabel => 'Indian Rupee (₹)';
 
@@ -4269,11 +4257,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get premiumActive => 'Premium Active';
 
-  @override // coverage:ignore-line
+  @override
+  String get liteActive => 'Lite Active (Ad-Free)';
+
+  @override
   String get freeTierActive => 'Free Tier';
 
   @override
   String get upgradeButtonLabel => 'Upgrade';
+
+  @override
+  String get upgradeToPremiumLabel => 'Upgrade to Premium';
+
+  @override
+  String expiresOnLabel(String date) {
+    return 'Expires on: $date';
+  }
+
+  @override
+  String get expiresNever => 'Never';
 
   @override
   String get selectRegionTitle => 'Select Cloud Region';
@@ -4282,35 +4284,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectRegionDescription =>
       'Choose where your data will be stored. This choice won\'t change after the first sync.';
 
-  @override // coverage:ignore-line
+  @override
   String get premiumFeaturesTitle => 'Premium Features';
 
-  @override // coverage:ignore-line
+  @override
   String get premiumTitle => 'Upgrade to Premium';
 
-  @override // coverage:ignore-line
+  @override
   String get premiumSubtitle => 'Unlock the full potential of Samriddhi Flow';
 
-  @override // coverage:ignore-line
+  @override
   String get featureCloudSyncTitle => 'Cloud Backup & Sync';
 
-  @override // coverage:ignore-line
+  @override
   String get featureCloudSyncDesc =>
       'Securely back up your data and sync across multiple devices.';
 
-  @override // coverage:ignore-line
+  @override
   String get featureAdFreeTitle => 'Ad-Free experience';
 
-  @override // coverage:ignore-line
+  @override
   String get featureAdFreeDesc =>
       'Focus on your finances without any interruptions.';
 
-  @override // coverage:ignore-line
+  @override
   String get upgradeToPremiumAction => 'UPGRADE TO PREMIUM';
 
-  @override // coverage:ignore-line
+  @override
+  String get buyLiteAction => 'GET LITE (AD-FREE)';
+
+  @override
+  String get buyPremiumAction => 'GET PREMIUM (FULL ACCESS)';
+
+  @override
+  String get alreadyPremiumTitle => 'You are a Premium User!';
+
+  @override
+  String get alreadyPremiumSubtitle =>
+      'Thank you for your support. You have access to all features.';
+
+  @override
   String get noThanksButton => 'No, thanks';
 
   @override
   String get confirmButton => 'Confirm';
+
+  @override
+  String get serverRegionLabel => 'Cloud Backup Region';
+
+  @override
+  String get serverRegionDesc => 'Manual selection of backup storage zone';
 }

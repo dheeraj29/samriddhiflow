@@ -142,6 +142,8 @@ void main() {
     when(() => mockStorage.isPinLocked()).thenReturn(false);
     when(() => mockSubscription.isAdFree()).thenReturn(true);
     when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
+    when(() => mockSubscription.getTier()).thenReturn(SubscriptionTier.premium);
+    when(() => mockSubscription.getExpiryDate()).thenReturn(null);
 
     when(() => mockStorage.setThemeMode(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveDashboardConfig(any())).thenAnswer((_) async {});
