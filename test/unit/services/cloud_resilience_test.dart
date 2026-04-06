@@ -90,6 +90,8 @@ void main() {
       when(() => mockStorage.getCloudDatabaseRegion())
           .thenReturn(CloudDatabaseRegion.india);
       when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
+      when(() => mockCloud.setActiveSessionId(any(), any()))
+          .thenAnswer((_) async {});
     });
 
     test('syncToCloud handles "firestore/unavailable" (Prefix check)',

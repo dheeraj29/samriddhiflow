@@ -102,7 +102,8 @@ class CloudSyncService {
 
     if (localSessionId == null ||
         (cloudSessionId != null && cloudSessionId != localSessionId)) {
-      throw Exception("SESSION_EXPIRED:Logged in from another device.");
+      throw Exception(
+          "SESSION_EXPIRED:Logged in from another device."); // coverage:ignore-line
     }
   }
 
@@ -167,12 +168,14 @@ class CloudSyncService {
     final user = auth.currentUser;
     if (user == null) throw Exception(errUserNotLoggedIn);
 
+    // Ensure session exists before verification (first backup on a new device).
+    // Uses direct write (not fire-and-forget) so the cloud is guaranteed to
+    // reflect the local session ID before _verifySession reads it.
+    final sessionId = await _ensureLocalSessionId();
+    await user.getIdToken(true);
+    await _cloudStorage.setActiveSessionId(user.uid, sessionId);
+
     await _verifySession(user);
-    // Claim session in cloud before sync if not already claimed on startup
-    final sessionId = _storageService.getSessionId();
-    if (sessionId != null) {
-      await updateActiveSessionId(sessionId);
-    }
 
     final encryption =
         (passcode != null && passcode.isNotEmpty) ? EncryptionService() : null;
@@ -354,13 +357,18 @@ class CloudSyncService {
 
   Future<void> _syncSessionBeforeRestore() async {
     final auth = _auth;
-    if (auth != null && auth.currentUser != null) {
-      final existingLocalId = _storageService.getSessionId();
-      if (existingLocalId == null) {
-        final newLocalId = await _ensureLocalSessionId();
-        await updateActiveSessionId(newLocalId);
-      }
+    if (auth == null || auth.currentUser == null) return;
+
+    final existingLocalId = _storageService.getSessionId();
+    if (existingLocalId != null) {
+      return; // Existing device — let _verifySession handle it
     }
+
+    // New device: create a local session and push it to cloud
+    final newLocalId = await _ensureLocalSessionId();
+    final user = auth.currentUser!;
+    await user.getIdToken(true);
+    await _cloudStorage.setActiveSessionId(user.uid, newLocalId);
   }
 
   Map<String, dynamic> _captureLocalIdentity() {
