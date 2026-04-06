@@ -109,8 +109,46 @@ void main() {
       // Attempt restoration
       await cloudSync.restoreFromCloud();
 
-      // Verify freshness and identity checks were triggered
+      // 1. In _verifySession (Pre-fetch)
+      // 2. In updateActiveSessionId (Post-restore claim)
       verify(() => mockUser.getIdToken(true)).called(2);
+      verify(() => mockCloudStorage.getActiveSessionId('test-uid')).called(1);
+    });
+
+    test('CloudSyncService proactively syncs sessionId on new devices',
+        () async {
+      String? currentCloudId = 'cloud-uuid';
+      String? currentLocalId; // Starts as null
+
+      when(() => mockCloudStorage.getActiveSessionId('test-uid'))
+          .thenAnswer((_) async => currentCloudId);
+      when(() => mockStorage.getSessionId()).thenAnswer((_) => currentLocalId);
+
+      // Capture the new session ID being set locally
+      when(() => mockStorage.setSessionId(any())).thenAnswer((inv) async {
+        currentLocalId = inv.positionalArguments[0] as String;
+      });
+
+      // Capture the new session ID being set in cloud
+      when(() => mockCloudStorage.setActiveSessionId(any(), any()))
+          .thenAnswer((inv) async {
+        currentCloudId = inv.positionalArguments[1] as String;
+      });
+
+      final cloudSync = CloudSyncService(
+        mockCloudStorage,
+        mockStorage,
+        mockTaxConfig,
+        mockSubscription,
+        firebaseAuth: mockAuth,
+      );
+
+      await cloudSync.restoreFromCloud();
+
+      // 1. updateActiveSessionId (Proactive)
+      // 2. _verifySession (Verification)
+      // 3. updateActiveSessionId (Post-restore claim)
+      verify(() => mockUser.getIdToken(true)).called(3);
       verify(() => mockCloudStorage.getActiveSessionId('test-uid')).called(1);
     });
   });

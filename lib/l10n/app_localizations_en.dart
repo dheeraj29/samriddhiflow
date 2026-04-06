@@ -1031,10 +1031,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showBudgetDesc => 'Display monthly budget progress bar';
 
   @override // coverage:ignore-line
-  String get cloudSyncIndiaOnly =>
-      'Cloud Synchronization is only available for users in India due to data residency compliance.';
-
-  @override // coverage:ignore-line
   String get connectionPaused => 'Connection Paused';
 
   @override // coverage:ignore-line
@@ -1268,9 +1264,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get restoredItemsLabel => 'Restored items:';
 
-  @override
-  String get okReloadButton => 'OK, Reload';
-
   @override // coverage:ignore-line
   String restoreFailedLabel(String error) {
     return 'Restore Failed: $error'; // coverage:ignore-line
@@ -1407,9 +1400,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override // coverage:ignore-line
   String get cessOnOtherSlabLabel => 'Cess on Other Slab Tax';
-
-  @override // coverage:ignore-line
-  String get cessOnSlabLabel => 'Total Cess on Slab Tax';
 
   @override // coverage:ignore-line
   String get cessOnSpecialLabel => 'Capital Gains Cess';
@@ -3275,7 +3265,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get confirmAction => 'Confirm';
 
-  @override // coverage:ignore-line
+  @override
   String get okButton => 'OK';
 
   @override
@@ -3475,11 +3465,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountDeactivatedStatus =>
       'Account Deactivated and All Data Wiped.';
 
-  @override // coverage:ignore-line
-  String deactivationFailedStatus(String error) {
-    return 'Deactivation Failed: $error'; // coverage:ignore-line
-  }
-
   @override
   String get clearCloudDataQuestion => 'Clear Cloud Data?';
 
@@ -3503,11 +3488,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudDataClearedStatus => 'Cloud Data Cleared Successfully.';
-
-  @override // coverage:ignore-line
-  String clearFailedStatus(String error) {
-    return 'Clear Failed: $error'; // coverage:ignore-line
-  }
 
   @override
   String get selectCurrencyTitle => 'Select Currency';
@@ -3990,9 +3970,6 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$count Long-term ready'; // coverage:ignore-line
   }
 
-  @override // coverage:ignore-line
-  String get valueLabel => 'Value';
-
   @override
   String get addInvestment => 'Add Investment';
 
@@ -4017,31 +3994,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get currentPriceLabel => 'Current Price';
 
-  @override // coverage:ignore-line
-  String get sellDateLabel => 'Sell Date';
-
-  @override // coverage:ignore-line
-  String get sellPriceLabel => 'Sell Price';
-
-  @override // coverage:ignore-line
-  String get isSoldLabel => 'Is Sold';
-
   @override
   String get mfCategoryLabel => 'MF Category';
 
   @override
   String get thresholdLabel => 'LT Threshold (Years)';
 
-  @override // coverage:ignore-line
-  String fixedRateInfo(Object rate) {
-    return 'Rate: $rate% (Info only)'; // coverage:ignore-line
-  }
-
   @override
   String get notAutoCalculated => '(Not auto-calculated)';
-
-  @override // coverage:ignore-line
-  String get remarksLabel => 'Remarks';
 
   @override
   String get exportTemplate => 'Export Tickers';
@@ -4108,24 +4068,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get mfCategory_others => 'Others';
 
-  @override // coverage:ignore-line
-  String get exportFileSuccess => 'Investment template saved to downloads';
-
-  @override // coverage:ignore-line
-  String get importFileError => 'Invalid JSON or missing codeName/name';
-
-  @override // coverage:ignore-line
-  String lastPriceUpdated(String price) {
-    return 'Last: $price'; // coverage:ignore-line
-  }
-
   @override
   String get sessionExpiredLogoutMessage =>
       'You were logged out because another device logged into this account.';
-
-  @override // coverage:ignore-line
-  String get sessionExpiredDeactivateMessage =>
-      'Account deactivated locally. Cloud session was already expired.';
 
   @override
   String get sessionVerificationFailed =>
@@ -4134,10 +4079,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get connectionFailedOffline =>
       'Connection failed. Switching to Offline Mode.';
-
-  @override // coverage:ignore-line
-  String get autoRestoreRegionWarning =>
-      'Auto-restore skipped: Cloud functions are only available in India.';
 
   @override
   String get encryptedBackupPromptTitle => 'Encrypted Backup Found';
@@ -4168,9 +4109,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteInvestmentConfirmation =>
       'This will permanently remove this investment record.';
 
-  @override // coverage:ignore-line
-  String get filterByTypeLabel => 'Filter by Type';
-
   @override
   String get searchLabel => 'Search Investments';
 
@@ -4194,12 +4132,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override // coverage:ignore-line
   String get copiedToClipboard => 'Copied to clipboard!';
-
-  @override // coverage:ignore-line
-  String get loadMoreAction => 'Load More';
-
-  @override // coverage:ignore-line
-  String get noMoreItems => 'All investments loaded';
 
   @override
   String get addInvestmentTitle => 'Add Investment';
@@ -4230,9 +4162,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recurringInvestmentHeader => 'Recurring Investment';
 
-  @override // coverage:ignore-line
-  String get enableRecurringLabel => 'Enable Monthly Recurring';
-
   @override
   String get recurringAmountLabel => 'Monthly Recurring Amount';
 
@@ -4244,9 +4173,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override // coverage:ignore-line
   String get upcomingCommitmentsHeader => 'Upcoming Commitments';
-
-  @override // coverage:ignore-line
-  String get noUpcomingCommitments => 'No upcoming recurring investments.';
 
   @override
   String get premiumSectionTile => 'Premium Features';

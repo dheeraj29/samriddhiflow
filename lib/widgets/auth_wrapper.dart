@@ -17,6 +17,7 @@ import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
 import '../utils/platform_utils.dart' as platform_utils;
 import '../l10n/app_localizations.dart';
+import '../services/subscription_service.dart';
 import 'region_selection_dialog.dart';
 
 const continueOfflineText = 'Continue Offline';
@@ -384,10 +385,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) async {
-    if (next.value == null || _isRestoring) return;
-
     final storage = ref.read(storageServiceProvider);
     if (storage.getAccounts().isNotEmpty) return;
+
+    final subService = ref.read(subscriptionServiceProvider);
+    if (!subService.isCloudSyncEnabled()) return;
 
     await _performAutoRestoreOperation(context);
   }
@@ -395,6 +397,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Future<void> _performAutoRestoreOperation(BuildContext context,
       [String? passcode]) async {
     if (_isRestoring && passcode == null) return; // Guard
+
+    final authService = ref.read(authServiceProvider);
+    if (!context.mounted || authService.currentUser == null) return;
 
     final storage = ref.read(storageServiceProvider);
     final isNewDevice = storage.getSessionId() == null;
@@ -431,6 +436,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     final errorStr = e.toString();
     final isSessionError = errorStr.contains("SESSION_EXPIRED") ||
         errorStr.contains("another device");
+
+    if (errorStr.contains("Premium Subscription required")) {
+      return; // Silent skip for auto-restore
+    }
 
     if (errorStr.contains("Passcode required") ||
         errorStr.contains("Incorrect passcode")) {
