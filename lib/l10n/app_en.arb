@@ -209,6 +209,14 @@
   "@dataControlDesc": {
     "description": "Policy item description"
   },
+  "singleDeviceAccessTitle": "Single Device Access",
+  "@singleDeviceAccessTitle": {
+    "description": "Policy item title"
+  },
+  "singleDeviceAccessDesc": "When using cloud sync features, only one device is allowed per account for security. We maintain only a randomly generated session ID of your latest device for matching purpose, with no links to track your identity or behavior. This session ID is removed when you log out.",
+  "@singleDeviceAccessDesc": {
+    "description": "Policy item description"
+  },
   "closeButton": "Close",
   "@closeButton": {
     "description": "Close button text"
@@ -3360,5 +3368,37 @@
   "noThanksButton": "No, thanks",
   "confirmButton": "Confirm",
   "serverRegionLabel": "Cloud Backup Region",
-  "serverRegionDesc": "Manual selection of backup storage zone"
+  "serverRegionDesc": "Manual selection of backup storage zone",
+  "bulkUpdateCodeTitle": "Update All Stock Codes?",
+  "bulkUpdateCodeMessage": "Found {count} other items with code \"{oldCode}\". Update them all to \"{newCode}\"?",
+  "@bulkUpdateCodeMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "oldCode": {
+        "type": "String"
+      },
+      "newCode": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAllAction": "UPDATE ALL",
+  "updateOnlyThisAction": "ONLY THIS",
+  "bulkUpdateValuationTitle": "Synchronize Valuations?",
+  "bulkUpdateValuationMessage": "The valuation for code \"{code}\" has changed. Update {count} other items to {price}?",
+  "@bulkUpdateValuationMessage": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "price": {
+        "type": "double"
+      }
+    }
+  }
 }

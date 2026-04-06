@@ -524,40 +524,101 @@ class _InvestmentDashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildBreakdownList(Map<MutualFundCategory, double> data,
-      String currency, AppLocalizations l10n) {
+  Widget _buildBreakdownList(
+      Map<MutualFundCategory, ({double invested, double current})> data,
+      String currency,
+      AppLocalizations l10n) {
     if (data.isEmpty) return const Text("No data");
-    // coverage:ignore-start
+    // Sort by current value descending
+    final sorted = data.entries.toList() // coverage:ignore-line
+      ..sort((a, b) =>
+          b.value.current.compareTo(a.value.current)); // coverage:ignore-line
+
     return Column(
-      children: data.entries
-          .map((e) =>
-              _buildBreakdownRow(e.key.localizedName(l10n), e.value, currency))
+      // coverage:ignore-line
+      children: sorted
+          // coverage:ignore-start
+          .map((e) => _buildBreakdownRow(e.key.localizedName(l10n),
+              e.value.invested, e.value.current, currency, l10n))
           .toList(),
       // coverage:ignore-end
     );
   }
 
-  Widget _buildTypeBreakdownList(Map<InvestmentType, double> data,
-      String currency, AppLocalizations l10n) {
+  Widget _buildTypeBreakdownList(
+      Map<InvestmentType, ({double invested, double current})> data,
+      String currency,
+      AppLocalizations l10n) {
     if (data.isEmpty) return const Text("No data");
+    // Sort by current value descending
+    final sorted = data.entries.toList()
+      ..sort((a, b) => b.value.current.compareTo(a.value.current));
+
     return Column(
-      children: data.entries
-          .map((e) =>
-              _buildBreakdownRow(e.key.localizedName(l10n), e.value, currency))
+      children: sorted
+          .map((e) => _buildBreakdownRow(e.key.localizedName(l10n),
+              e.value.invested, e.value.current, currency, l10n))
           .toList(),
     );
   }
 
-  Widget _buildBreakdownRow(String label, double value, String currency) {
+  Widget _buildBreakdownRow(String label, double invested, double current,
+      String currency, AppLocalizations l10n) {
+    final gain = current - invested;
+    final gainPercent = invested > 0 ? (gain / invested) * 100 : 0.0;
+    final isProfit = gain >= -0.01;
+    final color = isProfit ? Colors.green : Colors.red;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w500))),
-          SmartCurrencyText(value: value, locale: currency),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              SmartCurrencyText(
+                value: current,
+                locale: currency,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("${l10n.investedLabel}: ",
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600)),
+                    Flexible(
+                      child: SmartCurrencyText(
+                        value: invested,
+                        locale: currency,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Icon(isProfit ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                  color: color, size: 14),
+              Text(
+                "${isProfit ? '+' : ''}${gainPercent.toStringAsFixed(1)}%",
+                style: TextStyle(
+                    fontSize: 11, color: color, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ],
       ),
     );

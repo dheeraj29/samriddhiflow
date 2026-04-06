@@ -75,8 +75,29 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     _bootGraceTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         _bootGracePeriodFinished = true;
+        // Proactively check auto-restore after boot grace completes.
+        // On first login, the auth event fires before the grace period ends,
+        // so the auto-restore listener skips it. This catch-up ensures
+        // auto-restore triggers for users who just signed in.
+        _triggerAutoRestoreIfNeeded();
       }
     });
+  }
+
+  void _triggerAutoRestoreIfNeeded() {
+    final authService = ref.read(authServiceProvider);
+    if (authService.currentUser == null) return;
+
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getAccounts().isNotEmpty) return;
+
+    final subService = ref.read(subscriptionServiceProvider);
+    if (!subService.isCloudSyncEnabled()) return;
+
+    // Use context from the widget's element (safe because mounted was checked)
+    if (mounted) {
+      _performAutoRestoreOperation(context);
+    }
   }
 
   void _startVerificationSafetyTimeout() {

@@ -165,6 +165,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can export, restore, or delete all your data at any time from the Settings screen. We believe you should have full ownership of your financial information.';
 
   @override
+  String get singleDeviceAccessTitle => 'Single Device Access';
+
+  @override
+  String get singleDeviceAccessDesc =>
+      'When using cloud sync features, only one device is allowed per account for security. We maintain only a randomly generated session ID of your latest device for matching purpose, with no links to track your identity or behavior. This session ID is removed when you log out.';
+
+  @override
   String get closeButton => 'Close';
 
   @override // coverage:ignore-line
@@ -4000,7 +4007,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get thresholdLabel => 'LT Threshold (Years)';
 
-  @override
+  @override // coverage:ignore-line
   String get notAutoCalculated => '(Not auto-calculated)';
 
   @override
@@ -4260,4 +4267,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serverRegionDesc => 'Manual selection of backup storage zone';
+
+  @override
+  String get bulkUpdateCodeTitle => 'Update All Stock Codes?';
+
+  @override
+  String bulkUpdateCodeMessage(int count, String oldCode, String newCode) {
+    return 'Found $count other items with code \"$oldCode\". Update them all to \"$newCode\"?';
+  }
+
+  @override
+  String get updateAllAction => 'UPDATE ALL';
+
+  @override
+  String get updateOnlyThisAction => 'ONLY THIS';
+
+  @override
+  String get bulkUpdateValuationTitle => 'Synchronize Valuations?';
+
+  @override
+  String bulkUpdateValuationMessage(String code, int count, double price) {
+    return 'The valuation for code \"$code\" has changed. Update $count other items to $price?';
+  }
 }

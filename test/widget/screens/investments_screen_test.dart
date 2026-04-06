@@ -167,7 +167,8 @@ void main() {
     expect(find.text('Stocks'), findsAtLeastNWidgets(1));
 
     // Verify Gain% is displayed (regex handles potential symbols or spaces)
-    expect(find.textContaining(RegExp(r'\+50\.0%')), findsOneWidget);
+    // It appears twice: once in the overall summary card and once in the type breakdown row
+    expect(find.textContaining(RegExp(r'\+50\.0%')), findsNWidgets(2));
     // Use a simpler check for absolute gain value
     expect(find.textContaining('50'), findsAtLeastNWidgets(1));
   });

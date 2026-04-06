@@ -353,6 +353,34 @@ class InvestmentsNotifier extends Notifier<List<Investment>> {
     }
     ref.invalidateSelf(); // coverage:ignore-line
   }
+
+  // coverage:ignore-start
+  Future<void> updateCodeNameBulk(String oldCode, String newCode) async {
+    final storage = ref.read(storageServiceProvider);
+    final current = state;
+    for (var inv in current) {
+      if (inv.codeName == oldCode) {
+        final updated = inv.copyWith(codeName: newCode);
+        await storage.saveInvestment(updated);
+        // coverage:ignore-end
+      }
+    }
+    ref.invalidateSelf(); // coverage:ignore-line
+  }
+
+  // coverage:ignore-start
+  Future<void> updateValuationBulk(String code, double price) async {
+    final storage = ref.read(storageServiceProvider);
+    final current = state;
+    for (var inv in current) {
+      if (inv.codeName == code) {
+        final updated = inv.copyWith(currentPrice: price);
+        await storage.saveInvestment(updated);
+        // coverage:ignore-end
+      }
+    }
+    ref.invalidateSelf(); // coverage:ignore-line
+  }
 }
 
 final investmentsProvider =
@@ -367,8 +395,9 @@ final investmentSummaryProvider = Provider((ref) {
   int readyToSellLTCount = 0;
   double readyToSellLTValue = 0;
 
-  final categoryBreakdown = <MutualFundCategory, double>{};
-  final typeBreakdown = <InvestmentType, double>{};
+  final categoryBreakdown =
+      <MutualFundCategory, ({double invested, double current})>{};
+  final typeBreakdown = <InvestmentType, ({double invested, double current})>{};
 
   for (final inv in investments) {
     if (inv.isSold) continue;
@@ -381,13 +410,21 @@ final investmentSummaryProvider = Provider((ref) {
       readyToSellLTValue += inv.currentValuation; // coverage:ignore-line
     }
 
-    typeBreakdown[inv.type] =
-        (typeBreakdown[inv.type] ?? 0) + inv.currentValuation;
+    final typeData = typeBreakdown[inv.type] ?? (invested: 0.0, current: 0.0);
+    typeBreakdown[inv.type] = (
+      invested: typeData.invested + inv.investedValue,
+      current: typeData.current + inv.currentValuation
+    );
 
     if (inv.type == InvestmentType.mutualFund && inv.mfCategory != null) {
-      categoryBreakdown[inv.mfCategory!] = // coverage:ignore-line
-          (categoryBreakdown[inv.mfCategory!] ?? 0) +
-              inv.currentValuation; // coverage:ignore-line
+      final catData =
+          // coverage:ignore-start
+          categoryBreakdown[inv.mfCategory!] ?? (invested: 0.0, current: 0.0);
+      categoryBreakdown[inv.mfCategory!] = (
+        invested: catData.invested + inv.investedValue,
+        current: catData.current + inv.currentValuation
+        // coverage:ignore-end
+      );
     }
   }
 

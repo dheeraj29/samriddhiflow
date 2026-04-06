@@ -382,6 +382,18 @@ abstract class AppLocalizations {
   /// **'You can export, restore, or delete all your data at any time from the Settings screen. We believe you should have full ownership of your financial information.'**
   String get dataControlDesc;
 
+  /// Policy item title
+  ///
+  /// In en, this message translates to:
+  /// **'Single Device Access'**
+  String get singleDeviceAccessTitle;
+
+  /// Policy item description
+  ///
+  /// In en, this message translates to:
+  /// **'When using cloud sync features, only one device is allowed per account for security. We maintain only a randomly generated session ID of your latest device for matching purpose, with no links to track your identity or behavior. This session ID is removed when you log out.'**
+  String get singleDeviceAccessDesc;
+
   /// Close button text
   ///
   /// In en, this message translates to:
@@ -7835,6 +7847,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manual selection of backup storage zone'**
   String get serverRegionDesc;
+
+  /// No description provided for @bulkUpdateCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update All Stock Codes?'**
+  String get bulkUpdateCodeTitle;
+
+  /// No description provided for @bulkUpdateCodeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Found {count} other items with code \"{oldCode}\". Update them all to \"{newCode}\"?'**
+  String bulkUpdateCodeMessage(int count, String oldCode, String newCode);
+
+  /// No description provided for @updateAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'UPDATE ALL'**
+  String get updateAllAction;
+
+  /// No description provided for @updateOnlyThisAction.
+  ///
+  /// In en, this message translates to:
+  /// **'ONLY THIS'**
+  String get updateOnlyThisAction;
+
+  /// No description provided for @bulkUpdateValuationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Synchronize Valuations?'**
+  String get bulkUpdateValuationTitle;
+
+  /// No description provided for @bulkUpdateValuationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The valuation for code \"{code}\" has changed. Update {count} other items to {price}?'**
+  String bulkUpdateValuationMessage(String code, int count, double price);
 }
 
 class _AppLocalizationsDelegate

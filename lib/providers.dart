@@ -203,7 +203,7 @@ final storageInitializerProvider = FutureProvider<void>((ref) async {
     await storage.recalculateCCBalances(); // coverage:ignore-line
   } catch (e) {
     if (!e.toString().contains('Cannot use the Ref')) {
-      DebugLogger().log("StorageInit Error: $e"); // coverage:ignore-line
+      DebugLogger().log("StorageInit Error: $e");
     }
     rethrow; // Propagate to AuthWrapper UI
   }

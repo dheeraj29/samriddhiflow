@@ -12,7 +12,8 @@ import '../../utils/currency_utils.dart';
 import '../../widgets/pure_icons.dart';
 
 class TaxRulesScreen extends ConsumerStatefulWidget {
-  const TaxRulesScreen({super.key});
+  final int? initialYear;
+  const TaxRulesScreen({super.key, this.initialYear}); // coverage:ignore-line
 
   @override
   ConsumerState<TaxRulesScreen> createState() => _TaxRulesScreenState();
@@ -90,8 +91,8 @@ class _TaxRulesScreenState extends ConsumerState<TaxRulesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 8, vsync: this);
-    // Fix: Initialize with Financial Year to match the Dropdown list
-    _selectedYear =
+    // Use passed year if available, otherwise default to current FY
+    _selectedYear = widget.initialYear ??
         ref.read(taxConfigServiceProvider).getCurrentFinancialYear();
     _loadRulesForYear(_selectedYear);
     _loadTransactionDescriptions();
