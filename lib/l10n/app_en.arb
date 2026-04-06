@@ -1078,7 +1078,7 @@
   "@dashboardCustomizationSection": {
     "description": "Section header"
   },
-  "cloudSyncSection": "Cloud & Sync",
+  "cloudSyncSection": "Cloud Sync",
   "@cloudSyncSection": {
     "description": "Section header"
   },
@@ -1141,10 +1141,6 @@
   "showBudgetDesc": "Display monthly budget progress bar",
   "@showBudgetDesc": {
     "description": "Switch subtitle"
-  },
-  "cloudSyncIndiaOnly": "Cloud Synchronization is only available for users in India due to data residency compliance.",
-  "@cloudSyncIndiaOnly": {
-    "description": "Restriction message"
   },
   "connectionPaused": "Connection Paused",
   "@connectionPaused": {
@@ -1296,7 +1292,7 @@
       }
     }
   },
-  "skipAction": "Skip",
+  "skipAction": "SKIP",
   "@skipAction": {
     "description": "Button text"
   },
@@ -1395,7 +1391,6 @@
   "restoreZipWarning": "This will PERMANENTLY WIPE all local data and replace it with the backup content.",
   "restoreCompleteTitle": "Restore Complete",
   "restoredItemsLabel": "Restored items:",
-  "okReloadButton": "OK, Reload",
   "restoreFailedLabel": "Restore Failed: {error}",
   "@restoreFailedLabel": {
     "placeholders": {
@@ -1499,8 +1494,6 @@
   "@cessOnSalaryTdsLabel": {},
   "cessOnOtherSlabLabel": "Cess on Other Slab Tax",
   "@cessOnOtherSlabLabel": {},
-  "cessOnSlabLabel": "Total Cess on Slab Tax",
-  "@cessOnSlabLabel": {},
   "cessOnSpecialLabel": "Capital Gains Cess",
   "@cessOnSpecialLabel": {},
   "advanceTaxPaidLabel": "Advance Tax Paid",
@@ -1805,7 +1798,7 @@
   },
   "outstandingPrincipalLabel": "Outstanding Principal",
   "bulkPayAction": "Bulk Pay",
-  "interestRateLabel": "Interest Rate",
+  "interestRateLabel": "Interest Rate (%)",
   "daysAccruedLabel": "Days Accrued",
   "estAccruedInterestLabel": "Est. Accrued Interest (To Date)",
   "maturityLabel": "Maturity: {date}",
@@ -2923,14 +2916,6 @@
   "deactivateWipeWarning": "This will PERMANENTLY WIPE all your data from both the cloud and your local device.",
   "localDataSafeNote": "Your account will be deleted, and you will be completely logged out with a blank slate.",
   "accountDeactivatedStatus": "Account Deactivated and All Data Wiped.",
-  "deactivationFailedStatus": "Deactivation Failed: {error}",
-  "@deactivationFailedStatus": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "clearCloudDataQuestion": "Clear Cloud Data?",
   "clearCloudWarning": "This will PERMANENTLY DELETE all your data from the cloud server.",
   "localDataSafeLabel": "Your Local Data will be SAFE.",
@@ -2945,14 +2930,6 @@
     }
   },
   "cloudDataClearedStatus": "Cloud Data Cleared Successfully.",
-  "clearFailedStatus": "Clear Failed: {error}",
-  "@clearFailedStatus": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "selectCurrencyTitle": "Select Currency",
   "encryptionPasscodeLabel": "Encryption Passcode",
   "pleaseEnterPasscodeError": "Please enter a passcode",
@@ -3228,8 +3205,7 @@
   "continueAction": "Continue",
   "@continueAction": {
     "description": "Continue action label"
-  }
-,
+  },
   "languageLabel": "Language",
   "@languageLabel": {
     "description": "Language selection label"
@@ -3257,7 +3233,6 @@
       }
     }
   },
-  "valueLabel": "Value",
   "addInvestment": "Add Investment",
   "editInvestment": "Edit Investment",
   "investmentName": "Investment Name",
@@ -3266,15 +3241,9 @@
   "acquisitionPrice": "Acquisition Price",
   "quantityLabel": "Quantity",
   "currentPriceLabel": "Current Price",
-  "sellDateLabel": "Sell Date",
-  "sellPriceLabel": "Sell Price",
-  "isSoldLabel": "Is Sold",
   "mfCategoryLabel": "MF Category",
-  "interestRateLabel": "Interest Rate (%)",
   "thresholdLabel": "LT Threshold (Years)",
-  "fixedRateInfo": "Rate: {rate}% (Info only)",
   "notAutoCalculated": "(Not auto-calculated)",
-  "remarksLabel": "Remarks",
   "exportTemplate": "Export Tickers",
   "importPrices": "Import Prices",
   "updatePricesSuccess": "Prices updated for {count} items",
@@ -3303,34 +3272,18 @@
   "mfCategory_mfIndex": "Index Fund",
   "mfCategory_industry": "Sectoral / Industry",
   "mfCategory_others": "Others",
-  "profitLabel": "Profit",
-  "lossLabel": "Loss",
-  "exportFileSuccess": "Investment template saved to downloads",
-  "importFileError": "Invalid JSON or missing codeName/name",
-  "lastPriceUpdated": "Last: {price}",
-  "@lastPriceUpdated": {
-    "placeholders": {
-      "price": {
-        "type": "String"
-      }
-    }
-  },
   "sessionExpiredLogoutMessage": "You were logged out because another device logged into this account.",
-  "sessionExpiredDeactivateMessage": "Account deactivated locally. Cloud session was already expired.",
   "sessionVerificationFailed": "Session verification failed. Sync paused.",
   "connectionFailedOffline": "Connection failed. Switching to Offline Mode.",
-  "autoRestoreRegionWarning": "Auto-restore skipped: Cloud functions are only available in India.",
   "encryptedBackupPromptTitle": "Encrypted Backup Found",
   "encryptedBackupPromptBody": "Your cloud backup is encrypted. Please enter your passcode to restore your data.",
   "incorrectPasscodeError": "Incorrect passcode. Please try again.",
   "passcodeLabel": "Passcode",
-  "skipAction": "SKIP",
   "allTypesLabel": "All Types",
   "sortByOldestFirst": "Sort by Oldest First",
   "sortByHighestGain": "Sort by Highest Gain",
   "deleteInvestmentTitle": "Delete Investment?",
   "deleteInvestmentConfirmation": "This will permanently remove this investment record.",
-  "filterByTypeLabel": "Filter by Type",
   "searchLabel": "Search Investments",
   "copyToClipboard": "Copy to Clipboard",
   "exportJsonTitle": "Export Tickers (JSON)",
@@ -3339,12 +3292,8 @@
   "invalidJsonError": "Invalid JSON format",
   "importAction": "Import",
   "copiedToClipboard": "Copied to clipboard!",
-  "cancelAction": "Cancel",
-  "loadMoreAction": "Load More",
-  "noMoreItems": "All investments loaded",
   "addInvestmentTitle": "Add Investment",
   "editInvestmentTitle": "Edit Investment",
-  "closeAction": "Close",
   "acquisitionDateLabel": "Acquisition Date",
   "acquisitionPriceLabel": "Acquisition Price",
   "invalidPriceError": "Invalid Price",
@@ -3357,15 +3306,10 @@
       }
     }
   },
-  "saveAction": "Save",
   "updateAction": "Update",
   "recurringInvestmentHeader": "Recurring Investment",
   "@recurringInvestmentHeader": {
     "description": "Section header in Add Investment"
-  },
-  "enableRecurringLabel": "Enable Monthly Recurring",
-  "@enableRecurringLabel": {
-    "description": "Label for recurring switch"
   },
   "recurringAmountLabel": "Monthly Recurring Amount",
   "@recurringAmountLabel": {
@@ -3382,10 +3326,6 @@
   "upcomingCommitmentsHeader": "Upcoming Commitments",
   "@upcomingCommitmentsHeader": {
     "description": "Header for upcoming investments dashboard"
-  },
-  "noUpcomingCommitments": "No upcoming recurring investments.",
-  "@noUpcomingCommitments": {
-    "description": "Empty state message"
   },
   "premiumSectionTile": "Premium Features",
   "subscriptionStatusLabel": "Subscription Status",
@@ -3420,12 +3360,5 @@
   "noThanksButton": "No, thanks",
   "confirmButton": "Confirm",
   "serverRegionLabel": "Cloud Backup Region",
-  "serverRegionDesc": "Manual selection of backup storage zone",
-  "cloudSyncSection": "Cloud Sync",
-  "appearanceSection": "Appearance",
-  "dashboardCustomizationSection": "Dashboard Customization",
-  "dataManagementSection": "Data Management",
-  "featureManagementSection": "Feature Management",
-  "profileManagementSection": "Profile Management"
+  "serverRegionDesc": "Manual selection of backup storage zone"
 }
-

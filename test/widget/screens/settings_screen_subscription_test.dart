@@ -96,8 +96,10 @@ void main() {
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.free));
       await tester.pumpAndSettle();
 
-      expect(find.text('Free Tier'), findsOneWidget);
-      expect(find.text('Upgrade'), findsOneWidget);
+      expect(
+          find.textContaining('Free Tier', findRichText: true), findsOneWidget);
+      expect(
+          find.textContaining('Upgrade', findRichText: true), findsOneWidget);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();
@@ -109,8 +111,10 @@ void main() {
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.lite));
       await tester.pumpAndSettle();
 
-      expect(find.text('Lite Active (Ad-Free)'), findsOneWidget);
-      expect(find.text('Upgrade to Premium'), findsOneWidget);
+      expect(find.textContaining('Lite Active (Ad-Free)', findRichText: true),
+          findsOneWidget);
+      expect(find.textContaining('Upgrade to Premium', findRichText: true),
+          findsOneWidget);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();

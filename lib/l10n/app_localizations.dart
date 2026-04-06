@@ -2008,12 +2008,6 @@ abstract class AppLocalizations {
   /// **'Display monthly budget progress bar'**
   String get showBudgetDesc;
 
-  /// Restriction message
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud Synchronization is only available for users in India due to data residency compliance.'**
-  String get cloudSyncIndiaOnly;
-
   /// Card title
   ///
   /// In en, this message translates to:
@@ -2434,12 +2428,6 @@ abstract class AppLocalizations {
   /// **'Restored items:'**
   String get restoredItemsLabel;
 
-  /// No description provided for @okReloadButton.
-  ///
-  /// In en, this message translates to:
-  /// **'OK, Reload'**
-  String get okReloadButton;
-
   /// No description provided for @restoreFailedLabel.
   ///
   /// In en, this message translates to:
@@ -2673,12 +2661,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cess on Other Slab Tax'**
   String get cessOnOtherSlabLabel;
-
-  /// No description provided for @cessOnSlabLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Total Cess on Slab Tax'**
-  String get cessOnSlabLabel;
 
   /// No description provided for @cessOnSpecialLabel.
   ///
@@ -6383,12 +6365,6 @@ abstract class AppLocalizations {
   /// **'Account Deactivated and All Data Wiped.'**
   String get accountDeactivatedStatus;
 
-  /// No description provided for @deactivationFailedStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Deactivation Failed: {error}'**
-  String deactivationFailedStatus(String error);
-
   /// No description provided for @clearCloudDataQuestion.
   ///
   /// In en, this message translates to:
@@ -6430,12 +6406,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud Data Cleared Successfully.'**
   String get cloudDataClearedStatus;
-
-  /// No description provided for @clearFailedStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear Failed: {error}'**
-  String clearFailedStatus(String error);
 
   /// No description provided for @selectCurrencyTitle.
   ///
@@ -7314,12 +7284,6 @@ abstract class AppLocalizations {
   /// **'{count} Long-term ready'**
   String readyToSellLT(int count);
 
-  /// No description provided for @valueLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Value'**
-  String get valueLabel;
-
   /// No description provided for @addInvestment.
   ///
   /// In en, this message translates to:
@@ -7368,24 +7332,6 @@ abstract class AppLocalizations {
   /// **'Current Price'**
   String get currentPriceLabel;
 
-  /// No description provided for @sellDateLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Sell Date'**
-  String get sellDateLabel;
-
-  /// No description provided for @sellPriceLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Sell Price'**
-  String get sellPriceLabel;
-
-  /// No description provided for @isSoldLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Is Sold'**
-  String get isSoldLabel;
-
   /// No description provided for @mfCategoryLabel.
   ///
   /// In en, this message translates to:
@@ -7398,23 +7344,11 @@ abstract class AppLocalizations {
   /// **'LT Threshold (Years)'**
   String get thresholdLabel;
 
-  /// No description provided for @fixedRateInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'Rate: {rate}% (Info only)'**
-  String fixedRateInfo(Object rate);
-
   /// No description provided for @notAutoCalculated.
   ///
   /// In en, this message translates to:
   /// **'(Not auto-calculated)'**
   String get notAutoCalculated;
-
-  /// No description provided for @remarksLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Remarks'**
-  String get remarksLabel;
 
   /// No description provided for @exportTemplate.
   ///
@@ -7542,35 +7476,11 @@ abstract class AppLocalizations {
   /// **'Others'**
   String get mfCategory_others;
 
-  /// No description provided for @exportFileSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Investment template saved to downloads'**
-  String get exportFileSuccess;
-
-  /// No description provided for @importFileError.
-  ///
-  /// In en, this message translates to:
-  /// **'Invalid JSON or missing codeName/name'**
-  String get importFileError;
-
-  /// No description provided for @lastPriceUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'Last: {price}'**
-  String lastPriceUpdated(String price);
-
   /// No description provided for @sessionExpiredLogoutMessage.
   ///
   /// In en, this message translates to:
   /// **'You were logged out because another device logged into this account.'**
   String get sessionExpiredLogoutMessage;
-
-  /// No description provided for @sessionExpiredDeactivateMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Account deactivated locally. Cloud session was already expired.'**
-  String get sessionExpiredDeactivateMessage;
 
   /// No description provided for @sessionVerificationFailed.
   ///
@@ -7583,12 +7493,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connection failed. Switching to Offline Mode.'**
   String get connectionFailedOffline;
-
-  /// No description provided for @autoRestoreRegionWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-restore skipped: Cloud functions are only available in India.'**
-  String get autoRestoreRegionWarning;
 
   /// No description provided for @encryptedBackupPromptTitle.
   ///
@@ -7644,12 +7548,6 @@ abstract class AppLocalizations {
   /// **'This will permanently remove this investment record.'**
   String get deleteInvestmentConfirmation;
 
-  /// No description provided for @filterByTypeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Filter by Type'**
-  String get filterByTypeLabel;
-
   /// No description provided for @searchLabel.
   ///
   /// In en, this message translates to:
@@ -7697,18 +7595,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copied to clipboard!'**
   String get copiedToClipboard;
-
-  /// No description provided for @loadMoreAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Load More'**
-  String get loadMoreAction;
-
-  /// No description provided for @noMoreItems.
-  ///
-  /// In en, this message translates to:
-  /// **'All investments loaded'**
-  String get noMoreItems;
 
   /// No description provided for @addInvestmentTitle.
   ///
@@ -7764,12 +7650,6 @@ abstract class AppLocalizations {
   /// **'Recurring Investment'**
   String get recurringInvestmentHeader;
 
-  /// Label for recurring switch
-  ///
-  /// In en, this message translates to:
-  /// **'Enable Monthly Recurring'**
-  String get enableRecurringLabel;
-
   /// Label for recurring amount field
   ///
   /// In en, this message translates to:
@@ -7793,12 +7673,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upcoming Commitments'**
   String get upcomingCommitmentsHeader;
-
-  /// Empty state message
-  ///
-  /// In en, this message translates to:
-  /// **'No upcoming recurring investments.'**
-  String get noUpcomingCommitments;
 
   /// No description provided for @premiumSectionTile.
   ///

@@ -2,15 +2,15 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-04-05T22:31:03.353874**
+> **Generated on: 2026-04-06T06:39:05.835569**
 > based on `lcov.info` from `flutter test --coverage`
 
-### **Total Project Coverage: 93.9%**
+### **Total Project Coverage: 94.0%**
 
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
 | services/ad_service.dart | 71.4% | 5/7 | WARN |
-| widgets/auth_wrapper.dart | 78.2% | 247/316 | WARN |
+| widgets/auth_wrapper.dart | 78.4% | 251/320 | WARN |
 | screens/investments_screen.dart | 83.0% | 259/312 | PASS |
 | screens/taxes/tax_dashboard_screen.dart | 87.7% | 372/424 | PASS |
 | services/auth_service.dart | 88.6% | 70/79 | PASS |
@@ -27,8 +27,8 @@
 | screens/cc_payment_dialog.dart | 92.3% | 120/130 | PASS |
 | widgets/charts/reports_pie_chart.dart | 92.6% | 25/27 | PASS |
 | screens/lending/lending_dashboard_screen.dart | 92.9% | 208/224 | PASS |
-| screens/settings_screen.dart | 92.9% | 852/917 | PASS |
 | widgets/common_dialogs.dart | 93.1% | 27/29 | PASS |
+| screens/settings_screen.dart | 93.1% | 878/943 | PASS |
 | utils/billing_helper.dart | 93.2% | 109/117 | PASS |
 | screens/add_transaction_screen.dart | 93.6% | 467/499 | PASS |
 | screens/reminders_screen.dart | 93.6% | 497/531 | PASS |
@@ -44,7 +44,6 @@
 | services/storage_service.dart | 95.0% | 781/822 | PASS |
 | screens/loan/loan_ledger_view.dart | 95.3% | 162/170 | PASS |
 | utils/network_utils.dart | 95.5% | 21/22 | PASS |
-| services/cloud_sync_service.dart | 95.8% | 275/287 | PASS |
 | services/json_data_service.dart | 96.0% | 119/124 | PASS |
 | screens/lending/add_lending_screen.dart | 96.0% | 96/100 | PASS |
 | widgets/transaction_list_item.dart | 96.0% | 97/101 | PASS |
@@ -56,6 +55,7 @@
 | widgets/bell_animation.dart | 96.6% | 28/29 | PASS |
 | providers/sum_tracker_provider.dart | 96.7% | 88/91 | PASS |
 | screens/add_investment_screen.dart | 96.7% | 178/184 | PASS |
+| services/cloud_sync_service.dart | 96.8% | 298/308 | PASS |
 | widgets/region_selection_dialog.dart | 96.9% | 31/32 | PASS |
 | screens/loan/loan_part_payment_dialog.dart | 97.0% | 64/66 | PASS |
 | screens/loan/loan_header_card.dart | 97.4% | 113/116 | PASS |

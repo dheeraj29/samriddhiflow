@@ -76,10 +76,8 @@ class CloudSyncService {
   }
 
   Future<String?> getCloudSessionId(String uid) async {
-    // coverage:ignore-line
     try {
-      return await _cloudStorage
-          .getActiveSessionId(uid); // coverage:ignore-line
+      return await _cloudStorage.getActiveSessionId(uid);
     } catch (_) {
       return null;
     }
@@ -129,6 +127,15 @@ class CloudSyncService {
     }
 
     await updateActiveSessionId(localSessionId);
+  }
+
+  Future<String> _ensureLocalSessionId() async {
+    var sessionId = _storageService.getSessionId();
+    if (sessionId == null) {
+      sessionId = const Uuid().v4();
+      await _storageService.setSessionId(sessionId);
+    }
+    return sessionId;
   }
 
   Future<void> deactivateAndCleanCloud() async {
@@ -345,15 +352,52 @@ class CloudSyncService {
     return data;
   }
 
+  Future<void> _syncSessionBeforeRestore() async {
+    final auth = _auth;
+    if (auth != null && auth.currentUser != null) {
+      final existingLocalId = _storageService.getSessionId();
+      if (existingLocalId == null) {
+        final newLocalId = await _ensureLocalSessionId();
+        await updateActiveSessionId(newLocalId);
+      }
+    }
+  }
+
+  Map<String, dynamic> _captureLocalIdentity() {
+    return {
+      'pId': _storageService.getActiveProfileId(),
+      'sId': _storageService.getSessionId(),
+      'isLog': _storageService.getAuthFlag(),
+      'lLog': _storageService.getLastLogin(),
+      'reg': _storageService.getCloudDatabaseRegion(),
+    };
+  }
+
+  Future<void> _restoreLocalIdentity(Map<String, dynamic> identity) async {
+    final sId = identity['sId'];
+    final lLog = identity['lLog'];
+    if (sId != null) {
+      await _storageService.setSessionId(sId);
+    }
+    await _storageService.setAuthFlag(identity['isLog']);
+    if (lLog != null) {
+      await _storageService.setLastLogin(lLog);
+    }
+    await _storageService.setCloudDatabaseRegion(identity['reg']);
+    await _storageService.setActiveProfileId(identity['pId']);
+  }
+
   Future<void> restoreFromCloud({String? passcode}) async {
     _verifySubscription();
     _checkRegionLock();
+
+    await _syncSessionBeforeRestore();
+
     final rawData = await _validateAuthAndFetchData();
     if (rawData == null) {
       throw Exception("No cloud data found");
     }
 
-    // Claim session in cloud after successful verification and fetch
     final sessionId = _storageService.getSessionId();
     if (sessionId != null) {
       await updateActiveSessionId(sessionId);
@@ -379,20 +423,12 @@ class CloudSyncService {
 
     // Cache local Tax Data and critical Session state before wiping
     final localTaxData = _storageService.getAllTaxYearData();
-    final pId = _storageService.getActiveProfileId();
-    final sId = _storageService.getSessionId();
-    final isLog = _storageService.getAuthFlag();
-    final lLog = _storageService.getLastLogin();
-    final reg = _storageService.getCloudDatabaseRegion();
+    final identity = _captureLocalIdentity();
 
     await _storageService.clearAllData();
 
     // Immediately restore Session identity to prevent verification failures
-    if (sId != null) await _storageService.setSessionId(sId);
-    await _storageService.setAuthFlag(isLog);
-    if (lLog != null) await _storageService.setLastLogin(lLog);
-    await _storageService.setCloudDatabaseRegion(reg);
-    await _storageService.setActiveProfileId(pId);
+    await _restoreLocalIdentity(identity);
 
     await _restoreProfiles(data, decrypt);
     await _restoreCategories(data);
@@ -637,6 +673,13 @@ class CloudSyncService {
     final user = auth.currentUser;
     if (user == null) {
       throw Exception(errUserNotLoggedIn);
+    }
+
+    // Proactively check and sync sessionId before deletion verification
+    final localId = await _ensureLocalSessionId();
+    final cloudId = await getCloudSessionId(user.uid);
+    if (cloudId != localId) {
+      await updateActiveSessionId(localId); // coverage:ignore-line
     }
 
     await _verifySession(user);

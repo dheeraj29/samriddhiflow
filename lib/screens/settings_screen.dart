@@ -1474,15 +1474,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _backupToZip() async {
-    // Check PIN if enabled
-    String? capturedPin;
-    if (_isAppLockEnabled) {
-      capturedPin = await _showVerifyPinDialog(context, // coverage:ignore-line
-          reason: AppLocalizations.of(context)!
-              .includePinInZip); // coverage:ignore-line
-      if (capturedPin == null) return;
+  Future<bool> _ensureEntitledTier() async {
+    final subService = ref.read(subscriptionServiceProvider);
+    final isLiteOrPremium = subService.getTier() != SubscriptionTier.free;
+
+    if (!isLiteOrPremium) {
+      // coverage:ignore-start
+      if (!mounted) return false;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (c) => const PremiumPromoScreen()),
+        // coverage:ignore-end
+      );
+      return result == true; // coverage:ignore-line
     }
+    return true;
+  }
+
+  Future<String?> _getBackupPin() async {
+    if (!_isAppLockEnabled) return null;
+    return await _showVerifyPinDialog(context, // coverage:ignore-line
+        reason: AppLocalizations.of(context)!
+            .includePinInZip); // coverage:ignore-line
+  }
+
+  Future<void> _backupToZip() async {
+    if (!await _ensureEntitledTier()) return;
+
+    final capturedPin = await _getBackupPin();
+    if (_isAppLockEnabled && capturedPin == null) return;
 
     setState(() => _isUploading = true);
     try {
@@ -1515,23 +1535,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _restoreFromZip() async {
-    // 1. Check PIN first if enabled (User requirement: PIN should pop immediately)
+    if (!await _ensureEntitledTier()) return;
+
     if (_isAppLockEnabled) {
+      if (!mounted) return;
       final pin = await _showVerifyPinDialog(context);
       if (pin == null) return;
     }
 
-    // 2. Pick File
     final bytes = await ref
         .read(fileServiceProvider)
         .pickFile(allowedExtensions: ['zip']);
-    if (bytes == null) return;
+    if (bytes == null || !mounted) return;
 
-    if (!mounted) return;
-    final confirmed = await _confirmRestoreFromZip();
-    if (!confirmed) return;
-
-    await _performZipRestore(bytes);
+    if (await _confirmRestoreFromZip()) {
+      await _performZipRestore(bytes);
+    }
   }
 
   Future<bool> _confirmRestoreFromZip() async {
@@ -1566,79 +1585,102 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return decision == 'RESTORE';
   }
 
+  Map<String, dynamic> _captureSessionIdentity() {
+    final storage = ref.read(storageServiceProvider);
+    return {
+      'isLoggedIn': ref.read(isLoggedInProvider),
+      'localMode': ref.read(localModeProvider),
+      'sessionId': storage.getSessionId(),
+      'lastLogin': storage.getLastLogin(),
+      'region': storage.getCloudDatabaseRegion(),
+      'profileId': storage.getActiveProfileId(),
+    };
+  }
+
+  Future<void> _applySessionIdentity(Map<String, dynamic> identity) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.setAuthFlag(identity['isLoggedIn']);
+    if (identity['sessionId'] != null) {
+      await storage.setSessionId(identity['sessionId']); // coverage:ignore-line
+    }
+    if (identity['lastLogin'] != null) {
+      await storage.setLastLogin(identity['lastLogin']); // coverage:ignore-line
+    }
+    await storage.setCloudDatabaseRegion(identity['region']);
+    await storage.setActiveProfileId(identity['profileId']);
+    ref.read(localModeProvider.notifier).value = identity['localMode'];
+  }
+
+  void _invalidateSettingsProviders() {
+    ref.invalidate(accountsProvider);
+    ref.invalidate(transactionsProvider);
+    ref.invalidate(loansProvider);
+    ref.invalidate(recurringTransactionsProvider);
+    ref.invalidate(profilesProvider);
+    ref.invalidate(monthlyBudgetProvider);
+    ref.invalidate(currencyProvider);
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(dashboardConfigProvider);
+    ref.read(txnsSinceBackupProvider.notifier).reset();
+  }
+
+  Future<void> _showRestoreSuccessDialog(Map<String, int> stats) async {
+    final summaryItems =
+        stats.entries.map((e) => "${e.key}: ${e.value}").toList();
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.restoreCompleteTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(AppLocalizations.of(context)!.restoredItemsLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ...summaryItems.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(item),
+                )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            // coverage:ignore-start
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (!ref.read(isLoggedInProvider)) {
+                ref.read(localModeProvider.notifier).value = true;
+                // coverage:ignore-end
+              }
+              // coverage:ignore-start
+              Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AuthWrapper()),
+                  (route) => false);
+              // coverage:ignore-end
+            },
+            child: Text(AppLocalizations.of(ctx)!.okButton),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _performZipRestore(dynamic bytes) async {
     setState(() => _isDownloading = true);
     try {
-      // 1. Capture pure authentic local state before overwriting DB
-      final wasLoggedInBeforeRestore = ref.read(isLoggedInProvider);
-      final wasLocalModeBeforeRestore = ref.read(localModeProvider);
+      final identity = _captureSessionIdentity();
 
       final stats =
           await ref.read(jsonDataServiceProvider).restoreFromPackage(bytes);
 
       if (mounted) {
-        // 2. Prevent the ZIP DB payload from corrupting our auth session
-        await ref
-            .read(storageServiceProvider)
-            .setAuthFlag(wasLoggedInBeforeRestore);
-
-        // 3. Keep localMode persistent
-        ref.read(localModeProvider.notifier).value = wasLocalModeBeforeRestore;
-
-        ref.invalidate(accountsProvider);
-        ref.invalidate(transactionsProvider);
-        ref.invalidate(loansProvider);
-        ref.invalidate(recurringTransactionsProvider);
-        ref.invalidate(profilesProvider);
-        ref.invalidate(monthlyBudgetProvider);
-        ref.invalidate(currencyProvider);
-        ref.invalidate(categoriesProvider);
-        ref.invalidate(dashboardConfigProvider);
-        ref.read(txnsSinceBackupProvider.notifier).reset();
-
-        final summaryItems =
-            stats.entries.map((e) => "${e.key}: ${e.value}").toList();
-
-        if (!mounted) return;
-
-        await showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-                  title:
-                      Text(AppLocalizations.of(context)!.restoreCompleteTitle),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(AppLocalizations.of(context)!.restoredItemsLabel,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      ...summaryItems.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(item),
-                          )),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                        // coverage:ignore-start
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          if (!ref.read(isLoggedInProvider)) {
-                            ref.read(localModeProvider.notifier).value = true;
-                            // coverage:ignore-end
-                          }
-                          // coverage:ignore-start
-                          Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const AuthWrapper()),
-                              (route) => false);
-                          // coverage:ignore-end
-                        },
-                        child: Text(AppLocalizations.of(ctx)!.okReloadButton))
-                  ],
-                ));
+        await _applySessionIdentity(identity);
+        _invalidateSettingsProviders();
+        await _showRestoreSuccessDialog(stats);
       }
     } catch (e) {
       // coverage:ignore-start

@@ -588,7 +588,7 @@ void main() {
     await tester.pump(const Duration(seconds: 6)); // Past boot grace
 
     // Now emit the user
-
+    when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
 
     await tester.pump();
@@ -635,7 +635,7 @@ void main() {
     await tester.pump(const Duration(seconds: 6)); // Past boot grace
 
     // Emit the user to trigger auto restore
-
+    when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
 
     await tester.pump();
@@ -770,6 +770,7 @@ void main() {
     ));
 
     await tester.pump(const Duration(seconds: 6));
+    when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
