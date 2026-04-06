@@ -2,7 +2,7 @@
 
 ## Test Coverage Summary
 > [!IMPORTANT]
-> **Generated on: 2026-04-06T06:39:05.835569**
+> **Generated on: 2026-04-06T08:10:42.649821**
 > based on `lcov.info` from `flutter test --coverage`
 
 ### **Total Project Coverage: 94.0%**
@@ -10,7 +10,7 @@
 | File | Coverage % | Hit / Total | Status |
 | :--- | :---: | :---: | :---: |
 | services/ad_service.dart | 71.4% | 5/7 | WARN |
-| widgets/auth_wrapper.dart | 78.4% | 251/320 | WARN |
+| widgets/auth_wrapper.dart | 78.2% | 248/317 | WARN |
 | screens/investments_screen.dart | 83.0% | 259/312 | PASS |
 | screens/taxes/tax_dashboard_screen.dart | 87.7% | 372/424 | PASS |
 | services/auth_service.dart | 88.6% | 70/79 | PASS |
@@ -50,12 +50,12 @@
 | screens/loan_payment_dialog.dart | 96.2% | 127/132 | PASS |
 | screens/update_billing_cycle_dialog.dart | 96.2% | 128/133 | PASS |
 | utils/recurrence_utils.dart | 96.5% | 109/113 | PASS |
+| services/cloud_sync_service.dart | 96.5% | 300/311 | PASS |
 | utils/transaction_filter_utils.dart | 96.5% | 55/57 | PASS |
 | services/file_service.dart | 96.6% | 28/29 | PASS |
 | widgets/bell_animation.dart | 96.6% | 28/29 | PASS |
 | providers/sum_tracker_provider.dart | 96.7% | 88/91 | PASS |
 | screens/add_investment_screen.dart | 96.7% | 178/184 | PASS |
-| services/cloud_sync_service.dart | 96.8% | 298/308 | PASS |
 | widgets/region_selection_dialog.dart | 96.9% | 31/32 | PASS |
 | screens/loan/loan_part_payment_dialog.dart | 97.0% | 64/66 | PASS |
 | screens/loan/loan_header_card.dart | 97.4% | 113/116 | PASS |

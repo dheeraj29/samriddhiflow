@@ -97,6 +97,8 @@ void main() {
       when(() => mockCloudStorage.getActiveSessionId('test-uid'))
           .thenAnswer((_) async => 'correct-uuid');
       when(() => mockStorage.getSessionId()).thenReturn('correct-uuid');
+      when(() => mockCloudStorage.setActiveSessionId(any(), any()))
+          .thenAnswer((_) async {});
 
       final cloudSync = CloudSyncService(
         mockCloudStorage,
@@ -109,8 +111,9 @@ void main() {
       // Attempt restoration
       await cloudSync.restoreFromCloud();
 
-      // 1. In _verifySession (Pre-fetch)
-      // 2. In updateActiveSessionId (Post-restore claim)
+      // _syncSessionBeforeRestore skips (localId exists) →
+      // 1. _verifySession (verification)
+      // 2. updateActiveSessionId (post-restore claim)
       verify(() => mockUser.getIdToken(true)).called(2);
       verify(() => mockCloudStorage.getActiveSessionId('test-uid')).called(1);
     });
@@ -145,9 +148,9 @@ void main() {
 
       await cloudSync.restoreFromCloud();
 
-      // 1. updateActiveSessionId (Proactive)
-      // 2. _verifySession (Verification)
-      // 3. updateActiveSessionId (Post-restore claim)
+      // 1. _syncSessionBeforeRestore (proactive claim)
+      // 2. _verifySession (verification)
+      // 3. updateActiveSessionId (post-restore claim)
       verify(() => mockUser.getIdToken(true)).called(3);
       verify(() => mockCloudStorage.getActiveSessionId('test-uid')).called(1);
     });

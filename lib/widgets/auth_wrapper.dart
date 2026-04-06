@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:uuid/uuid.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../utils/connectivity_platform.dart';
@@ -335,15 +334,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   /// Claims a new session UUID when the user signs in for the first time.
   Future<void> _claimSessionOnNewSignIn(
       AsyncValue<User?>? previous, AsyncValue<User?> next) async {
-    if (previous?.value != null || next.value == null) return;
-    final storage = ref.read(storageServiceProvider);
-    var sessionId = storage.getSessionId();
-    if (sessionId == null) {
-      sessionId = const Uuid().v4(); // coverage:ignore-line
-      await storage.setSessionId(sessionId); // coverage:ignore-line
-    }
-    // Optimization: Don't hit Firestore on startup.
-    // Defer session claim to syncToCloud/restoreFromCloud.
+    // No-op: session creation is deferred to sync/restore flows.
+    // Creating a local UUID here without pushing to cloud would cause
+    // _syncSessionBeforeRestore to skip the cloud push and poison
+    // isNewDevice checks across AuthWrapper and SettingsScreen.
   }
 
   bool _shouldSkipAuthProcessing(dynamic authService) {

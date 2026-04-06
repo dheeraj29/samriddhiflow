@@ -117,6 +117,8 @@ void main() {
     when(() => mockStorageService.setCloudDatabaseRegion(any()))
         .thenAnswer((_) async {});
     when(() => mockSubscriptionService.isCloudSyncEnabled()).thenReturn(true);
+    when(() => mockCloudStorage.setActiveSessionId(any(), any()))
+        .thenAnswer((_) async {});
 
     cloudSyncService = CloudSyncService(mockCloudStorage, mockStorageService,
         mockTaxConfigService, mockSubscriptionService,
@@ -706,28 +708,71 @@ void main() {
           .called(1);
     });
 
-    test('restoreFromCloud throws Exception if local session is missing',
+    test('restoreFromCloud creates session if local session is missing',
         () async {
-      // Local session is null initially
-      when(() => mockStorageService.getSessionId()).thenReturn(null);
+      // Track session state dynamically
+      String? currentSessionId;
+      when(() => mockStorageService.getSessionId())
+          .thenAnswer((_) => currentSessionId);
+      when(() => mockStorageService.setSessionId(any()))
+          .thenAnswer((inv) async {
+        currentSessionId = inv.positionalArguments[0] as String;
+      });
 
-      // cloud status is fine
       final cloudData = {'settings': {}};
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudData);
       when(() => mockCloudStorage.getActiveSessionId(any()))
-          .thenAnswer((_) async => null);
+          .thenAnswer((_) async => currentSessionId);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() => mockStorageService.saveSettings(any()))
+          .thenAnswer((_) async {});
 
-      // Should throw Exception because local session is null
-      expect(() => cloudSyncService.restoreFromCloud(), throwsException);
+      // Should NOT throw — session is created on-the-fly
+      await cloudSyncService.restoreFromCloud();
+
+      expect(currentSessionId, isNotNull);
+      verify(() => mockStorageService.setSessionId(any()))
+          .called(greaterThanOrEqualTo(1));
+      verify(() => mockCloudStorage.setActiveSessionId('user123', any()))
+          .called(greaterThanOrEqualTo(1));
     });
 
-    test('syncToCloud throws Exception if local session is missing', () async {
-      // Local session is null initially
-      when(() => mockStorageService.getSessionId()).thenReturn(null);
+    test('syncToCloud creates session if local session is missing', () async {
+      // Track session state dynamically
+      String? currentSessionId;
+      when(() => mockStorageService.getSessionId())
+          .thenAnswer((_) => currentSessionId);
+      when(() => mockStorageService.setSessionId(any()))
+          .thenAnswer((inv) async {
+        currentSessionId = inv.positionalArguments[0] as String;
+      });
+      when(() => mockCloudStorage.getActiveSessionId(any()))
+          .thenAnswer((_) async => currentSessionId);
+      when(() => mockStorageService.getAllAccounts()).thenReturn([]);
+      when(() => mockStorageService.getAllTransactions()).thenReturn([]);
+      when(() => mockStorageService.getAllLoans()).thenReturn([]);
+      when(() => mockStorageService.getAllRecurring()).thenReturn([]);
+      when(() => mockStorageService.getAllCategories()).thenReturn([]);
+      when(() => mockStorageService.getProfiles()).thenReturn([]);
+      when(() => mockStorageService.getAllSettings()).thenReturn({});
+      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getAllInvestments()).thenReturn([]);
+      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockCloudStorage.syncData(any(), any()))
+          .thenAnswer((_) async {});
 
-      // Should throw Exception because local session is null
-      expect(() => cloudSyncService.syncToCloud(), throwsException);
+      // Should NOT throw — session is created on-the-fly
+      await cloudSyncService.syncToCloud();
+
+      expect(currentSessionId, isNotNull);
+      verify(() => mockStorageService.setSessionId(any()))
+          .called(greaterThanOrEqualTo(1));
+      verify(() => mockCloudStorage.setActiveSessionId('user123', any()))
+          .called(greaterThanOrEqualTo(1));
     });
   });
 }
