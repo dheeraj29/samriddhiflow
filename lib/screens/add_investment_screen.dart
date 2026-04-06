@@ -33,6 +33,11 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
   int _thresholdYears = 1;
   bool _isRecurringEnabled = false;
   bool _isRecurringPaused = false;
+  late TextEditingController _nameCtrl;
+  late TextEditingController _codeNameCtrl;
+  // These will be used to sync with Autocomplete's internal controllers
+  TextEditingController? _nameAutocompleteCtrl;
+  TextEditingController? _codeNameAutocompleteCtrl;
   double? _recurringAmount;
   DateTime? _nextRecurringDate;
 
@@ -65,6 +70,15 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
       _isRecurringEnabled = false;
       _isRecurringPaused = false;
     }
+    _nameCtrl = TextEditingController(text: _name);
+    _codeNameCtrl = TextEditingController(text: _codeName ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _codeNameCtrl.dispose();
+    super.dispose();
   }
 
   bool get _showCodeName =>
@@ -74,56 +88,192 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
       _type != InvestmentType.otherFixed &&
       _type != InvestmentType.pf;
 
-  // coverage:ignore-start
-  void _save() {
+  Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
+      final l10n = AppLocalizations.of(context)!;
+      final theme = Theme.of(context);
       _formKey.currentState!.save();
+
+      final newCode =
+          _codeNameCtrl.text.trim().isEmpty ? null : _codeNameCtrl.text.trim();
+      final oldItem = widget.investmentToEdit;
+      final oldCode = oldItem?.codeName;
+
+      // 1. Handle stock code rename in bulk
+      await _handleBulkCodeRename(newCode, oldCode, oldItem?.id, l10n, theme);
+
+      if (!mounted) return;
+
+      // 2. Handle valuation sync across matching tickers
+      final finalPrice = _currentPrice ?? 0.0;
+      await _handleBulkValuationSync(
+          newCode, oldItem?.id, finalPrice, l10n, theme);
+
+      if (!mounted) return;
+
+      // Final save and exit
       final investment = _prepareInvestment();
-      ref.read(investmentsProvider.notifier).saveInvestment(investment);
-      Navigator.pop(context);
-      // coverage:ignore-end
+      await ref.read(investmentsProvider.notifier).saveInvestment(investment);
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
-  // coverage:ignore-start
+  Future<void> _handleBulkCodeRename(String? newCode, String? oldCode,
+      String? currentId, AppLocalizations l10n, ThemeData theme) async {
+    if (currentId == null ||
+        oldCode == null ||
+        oldCode.isEmpty ||
+        newCode == oldCode ||
+        newCode == null) {
+      return;
+    }
+
+    final otherMatching = ref
+        .read(investmentsProvider)
+        .where((inv) => inv.id != currentId && inv.codeName == oldCode)
+        .toList();
+
+    if (otherMatching.isEmpty) return;
+
+    final proceedBulk = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.bulkUpdateCodeTitle),
+        content: Text(
+            l10n.bulkUpdateCodeMessage(otherMatching.length, oldCode, newCode)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+            child: Text(l10n.updateOnlyThisAction),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary),
+            child: Text(l10n.updateAllAction),
+          ),
+        ],
+      ),
+    );
+
+    if (proceedBulk == true) {
+      await ref
+          .read(investmentsProvider.notifier)
+          .updateCodeNameBulk(oldCode, newCode);
+    }
+  }
+
+  Future<void> _handleBulkValuationSync(String? newCode, String? currentId,
+      double finalPrice, AppLocalizations l10n, ThemeData theme) async {
+    if (newCode == null || newCode.isEmpty || !mounted) return;
+
+    final otherPriceMatching = ref
+        .read(investmentsProvider)
+        .where((inv) =>
+            inv.id != currentId &&
+            inv.codeName == newCode &&
+            inv.currentPrice != finalPrice)
+        .toList();
+
+    if (otherPriceMatching.isEmpty) return;
+
+    final proceedValSync = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.bulkUpdateValuationTitle),
+        content: Text(l10n.bulkUpdateValuationMessage(
+            newCode, otherPriceMatching.length, finalPrice)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+            child: Text(l10n.updateOnlyThisAction),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary),
+            child: Text(l10n.updateAllAction),
+          ),
+        ],
+      ),
+    );
+
+    if (proceedValSync == true) {
+      await ref
+          .read(investmentsProvider.notifier)
+          .updateValuationBulk(newCode, finalPrice);
+    }
+  }
+
   Investment _prepareInvestment() {
+    final nameVal = _nameCtrl.text;
+    final codeNameVal = _codeNameCtrl.text.isEmpty ? null : _codeNameCtrl.text;
+    final isMutualFund = _type == InvestmentType.mutualFund;
+
+    final baseProps = {
+      'name': nameVal,
+      'codeName': codeNameVal,
+      'type': _type,
+      'mfCategory': isMutualFund ? _mfCategory : null, // coverage:ignore-line
+      'acquisitionDate': _acquisitionDate,
+      'acquisitionPrice': _acquisitionPrice,
+      'quantity': _showQuantity ? _quantity : 1.0,
+      'currentPrice': _currentPrice ??
+          (widget.investmentToEdit != null
+              ? _acquisitionPrice
+              : 0.0), // coverage:ignore-line
+      'fixedInterestRate': _fixedInterestRate,
+      'customLongTermThresholdYears': _thresholdYears,
+      'isRecurringEnabled': _isRecurringEnabled,
+      'isRecurringPaused': _isRecurringPaused,
+      'recurringAmount': _isRecurringEnabled ? _recurringAmount : null,
+      'nextRecurringDate': _isRecurringEnabled ? _nextRecurringDate : null,
+    };
+
     if (widget.investmentToEdit != null) {
-      return widget.investmentToEdit!.copyWith(
-        name: _name,
-        codeName: _codeName,
-        type: _type,
-        mfCategory: _type == InvestmentType.mutualFund ? _mfCategory : null,
-        acquisitionDate: _acquisitionDate,
-        acquisitionPrice: _acquisitionPrice,
-        quantity: _showQuantity ? _quantity : 1.0,
-        currentPrice: _currentPrice ?? _acquisitionPrice,
-        fixedInterestRate: _fixedInterestRate,
-        customLongTermThresholdYears: _thresholdYears,
-        isRecurringEnabled: _isRecurringEnabled,
-        isRecurringPaused: _isRecurringPaused,
-        recurringAmount: _isRecurringEnabled ? _recurringAmount : null,
-        nextRecurringDate: _isRecurringEnabled ? _nextRecurringDate : null,
-        // coverage:ignore-end
+      final inv = widget.investmentToEdit!;
+      return inv.copyWith(
+        name: baseProps['name'] as String,
+        codeName: baseProps['codeName'] as String?,
+        type: baseProps['type'] as InvestmentType,
+        mfCategory: baseProps['mfCategory'] as MutualFundCategory?,
+        acquisitionDate: baseProps['acquisitionDate'] as DateTime,
+        acquisitionPrice: baseProps['acquisitionPrice'] as double,
+        quantity: baseProps['quantity'] as double,
+        currentPrice: baseProps['currentPrice'] as double,
+        fixedInterestRate: baseProps['fixedInterestRate'] as double?,
+        customLongTermThresholdYears:
+            baseProps['customLongTermThresholdYears'] as int,
+        isRecurringEnabled: baseProps['isRecurringEnabled'] as bool,
+        isRecurringPaused: baseProps['isRecurringPaused'] as bool,
+        recurringAmount: baseProps['recurringAmount'] as double?,
+        nextRecurringDate: baseProps['nextRecurringDate'] as DateTime?,
       );
     }
 
     // coverage:ignore-start
     return Investment.create(
-      name: _name,
-      codeName: _codeName,
-      type: _type,
-      mfCategory: _type == InvestmentType.mutualFund ? _mfCategory : null,
-      acquisitionDate: _acquisitionDate,
-      acquisitionPrice: _acquisitionPrice,
-      quantity: _showQuantity ? _quantity : 1.0,
-      currentPrice: _currentPrice ?? 0.0,
-      fixedInterestRate: _fixedInterestRate,
-      customLongTermThresholdYears: _thresholdYears,
+      name: baseProps['name'] as String,
+      codeName: baseProps['codeName'] as String?,
+      type: baseProps['type'] as InvestmentType,
+      mfCategory: baseProps['mfCategory'] as MutualFundCategory?,
+      acquisitionDate: baseProps['acquisitionDate'] as DateTime,
+      acquisitionPrice: baseProps['acquisitionPrice'] as double,
+      quantity: baseProps['quantity'] as double,
+      currentPrice: baseProps['currentPrice'] as double,
+      fixedInterestRate: baseProps['fixedInterestRate'] as double?,
+      // coverage:ignore-end
+      customLongTermThresholdYears:
+          // coverage:ignore-start
+          baseProps['customLongTermThresholdYears'] as int,
       profileId: ref.read(activeProfileIdProvider),
-      isRecurringEnabled: _isRecurringEnabled,
-      isRecurringPaused: _isRecurringPaused,
-      recurringAmount: _isRecurringEnabled ? _recurringAmount : null,
-      nextRecurringDate: _isRecurringEnabled ? _nextRecurringDate : null,
+      isRecurringEnabled: baseProps['isRecurringEnabled'] as bool,
+      isRecurringPaused: baseProps['isRecurringPaused'] as bool,
+      recurringAmount: baseProps['recurringAmount'] as double?,
+      nextRecurringDate: baseProps['nextRecurringDate'] as DateTime?,
       // coverage:ignore-end
     );
   }
@@ -167,16 +317,109 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
   }
 
   Widget _buildBasicInfoFields(AppLocalizations l10n) {
-    return TextFormField(
-      initialValue: _name,
-      decoration: InputDecoration(
-        labelText: l10n.investmentName,
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.label_important_outline),
+    final suggestions = ref
+        .watch(investmentsProvider)
+        .map((e) => e.name)
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList();
+
+    return _buildAutocompleteField(
+      label: l10n.investmentName,
+      icon: Icons.label_important_outline,
+      initialValue: _nameCtrl.text,
+      suggestions: suggestions,
+      onSelected: (val) {
+        _nameCtrl.text = val;
+        _nameAutocompleteCtrl?.text = val;
+        _autoFillTickerFromName(val);
+      },
+      onChanged: (v) => _nameCtrl.text = v,
+      validator: (v) => v!.isEmpty ? l10n.requiredError : null,
+      onControllerCreated: (c) => _nameAutocompleteCtrl = c,
+    );
+  }
+
+  void _autoFillTickerFromName(String name) {
+    final existing = ref
+        .read(investmentsProvider)
+        .where((e) => e.name == name && e.codeName != null)
+        .map((e) => e.codeName!)
+        .toSet();
+    if (existing.length == 1) {
+      final ticker = existing.first;
+      _codeNameCtrl.text = ticker;
+      _codeNameAutocompleteCtrl?.text = ticker;
+    }
+  }
+
+  Widget _buildAutocompleteField({
+    required String label,
+    required IconData icon,
+    required String initialValue,
+    required List<String> suggestions,
+    required Function(String) onSelected,
+    required Function(String) onChanged,
+    String? Function(String?)? validator,
+    required Function(TextEditingController) onControllerCreated,
+  }) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return Autocomplete<String>(
+        optionsBuilder: (TextEditingValue value) {
+          if (value.text.isEmpty) return const Iterable<String>.empty();
+          return suggestions
+              .where((s) => s.toLowerCase().contains(value.text.toLowerCase()));
+        },
+        fieldViewBuilder: (ctx, controller, focus, onSubmitted) {
+          onControllerCreated(controller);
+          if (controller.text.isEmpty && initialValue.isNotEmpty) {
+            controller.text = initialValue;
+          }
+          return TextFormField(
+            controller: controller,
+            focusNode: focus,
+            decoration: InputDecoration(
+              labelText: label,
+              border: const OutlineInputBorder(),
+              prefixIcon: Icon(icon),
+            ),
+            validator: validator,
+            onChanged: onChanged,
+          );
+        },
+        optionsViewBuilder: (ctx, onSelectedOpt, options) {
+          return _buildAutocompleteOptions(
+              ctx, onSelectedOpt, options, constraints.maxWidth);
+        },
+        onSelected: onSelected,
+      );
+    });
+  }
+
+  Widget _buildAutocompleteOptions(BuildContext context,
+      Function(String) onSelected, Iterable<String> options, double width) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: width,
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: ListView.builder(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (ctx, i) {
+              final opt = options.elementAt(i);
+              return ListTile(
+                title: Text(opt),
+                onTap: () => onSelected(opt),
+              );
+            },
+          ),
+        ),
       ),
-      validator: (v) =>
-          v!.isEmpty ? l10n.requiredError : null, // coverage:ignore-line
-      onSaved: (v) => _name = v!, // coverage:ignore-line
     );
   }
 
@@ -184,42 +427,87 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
     return Column(
       children: [
         if (_showCodeName) ...[
-          TextFormField(
-            initialValue: _codeName,
+          _buildTickerAutocomplete(l10n),
+          const SizedBox(height: 16),
+        ],
+        if (_type == InvestmentType.mutualFund) ...[
+          _buildMFCategoryDropdown(l10n), // coverage:ignore-line
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTickerAutocomplete(AppLocalizations l10n) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return Autocomplete<String>(
+        optionsBuilder: (TextEditingValue value) {
+          final currentName = _nameCtrl.text.toLowerCase();
+          final allInvestments = ref.read(investmentsProvider);
+
+          final matchedTickers = allInvestments
+              .where((e) =>
+                  e.name.toLowerCase() == currentName && e.codeName != null)
+              .map((e) => e.codeName!)
+              .toSet();
+
+          final otherTickers = allInvestments
+              .where((e) => e.codeName != null)
+              .map((e) => e.codeName!)
+              .toSet();
+
+          final combined = {...matchedTickers, ...otherTickers}.toList();
+          return value.text.isEmpty
+              ? matchedTickers
+              : combined.where(
+                  (s) => s.toLowerCase().contains(value.text.toLowerCase()));
+        },
+        fieldViewBuilder: (ctx, controller, focus, onSubmitted) {
+          _codeNameAutocompleteCtrl = controller;
+          if (controller.text.isEmpty && _codeNameCtrl.text.isNotEmpty) {
+            controller.text = _codeNameCtrl.text;
+          }
+          return TextFormField(
+            controller: controller,
+            focusNode: focus,
             decoration: InputDecoration(
               labelText: l10n.investmentCodeName,
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.tag),
             ),
-            onSaved: (v) => _codeName = v, // coverage:ignore-line
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_type == InvestmentType.mutualFund) ...[
+            onChanged: (v) => _codeNameCtrl.text = v,
+          );
+        },
+        // coverage:ignore-start
+        optionsViewBuilder: (ctx, onSelected, options) =>
+            _buildAutocompleteOptions(
+                ctx, onSelected, options, constraints.maxWidth),
+        onSelected: (val) => _codeNameCtrl.text = val,
+        // coverage:ignore-end
+      );
+    });
+  }
+
+  // coverage:ignore-start
+  Widget _buildMFCategoryDropdown(AppLocalizations l10n) {
+    return DropdownButtonFormField<MutualFundCategory>(
+      initialValue: _mfCategory,
+      decoration: InputDecoration(
+        labelText: l10n.mfCategoryLabel,
+        // coverage:ignore-end
+        border: const OutlineInputBorder(),
+      ),
+      items: MutualFundCategory.values
+          .map((c) => DropdownMenuItem(
+                // coverage:ignore-line
+                value: c,
+                child: Text(c.localizedName(l10n)), // coverage:ignore-line
+              ))
           // coverage:ignore-start
-          DropdownButtonFormField<MutualFundCategory>(
-            initialValue: _mfCategory,
-            decoration: InputDecoration(
-              labelText: l10n.mfCategoryLabel,
-              // coverage:ignore-end
-              border: const OutlineInputBorder(),
-            ),
-            items: MutualFundCategory.values
-                .map((c) => DropdownMenuItem(
-                      // coverage:ignore-line
-                      value: c,
-                      child:
-                          Text(c.localizedName(l10n)), // coverage:ignore-line
-                    ))
-                // coverage:ignore-start
-                .toList(),
-            onChanged: (v) => setState(() => _mfCategory = v),
-            validator: (v) => v == null ? l10n.requiredError : null,
-            // coverage:ignore-end
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
+          .toList(),
+      onChanged: (v) => setState(() => _mfCategory = v),
+      validator: (v) => v == null ? l10n.requiredError : null,
+      // coverage:ignore-end
     );
   }
 
@@ -252,114 +540,107 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
   Widget _buildFinancialFields(AppLocalizations l10n, String currencySymbol) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: _acquisitionPrice.toString(),
-                decoration: InputDecoration(
-                  labelText: l10n.acquisitionPriceLabel,
-                  border: const OutlineInputBorder(),
-                  prefixText: '$currencySymbol ',
-                  isDense: true,
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-                ],
-                // coverage:ignore-start
-                onSaved: (v) =>
-                    _acquisitionPrice = double.tryParse(v ?? '') ?? 0,
-                validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
-                    ? l10n.invalidPriceError
-                    // coverage:ignore-end
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: (_currentPrice ?? _acquisitionPrice).toString(),
-                decoration: InputDecoration(
-                  labelText: l10n.currentPriceLabel,
-                  border: const OutlineInputBorder(),
-                  prefixText: '$currencySymbol ',
-                  isDense: true,
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-                ],
-                // coverage:ignore-start
-                onSaved: (v) => _currentPrice = double.tryParse(v ?? ''),
-                validator: (v) => (double.tryParse(v ?? '') ?? 0) < 0
-                    ? l10n.invalidPriceError
-                    // coverage:ignore-end
-                    : null,
-              ),
-            ),
-            if (_showQuantity) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  initialValue: _quantity.toString(),
-                  decoration: InputDecoration(
-                    labelText: l10n.quantityLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-                  ],
-                  // coverage:ignore-start
-                  onSaved: (v) => _quantity = double.tryParse(v ?? '') ?? 1,
-                  validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
-                      ? l10n.invalidQuantityError
-                      // coverage:ignore-end
-                      : null,
-                ),
-              ),
-            ],
-          ],
-        ),
+        _buildPriceAndQuantityRow(l10n, currencySymbol),
         const SizedBox(height: 16),
         if (!_showQuantity) ...[
-          TextFormField(
-            initialValue: _fixedInterestRate?.toString(),
-            decoration: InputDecoration(
-              labelText: l10n.interestRateLabel,
-              helperText: l10n.notAutoCalculated,
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.percent),
-              isDense: true,
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-            ],
-            onSaved: (v) => _fixedInterestRate =
-                double.tryParse(v ?? ''), // coverage:ignore-line
-          ),
+          _buildInterestRateField(l10n),
           const SizedBox(height: 16),
         ],
-        TextFormField(
-          initialValue: _thresholdYears.toString(),
-          decoration: InputDecoration(
-            labelText: l10n.thresholdLabel,
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.timer_outlined),
-            isDense: true,
-          ),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onSaved: (v) => _thresholdYears =
-              int.tryParse(v ?? '1') ?? 1, // coverage:ignore-line
-        ),
+        _buildThresholdField(l10n),
       ],
+    );
+  }
+
+  Widget _buildPriceAndQuantityRow(
+      AppLocalizations l10n, String currencySymbol) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildNumericField(
+            initialValue: _acquisitionPrice.toString(),
+            label: l10n.acquisitionPriceLabel,
+            prefixText: '$currencySymbol ',
+            onSaved: (v) => _acquisitionPrice = double.tryParse(v ?? '') ?? 0,
+            validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+                ? l10n.invalidPriceError // coverage:ignore-line
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildNumericField(
+            initialValue: (_currentPrice ?? _acquisitionPrice).toString(),
+            label: l10n.currentPriceLabel,
+            prefixText: '$currencySymbol ',
+            onSaved: (v) => _currentPrice = double.tryParse(v ?? ''),
+            validator: (v) => (double.tryParse(v ?? '') ?? 0) < 0
+                ? l10n.invalidPriceError // coverage:ignore-line
+                : null,
+          ),
+        ),
+        if (_showQuantity) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildNumericField(
+              initialValue: _quantity.toString(),
+              label: l10n.quantityLabel,
+              onSaved: (v) => _quantity = double.tryParse(v ?? '') ?? 1,
+              validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0
+                  ? l10n.invalidQuantityError // coverage:ignore-line
+                  : null,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNumericField({
+    required String initialValue,
+    required String label,
+    String? prefixText,
+    required void Function(String?) onSaved,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      initialValue: initialValue,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixText: prefixText,
+        isDense: true,
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegexUtils.amountExp)
+      ],
+      onSaved: onSaved,
+      validator: validator,
+    );
+  }
+
+  Widget _buildInterestRateField(AppLocalizations l10n) {
+    return _buildNumericField(
+      initialValue: _fixedInterestRate?.toString() ?? '',
+      label: l10n.interestRateLabel,
+      prefixText: '% ',
+      onSaved: (v) =>
+          _fixedInterestRate = double.tryParse(v ?? ''), // coverage:ignore-line
+    );
+  }
+
+  Widget _buildThresholdField(AppLocalizations l10n) {
+    return TextFormField(
+      initialValue: _thresholdYears.toString(),
+      decoration: InputDecoration(
+        labelText: l10n.thresholdLabel,
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.timer_outlined),
+        isDense: true,
+      ),
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onSaved: (v) => _thresholdYears = int.tryParse(v ?? '1') ?? 1,
     );
   }
 

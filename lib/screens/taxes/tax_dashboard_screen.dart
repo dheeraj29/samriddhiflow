@@ -1067,7 +1067,8 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             // coverage:ignore-start
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const TaxRulesScreen()),
+              MaterialPageRoute(
+                  builder: (_) => TaxRulesScreen(initialYear: _selectedYear)),
               // coverage:ignore-end
             ),
           ),

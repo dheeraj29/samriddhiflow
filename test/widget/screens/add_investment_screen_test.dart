@@ -12,9 +12,10 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 class MockStorageService extends Mock implements StorageService {}
 
 class MockInvestmentsNotifier extends InvestmentsNotifier {
-  MockInvestmentsNotifier();
+  final List<Investment> _investments;
+  MockInvestmentsNotifier([this._investments = const []]);
   @override
-  List<Investment> build() => [];
+  List<Investment> build() => _investments;
   @override
   Future<void> saveInvestment(Investment inv) async {}
 }
@@ -41,11 +42,13 @@ void main() {
     mockStorage = MockStorageService();
   });
 
-  Widget createTestWidget({Investment? investmentToEdit}) {
+  Widget createTestWidget(
+      {Investment? investmentToEdit, List<Investment> investments = const []}) {
     return ProviderScope(
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorage),
-        investmentsProvider.overrideWith(() => MockInvestmentsNotifier()),
+        investmentsProvider
+            .overrideWith(() => MockInvestmentsNotifier(investments)),
         activeProfileIdProvider.overrideWith(() => FakeProfileIdNotifier()),
       ],
       child: MaterialApp(
@@ -140,5 +143,40 @@ void main() {
     // Check if configuration fields appear
     expect(find.textContaining('Amount'), findsWidgets);
     expect(find.textContaining('Date'), findsWidgets);
+  });
+
+  testWidgets('Autocomplete suggestions and auto-fill logic', (tester) async {
+    final existing = Investment.create(
+      name: 'Reliance',
+      codeName: 'RELIANCE.NS',
+      type: InvestmentType.stock,
+      acquisitionDate: DateTime(2022),
+      acquisitionPrice: 2000,
+      quantity: 1,
+      profileId: 'default',
+    );
+
+    await tester.pumpWidget(createTestWidget(investments: [existing]));
+    await tester.pumpAndSettle();
+
+    // Type 'Rel' in Name field
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Investment Name'), 'Rel');
+    await tester.pump(const Duration(milliseconds: 500)); // Autocomplete delay
+    await tester.pumpAndSettle();
+
+    // Verify 'Reliance' suggestion appears
+    expect(find.text('Reliance'),
+        findsWidgets); // Both in text field and suggestion list
+
+    // Tap the suggestion in the list
+    // The suggestion list is rendered in an Overlay/Portal.
+    // We look for the one that is NOT the text field (which usually is a descendant of TextFormField)
+    final suggestion = find.text('Reliance').last;
+    await tester.tap(suggestion);
+    await tester.pumpAndSettle();
+
+    // Verify Ticker is auto-filled
+    expect(find.text('RELIANCE.NS'), findsOneWidget);
   });
 }

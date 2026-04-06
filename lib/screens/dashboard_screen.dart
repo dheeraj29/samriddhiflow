@@ -984,7 +984,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.add_circle_outline,
                 AppLocalizations.of(context)!.incomeAction, Colors.green),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1001,7 +1000,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.swap_horiz,
                 AppLocalizations.of(context)!.transferAction, Colors.blue),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1018,7 +1016,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.payment,
                 AppLocalizations.of(context)!.payBillAction, Colors.orange),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1030,7 +1027,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.account_balance,
                 AppLocalizations.of(context)!.loansAction, Colors.purple),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1041,7 +1037,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.receipt_long,
                 AppLocalizations.of(context)!.taxesAction, Colors.blueGrey),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1057,7 +1052,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildActionItem(context, Icons.handshake,
                 AppLocalizations.of(context)!.lendingAction, Colors.teal),
           ),
-          const SizedBox(width: 16),
           InkWell(
             // coverage:ignore-start
             onTap: () {
@@ -1322,6 +1316,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Icons.verified_user_outlined,
                 AppLocalizations.of(context)!.dataControlTitle,
                 AppLocalizations.of(context)!.dataControlDesc,
+              ),
+              _buildPolicyItem(
+                Icons.devices_other,
+                AppLocalizations.of(context)!.singleDeviceAccessTitle,
+                AppLocalizations.of(context)!.singleDeviceAccessDesc,
               ),
               const SizedBox(height: 16),
               Center(
