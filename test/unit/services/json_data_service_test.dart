@@ -98,10 +98,10 @@ void main() {
     when(() => mockStorageService.getAllCategories()).thenReturn([]);
     when(() => mockStorageService.getProfiles()).thenReturn([]);
     when(() => mockStorageService.getAllSettings()).thenReturn({});
-    when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
-    when(() => mockTaxConfigService.getAllRules()).thenReturn({});
-    when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-    when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+    when(() => mockStorageService.getInsurancePoliciesGlobal()).thenReturn([]);
+    when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
+    when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
+    when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
     when(() => mockStorageService.getAllInvestments()).thenReturn([]);
 
     // Run
@@ -185,7 +185,9 @@ void main() {
 
     final zipBytes = ZipEncoder().encode(archive);
 
-    when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+    when(() =>
+            mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+        .thenAnswer((_) async {});
     when(() => mockStorageService.saveProfile(any())).thenAnswer((_) async {});
     when(() => mockStorageService.addCategory(any(),
         isRestore: any(named: 'isRestore'))).thenAnswer((_) async {});
@@ -198,11 +200,11 @@ void main() {
     when(() => mockStorageService.saveRecurringTransaction(any()))
         .thenAnswer((_) async {});
     when(() => mockStorageService.saveSettings(any())).thenAnswer((_) async {});
-    when(() => mockStorageService.saveInsurancePolicies(any()))
+    when(() => mockStorageService.saveInsurancePoliciesGlobal(any()))
         .thenAnswer((_) async {});
-    when(() => mockTaxConfigService.restoreAllRules(any()))
+    when(() => mockTaxConfigService.restoreAllRulesGlobal(any()))
         .thenAnswer((_) async {});
-    when(() => mockStorageService.saveTaxYearData(any()))
+    when(() => mockStorageService.saveTaxYearDataGlobal(any()))
         .thenAnswer((_) async {});
     when(() => mockStorageService.saveLendingRecord(any()))
         .thenAnswer((_) async {});
@@ -213,7 +215,9 @@ void main() {
     final stats = await jsonDataService.restoreFromPackage(zipBytes);
 
     // Verify
-    verify(() => mockStorageService.clearAllData()).called(1);
+    verify(() =>
+            mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+        .called(1);
     verify(() => mockStorageService.saveProfile(any())).called(1);
     verify(() => mockStorageService.addCategory(any(), isRestore: true))
         .called(1);
@@ -245,7 +249,9 @@ void main() {
     });
 
     final zipBytes = ZipEncoder().encode(archive);
-    when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+    when(() =>
+            mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+        .thenAnswer((_) async {});
 
     Map<String, dynamic>? savedSettings;
     when(() => mockStorageService.saveSettings(any()))
@@ -290,10 +296,10 @@ void main() {
     when(() => mockStorageService.getProfiles()).thenReturn([]);
     when(() => mockStorageService.getAllSettings())
         .thenReturn({'inf': double.negativeInfinity});
-    when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
-    when(() => mockTaxConfigService.getAllRules()).thenReturn({});
-    when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-    when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+    when(() => mockStorageService.getInsurancePoliciesGlobal()).thenReturn([]);
+    when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
+    when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
+    when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
     when(() => mockStorageService.getAllInvestments()).thenReturn([]);
 
     // Run

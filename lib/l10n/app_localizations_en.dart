@@ -8,7 +8,7 @@ import 'app_localizations.dart';
 class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
-  @override // coverage:ignore-line
+  @override
   String get appTitle => 'Samriddhi Flow';
 
   @override
@@ -25,7 +25,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get remindersTooltip => 'Reminders';
 
-  @override // coverage:ignore-line
+  @override
   String get lockAppTooltip => 'Lock App';
 
   @override
@@ -55,18 +55,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ccUsageLabel => 'CC Usage';
 
-  @override // coverage:ignore-line
+  @override
   String get totalLoanLiabilityLabel => 'Total Loan Liability';
 
-  @override // coverage:ignore-line
+  @override
   String debtFreeIn(String months, int days) {
-    return 'Debt Free in ~$months months ($days days)'; // coverage:ignore-line
+    return 'Debt Free in ~$months months ($days days)';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get incomeMonthLabel => 'Income (Month)';
 
-  @override // coverage:ignore-line
+  @override
   String get budgetExpenseLabel => 'Budget Expense';
 
   @override
@@ -174,9 +174,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get closeButton => 'Close';
 
-  @override // coverage:ignore-line
+  @override
   String switchProfileTooltip(String name) {
-    return 'Switch Profile ($name)'; // coverage:ignore-line
+    return 'Switch Profile ($name)';
   }
 
   @override
@@ -215,12 +215,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get savingsAccountType => 'Savings Account';
 
-  @override // coverage:ignore-line
+  @override
   String get walletType => 'Wallet';
 
-  @override // coverage:ignore-line
+  @override
   String limitLabel(String value) {
-    return 'Credit Limit: $value'; // coverage:ignore-line
+    return 'Credit Limit: $value';
   }
 
   @override
@@ -228,9 +228,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Limit: $value';
   }
 
-  @override // coverage:ignore-line
+  @override
   String availableLabel(String value) {
-    return 'Available: $value'; // coverage:ignore-line
+    return 'Available: $value';
   }
 
   @override
@@ -238,19 +238,19 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Avail: $value';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get billedChip => 'Billed';
 
   @override
   String get balanceChip => 'Balance';
 
-  @override // coverage:ignore-line
+  @override
   String get unbilledChip => 'Unbilled';
 
-  @override // coverage:ignore-line
+  @override
   String get calculatesOn => 'Calculates on';
 
-  @override // coverage:ignore-line
+  @override
   String get initialBillOn => 'Initial bill on';
 
   @override
@@ -258,7 +258,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$value% used';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get unpinAccount => 'Unpin Account';
 
   @override
@@ -283,10 +283,10 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Next Bill Date: $date';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get updateBillingCycle => 'Update Billing Cycle';
 
-  @override // coverage:ignore-line
+  @override
   String get updateBillingCycleDesc =>
       'Move to a new cycle day or due date safely';
 
@@ -307,7 +307,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noAccountManual => 'No Account (Manual)';
 
-  @override // coverage:ignore-line
+  @override
   String get noMatchesFilter => 'No matches for this filter.';
 
   @override
@@ -322,10 +322,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionsMovedToRecycleBin =>
       'Transactions moved to Recycle Bin';
 
-  @override // coverage:ignore-line
+  @override
   String get deleteTransactionTitle => 'Delete Transaction?';
 
-  @override // coverage:ignore-line
+  @override
   String get movedToRecycleBin => 'Moved to Recycle Bin';
 
   @override
@@ -361,9 +361,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get otherTab => 'Other';
 
-  @override // coverage:ignore-line
+  @override
   String categoryDataClearedStatus(String category) {
-    return '$category data cleared.'; // coverage:ignore-line
+    return '$category data cleared.';
   }
 
   @override
@@ -383,7 +383,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unsavedChangesContent =>
       'You have unsaved changes. Do you want to discard them and leave?';
 
-  @override // coverage:ignore-line
+  @override
   String get discardAction => 'Discard';
 
   @override
@@ -454,7 +454,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lessStandardDeductionLabel => 'Less: Standard Deduction';
 
-  @override // coverage:ignore-line
+  @override
   String get lessStatutoryExemptionsLabel => 'Less: Statutory Exemptions';
 
   @override
@@ -500,9 +500,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get presumptiveTaxationHelper =>
       'Presumptive taxation allows computing tax on a percentage of turnover.';
 
-  @override // coverage:ignore-line
+  @override
   String turnoverExceedsLimitWarning(String limit) {
-    return 'Turnover exceeds limit of $limit for presumptive taxation.'; // coverage:ignore-line
+    return 'Turnover exceeds limit of $limit for presumptive taxation.';
   }
 
   @override
@@ -532,16 +532,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reinvestmentExemptionsSubtitle => 'Section 54/54F/54EC exemptions';
 
-  @override // coverage:ignore-line
+  @override
   String get reinvestmentDetailsTitle => 'Reinvestment Details';
 
-  @override // coverage:ignore-line
+  @override
   String get pendingNotDecidedLabel => 'Pending / Not Decided';
 
-  @override // coverage:ignore-line
+  @override
   String get amountInvestedLabel => 'Amount Invested';
 
-  @override // coverage:ignore-line
+  @override
   String get reinvestDateLabel => 'Reinvest Date';
 
   @override
@@ -570,7 +570,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Gross Amount ($symbol)';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get linkExemptionOptionalLabel => 'Link Exemption (Optional)';
 
   @override
@@ -627,7 +627,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get netAgriIncomeLabel => 'Net Agricultural Income';
 
-  @override // coverage:ignore-line
+  @override
   String get noEntriesMatchFilteringNote =>
       'No entries match the current filters.';
 
@@ -637,25 +637,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startMonthLabel => 'Start Month';
 
-  @override // coverage:ignore-line
+  @override
   String get deductionNameLabel => 'Deduction Name';
 
-  @override // coverage:ignore-line
+  @override
   String get allowanceNameLabel => 'Allowance Name';
 
-  @override // coverage:ignore-line
+  @override
   String get annualDeductionAmountLabel => 'Annual Deduction Amount';
 
-  @override // coverage:ignore-line
+  @override
   String get annualPayoutAmountLabel => 'Annual Payout Amount';
 
-  @override // coverage:ignore-line
+  @override
   String get exemptionLimitLabel => 'Exemption Limit';
 
-  @override // coverage:ignore-line
+  @override
   String get monthlyAmountsLabel => 'Monthly Amounts';
 
-  @override // coverage:ignore-line
+  @override
   String get noPayoutMonthsSelectedNote => 'No payout months selected.';
 
   @override
@@ -748,9 +748,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get justSchedule => 'Just Schedule';
 
-  @override // coverage:ignore-line
+  @override
   String firstExecution(String date) {
-    return 'First Execution: $date'; // coverage:ignore-line
+    return 'First Execution: $date';
   }
 
   @override
@@ -814,7 +814,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profitLabel => 'Profit';
 
-  @override // coverage:ignore-line
+  @override
   String get lossLabel => 'Loss';
 
   @override
@@ -863,18 +863,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get capitalGainTag => 'Capital Gain';
 
-  @override // coverage:ignore-line
+  @override
   String get directTaxTag => 'Direct Tax';
 
-  @override // coverage:ignore-line
+  @override
   String get budgetFreeTag => 'Budget Free';
 
-  @override // coverage:ignore-line
+  @override
   String get taxFreeTag => 'Tax Free';
 
-  @override // coverage:ignore-line
+  @override
   String usageShort(String amount) {
-    return 'Usage: $amount'; // coverage:ignore-line
+    return 'Usage: $amount';
   }
 
   @override
@@ -947,10 +947,10 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$count Categories Excluded';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get selectMonthLabel => 'Select Month';
 
-  @override // coverage:ignore-line
+  @override
   String get selectYearLabel => 'Select Year';
 
   @override
@@ -962,7 +962,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prepayment => 'Prepayment';
 
-  @override // coverage:ignore-line
+  @override
   String get totalPaid => 'Total Paid';
 
   @override
@@ -974,7 +974,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get capitalGainsRealized => 'Capital Gains (Realized)';
 
-  @override // coverage:ignore-line
+  @override
   String get capitalLossesRealized => 'Capital Losses (Realized)';
 
   @override
@@ -982,6 +982,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get profileSettingsHeader => 'Profile Settings';
+
+  @override
+  String get globalSettingsHeader => 'Global App Settings';
 
   @override
   String get appearanceSection => 'Appearance';
@@ -994,6 +1000,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dataManagementSection => 'Data Management';
+
+  @override
+  String get profileDataSection => 'Data Cleanup & Recovery';
+
+  @override
+  String get globalDataSection => 'Local Backup & Export';
 
   @override
   String get featureManagementSection => 'Feature Management';
@@ -1037,23 +1049,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get showBudgetDesc => 'Display monthly budget progress bar';
 
-  @override // coverage:ignore-line
+  @override
   String get connectionPaused => 'Connection Paused';
 
-  @override // coverage:ignore-line
+  @override
   String get offlineModeDesc =>
       'You are in Offline Mode. Cloud Sync is deferred.';
 
-  @override // coverage:ignore-line
+  @override
   String get retryConnection => 'Retry Connection';
 
-  @override // coverage:ignore-line
+  @override
   String get retryingConnection => 'Retrying connection...';
 
-  @override // coverage:ignore-line
+  @override
   String get internetRestored => 'Internet restored! Ready to sync.';
 
-  @override // coverage:ignore-line
+  @override
   String get stillOffline => 'Still offline. Check connection.';
 
   @override
@@ -1123,7 +1135,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taxYearLabel => 'Tax Year';
 
-  @override // coverage:ignore-line
+  @override
   String get capitalGains => 'Capital Gains';
 
   @override
@@ -1132,18 +1144,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tdsTcsLabel => 'TDS / TCS Tracked';
 
-  @override // coverage:ignore-line
+  @override
   String get advanceTaxOverdue => 'Advance Tax Overdue!';
 
   @override
   String get manualLabel => 'Manual';
 
-  @override // coverage:ignore-line
+  @override
   String get autoLabel => 'Auto';
 
-  @override // coverage:ignore-line
+  @override
   String recurringPaymentCalendarDescription(String title) {
-    return 'Recurring payment: $title'; // coverage:ignore-line
+    return 'Recurring payment: $title';
   }
 
   @override
@@ -1163,12 +1175,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get upcomingTaxInstallments => 'Upcoming Tax Installments';
 
-  @override // coverage:ignore-line
+  @override
   String daysLate(int days) {
-    return '${days}d Late'; // coverage:ignore-line
+    return '${days}d Late';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get dueToday => 'Due Today';
 
   @override
@@ -1181,9 +1193,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Next: $amount due by $date';
   }
 
-  @override // coverage:ignore-line
+  @override
   String errorLabel(String message) {
-    return 'Error: $message'; // coverage:ignore-line
+    return 'Error: $message';
   }
 
   @override
@@ -1225,21 +1237,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get updateApplicationDesc => 'Clear cache and reload latest version';
 
-  @override // coverage:ignore-line
+  @override
   String get installAppDesc => 'Add to Home Screen for Offline use';
 
   @override
   String get clearCloudDataDesc =>
       'Wipe current cloud backup while keeping your account connected for future syncs.';
 
-  @override // coverage:ignore-line
+  @override
   String get internetRequiredForUpdates =>
       'Internet connection required to check for updates.';
 
-  @override // coverage:ignore-line
+  @override
   String get checkingForUpdates => 'Checking for updates...';
 
-  @override // coverage:ignore-line
+  @override
   String get upToDateTitle => 'Up to Date';
 
   @override
@@ -1250,9 +1262,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Sync Error: $error';
   }
 
-  @override // coverage:ignore-line
+  @override
   String backupFailedLabel(String error) {
-    return 'Backup Failed: $error'; // coverage:ignore-line
+    return 'Backup Failed: $error';
   }
 
   @override
@@ -1271,50 +1283,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get restoredItemsLabel => 'Restored items:';
 
-  @override // coverage:ignore-line
+  @override
   String restoreFailedLabel(String error) {
-    return 'Restore Failed: $error'; // coverage:ignore-line
+    return 'Restore Failed: $error';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get cloudRestoreTitle => 'Cloud Restore';
 
-  @override // coverage:ignore-line
+  @override
   String get criticalWarningTitle => 'Critical Warning';
 
-  @override // coverage:ignore-line
+  @override
   String get useCloudRestoreQuestion => 'Use Cloud Restore?';
 
   @override
   String get clearCloudDataTitle => 'Clear Cloud Data (Keep Account)';
 
-  @override // coverage:ignore-line
+  @override
   String get clearButton => 'CLEAR';
 
-  @override // coverage:ignore-line
+  @override
   String get includePinInCloudBackup =>
       'Enter PIN to include it in your secure cloud backup.';
 
-  @override // coverage:ignore-line
+  @override
   String get includePinInZip => 'Enter PIN to include it in your backup ZIP.';
 
   @override
   String get backupReminderTitle => 'Backup Reminder';
 
-  @override // coverage:ignore-line
+  @override
   String get selectCreditCardTitle => 'Select Credit Card';
 
-  @override // coverage:ignore-line
+  @override
   String get claimOwnershipTitle => 'Claim Ownership?';
 
-  @override // coverage:ignore-line
+  @override
   String get claimOwnershipDesc =>
       'This account is currently active on another device. Taking ownership will allow you to Backup or Restore here, but will lock the other device out.';
 
-  @override // coverage:ignore-line
+  @override
   String get claimOwnershipAction => 'Claim Ownership';
 
-  @override // coverage:ignore-line
+  @override
   String get allCreditCardsLabel => 'All Credit Cards';
 
   @override
@@ -1331,9 +1343,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$_temp0';
   }
 
-  @override // coverage:ignore-line
+  @override
   String taxInitializationError(String error) {
-    return 'Error initializing tax services: $error'; // coverage:ignore-line
+    return 'Error initializing tax services: $error';
   }
 
   @override
@@ -1347,32 +1359,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get viewPoliciesAction => 'View Policies';
 
-  @override // coverage:ignore-line
+  @override
   String get syncingStatus => 'Syncing data...';
 
-  @override // coverage:ignore-line
+  @override
   String get syncCompleteStatus => 'Data synchronized successfully!';
 
-  @override // coverage:ignore-line
+  @override
   String syncFailedStatus(String error) {
-    return 'Sync failed: $error'; // coverage:ignore-line
+    return 'Sync failed: $error';
   }
 
   @override
   String get capitalGainLabel => 'Capital Gain';
 
-  @override // coverage:ignore-line
+  @override
   String get expiredStatus => 'Expired';
 
-  @override // coverage:ignore-line
+  @override
   String get addReinvestmentTooltip => 'Add Reinvestment';
 
-  @override // coverage:ignore-line
+  @override
   String get capitalGainsTrackerTitle => 'Capital Gains Tracker';
 
-  @override // coverage:ignore-line
+  @override
   String capitalGainsTrackerSubtitle(double years) {
-    return 'Tracking reinvestment deadlines for gains within $years years.'; // coverage:ignore-line
+    return 'Tracking reinvestment deadlines for gains within $years years.';
   }
 
   @override
@@ -1384,7 +1396,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get capitalGainsLabel => 'Capital Gains';
 
-  @override // coverage:ignore-line
+  @override
   String get capitalGainsDeductionsLabel => 'Capital Gains Exemptions';
 
   @override
@@ -1402,19 +1414,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get totalTaxLiabilityLabel => 'Total Tax Liability';
 
-  @override // coverage:ignore-line
+  @override
   String get cessOnSalaryTdsLabel => 'Cess included in Salary TDS';
 
-  @override // coverage:ignore-line
+  @override
   String get cessOnOtherSlabLabel => 'Cess on Other Slab Tax';
 
-  @override // coverage:ignore-line
+  @override
   String get cessOnSpecialLabel => 'Capital Gains Cess';
 
   @override
   String get advanceTaxPaidLabel => 'Advance Tax Paid';
 
-  @override // coverage:ignore-line
+  @override
   String get taxShortfallInterestLabel => 'Tax Shortfall Interest';
 
   @override
@@ -1431,7 +1443,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get actionRequiredAdvanceTaxTitle => 'Action Required: Advance Tax';
 
-  @override // coverage:ignore-line
+  @override
   String get upcomingAdvanceTaxTitle => 'Upcoming Advance Tax';
 
   @override
@@ -1452,13 +1464,13 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$days days left';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get taxRulesUpdatedStatus => 'Tax rules updated successfully.';
 
   @override
   String get addPolicyTitle => 'Add Insurance Policy';
 
-  @override // coverage:ignore-line
+  @override
   String get editPolicyTitle => 'Edit Insurance Policy';
 
   @override
@@ -1483,7 +1495,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get enableInstallmentLabel => 'Enable Installment?';
 
-  @override // coverage:ignore-line
+  @override
   String get installmentStartLabel => 'Installment Start';
 
   @override
@@ -1501,16 +1513,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get yourPoliciesTitle => 'Your Policies';
 
-  @override // coverage:ignore-line
+  @override
   String get pendingCalcStatus => 'Pending Calculation';
 
-  @override // coverage:ignore-line
+  @override
   String get installmentsEnabledLabel => 'Installments Enabled';
 
   @override
   String get taxableStatus => 'Taxable';
 
-  @override // coverage:ignore-line
+  @override
   String get exemptStatus => 'Exempt';
 
   @override
@@ -1525,19 +1537,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get otherIncomeHead => 'Other Income';
 
-  @override // coverage:ignore-line
+  @override
   String get assetCategoryLabel => 'Asset Category';
 
-  @override // coverage:ignore-line
+  @override
   String get saleMaturityAmountLabel => 'Sale / Maturity Amount';
 
   @override
   String get costOfAcquisitionLabel => 'Cost of Acquisition';
 
-  @override // coverage:ignore-line
+  @override
   String get isLongTermLabel => 'Is Long Term?';
 
-  @override // coverage:ignore-line
+  @override
   String get incomeAlreadyAddedNote =>
       'Warning: Income for this year may already be present in Dashboard.';
 
@@ -1550,17 +1562,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectMonthsAction => 'Select Payout Months';
 
   @override
+  String get coreSalarySection => 'Core Salary';
+
+  @override
+  String get payoutsSection => 'Irregular Payouts & Variable Pay';
+
+  @override
+  String get deductionsSection => 'Deductions & Unemployment';
+
+  @override
+  String get firstPayoutMonthLabel => 'First Payout Month';
+
+  @override
+  String get noMonthsSelectedNote => 'No months selected';
+
+  @override
+  String get addCustomAllowanceAction => 'Add Allowance';
+
+  @override
+  String get editAllowanceAction => 'Edit Allowance';
+
+  @override
+  String get payoutAmountLabel => 'Payout Amount';
+
+  @override
+  String get none => 'None';
+
+  @override
+  String get cliffExemptionTitle => 'Cliff-based Exemption';
+
+  @override
+  String get payoutFrequencyLabel => 'Payout Frequency';
+
+  @override
+  String get exemptionLimitHelperText =>
+      'Income above this limit is fully taxable (no exemption applies).';
+
+  @override
+  String get cliffExemptionSubtitle =>
+      'If checked, income above limit becomes fully taxable.';
+
+  @override
   String get transactionDateLabel => 'Transaction Date';
 
   @override
   String get addEntryAction => 'Add Entry';
 
-  @override // coverage:ignore-line
+  @override
   String get adhocExemptionsLabel => 'Less: Ad-hoc Exemptions';
 
-  @override // coverage:ignore-line
+  @override
   String clearCategoryDataTitle(String category) {
-    return 'Clear $category Data?'; // coverage:ignore-line
+    return 'Clear $category Data?';
   }
 
   @override
@@ -1575,9 +1628,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get syncTaxDataTitle => 'Sync Tax Data';
 
-  @override // coverage:ignore-line
+  @override
   String lastSyncedLabel(String date) {
-    return 'Last synced: $date'; // coverage:ignore-line
+    return 'Last synced: $date';
   }
 
   @override
@@ -1656,7 +1709,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noActiveLoans => 'No active loans found.';
 
-  @override // coverage:ignore-line
+  @override
   String get remainingPrincipal => 'Remaining Principal';
 
   @override
@@ -1668,10 +1721,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get paymentDateLabel => 'Payment Date';
 
-  @override // coverage:ignore-line
+  @override
   String get principalComponent => 'Principal Component';
 
-  @override // coverage:ignore-line
+  @override
   String get interestComponent => 'Interest Component';
 
   @override
@@ -1696,7 +1749,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectSavingsAccountHelper =>
       'Select a savings account for EMI payments';
 
-  @override // coverage:ignore-line
+  @override
   String get maturityDate => 'Maturity Date';
 
   @override
@@ -1707,21 +1760,21 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Total Interest: $amount';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get projectedInterestSimple => 'Projected Interest (Simple)';
 
-  @override // coverage:ignore-line
+  @override
   String get interestPayableMaturity =>
       'Interest payable at maturity or renewal';
 
-  @override // coverage:ignore-line
+  @override
   String availLabel(String amount) {
-    return 'Avail: $amount'; // coverage:ignore-line
+    return 'Avail: $amount';
   }
 
-  @override // coverage:ignore-line
+  @override
   String balLabel(String amount) {
-    return 'Bal: $amount'; // coverage:ignore-line
+    return 'Bal: $amount';
   }
 
   @override
@@ -1785,7 +1838,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get newTenureLabel => 'New Tenure';
 
-  @override // coverage:ignore-line
+  @override
   String get newEmiLabel => 'New EMI';
 
   @override
@@ -1794,9 +1847,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tenureReducedLabel => 'Tenure Reduced';
 
-  @override // coverage:ignore-line
+  @override
   String recordedPaymentsSuccess(int count) {
-    return 'Recorded $count payments successfully.'; // coverage:ignore-line
+    return 'Recorded $count payments successfully.';
   }
 
   @override
@@ -1806,7 +1859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteLoanConfirmMessage =>
       'This will remove the loan tracking. Existing transactions will NOT be deleted.';
 
-  @override // coverage:ignore-line
+  @override
   String get bulkRecordPaymentsTitle => 'Bulk Record Payments';
 
   @override
@@ -1837,14 +1890,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addToSystemCalendarTooltip => 'Add to System Calendar';
 
-  @override // coverage:ignore-line
+  @override
   String loanMaturityEventTitle(String name) {
-    return 'Loan Maturity: $name'; // coverage:ignore-line
+    return 'Loan Maturity: $name';
   }
 
-  @override // coverage:ignore-line
+  @override
   String loanMaturityEventDescription(String name) {
-    return 'Maturity date for Gold Loan: $name. Principal and Interest due.'; // coverage:ignore-line
+    return 'Maturity date for Gold Loan: $name. Principal and Interest due.';
   }
 
   @override
@@ -1946,7 +1999,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prepaymentTitle => 'Prepayment';
 
-  @override // coverage:ignore-line
+  @override
   String get interestRateUpdatedTitle => 'Interest Rate Updated';
 
   @override
@@ -1960,12 +2013,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prepaymentSubtitle => 'Direct reduction of principal';
 
-  @override // coverage:ignore-line
+  @override
   String newRateSubtitle(String rate) {
-    return 'New Rate: $rate%'; // coverage:ignore-line
+    return 'New Rate: $rate%';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get loanTopUpSubtitle => 'Increased principal amount';
 
   @override
@@ -2100,9 +2153,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Paid: $amount ($count txn)';
   }
 
-  @override // coverage:ignore-line
+  @override
   String closedOnSubtitle(String date) {
-    return 'Closed on $date'; // coverage:ignore-line
+    return 'Closed on $date';
   }
 
   @override
@@ -2127,9 +2180,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Has the amount of $amount been received back from $person?';
   }
 
-  @override // coverage:ignore-line
+  @override
   String settleBorrowedConfirmation(String amount, String person) {
-    return 'Has the amount of $amount been paid back to $person?'; // coverage:ignore-line
+    return 'Has the amount of $amount been paid back to $person?';
   }
 
   @override
@@ -2167,7 +2220,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get enterAmountError => 'Enter amount';
 
-  @override // coverage:ignore-line
+  @override
   String get invalidNumberError => 'Invalid number';
 
   @override
@@ -2214,7 +2267,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recurringPaymentsTitle => 'Recurring Payments';
 
-  @override // coverage:ignore-line
+  @override
   String get noRecurringPayments => 'No recurring payments set up.';
 
   @override
@@ -2225,32 +2278,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addToCalendarTooltip => 'Add to System Calendar';
 
-  @override // coverage:ignore-line
+  @override
   String recurringEventDescription(String title, String amount) {
-    return 'Recurring payment: $title for $amount'; // coverage:ignore-line
+    return 'Recurring payment: $title for $amount';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get everyWeekendLabel => 'Every Weekend (Sat/Sun)';
 
-  @override // coverage:ignore-line
+  @override
   String get lastWeekendLabel => 'Last Weekend of Month';
 
-  @override // coverage:ignore-line
+  @override
   String everyWeekdayLabel(String weekday) {
-    return 'Every $weekday'; // coverage:ignore-line
+    return 'Every $weekday';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get lastDayOfMonthLabel => 'Last Day of Month';
 
-  @override // coverage:ignore-line
+  @override
   String get lastWorkingDayLabel => 'Last Working Day';
 
-  @override // coverage:ignore-line
+  @override
   String get firstWorkingDayLabel => 'First Working Day';
 
-  @override // coverage:ignore-line
+  @override
   String get adjForHolidaysLabel => ' (Adj. for Holidays)';
 
   @override
@@ -2308,9 +2361,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Due on $date';
   }
 
-  @override // coverage:ignore-line
+  @override
   String nextBillLabel(String date) {
-    return 'Next Bill: $date'; // coverage:ignore-line
+    return 'Next Bill: $date';
   }
 
   @override
@@ -2346,16 +2399,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get frequencyMonthly => 'Monthly';
 
-  @override // coverage:ignore-line
+  @override
   String get frequencyWeekly => 'Weekly';
 
-  @override // coverage:ignore-line
+  @override
   String get frequencyOther => 'Other';
 
   @override
   String get selectStoppedMonthsAction => 'Select Stopped Months';
 
-  @override // coverage:ignore-line
+  @override
   String get presumptiveProfitHelper => 'Presumptive profit based on turnover';
 
   @override
@@ -2366,12 +2419,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get equitySharesTooltip =>
       'LTCG on equity shares above 1.25L is taxed at 12.5%.';
 
-  @override // coverage:ignore-line
+  @override
   String get reinvestmentPendingLabel => 'Reinvestment Pending';
 
-  @override // coverage:ignore-line
+  @override
   String reinvestedDetailsLabel(String amount, String type) {
-    return 'Reinvested $amount via $type'; // coverage:ignore-line
+    return 'Reinvested $amount via $type';
   }
 
   @override
@@ -2381,7 +2434,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get stcgLabel => 'STCG';
 
-  @override // coverage:ignore-line
+  @override
   String get ltcgLabel => 'LTCG';
 
   @override
@@ -2399,7 +2452,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addIncomeAction => 'Add Income';
 
-  @override // coverage:ignore-line
+  @override
   String get noneLabel => 'None';
 
   @override
@@ -2481,7 +2534,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noMappingsFoundNote => 'No mappings defined.';
 
-  @override // coverage:ignore-line
+  @override
   String get mappingsInstructionNote =>
       'Map Transaction Tags or Descriptions to Tax Heads for auto-assignment.';
 
@@ -2581,12 +2634,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get interestRateMonthlyLabel => 'Interest Rate % (Monthly)';
 
-  @override // coverage:ignore-line
+  @override
   String get addCustomExemptionTitle => 'Add Custom Exemption';
-
-  @override // coverage:ignore-line
-  String get cliffExemptionSubtitle =>
-      'If checked, income above limit becomes fully taxable.';
 
   @override
   String get restoreAction => 'Restore';
@@ -2685,7 +2734,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get rate44ADALabel => 'Presumptive Profit Rate (%)';
 
-  @override // coverage:ignore-line
+  @override
   String get cancelBtnLabel => 'Cancel';
 
   @override
@@ -2765,7 +2814,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addInstallmentBtn => 'Add Installment';
 
-  @override // coverage:ignore-line
+  @override
   String get noInstallmentsMsg => 'No installments configured.';
 
   @override
@@ -2773,16 +2822,16 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Installment #$number';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get limitFieldLabel => 'Limit';
 
-  @override // coverage:ignore-line
+  @override
   String get isCliffExemptionLabel => 'Is Cliff Exemption?';
 
-  @override // coverage:ignore-line
+  @override
   String get addBtnLabel => 'Add';
 
-  @override // coverage:ignore-line
+  @override
   String get incomeHeadLabel => 'Income Head';
 
   @override
@@ -2794,31 +2843,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saveButton => 'Save';
 
-  @override // coverage:ignore-line
+  @override
   String get editIndependentDeductionAction => 'Edit Independent Deduction';
 
-  @override // coverage:ignore-line
+  @override
   String get editIndependentAllowanceAction => 'Edit Independent Allowance';
 
-  @override // coverage:ignore-line
-  String get payoutFrequencyLabel => 'Payout Frequency';
-
-  @override // coverage:ignore-line
+  @override
   String get payoutFrequencyTrimesterLabel => 'Trimester (4 Months)';
 
-  @override // coverage:ignore-line
+  @override
   String monthsSelectedCountLabel(String count) {
-    return '$count Months Selected'; // coverage:ignore-line
+    return '$count Months Selected';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get isPartialIrregularTitle => 'Partial/Irregular Payouts';
 
-  @override // coverage:ignore-line
+  @override
   String get isPartialIrregularSubtitle =>
       'Enter different amounts for each payout month';
 
-  @override // coverage:ignore-line
+  @override
   String get enterAmountsForPayoutMonthsNote =>
       'Enter amounts for selected payout months:';
 
@@ -2826,9 +2872,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unemploymentNoSalarySubtitle =>
       'Select months where no salary was received';
 
-  @override // coverage:ignore-line
+  @override
   String monthsStoppedCountLabel(String count) {
-    return '$count Months Stopped'; // coverage:ignore-line
+    return '$count Months Stopped';
   }
 
   @override
@@ -2848,7 +2894,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get defaultEqualDistributionSubtitle => 'Default: Equal distribution';
 
-  @override // coverage:ignore-line
+  @override
   String get annualPayoutLabel => 'Annual Payout';
 
   @override
@@ -2860,10 +2906,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addCapitalGainAction => 'Add Capital Gain';
 
-  @override // coverage:ignore-line
+  @override
   String get editEntryAction => 'Edit Entry';
 
-  @override // coverage:ignore-line
+  @override
   String get selectButton => 'Select';
 
   @override
@@ -2887,7 +2933,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$count salary structures copied.';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get noHousePropertiesPreviousYearNote =>
       'No house properties found for the previous year.';
 
@@ -2896,19 +2942,15 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$count house properties copied.';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get isCliffExemptionTitle => 'Is Cliff Exemption?';
-
-  @override // coverage:ignore-line
-  String get exemptionLimitHelperText =>
-      'Income above this limit is fully taxable (no exemption applies).';
 
   @override
   String get taxDetailsSavedStatus => 'Tax details saved successfully.';
 
-  @override // coverage:ignore-line
+  @override
   String clearCategoryDataContent(String category, String year) {
-    return 'Are you sure you want to clear all $category data for FY $year?'; // coverage:ignore-line
+    return 'Are you sure you want to clear all $category data for FY $year?';
   }
 
   @override
@@ -2935,7 +2977,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get filterByDateRangeLabel => 'Filter by Date Range';
 
-  @override // coverage:ignore-line
+  @override
   String get clearDateFilterLabel => 'Clear Date Filter';
 
   @override
@@ -2959,7 +3001,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lastUpdatedLabel => 'Last Updated';
 
-  @override // coverage:ignore-line
+  @override
   String get fullYearLabel => 'Full Year';
 
   @override
@@ -2990,6 +3032,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gratuityTitleLabel => 'Gratuity';
+
+  @override
+  String get employerGiftsLabel => 'Employer Gifts';
 
   @override
   String get customAdHocExemptionsTitle => 'Custom Ad-hoc Exemptions';
@@ -3025,11 +3070,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get interestLabel => 'Interest';
 
-  @override // coverage:ignore-line
+  @override
   String get letOutLabel => 'Let Out';
 
   @override
   String get lessEmployerNPSLabel => 'Less: Employer NPS Contribution';
+
+  @override
+  String get lessEmployerGiftsLabel => 'Less: Employer Gifts (Exempt)';
 
   @override
   String get taxableBeforeAdHocExemptionsLabel =>
@@ -3038,7 +3086,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lessCustomAdHocExemptionsLabel => 'Less: Custom Ad-hoc Exemptions';
 
-  @override // coverage:ignore-line
+  @override
   String get editPropertyAction => 'Edit Property';
 
   @override
@@ -3047,13 +3095,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get netShortLabel => 'Net';
 
-  @override // coverage:ignore-line
+  @override
   String get editBusinessAction => 'Edit Business';
 
   @override
   String get shortTermSTCGLabel => 'Short Term (STCG)';
 
-  @override // coverage:ignore-line
+  @override
   String get otherAssetsTooltip =>
       'LTCG on other assets is taxed at 20% with indexation.';
 
@@ -3069,7 +3117,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addAgriIncomeAction => 'Add Agri Income';
 
-  @override // coverage:ignore-line
+  @override
   String get editAgriIncomeAction => 'Edit Agri Income';
 
   @override
@@ -3088,7 +3136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get maturityDateLabel => 'Maturity Date';
 
-  @override // coverage:ignore-line
+  @override
   String get selectDateAction => 'Select Date';
 
   @override
@@ -3174,15 +3222,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taxableAmountsNote =>
       'Note: Taxable amounts are the sum of annual premiums for policies that have lost 10(10D) exemption.';
 
-  @override // coverage:ignore-line
+  @override
   String get addPremiumRuleTitle => 'Add Premium Rule';
 
-  @override // coverage:ignore-line
+  @override
   String limitPctLabel(String symbol) {
-    return 'Limit % ($symbol)'; // coverage:ignore-line
+    return 'Limit % ($symbol)';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get addRuleAction => 'Add Rule';
 
   @override
@@ -3191,13 +3239,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noteLabel => 'Note';
 
-  @override // coverage:ignore-line
+  @override
   String get principalShort => 'Principal';
 
-  @override // coverage:ignore-line
+  @override
   String get interestShort => 'Interest';
 
-  @override // coverage:ignore-line
+  @override
   String get loanEmiTitle => 'Loan EMIs';
 
   @override
@@ -3206,7 +3254,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get monthLabel => 'Month';
 
-  @override // coverage:ignore-line
+  @override
   String get selectReinvestmentTypeNote =>
       'Select reinvestment type to see details.';
 
@@ -3216,7 +3264,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get isLTCGLabel => 'Is LTCG?';
 
-  @override // coverage:ignore-line
+  @override
   String get editOtherIncomeAction => 'Edit Other Income';
 
   @override
@@ -3239,9 +3287,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Add $type';
   }
 
-  @override // coverage:ignore-line
+  @override
   String editEntryTypeAction(String type) {
-    return 'Edit $type'; // coverage:ignore-line
+    return 'Edit $type';
   }
 
   @override
@@ -3255,12 +3303,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noCashGiftsNote => 'No cash gifts found for this year.';
 
-  @override // coverage:ignore-line
+  @override
   String get editGiftAction => 'Edit Gift';
 
-  @override // coverage:ignore-line
+  @override
   String errorLabelWithDetails(String error) {
-    return 'Error: $error'; // coverage:ignore-line
+    return 'Error: $error';
   }
 
   @override
@@ -3293,10 +3341,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get yesRestoreAction => 'Yes, Restore';
 
-  @override // coverage:ignore-line
+  @override
   String get updateAndReloadAction => 'Update & Reload';
 
-  @override // coverage:ignore-line
+  @override
   String get forceReloadAction => 'Force Reload';
 
   @override
@@ -3343,9 +3391,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get continueOfflineAction => 'Continue Offline / Use Locally';
 
-  @override // coverage:ignore-line
+  @override
   String loginStatusMsg(String message) {
-    return 'Login Status: $message'; // coverage:ignore-line
+    return 'Login Status: $message';
   }
 
   @override
@@ -3366,7 +3414,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Pay $name Bill';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get billAlreadyPaidNote => 'Bill is already marked as paid.';
 
   @override
@@ -3375,7 +3423,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get roundToNearestNote => 'Round to nearest number';
 
-  @override // coverage:ignore-line
+  @override
   String get errorLoadingAccounts => 'Error loading accounts';
 
   @override
@@ -3386,7 +3434,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get freezeDateLockedNote =>
       'Freeze date cannot be changed for an active freeze.';
 
-  @override // coverage:ignore-line
+  @override
   String get debtZeroRequirementNote =>
       'Billing cycle day can only be changed when the total debt is 0. However, you can still update your Payment Due Date.';
 
@@ -3412,7 +3460,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get billingCycleUpdateSuccess =>
       'Billing cycle update initialized successfully!';
 
-  @override // coverage:ignore-line
+  @override
   String get paymentDueDateUpdateSuccess =>
       'Payment due date updated successfully!';
 
@@ -3426,31 +3474,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prepaymentEffectLabel => 'Prepayment Effect:';
 
-  @override // coverage:ignore-line
+  @override
   String get errorTitle => 'Error';
 
-  @override // coverage:ignore-line
+  @override
   String upToDateMessage(String version) {
-    return 'You are consistent with the latest version ($version).'; // coverage:ignore-line
+    return 'You are consistent with the latest version ($version).';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get forceReloadNote =>
       'If you don\'t see expected changes, you can force a reload.';
 
-  @override // coverage:ignore-line
+  @override
   String get updateApplicationConfirmMessage =>
       'This will clear the application cache and reload the latest version. Your local data (Hive) will remain safe. Do you want to proceed?';
 
-  @override // coverage:ignore-line
+  @override
   String get updateNotAvailableError =>
       'Update not available for this platform.';
 
-  @override // coverage:ignore-line
+  @override
   String get requestTimeoutError =>
       'Request timed out. Please check your connection.';
 
-  @override // coverage:ignore-line
+  @override
   String get restoreCloudWarning =>
       'This will PERMANENTLY WIPE all local data and replace it with your cloud data.';
 
@@ -3468,7 +3516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localDataSafeNote =>
       'Your account will be deleted, and you will be completely logged out with a blank slate.';
 
-  @override // coverage:ignore-line
+  @override
   String get accountDeactivatedStatus =>
       'Account Deactivated and All Data Wiped.';
 
@@ -3488,9 +3536,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get proceedQuestion => 'Proceed?';
 
-  @override // coverage:ignore-line
+  @override
   String authFailedStatus(String error) {
-    return 'Authentication Failed: $error'; // coverage:ignore-line
+    return 'Authentication Failed: $error';
   }
 
   @override
@@ -3511,10 +3559,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get verifyPinReasonDefault => 'Enter your 4-6 digit PIN to continue.';
 
-  @override // coverage:ignore-line
+  @override
   String get pinLengthError => 'PIN must be 4-6 digits long.';
 
-  @override // coverage:ignore-line
+  @override
   String get tooManyAttemptsError => 'Too many attempts. Try again later.';
 
   @override
@@ -3550,7 +3598,7 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'This will PERMANENTLY delete the profile \'$name\' and ALL its associated data (Accounts, Transactions, Loans, Taxes, Lending, Categories). This cannot be undone.';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get noOtherProfilesError => 'No other profiles to copy from.';
 
   @override
@@ -3567,7 +3615,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutTitle => 'About';
 
-  @override // coverage:ignore-line
+  @override
   String get installAppTitle => 'Install App';
 
   @override
@@ -3580,10 +3628,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deactivateWipeCloudDesc =>
       'Delete all cloud data and sign out of cloud sync. This cannot be undone.';
 
-  @override // coverage:ignore-line
+  @override
   String get offlineUpdateError => 'Offline: Unable to check for updates.';
 
-  @override // coverage:ignore-line
+  @override
   String get cloudRestoreWarning =>
       'If your cloud backup was encrypted, please enter the passcode. If it was not encrypted, leave this blank and continue.';
 
@@ -3594,7 +3642,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteCategoriesEncryption =>
       'Note: Categories are stored as metadata and are NOT encrypted.';
 
-  @override // coverage:ignore-line
+  @override
   String get frozenLabel => 'FROZEN';
 
   @override
@@ -3622,12 +3670,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recalculateBillDesc => 'Refreshes billing cycle display';
 
-  @override // coverage:ignore-line
+  @override
   String get recalculatingBillStatus => 'Recalculating bill...';
 
-  @override // coverage:ignore-line
+  @override
   String billRecalculatedStatus(String name) {
-    return 'Bill recalculated for $name.'; // coverage:ignore-line
+    return 'Bill recalculated for $name.';
   }
 
   @override
@@ -3635,12 +3683,12 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$used / $avail';
   }
 
-  @override // coverage:ignore-line
+  @override
   String usedAvailableLabel(String used, String avail) {
-    return '$used / $avail'; // coverage:ignore-line
+    return '$used / $avail';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get requiredShortLabel => 'Req';
 
   @override
@@ -3669,7 +3717,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accountNameLabel => 'Account Name';
 
-  @override // coverage:ignore-line
+  @override
   String get reservedNameError => 'Reserved name';
 
   @override
@@ -3681,16 +3729,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get updateAccountAction => 'Update Account';
 
-  @override // coverage:ignore-line
+  @override
   String get creditLimitLabel => 'Credit Limit';
 
-  @override // coverage:ignore-line
+  @override
   String get billGenDayLabel => 'Bill Gen. Day';
 
-  @override // coverage:ignore-line
+  @override
   String get paymentDueDayLabel => 'Payment Due Day';
 
-  @override // coverage:ignore-line
+  @override
   String get dayOfMonthHelper => 'Day of month';
 
   @override
@@ -3705,28 +3753,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get usDollarLabel => 'US Dollar (\$)';
 
-  @override // coverage:ignore-line
+  @override
   String get freqDaily => 'DAILY';
 
-  @override // coverage:ignore-line
+  @override
   String get freqWeekly => 'WEEKLY';
 
   @override
   String get freqMonthly => 'MONTHLY';
 
-  @override // coverage:ignore-line
+  @override
   String get freqYearly => 'YEARLY';
 
   @override
   String get daySuffixSt => 'st';
 
-  @override // coverage:ignore-line
+  @override
   String get daySuffixNd => 'nd';
 
-  @override // coverage:ignore-line
+  @override
   String get daySuffixRd => 'rd';
 
-  @override // coverage:ignore-line
+  @override
   String get daySuffixTh => 'th';
 
   @override
@@ -3773,7 +3821,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adjustmentCategory => 'Adjustment';
 
-  @override // coverage:ignore-line
+  @override
   String get timeoutError => 'Request timed out. Please check your connection.';
 
   @override
@@ -3790,9 +3838,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return '$name: Successfully repaired $count items.';
   }
 
-  @override // coverage:ignore-line
+  @override
   String repairFailedStatus(String error) {
-    return 'Repair Failed: $error'; // coverage:ignore-line
+    return 'Repair Failed: $error';
   }
 
   @override
@@ -3833,11 +3881,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get changePinTitle => 'Change PIN';
 
-  @override // coverage:ignore-line
+  @override
   String get sameAccountError =>
       'Source and Target accounts cannot be the same.';
 
-  @override // coverage:ignore-line
+  @override
   String get futureScheduleOnlyError =>
       '\"Just Schedule\" is only allowed for Today or Future dates.';
 
@@ -3859,10 +3907,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transferCategory => 'Transfer';
 
-  @override // coverage:ignore-line
+  @override
   String get day15Hint => 'e.g. 15';
 
-  @override // coverage:ignore-line
+  @override
   String get day5Hint => 'e.g. 5';
 
   @override
@@ -3874,17 +3922,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get uaeDirhamLabel => 'UAE Dirham (د.إ)';
 
-  @override // coverage:ignore-line
+  @override
   String get bulkRecordDesc =>
       'Record EMI payments for a date range automatically. Assumes paid on time.';
 
-  @override // coverage:ignore-line
+  @override
   String get startDateLabel => 'Start Date';
 
-  @override // coverage:ignore-line
+  @override
   String get endDateLabel => 'End Date';
 
-  @override // coverage:ignore-line
+  @override
   String get recordPaymentsAction => 'Record Payments';
 
   @override
@@ -3925,15 +3973,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copiedFromPreviousYearStatus =>
       'Values copied from previous year. Click Save to apply.';
 
-  @override // coverage:ignore-line
+  @override
   String mapsToLabel(String target) {
-    return 'Maps to: $target'; // coverage:ignore-line
+    return 'Maps to: $target';
   }
 
-  @override // coverage:ignore-line
+  @override
   String get advancedMappingsHeader => 'Advanced Mappings (CG / Filters)';
 
-  @override // coverage:ignore-line
+  @override
   String get calculatedRateLabel => 'Calculated Rate';
 
   @override
@@ -3972,15 +4020,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get unrealizedGainLabel => 'Unrealized Gain';
 
-  @override // coverage:ignore-line
+  @override
   String readyToSellLT(int count) {
-    return '$count Long-term ready'; // coverage:ignore-line
+    return '$count Long-term ready';
   }
 
   @override
   String get addInvestment => 'Add Investment';
 
-  @override // coverage:ignore-line
+  @override
   String get editInvestment => 'Edit Investment';
 
   @override
@@ -3989,10 +4037,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get investmentType => 'Type';
 
-  @override // coverage:ignore-line
+  @override
   String get acquisitionDate => 'Acquisition Date';
 
-  @override // coverage:ignore-line
+  @override
   String get acquisitionPrice => 'Acquisition Price';
 
   @override
@@ -4007,7 +4055,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get thresholdLabel => 'LT Threshold (Years)';
 
-  @override // coverage:ignore-line
+  @override
   String get notAutoCalculated => '(Not auto-calculated)';
 
   @override
@@ -4016,9 +4064,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importPrices => 'Import Prices';
 
-  @override // coverage:ignore-line
+  @override
   String updatePricesSuccess(int count) {
-    return 'Prices updated for $count items'; // coverage:ignore-line
+    return 'Prices updated for $count items';
   }
 
   @override
@@ -4051,28 +4099,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get investmentType_otherFixed => 'Other (Fixed Interest)';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_flexi => 'Flexi Cap';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_largeCap => 'Large Cap';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_midCap => 'Mid Cap';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_smallCap => 'Small Cap';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_debt => 'Debt';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_mfIndex => 'Index Fund';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_industry => 'Sectoral / Industry';
 
-  @override // coverage:ignore-line
+  @override
   String get mfCategory_others => 'Others';
 
   @override
@@ -4083,7 +4131,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionVerificationFailed =>
       'Session verification failed. Sync paused.';
 
-  @override // coverage:ignore-line
+  @override
   String get connectionFailedOffline =>
       'Connection failed. Switching to Offline Mode.';
 
@@ -4094,7 +4142,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get encryptedBackupPromptBody =>
       'Your cloud backup is encrypted. Please enter your passcode to restore your data.';
 
-  @override // coverage:ignore-line
+  @override
   String get incorrectPasscodeError => 'Incorrect passcode. Please try again.';
 
   @override
@@ -4103,41 +4151,41 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get allTypesLabel => 'All Types';
 
-  @override // coverage:ignore-line
+  @override
   String get sortByOldestFirst => 'Sort by Oldest First';
 
-  @override // coverage:ignore-line
+  @override
   String get sortByHighestGain => 'Sort by Highest Gain';
 
-  @override // coverage:ignore-line
+  @override
   String get deleteInvestmentTitle => 'Delete Investment?';
 
-  @override // coverage:ignore-line
+  @override
   String get deleteInvestmentConfirmation =>
       'This will permanently remove this investment record.';
 
   @override
   String get searchLabel => 'Search Investments';
 
-  @override // coverage:ignore-line
+  @override
   String get copyToClipboard => 'Copy to Clipboard';
 
-  @override // coverage:ignore-line
+  @override
   String get exportJsonTitle => 'Export Tickers (JSON)';
 
-  @override // coverage:ignore-line
+  @override
   String get importJsonTitle => 'Import Prices (JSON)';
 
-  @override // coverage:ignore-line
+  @override
   String get importJsonHint => 'Paste JSON here...';
 
-  @override // coverage:ignore-line
+  @override
   String get invalidJsonError => 'Invalid JSON format';
 
-  @override // coverage:ignore-line
+  @override
   String get importAction => 'Import';
 
-  @override // coverage:ignore-line
+  @override
   String get copiedToClipboard => 'Copied to clipboard!';
 
   @override
@@ -4152,10 +4200,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get acquisitionPriceLabel => 'Acquisition Price';
 
-  @override // coverage:ignore-line
+  @override
   String get invalidPriceError => 'Invalid Price';
 
-  @override // coverage:ignore-line
+  @override
   String get invalidQuantityError => 'Invalid Quantity';
 
   @override
@@ -4178,7 +4226,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pauseRecurringLabel => 'Pause Recurring Payments';
 
-  @override // coverage:ignore-line
+  @override
   String get upcomingCommitmentsHeader => 'Upcoming Commitments';
 
   @override

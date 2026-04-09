@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_core/firebase_core.dart';
@@ -17,7 +19,6 @@ import 'taxes/tax_config_service.dart';
 import 'subscription_service.dart';
 import '../models/lending_record.dart';
 import '../models/investment.dart';
-import 'dart:convert';
 import 'encryption_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -180,9 +181,17 @@ class CloudSyncService {
     final encryption =
         (passcode != null && passcode.isNotEmpty) ? EncryptionService() : null;
 
-    dynamic encryptIfRequested(dynamic payload) {
+    Uint8List? preDerivedKey;
+    Uint8List? salt;
+    if (encryption != null) {
+      salt = encryption.generateSalt();
+      preDerivedKey = await encryption.deriveKey(passcode!, salt);
+    }
+
+    Future<dynamic> encryptIfRequested(dynamic payload) async {
       if (encryption == null) return payload;
-      return encryption.encryptData(jsonEncode(payload), passcode!);
+      return await encryption.encryptData(jsonEncode(payload), passcode!,
+          preDerivedKey: preDerivedKey, salt: salt);
     }
 
     final settings = _storageService.getAllSettings();
@@ -202,7 +211,7 @@ class CloudSyncService {
     }
 
     // Serialize all app data
-    final data = _createSyncPayload(
+    final data = await _createSyncPayload(
       encryptor: encryptIfRequested,
       isEncrypted: encryption != null,
       settingsToEncrypt: settingsToEncrypt,
@@ -216,57 +225,70 @@ class CloudSyncService {
     }
   }
 
-  Map<String, dynamic> _createSyncPayload({
-    required dynamic Function(dynamic) encryptor,
+  Future<Map<String, dynamic>> _createSyncPayload({
+    required Future<dynamic> Function(dynamic) encryptor,
     required bool isEncrypted,
     required Map<String, dynamic> settingsToEncrypt,
     dynamic lastSync,
-  }) {
+  }) async {
     return {
-      'accounts': encryptor(
+      'accounts': await encryptor(
           _storageService.getAllAccounts().map((e) => e.toMap()).toList()),
-      'transactions_v2': _preparePartitionedTransactions(
+      'transactions_v2': await _preparePartitionedTransactions(
           _storageService.getAllTransactions(), encryptor),
-      'loans_v2':
-          _preparePartitionedLoans(_storageService.getAllLoans(), encryptor),
-      'recurring': encryptor(
+      'loans_v2': await _preparePartitionedLoans(
+          _storageService.getAllLoans(), encryptor),
+      'recurring': await encryptor(
           _storageService.getAllRecurring().map((e) => e.toMap()).toList()),
       'categories':
           _storageService.getAllCategories().map((e) => e.toMap()).toList(),
-      'profiles': encryptor(
+      'profiles': await encryptor(
           _storageService.getProfiles().map((e) => e.toMap()).toList()),
-      'settings': encryptor(settingsToEncrypt),
+      'settings': await encryptor(settingsToEncrypt),
       'last_sync': lastSync,
-      'insurance_policies': encryptor(_storageService
-          .getInsurancePolicies()
+      'insurance_policies': await encryptor(_storageService
+          .getInsurancePoliciesGlobal()
           .map((e) => e.toMap())
           .toList()),
-      'tax_rules_v2': _preparePartitionedTaxRules(
-          _taxConfigService.getAllRules(), encryptor),
-      'tax_data_v2': _preparePartitionedTaxData(
-          _storageService.getAllTaxYearData(), encryptor),
-      'lending_records': _preparePartitionedLendingRecords(
-          _storageService.getLendingRecords(), encryptor),
+      'tax_rules_v2': await _preparePartitionedTaxRules(
+          _taxConfigService.getAllRulesGlobal(), encryptor),
+      'tax_data_v2': await _preparePartitionedTaxData(
+          _storageService.getAllTaxYearDataGlobal(), encryptor),
+      'lending_records': await _preparePartitionedLendingRecords(
+          _storageService.getLendingRecordsGlobal(), encryptor),
       'is_encrypted': isEncrypted,
       'sync_format_version': 2,
-      'investments_v2': _preparePartitionedInvestments(
+      'investments_v2': await _preparePartitionedInvestments(
           _storageService.getAllInvestments(), encryptor),
     };
   }
 
-  dynamic Function(dynamic) _createDecryptor({
+  Future<dynamic> Function(dynamic) _createDecryptor({
     required bool isEncrypted,
     required EncryptionService? encryption,
     required String? passcode,
   }) {
-    return (dynamic payload) {
+    Uint8List? sessionKey;
+
+    return (dynamic payload) async {
       if (!isEncrypted || payload == null || payload is! String) {
         // coverage:ignore-line
         return payload;
       }
       try {
-        final decryptedString =
-            encryption!.decryptData(payload, passcode!); // coverage:ignore-line
+        if (sessionKey == null) {
+          // coverage:ignore-start
+          final parts = payload.split('|');
+          if (parts.length == 6) {
+            final salt = base64.decode(parts[2]);
+            sessionKey = await encryption!.deriveKey(passcode!, salt);
+            // coverage:ignore-end
+          }
+        }
+
+        final decryptedString = await encryption!.decryptData(
+            payload, passcode!,
+            preDerivedKey: sessionKey); // coverage:ignore-line
         return jsonDecode(decryptedString); // coverage:ignore-line
       } catch (e) {
         throw Exception(
@@ -275,55 +297,84 @@ class CloudSyncService {
     };
   }
 
-  Map<String, dynamic> _preparePartitionedTransactions(
-      List<Transaction> transactions, dynamic Function(dynamic) encryptor) {
+  Future<Map<String, dynamic>> _preparePartitionedTransactions(
+      List<Transaction> transactions,
+      Future<dynamic> Function(dynamic) encryptor) async {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var t in transactions) {
       final bucket =
           "${t.date.year}-${t.date.month.toString().padLeft(2, '0')}";
       grouped.putIfAbsent(bucket, () => []).add(t.toMap());
     }
-    return grouped.map((k, v) => MapEntry(k, encryptor(v)));
+
+    final Map<String, dynamic> encryptedMap = {};
+    for (var entry in grouped.entries) {
+      encryptedMap[entry.key] = await encryptor(entry.value);
+    }
+    return encryptedMap;
   }
 
-  Map<String, dynamic> _preparePartitionedLoans(
-      List<Loan> loans, dynamic Function(dynamic) encryptor) {
-    return {for (var l in loans) l.id: encryptor(l.toMap())};
+  Future<Map<String, dynamic>> _preparePartitionedLoans(
+      List<Loan> loans, Future<dynamic> Function(dynamic) encryptor) async {
+    final Map<String, dynamic> encryptedMap = {};
+    for (var l in loans) {
+      encryptedMap[l.id] = await encryptor(l.toMap()); // coverage:ignore-line
+    }
+    return encryptedMap;
   }
 
-  Map<String, dynamic> _preparePartitionedTaxRules(
-      Map<int, TaxRules> rules, dynamic Function(dynamic) encryptor) {
-    return {
-      for (var entry in rules.entries)
-        entry.key.toString(): encryptor(entry.value.toMap())
-    };
+  Future<Map<String, dynamic>> _preparePartitionedTaxRules(
+      Map<String, TaxRules> rules,
+      Future<dynamic> Function(dynamic) encryptor) async {
+    final Map<String, dynamic> encryptedMap = {};
+    for (var entry in rules.entries) {
+      encryptedMap[entry.key] = await encryptor(entry.value.toMap());
+    }
+    return encryptedMap;
   }
 
-  Map<String, dynamic> _preparePartitionedTaxData(
-      List<TaxYearData> taxData, dynamic Function(dynamic) encryptor) {
-    return {for (var td in taxData) td.year.toString(): encryptor(td.toMap())};
+  Future<Map<String, dynamic>> _preparePartitionedTaxData(
+      List<TaxYearData> taxData,
+      Future<dynamic> Function(dynamic) encryptor) async {
+    final Map<String, dynamic> encryptedMap = {};
+    for (var td in taxData) {
+      encryptedMap[td.year.toString()] = await encryptor(td.toMap());
+    }
+    return encryptedMap;
   }
 
-  Map<String, dynamic> _preparePartitionedInvestments(
-      List<Investment> investments, dynamic Function(dynamic) encryptor) {
+  Future<Map<String, dynamic>> _preparePartitionedInvestments(
+      List<Investment> investments,
+      Future<dynamic> Function(dynamic) encryptor) async {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var i in investments) {
       final bucket =
           "${i.acquisitionDate.year}-${i.acquisitionDate.month.toString().padLeft(2, '0')}";
       grouped.putIfAbsent(bucket, () => []).add(i.toMap());
     }
-    return grouped.map((k, v) => MapEntry(k, encryptor(v)));
+
+    final Map<String, dynamic> encryptedMap = {};
+    for (var entry in grouped.entries) {
+      encryptedMap[entry.key] = await encryptor(entry.value);
+    }
+    return encryptedMap;
   }
 
-  Map<String, dynamic> _preparePartitionedLendingRecords(
-      List<LendingRecord> records, dynamic Function(dynamic) encryptor) {
+  Future<Map<String, dynamic>> _preparePartitionedLendingRecords(
+      List<LendingRecord> records,
+      Future<dynamic> Function(dynamic) encryptor) async {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var r in records) {
       final bucket =
           "${r.date.year}-${r.date.month.toString().padLeft(2, '0')}";
       grouped.putIfAbsent(bucket, () => []).add(r.toMap());
     }
-    return grouped.map((k, v) => MapEntry(k, encryptor(v)));
+
+    final Map<String, dynamic> encryptedMap = {};
+    for (var entry in grouped.entries) {
+      encryptedMap[entry.key] = await encryptor(entry.value);
+    }
+    return encryptedMap;
   }
 
   void _handleSyncError(FirebaseException e) {
@@ -433,7 +484,7 @@ class CloudSyncService {
     final localTaxData = _storageService.getAllTaxYearData();
     final identity = _captureLocalIdentity();
 
-    await _storageService.clearAllData();
+    await _storageService.clearAllData(fullWipe: true);
 
     // Immediately restore Session identity to prevent verification failures
     await _restoreLocalIdentity(identity);
@@ -477,10 +528,10 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreProfiles(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreProfiles(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     if (data['profiles'] == null) return;
-    final profiles = decrypt(data['profiles']);
+    final profiles = await decrypt(data['profiles']);
     for (var p in (profiles as List)) {
       await _storageService
           .saveProfile(Profile.fromMap(Map<String, dynamic>.from(p)));
@@ -498,10 +549,10 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreAccounts(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreAccounts(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     if (data['accounts'] == null) return;
-    final accList = decrypt(data['accounts']);
+    final accList = await decrypt(data['accounts']);
     for (var a in (accList as List)) {
       final acc = Account.fromMap(Map<String, dynamic>.from(a));
       await _storageService.saveAccount(acc);
@@ -513,13 +564,13 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreTransactions(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreTransactions(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final v2Data = data['transactions_v2'];
     if (v2Data == null || v2Data is! Map) return;
 
     for (var bucketValue in v2Data.values) {
-      final txns = decrypt(bucketValue);
+      final txns = await decrypt(bucketValue);
       for (var t in (txns as List)) {
         await _storageService.saveTransaction(
             Transaction.fromMap(Map<String, dynamic>.from(t)),
@@ -528,37 +579,37 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreLoans(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreLoans(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final v2Data = data['loans_v2'];
     if (v2Data == null || v2Data is! Map) return;
 
-    for (var bucketValue in v2Data.values) {
-      final loanMap = decrypt(bucketValue);
+    for (var loanData in v2Data.values) {
+      final l = await decrypt(loanData);
       await _storageService
-          .saveLoan(Loan.fromMap(Map<String, dynamic>.from(loanMap)));
+          .saveLoan(Loan.fromMap(Map<String, dynamic>.from(l)));
     }
   }
 
-  Future<void> _restoreRecurring(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreRecurring(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     if (data['recurring'] == null) return;
-    final recs = decrypt(data['recurring']);
-    for (var rt in (recs as List)) {
+    final recurring = await decrypt(data['recurring']);
+    for (var rt in (recurring as List)) {
       await _storageService.saveRecurringTransaction(
           RecurringTransaction.fromMap(Map<String, dynamic>.from(rt)));
     }
   }
 
-  Future<void> _restoreSettings(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreSettings(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     if (data['settings'] == null) return;
     final Map<String, dynamic> finalSettings = {};
 
     if (data['settings'] is Map) {
       finalSettings.addAll(Map<String, dynamic>.from(data['settings']));
     } else {
-      final decoded = decrypt(data['settings']); // coverage:ignore-line
+      final decoded = await decrypt(data['settings']); // coverage:ignore-line
       finalSettings
           .addAll(Map<String, dynamic>.from(decoded)); // coverage:ignore-line
     }
@@ -573,45 +624,43 @@ class CloudSyncService {
     await _storageService.saveSettings(finalSettings);
   }
 
-  Future<void> _restoreInsurancePolicies(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreInsurancePolicies(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     if (data['insurance_policies'] == null) return;
     final List<InsurancePolicy> policies = [];
-    final insPolicies = decrypt(data['insurance_policies']);
+    final insPolicies = await decrypt(data['insurance_policies']);
     for (var p in (insPolicies as List)) {
       policies.add(InsurancePolicy.fromMap(Map<String, dynamic>.from(p)));
     }
-    await _storageService.saveInsurancePolicies(policies);
+    await _storageService.saveInsurancePoliciesGlobal(policies);
   }
 
-  Future<void> _restoreTaxRules(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreTaxRules(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final v2Data = data['tax_rules_v2'];
     if (v2Data == null || v2Data is! Map) return;
 
-    final Map<int, TaxRules> taxRules = {};
+    final Map<String, TaxRules> allRules = {};
     for (var entry in v2Data.entries) {
-      final year = int.parse(entry.key.toString());
-      final rulesMap = decrypt(entry.value);
-      taxRules[year] = TaxRules.fromMap(Map<String, dynamic>.from(rulesMap));
+      final r = await decrypt(entry.value);
+      allRules[entry.key] = TaxRules.fromMap(Map<String, dynamic>.from(r));
     }
-    await _taxConfigService.restoreAllRules(taxRules);
+    await _taxConfigService.restoreAllRulesGlobal(allRules);
   }
 
-  Future<Set<int>> _restoreTaxData(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
-    final restoredTaxYears = <int>{};
+  Future<Set<int>> _restoreTaxData(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final v2Data = data['tax_data_v2'];
+    if (v2Data == null || v2Data is! Map) return {};
 
-    if (v2Data == null || v2Data is! Map) return restoredTaxYears;
-
-    for (var bucketValue in v2Data.values) {
-      final tdMap = decrypt(bucketValue);
-      final taxData = TaxYearData.fromMap(Map<String, dynamic>.from(tdMap));
-      await _storageService.saveTaxYearData(taxData);
-      restoredTaxYears.add(taxData.year);
+    final Set<int> restoredYears = {};
+    for (var entry in v2Data.entries) {
+      final td = await decrypt(entry.value);
+      final taxData = TaxYearData.fromMap(Map<String, dynamic>.from(td));
+      await _storageService.saveTaxYearDataGlobal(taxData);
+      restoredYears.add(taxData.year);
     }
-    return restoredTaxYears;
+    return restoredYears;
   }
 
   Future<void> _mergeLocalTaxSafety(
@@ -642,14 +691,16 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreLendingRecords(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreLendingRecords(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final lendingData = data['lending_records'];
-    if (lendingData == null || lendingData is! Map) return;
+    if (lendingData == null || lendingData is! Map) {
+      return;
+    }
 
     // Partitioned Format
     for (var bucketValue in lendingData.values) {
-      final records = decrypt(bucketValue);
+      final records = await decrypt(bucketValue);
       if (records == null || records is! List) continue;
       for (var r in records) {
         await _storageService.saveLendingRecord(
@@ -658,14 +709,14 @@ class CloudSyncService {
     }
   }
 
-  Future<void> _restoreInvestments(
-      Map<String, dynamic> data, Function(dynamic) decrypt) async {
+  Future<void> _restoreInvestments(Map<String, dynamic> data,
+      Future<dynamic> Function(dynamic) decrypt) async {
     final v2Data = data['investments_v2'];
     if (v2Data == null || v2Data is! Map) return;
 
     for (var bucketValue in v2Data.values) {
-      final invs = decrypt(bucketValue);
-      for (var i in (invs as List)) {
+      final investments = await decrypt(bucketValue);
+      for (var i in (investments as List)) {
         await _storageService
             .saveInvestment(Investment.fromMap(Map<String, dynamic>.from(i)));
       }

@@ -1,4 +1,4 @@
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
 part 'tax_rules.g.dart';
 
@@ -796,6 +796,10 @@ class TaxRules {
               ?.map((e) => TaxMappingRule.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
           [],
+      financialYearStartMonth: m['financialYearStartMonth'] ?? 4,
+      giftFromEmployerExemptionLimit:
+          (m['giftFromEmployerExemptionLimit'] as num?)?.toDouble() ?? 5000,
+      isGiftFromEmployerEnabled: m['isGiftFromEmployerEnabled'] ?? true,
       is44ADEnabled: m['is44ADEnabled'] ?? true,
       limit44AD: (m['limit44AD'] as num?)?.toDouble() ?? 20000000,
       rate44AD: (m['rate44AD'] as num?)?.toDouble() ?? 6.0,

@@ -5,7 +5,7 @@ import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:samriddhi_flow/hive_registrar.g.dart';
 
 class MockAuthService extends Mock implements AuthService {}

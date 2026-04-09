@@ -1,4 +1,4 @@
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../utils/currency_utils.dart';
 import 'package:uuid/uuid.dart';
 import 'transaction.dart';

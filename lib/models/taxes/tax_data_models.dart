@@ -1,5 +1,5 @@
 import 'package:samriddhi_flow/utils/regex_utils.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:math';
 
@@ -29,10 +29,14 @@ class SalaryDetails {
   @HiveField(7)
   final List<CustomDeduction> independentDeductions;
 
+  @HiveField(8)
+  final double employerGifts;
+
   const SalaryDetails({
     this.npsEmployer = 0,
     this.leaveEncashment = 0,
     this.gratuity = 0,
+    this.employerGifts = 0,
     this.history = const [],
     this.netSalaryReceived = const {},
     this.independentAllowances = const [],
@@ -44,6 +48,7 @@ class SalaryDetails {
     double? npsEmployer,
     double? leaveEncashment,
     double? gratuity,
+    double? employerGifts,
     List<SalaryStructure>? history,
     Map<int, double>? netSalaryReceived,
     List<CustomAllowance>? independentAllowances,
@@ -54,6 +59,7 @@ class SalaryDetails {
       npsEmployer: npsEmployer ?? this.npsEmployer,
       leaveEncashment: leaveEncashment ?? this.leaveEncashment,
       gratuity: gratuity ?? this.gratuity,
+      employerGifts: employerGifts ?? this.employerGifts,
       history: history ?? this.history, // coverage:ignore-line
       netSalaryReceived: netSalaryReceived ?? this.netSalaryReceived,
       independentAllowances:
@@ -69,6 +75,7 @@ class SalaryDetails {
         'npsEmployer': npsEmployer,
         'leaveEncashment': leaveEncashment,
         'gratuity': gratuity,
+        'employerGifts': employerGifts,
         'history': history.map((e) => e.toMap()).toList(),
         'netSalaryReceived':
             netSalaryReceived.map((k, v) => MapEntry(k.toString(), v)),
@@ -84,6 +91,7 @@ class SalaryDetails {
         npsEmployer: (m['npsEmployer'] as num?)?.toDouble() ?? 0,
         leaveEncashment: (m['leaveEncashment'] as num?)?.toDouble() ?? 0,
         gratuity: (m['gratuity'] as num?)?.toDouble() ?? 0,
+        employerGifts: (m['employerGifts'] as num?)?.toDouble() ?? 0,
         history: (m['history'] as List?)
                 ?.map((e) =>
                     SalaryStructure.fromMap(Map<String, dynamic>.from(e)))

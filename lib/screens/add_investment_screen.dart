@@ -677,7 +677,7 @@ class _AddInvestmentScreenState extends ConsumerState<AddInvestmentScreen> {
 
   Widget _buildTypeChip(InvestmentType t, AppLocalizations l10n) {
     return ChoiceChip(
-      label: Text(t.localizedName(l10n), style: const TextStyle(fontSize: 12)),
+      label: Text(t.localizedName(l10n)),
       selected: _type == t,
       onSelected: (selected) {
         if (selected) {

@@ -12,6 +12,7 @@ import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/l10n/app_localizations.dart';
 import 'package:samriddhi_flow/core/cloud_config.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:samriddhi_flow/services/subscription_service.dart';
 
 class MockAuthService extends Mock implements AuthService {}
 
@@ -20,6 +21,8 @@ class MockStorageService extends Mock implements StorageService {}
 class MockCloudSyncService extends Mock implements CloudSyncService {}
 
 class MockUser extends Mock implements User {}
+
+class MockSubscriptionService extends Mock implements SubscriptionService {}
 
 class FakeIsOfflineNotifier extends IsOfflineNotifier {
   @override
@@ -31,12 +34,18 @@ void main() {
   late MockStorageService mockStorageService;
   late MockCloudSyncService mockCloudSync;
   late MockUser mockUser;
+  late MockSubscriptionService mockSubscription;
 
   setUp(() {
     mockAuthService = MockAuthService();
     mockStorageService = MockStorageService();
     mockCloudSync = MockCloudSyncService();
     mockUser = MockUser();
+    mockSubscription = MockSubscriptionService();
+
+    when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
+    when(() => mockSubscription.getTier()).thenReturn(SubscriptionTier.free);
+    when(() => mockSubscription.getExpiryDate()).thenReturn(null);
 
     when(() => mockUser.uid).thenReturn('test-uid');
     when(() => mockUser.email).thenReturn('test@example.com');
@@ -87,10 +96,12 @@ void main() {
         .thenThrow(Exception("SESSION_EXPIRED"));
     when(() => mockCloudSync.deleteCloudData())
         .thenAnswer((_) async {}); // Stub missing call!
-    when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+    when(() =>
+            mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+        .thenAnswer((_) async {});
     when(() => mockAuthService.signOut(any())).thenAnswer((_) async {});
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(ProviderScope(
@@ -105,6 +116,7 @@ void main() {
         isOfflineProvider.overrideWith(FakeIsOfflineNotifier.new),
         connectivityStreamProvider.overrideWithValue(const AsyncValue.data([])),
         authStreamProvider.overrideWithValue(AsyncValue.data(mockUser)),
+        subscriptionServiceProvider.overrideWithValue(mockSubscription),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -117,10 +129,14 @@ void main() {
 
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
+    // Switch to global settings
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     // 2. Trigger the deactivation flow (we must find the list tile that triggers it)
     final deactivateTile = find.text(l10n.deactivateWipeCloudTitle);
 
-    await tester.scrollUntilVisible(deactivateTile, 500.0);
+    await tester.scrollUntilVisible(deactivateTile, 1000.0);
     await tester.tap(deactivateTile);
     await tester.pumpAndSettle(); // Show dialog
 
@@ -132,7 +148,7 @@ void main() {
     // We expect clearAllData to be called because SESSION_EXPIRED was thrown
     await tester.pumpAndSettle();
 
-    verify(() => mockStorageService.clearAllData()).called(1);
+    verify(() => mockStorageService.clearAllData(fullWipe: true)).called(1);
     verify(() => mockAuthService.signOut(any())).called(1);
   });
 }

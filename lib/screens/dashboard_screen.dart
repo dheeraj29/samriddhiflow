@@ -14,7 +14,6 @@ import '../models/category.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
 import '../utils/billing_helper.dart';
-import '../utils/currency_utils.dart';
 import '../widgets/smart_currency_text.dart';
 import '../widgets/pure_icons.dart';
 import '../widgets/transaction_list_item.dart';
@@ -806,7 +805,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return transactionsAsync.when(
       data: (transactions) {
         final totals = _computeMonthlyTotals(transactions, ref);
-        final budget = ref.watch(monthlyBudgetProvider);
         // coverage:ignore-end
 
         // coverage:ignore-start
@@ -832,11 +830,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               const SizedBox(height: 16),
             ],
-            // coverage:ignore-start
-            if (config.showBudget && budget > 0)
-              _buildWhiteThemeBudgetProgress(
-                  totals.expense, budget, currencyLocale, _isPrivacyMode),
-            // coverage:ignore-end
+            // Removed redundant budget progress - now handled globally in _buildNetWorthContent
           ],
         );
       },
@@ -908,12 +902,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-                '${AppLocalizations.of(context)!.expLabel}${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(expense, currencyLocale)}',
-                style: const TextStyle(fontSize: 10, color: Colors.white70)),
-            Text(
-                '${AppLocalizations.of(context)!.remLabel}${isPrivate ? hiddenTextChars : CurrencyUtils.getSmartFormat(budget - expense, currencyLocale)}',
-                style: const TextStyle(fontSize: 10, color: Colors.white70)),
+            Row(
+              children: [
+                Text('${AppLocalizations.of(context)!.expLabel} ',
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.white70)),
+                isPrivate
+                    ? const Text(hiddenTextChars,
+                        style: TextStyle(fontSize: 10, color: Colors.white70))
+                    : SmartCurrencyText(
+                        value: expense,
+                        locale: currencyLocale,
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.white70),
+                      ),
+              ],
+            ),
+            Row(
+              children: [
+                Text('${AppLocalizations.of(context)!.remLabel} ',
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.white70)),
+                isPrivate
+                    ? const Text(hiddenTextChars,
+                        style: TextStyle(fontSize: 10, color: Colors.white70))
+                    : SmartCurrencyText(
+                        value: budget - expense,
+                        locale: currencyLocale,
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.white70),
+                      ),
+              ],
+            ),
           ],
         ),
       ],
@@ -1059,8 +1079,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Navigator.pushNamed(context, '/investments');
               // coverage:ignore-end
             },
-            child: _buildActionItem(context, Icons.trending_up,
-                AppLocalizations.of(context)!.investmentsAction, Colors.indigo),
+            child: _buildActionItem(
+              context,
+              Icons.analytics,
+              AppLocalizations.of(context)!.investmentsAction,
+              Colors.indigo,
+            ),
           ),
         ],
       ),
@@ -1068,7 +1092,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildActionItem(
-      BuildContext context, IconData icon, String label, Color color) {
+      BuildContext context, IconData icon, String label, Color color,
+      {double iconSize = 28}) {
     return Column(
       children: [
         Container(
@@ -1079,10 +1104,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
           ),
-          child: Icon(icon, color: color, size: 28),
+          child: Icon(icon, color: color, size: iconSize),
         ),
         const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        SizedBox(
+          width: 72,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

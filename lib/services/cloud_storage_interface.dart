@@ -21,4 +21,10 @@ abstract class CloudStorageInterface {
 
   /// Clears the active session device ID from the cloud.
   Future<void> clearActiveSessionId(String uid);
+
+  /// Retrieves the region hint for the user from the global database.
+  Future<String?> getRegionHint(String uid);
+
+  /// Sets the region hint for the user in the global database.
+  Future<void> setRegionHint(String uid, String region);
 }

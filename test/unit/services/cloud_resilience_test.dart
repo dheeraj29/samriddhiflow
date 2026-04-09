@@ -77,10 +77,10 @@ void main() {
       when(() => mockStorage.getAllRecurring()).thenReturn([]);
       when(() => mockStorage.getAllCategories()).thenReturn([]);
       when(() => mockStorage.getProfiles()).thenReturn([]);
-      when(() => mockStorage.getInsurancePolicies()).thenReturn([]);
-      when(() => mockTax.getAllRules()).thenReturn({});
-      when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorage.getLendingRecords()).thenReturn([]);
+      when(() => mockStorage.getInsurancePoliciesGlobal()).thenReturn([]);
+      when(() => mockTax.getAllRulesGlobal()).thenReturn({});
+      when(() => mockStorage.getAllTaxYearDataGlobal()).thenReturn([]);
+      when(() => mockStorage.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorage.getAllInvestments()).thenReturn([]);
       when(() => mockUser.getIdToken(any()))
           .thenAnswer((_) async => 'token123');

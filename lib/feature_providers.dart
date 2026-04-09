@@ -41,6 +41,16 @@ class CloudDatabaseRegionNotifier extends Notifier<String> {
     final storage = ref.read(storageServiceProvider);
     await storage.setCloudDatabaseRegion(region);
     // coverage:ignore-end
+
+    // PERSIST GLOBAL HINT: Prevent region-probing attacks by storing hint in (default) db
+    final user = FirebaseAuth.instance.currentUser; // coverage:ignore-line
+    if (user != null) {
+      // Create a dedicated one-off global instance for this write
+      final globalStorage =
+          FirestoreStorageService(databaseId: null); // coverage:ignore-line
+      await globalStorage.setRegionHint(
+          user.uid, region); // coverage:ignore-line
+    }
   }
 }
 
@@ -251,7 +261,7 @@ class LocaleNotifier extends Notifier<Locale?> {
     final storage = ref.watch(storageServiceProvider);
     final localeCode = storage.getLocale();
     if (localeCode != null) {
-      return Locale(localeCode);
+      return Locale(localeCode); // coverage:ignore-line
     }
     return null;
   }

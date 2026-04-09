@@ -79,23 +79,22 @@ class JsonDataService {
     _addToArchive(archive, 'settings.json', settings);
 
     // 9. Insurance Policies
-    final policies = _storageService.getInsurancePolicies();
+    final policies = _storageService.getInsurancePoliciesGlobal();
     _addToArchive(archive, 'insurance_policies.json',
         policies.map((e) => e.toMap()).toList());
 
     // 10. Tax Rules
-    final rules = _taxConfigService.getAllRules();
-    final rulesMap =
-        rules.map((year, rule) => MapEntry(year.toString(), rule.toMap()));
+    final rules = _taxConfigService.getAllRulesGlobal();
+    final rulesMap = rules.map((key, rule) => MapEntry(key, rule.toMap()));
     _addToArchive(archive, 'tax_rules.json', rulesMap);
 
     // 11. Tax Year Data
-    final taxData = _storageService.getAllTaxYearData();
+    final taxData = _storageService.getAllTaxYearDataGlobal();
     _addToArchive(
         archive, 'tax_data.json', taxData.map((e) => e.toMap()).toList());
 
     // 12. Lending Records
-    final lending = _storageService.getLendingRecords();
+    final lending = _storageService.getLendingRecordsGlobal();
     _addToArchive(archive, 'lending_records.json',
         lending.map((e) => e.toMap()).toList());
 
@@ -146,7 +145,7 @@ class JsonDataService {
     }
 
     // 2. Wipe Current Data
-    await _storageService.clearAllData();
+    await _storageService.clearAllData(fullWipe: true);
 
     // 3. Restore Each Entity
     final stats = <String, int>{};
@@ -202,8 +201,8 @@ class JsonDataService {
         'tax_data.json',
         stats,
         'tax_data',
-        (td) async => // coverage:ignore-line
-            await _storageService.saveTaxYearData(
+        (td) async => await _storageService // coverage:ignore-line
+            .saveTaxYearDataGlobal(
                 TaxYearData.fromMap(td))); // coverage:ignore-line
     await _restoreEntityList(
         getJson,
@@ -282,7 +281,7 @@ class JsonDataService {
     for (var p in (policiesList as List)) {
       policies.add(InsurancePolicy.fromMap(p)); // coverage:ignore-line
     }
-    await _storageService.saveInsurancePolicies(policies);
+    await _storageService.saveInsurancePoliciesGlobal(policies);
     stats['insurance_policies'] = policies.length;
   }
 
@@ -290,11 +289,12 @@ class JsonDataService {
       dynamic Function(String) getJson, Map<String, int> stats) async {
     final rulesMap = getJson('tax_rules.json');
     if (rulesMap == null) return;
-    final Map<int, TaxRules> rules = {};
+    final Map<String, TaxRules> rules = {};
     (rulesMap as Map).forEach((k, v) {
-      rules[int.parse(k)] = TaxRules.fromMap(v); // coverage:ignore-line
+      rules[k.toString()] = TaxRules.fromMap(
+          Map<String, dynamic>.from(v)); // coverage:ignore-line
     });
-    await _taxConfigService.restoreAllRules(rules);
+    await _taxConfigService.restoreAllRulesGlobal(rules);
     stats['tax_rules'] = rules.length;
   }
 }

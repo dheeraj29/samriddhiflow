@@ -73,7 +73,9 @@ void main() {
         .thenAnswer((_) async => {});
     when(() => mockStorage.getAuthFlag()).thenReturn(true);
     when(() => mockStorage.getAllTaxYearData()).thenReturn([]);
-    when(() => mockStorage.clearAllData()).thenAnswer((_) async {});
+    when(() => mockStorage.getAllTaxYearDataGlobal()).thenReturn([]);
+    when(() => mockStorage.clearAllData(fullWipe: any(named: 'fullWipe')))
+        .thenAnswer((_) async {});
     // Stub the restore helpers
     when(() => mockStorage.getProfiles()).thenReturn([]);
     when(() => mockStorage.saveProfile(any())).thenAnswer((_) async {});
