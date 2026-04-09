@@ -95,15 +95,15 @@ void main() {
       await tester
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.free));
       await tester.pumpAndSettle();
-      
+
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
       await tester.tap(find.text('Global Settings'));
       await tester.pumpAndSettle();
 
-      expect(
-          find.textContaining(l10n.freeTierActive, findRichText: true), findsOneWidget);
-      expect(
-          find.widgetWithText(TextButton, l10n.upgradeButtonLabel), findsOneWidget);
+      expect(find.textContaining(l10n.freeTierActive, findRichText: true),
+          findsOneWidget);
+      expect(find.widgetWithText(TextButton, l10n.upgradeButtonLabel),
+          findsOneWidget);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();
@@ -140,13 +140,13 @@ void main() {
 
       expect(find.text(l10n.premiumActive), findsOneWidget);
       expect(find.text(l10n.expiresOnLabel(l10n.expiresNever)), findsOneWidget);
-      expect(find.widgetWithText(TextButton, l10n.upgradeButtonLabel), findsNothing);
-      expect(
-          find.widgetWithText(TextButton, l10n.upgradeToPremiumLabel), findsNothing);
+      expect(find.widgetWithText(TextButton, l10n.upgradeButtonLabel),
+          findsNothing);
+      expect(find.widgetWithText(TextButton, l10n.upgradeToPremiumLabel),
+          findsNothing);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();
     });
   });
 }
-

@@ -261,7 +261,7 @@ class LocaleNotifier extends Notifier<Locale?> {
     final storage = ref.watch(storageServiceProvider);
     final localeCode = storage.getLocale();
     if (localeCode != null) {
-      return Locale(localeCode); // coverage:ignore-line
+      return Locale(localeCode);
     }
     return null;
   }

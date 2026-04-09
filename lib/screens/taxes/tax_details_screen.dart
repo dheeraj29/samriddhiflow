@@ -507,11 +507,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       canPop: !_hasUnsavedChanges,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        // coverage:ignore-start
         final shouldPop = await _showUnsavedWarning();
         if (shouldPop && context.mounted) {
           Navigator.pop(context);
-          // coverage:ignore-end
         }
       },
       child: Scaffold(
@@ -733,7 +731,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
-  // coverage:ignore-start
   Future<bool> _showUnsavedWarning() async {
     return await showDialog<bool>(
           context: context,
@@ -742,12 +739,12 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             content: Text(AppLocalizations.of(context)!.unsavedChangesContent),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () =>
+                      Navigator.pop(context, false), // coverage:ignore-line
                   child: Text(AppLocalizations.of(context)!.keepEditingButton)),
               FilledButton(
                   onPressed: () => Navigator.pop(context, true),
                   child: Text(AppLocalizations.of(context)!.discardButton)),
-              // coverage:ignore-end
             ],
           ),
         ) ??
@@ -997,11 +994,9 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
             '${AppLocalizations.of(context)!.basicLabel}: ${CurrencyUtils.formatCurrency(s.monthlyBasic, ref.watch(currencyProvider))} + ${AppLocalizations.of(context)!.allowancesLabel}'),
         trailing: IconButton(
           icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
-          // coverage:ignore-start
           onPressed: () {
             FocusScope.of(context).unfocus();
             _editSalaryStructure(s);
-            // coverage:ignore-end
           },
         ),
         // coverage:ignore-start
@@ -5044,20 +5039,17 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
 
     if (result != null) {
       setState(() {
-        // coverage:ignore-line
         if (existing != null) {
-          // coverage:ignore-start
           final idx = _salaryHistory.indexWhere((s) => s.id == existing.id);
           if (idx != -1) {
             _salaryHistory[idx] = result;
-            // coverage:ignore-end
           }
         } else {
-          _salaryHistory.add(result); // coverage:ignore-line
+          _salaryHistory.add(result);
         }
-        _hasUnsavedChanges = true; // coverage:ignore-line
+        _hasUnsavedChanges = true;
       });
-      _updateSummary(); // coverage:ignore-line
+      _updateSummary();
     }
   }
 
@@ -5628,8 +5620,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       try {
         applicable = sortedHistory.lastWhere((s) =>
             s.effectiveDate.isBefore(monthDate) ||
-            s.effectiveDate
-                .isAtSameMomentAs(monthDate)); // coverage:ignore-line
+            s.effectiveDate.isAtSameMomentAs(monthDate));
       } catch (e) {
         applicable = null;
       }

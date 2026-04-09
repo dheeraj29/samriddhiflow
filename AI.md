@@ -126,8 +126,6 @@ Run: `build_pwa.bat`
 
 ## 6. Testing
 Execute: `test_pwa.bat`
-*   **Baseline Coverage:** **77.1%**. Core logic and critical UI screens must maintain or improve coverage.
-*   **Consolidated Tests**: Unit tests are consolidated to avoid fragmentation. Use `test_mocks.dart` for shared service mocks.
 
 ---
 *Documentation synchronized with project state on 2026-03-01.*

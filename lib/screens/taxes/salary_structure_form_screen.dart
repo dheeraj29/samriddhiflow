@@ -54,21 +54,17 @@ class _SalaryStructureFormScreenState
   void _initBasicInfo(SalaryStructure? e) {
     _effectiveDateNotifier = ValueNotifier(e?.effectiveDate ?? DateTime.now());
     _basicCtrl = TextEditingController(
-        text: e != null
-            ? (e.monthlyBasic * 12).toStringAsFixed(0)
-            : ''); // coverage:ignore-line
+        text: e != null ? (e.monthlyBasic * 12).toStringAsFixed(0) : '');
     _fixedCtrl = TextEditingController(
         text: e != null
-            ? (e.monthlyFixedAllowances * 12)
-                .toStringAsFixed(0) // coverage:ignore-line
+            ? (e.monthlyFixedAllowances * 12).toStringAsFixed(0)
             : '');
   }
 
   void _initPerformancePay(SalaryStructure? e) {
     _perfCtrl = TextEditingController(
-        text: e != null
-            ? (e.monthlyPerformancePay * 12).toStringAsFixed(0)
-            : ''); // coverage:ignore-line
+        text:
+            e != null ? (e.monthlyPerformancePay * 12).toStringAsFixed(0) : '');
     _perfFreqNotifier =
         ValueNotifier(e?.performancePayFrequency ?? PayoutFrequency.monthly);
     _perfStartMonthNotifier = ValueNotifier(e?.performancePayStartMonth);
@@ -80,9 +76,7 @@ class _SalaryStructureFormScreenState
 
   void _initVariablePay(SalaryStructure? e) {
     _variableCtrl = TextEditingController(
-        text: e != null
-            ? e.annualVariablePay.toStringAsFixed(0)
-            : ''); // coverage:ignore-line
+        text: e != null ? e.annualVariablePay.toStringAsFixed(0) : '');
     _varFreqNotifier =
         ValueNotifier(e?.variablePayFrequency ?? PayoutFrequency.annually);
     _varStartMonthNotifier = ValueNotifier(e?.variablePayStartMonth);
@@ -95,13 +89,9 @@ class _SalaryStructureFormScreenState
     _customAllowancesNotifier = ValueNotifier(e?.customAllowances ?? []);
     _stoppedMonthsNotifier = ValueNotifier(e?.stoppedMonths ?? []);
     _pfCtrl = TextEditingController(
-        text: e != null
-            ? (e.monthlyEmployeePF * 12).toStringAsFixed(0)
-            : ''); // coverage:ignore-line
+        text: e != null ? (e.monthlyEmployeePF * 12).toStringAsFixed(0) : '');
     _gratuityCtrl = TextEditingController(
-        text: e != null
-            ? (e.monthlyGratuity * 12).toStringAsFixed(0)
-            : ''); // coverage:ignore-line
+        text: e != null ? (e.monthlyGratuity * 12).toStringAsFixed(0) : '');
   }
 
   @override
@@ -144,7 +134,6 @@ class _SalaryStructureFormScreenState
     _gratuityCtrl.dispose();
   }
 
-  // coverage:ignore-start
   void _onSave() {
     final basic = (double.tryParse(_basicCtrl.text) ?? 0) / 12;
     final fixed = (double.tryParse(_fixedCtrl.text) ?? 0) / 12;
@@ -152,25 +141,19 @@ class _SalaryStructureFormScreenState
     final pf = (double.tryParse(_pfCtrl.text) ?? 0) / 12;
     final gratuity = (double.tryParse(_gratuityCtrl.text) ?? 0) / 12;
     final variable = double.tryParse(_variableCtrl.text) ?? 0;
-    // coverage:ignore-end
 
-    // coverage:ignore-start
     final newStructure = SalaryStructure(
       id: widget.existing?.id ?? const Uuid().v4(),
       effectiveDate: _effectiveDateNotifier.value,
-      // coverage:ignore-end
       monthlyBasic: basic,
       monthlyFixedAllowances: fixed,
       monthlyPerformancePay: perf,
-      // coverage:ignore-start
       performancePayFrequency: _perfFreqNotifier.value,
       performancePayStartMonth: _perfStartMonthNotifier.value,
       performancePayCustomMonths: _perfCustomMonthsNotifier.value,
       isPerformancePayPartial: _perfPartialNotifier.value,
       performancePayAmounts: _perfAmountsNotifier.value,
-      // coverage:ignore-end
       annualVariablePay: variable,
-      // coverage:ignore-start
       variablePayFrequency: _varFreqNotifier.value,
       variablePayStartMonth: _varStartMonthNotifier.value,
       variablePayCustomMonths: _varCustomMonthsNotifier.value,
@@ -178,12 +161,11 @@ class _SalaryStructureFormScreenState
       variablePayAmounts: _varAmountsNotifier.value,
       customAllowances: _customAllowancesNotifier.value,
       stoppedMonths: _stoppedMonthsNotifier.value,
-      // coverage:ignore-end
       monthlyEmployeePF: pf,
       monthlyGratuity: gratuity,
     );
 
-    Navigator.pop(context, newStructure); // coverage:ignore-line
+    Navigator.pop(context, newStructure);
   }
 
   @override
@@ -193,7 +175,7 @@ class _SalaryStructureFormScreenState
       appBar: AppBar(
         title: Text(widget.existing == null
             ? l10n.addSalaryStructureAction
-            : l10n.editSalaryStructureAction), // coverage:ignore-line
+            : l10n.editSalaryStructureAction),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),

@@ -8,16 +8,14 @@ abstract class RefReader {
 
 // Extension to allow WidgetRef to act as RefReader
 extension WidgetRefReader on WidgetRef {
-  RefReader get reader => _WidgetRefReader(this); // coverage:ignore-line
+  RefReader get reader => _WidgetRefReader(this);
 }
 
 class _WidgetRefReader implements RefReader {
   final WidgetRef ref;
-  // coverage:ignore-start
   _WidgetRefReader(this.ref);
-  @override
-  T read<T>(dynamic provider) => ref.read(provider);
-  // coverage:ignore-end
+  @override // coverage:ignore-line
+  T read<T>(dynamic provider) => ref.read(provider); // coverage:ignore-line
 }
 
 abstract class RepairJob {

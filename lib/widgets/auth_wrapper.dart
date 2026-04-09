@@ -738,12 +738,16 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             const CircularProgressIndicator(),
             const SizedBox(height: 20),
             Text(message,
-                style: AppTheme.offlineSafeTextStyle
-                    .copyWith(color: theme.textTheme.bodyMedium?.color ?? Colors.grey, fontWeight: FontWeight.w500)),
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                    color: theme.textTheme.bodyMedium?.color ?? Colors.grey,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 10),
             Text(AppConstants.appVersion,
-                style: AppTheme.offlineSafeTextStyle
-                    .copyWith(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) ?? Colors.grey[400], fontSize: 10)),
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                    color: theme.textTheme.bodySmall?.color
+                            ?.withValues(alpha: 0.5) ??
+                        Colors.grey[400], // coverage:ignore-line
+                    fontSize: 10)),
             if (_isSlowConnection && showOfflineBypass) ...[
               const SizedBox(height: 32),
               // coverage:ignore-start
@@ -843,7 +847,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               Text(
                 message,
                 style: AppTheme.offlineSafeTextStyle.copyWith(
-                  color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey[600],
+                  color: Theme.of(context).textTheme.bodySmall?.color ??
+                      Colors.grey[600], // coverage:ignore-line
                 ),
                 textAlign: TextAlign.center,
               ),

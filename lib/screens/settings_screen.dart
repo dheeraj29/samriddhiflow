@@ -542,11 +542,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       statusIcon = Icons.verified_user_rounded;
       statusColor = Colors.green;
     } else if (isLite) {
-      statusText = l10n.liteActive; // coverage:ignore-line
+      statusText = l10n.liteActive;
       statusIcon = Icons.star_rounded;
       statusColor = Colors.blue;
     } else {
-      statusText = l10n.freeTierActive; // coverage:ignore-line
+      statusText = l10n.freeTierActive;
       statusIcon = Icons.star_border_rounded;
       statusColor = Colors.amber;
     }
@@ -577,8 +577,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           leading: Icon(statusIcon, color: statusColor, size: 28),
           trailing: (!isPremium)
-              // coverage:ignore-start
               ? TextButton(
+                  // coverage:ignore-start
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -587,7 +587,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       // coverage:ignore-end
                     );
                   },
-                  child: Text(upgradeLabel), // coverage:ignore-line
+                  child: Text(upgradeLabel),
                 )
               : null,
         ),
@@ -665,18 +665,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildCloudSection(
       BuildContext context, dynamic user, AppLocalizations l10n) {
     if (user == null) {
-      return _buildNoUserCloudSection(context, l10n); // coverage:ignore-line
+      return _buildNoUserCloudSection(context, l10n);
     }
     return _buildActiveCloudCard(context, user, l10n);
   }
 
-  // coverage:ignore-start
   Widget _buildNoUserCloudSection(BuildContext context, AppLocalizations l10n) {
     if (ref.watch(isLoggedInProvider)) {
-      return _buildOfflinePausedCard(context, l10n);
-      // coverage:ignore-end
+      return _buildOfflinePausedCard(context, l10n); // coverage:ignore-line
     }
-    return _buildEnableCloudCard(context, l10n); // coverage:ignore-line
+    return _buildEnableCloudCard(context, l10n);
   }
 
   Widget _buildOfflinePausedCard(BuildContext context, AppLocalizations l10n) {
@@ -764,48 +762,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildEnableCloudCard(BuildContext context, AppLocalizations l10n) {
-    // coverage:ignore-line
     return Container(
-      // coverage:ignore-line
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
-      // coverage:ignore-start
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        // coverage:ignore-end
       ),
-      // coverage:ignore-start
       child: Column(
         children: [
           Text(AppLocalizations.of(context)!.enableCloudSync,
               style: TextStyle(
-                  // coverage:ignore-end
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface)), // coverage:ignore-line
+                  color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 8),
           Text(
-            // coverage:ignore-line
-            AppLocalizations.of(context)!
-                .enableCloudSyncDesc, // coverage:ignore-line
+            AppLocalizations.of(context)!.enableCloudSyncDesc,
             textAlign: TextAlign.center,
             style: TextStyle(
-                // coverage:ignore-line
-                fontSize: 12,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface), // coverage:ignore-line
+                fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(height: 12),
-          // coverage:ignore-start
           ElevatedButton(
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const LoginScreen())),
+            onPressed: () => Navigator.push(
+                context, // coverage:ignore-line
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const LoginScreen())), // coverage:ignore-line
             child: Text(AppLocalizations.of(context)!.loginToSetupCloud),
-            // coverage:ignore-end
           )
         ],
       ),
@@ -912,11 +897,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: Text(AppLocalizations.of(context)!.repairDataLabel),
           subtitle: Text(AppLocalizations.of(context)!.repairDataDesc),
           leading: const Icon(Icons.build_circle, color: Colors.amber),
-          // coverage:ignore-start
           onTap: () {
             FocusScope.of(context).unfocus();
             _showRepairDialog(context, l10n);
-            // coverage:ignore-end
           },
         ),
       ],
@@ -965,81 +948,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // coverage:ignore-start
   void _showRepairDialog(BuildContext parentContext, AppLocalizations l10n) {
     final allJobs = ref.read(repairServiceProvider).jobs;
     final jobs = allJobs.where((j) => j.showInSettings).toList();
     showDialog(
-      // coverage:ignore-end
       context: parentContext,
-      // coverage:ignore-start
       builder: (dialogContext) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.dataRepairTitle),
         content: SizedBox(
-          // coverage:ignore-end
           width: double.maxFinite,
           child: ListView.builder(
-            // coverage:ignore-line
             shrinkWrap: true,
-            // coverage:ignore-start
             itemCount: jobs.length,
             itemBuilder: (itemContext, index) {
               final job = jobs[index];
               return ListTile(
                 title: Text(job.name),
                 subtitle: Text(job.description),
-                // coverage:ignore-end
                 trailing: const Icon(Icons.play_arrow, color: Colors.blue),
-                // coverage:ignore-start
                 onTap: () {
                   FocusScope.of(context).unfocus();
                   Navigator.pop(dialogContext);
                   _handleRepairJobTap(parentContext, job, l10n);
-                  // coverage:ignore-end
                 },
               );
             },
           ),
         ),
-        // coverage:ignore-start
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () =>
+                  Navigator.pop(dialogContext), // coverage:ignore-line
               child: Text(AppLocalizations.of(context)!.closeButton)),
-          // coverage:ignore-end
         ],
       ),
     );
   }
 
   Future<void> _handleRepairJobTap(
-      // coverage:ignore-line
-      BuildContext parentContext,
-      dynamic job,
-      AppLocalizations l10n) async {
+      BuildContext parentContext, dynamic job, AppLocalizations l10n) async {
     Map<String, dynamic>? args;
 
-    // coverage:ignore-start
     if (job.id == 'repair_cc_balances') {
-      args = await _selectCreditCardForRepair(parentContext);
-      if (args == null && !context.mounted) return;
-      // coverage:ignore-end
+      args = await _selectCreditCardForRepair(
+          parentContext); // coverage:ignore-line
+      if (args == null && !context.mounted) return; // coverage:ignore-line
     }
 
-    if (!context.mounted) return; // coverage:ignore-line
+    if (!context.mounted) return;
 
-    ScaffoldMessenger.of(parentContext) // coverage:ignore-line
-        .showSnackBar(SnackBar(
-            content: Text(l10n.runningRepair))); // coverage:ignore-line
+    ScaffoldMessenger.of(parentContext)
+        .showSnackBar(SnackBar(content: Text(l10n.runningRepair)));
 
     try {
-      // coverage:ignore-start
       final int count = await job.run(ref.reader, args: args);
       if (context.mounted) {
         ScaffoldMessenger.of(parentContext).showSnackBar(
             SnackBar(content: Text(l10n.repairSuccessStatus(job.name, count))));
         ref.invalidate(accountsProvider);
-        // coverage:ignore-end
       }
     } catch (e) {
       // coverage:ignore-start
@@ -1757,15 +1723,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          // coverage:ignore-line
-          SnackBar(
-              content: Text(
-                  l10n.sessionExpiredLogoutMessage)), // coverage:ignore-line
+          SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
         );
-        await ref
-            .read(storageServiceProvider)
-            .clearAllData(fullWipe: true); // coverage:ignore-line
-        ref.read(authServiceProvider).signOut(ref); // coverage:ignore-line
+        await ref.read(storageServiceProvider).clearAllData(fullWipe: true);
+        ref.read(authServiceProvider).signOut(ref);
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2706,11 +2667,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           profiles: otherProfiles,
           targetProfileId: targetProfileId,
           allProfiles: profiles,
-          // coverage:ignore-start
           onCopy: (sourceId) async {
             final storage = ref.read(storageServiceProvider);
             await storage.copyCategories(sourceId, targetProfileId);
-            // coverage:ignore-end
           },
         ),
       );
@@ -2754,21 +2713,17 @@ class _CopyCategoriesDialog extends StatelessWidget {
   Widget _buildProfileOption(BuildContext context, Profile p) {
     return ListTile(
       title: Text(p.name),
-      // coverage:ignore-start
       onTap: () async {
         await onCopy(p.id);
         if (context.mounted) {
-          // coverage:ignore-end
           final targetName =
-              // coverage:ignore-start
               allProfiles.firstWhere((pr) => pr.id == targetProfileId).name;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(AppLocalizations.of(context)!
                     .categoriesCopiedStatus(targetName))),
-            // coverage:ignore-end
           );
-          Navigator.pop(context); // coverage:ignore-line
+          Navigator.pop(context);
         }
       },
     );
