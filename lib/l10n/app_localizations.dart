@@ -1912,6 +1912,18 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// Header for profile-specific settings
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Settings'**
+  String get profileSettingsHeader;
+
+  /// Header for app-wide settings
+  ///
+  /// In en, this message translates to:
+  /// **'Global App Settings'**
+  String get globalSettingsHeader;
+
   /// Section header
   ///
   /// In en, this message translates to:
@@ -1935,6 +1947,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Data Management'**
   String get dataManagementSection;
+
+  /// Section header for profile data
+  ///
+  /// In en, this message translates to:
+  /// **'Data Cleanup & Recovery'**
+  String get profileDataSection;
+
+  /// Section header for global data
+  ///
+  /// In en, this message translates to:
+  /// **'Local Backup & Export'**
+  String get globalDataSection;
 
   /// Section header
   ///
@@ -2925,6 +2949,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Payout Months'**
   String get selectMonthsAction;
+
+  /// No description provided for @coreSalarySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Core Salary'**
+  String get coreSalarySection;
+
+  /// No description provided for @payoutsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Irregular Payouts & Variable Pay'**
+  String get payoutsSection;
+
+  /// No description provided for @deductionsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Deductions & Unemployment'**
+  String get deductionsSection;
+
+  /// No description provided for @firstPayoutMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'First Payout Month'**
+  String get firstPayoutMonthLabel;
+
+  /// No description provided for @noMonthsSelectedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No months selected'**
+  String get noMonthsSelectedNote;
+
+  /// No description provided for @addCustomAllowanceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Allowance'**
+  String get addCustomAllowanceAction;
+
+  /// No description provided for @editAllowanceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Allowance'**
+  String get editAllowanceAction;
+
+  /// No description provided for @payoutAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout Amount'**
+  String get payoutAmountLabel;
+
+  /// No description provided for @none.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get none;
+
+  /// No description provided for @cliffExemptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cliff-based Exemption'**
+  String get cliffExemptionTitle;
+
+  /// No description provided for @payoutFrequencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout Frequency'**
+  String get payoutFrequencyLabel;
+
+  /// No description provided for @exemptionLimitHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Income above this limit is fully taxable (no exemption applies).'**
+  String get exemptionLimitHelperText;
+
+  /// No description provided for @cliffExemptionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'If checked, income above limit becomes fully taxable.'**
+  String get cliffExemptionSubtitle;
 
   /// No description provided for @transactionDateLabel.
   ///
@@ -4786,12 +4888,6 @@ abstract class AppLocalizations {
   /// **'Add Custom Exemption'**
   String get addCustomExemptionTitle;
 
-  /// No description provided for @cliffExemptionSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'If checked, income above limit becomes fully taxable.'**
-  String get cliffExemptionSubtitle;
-
   /// Restore action label
   ///
   /// In en, this message translates to:
@@ -5188,12 +5284,6 @@ abstract class AppLocalizations {
   /// **'Edit Independent Allowance'**
   String get editIndependentAllowanceAction;
 
-  /// No description provided for @payoutFrequencyLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Payout Frequency'**
-  String get payoutFrequencyLabel;
-
   /// No description provided for @payoutFrequencyTrimesterLabel.
   ///
   /// In en, this message translates to:
@@ -5355,12 +5445,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Is Cliff Exemption?'**
   String get isCliffExemptionTitle;
-
-  /// No description provided for @exemptionLimitHelperText.
-  ///
-  /// In en, this message translates to:
-  /// **'Income above this limit is fully taxable (no exemption applies).'**
-  String get exemptionLimitHelperText;
 
   /// No description provided for @taxDetailsSavedStatus.
   ///
@@ -5524,6 +5608,12 @@ abstract class AppLocalizations {
   /// **'Gratuity'**
   String get gratuityTitleLabel;
 
+  /// No description provided for @employerGiftsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Employer Gifts'**
+  String get employerGiftsLabel;
+
   /// No description provided for @customAdHocExemptionsTitle.
   ///
   /// In en, this message translates to:
@@ -5601,6 +5691,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Less: Employer NPS Contribution'**
   String get lessEmployerNPSLabel;
+
+  /// No description provided for @lessEmployerGiftsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Less: Employer Gifts (Exempt)'**
+  String get lessEmployerGiftsLabel;
 
   /// No description provided for @taxableBeforeAdHocExemptionsLabel.
   ///

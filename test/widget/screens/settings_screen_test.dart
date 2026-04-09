@@ -219,60 +219,77 @@ void main() {
     );
   }
 
-  testWidgets('SettingsScreen renders all major sections',
+  testWidgets('SettingsScreen renders unified header and toggle',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('APPEARANCE'), findsOneWidget);
-    expect(find.text('DASHBOARD CUSTOMIZATION'), findsOneWidget);
+    // Verify unified header elements
+    expect(find.text('Profile 1'), findsOneWidget);
+    expect(find.text('PROFILE SETTINGS'), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('DATA MANAGEMENT'), 200);
-    expect(find.text('DATA MANAGEMENT'), findsOneWidget);
+    // Verify toggle buttons
+    expect(find.text('Profile Settings'), findsOneWidget);
+    expect(find.text('Global Settings'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('FEATURE MANAGEMENT'), 200);
-    expect(find.text('FEATURE MANAGEMENT'), findsOneWidget);
+    // Profile settings should be visible by default
+    expect(find.text('Preferences'), findsOneWidget);
+    expect(find.text('Data Cleanup & Recovery'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('PROFILE MANAGEMENT'), 200);
-    expect(find.text('PROFILE MANAGEMENT'), findsOneWidget);
+    // Global settings should NOT be visible yet
+    expect(find.text('Appearance'), findsNothing);
 
-    await tester.scrollUntilVisible(find.text('PREFERENCES'), 200);
-    expect(find.text('PREFERENCES'), findsOneWidget);
+    // Switch to Global Settings
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Dashboard Customization'), findsOneWidget);
+    expect(find.text('Feature Management'), findsOneWidget);
   });
 
   testWidgets('Theme mode can be changed', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final dropdown = find.byType(DropdownButton<ThemeMode>);
-    await tester.tap(dropdown);
+    // Must switch to Global for Appearance
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Dark').last);
+    // It's a SegmentedButton now
+    final darkBtn = find.text('Dark');
+    await tester.scrollUntilVisible(darkBtn, 500);
+    await tester.tap(darkBtn);
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setThemeMode('dark')).called(1);
   });
 
   testWidgets('Language can be changed', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final dropdown = find.byType(DropdownButton<String?>);
-    await tester.tap(dropdown);
+    // Must switch to Global for Appearance/Language
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('English').last);
+    // It's a SegmentedButton now
+    final englishBtn = find.text('English');
+    await tester.scrollUntilVisible(englishBtn, 500);
+    await tester.tap(englishBtn);
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setLocale('en')).called(1);
 
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('System Default').last);
+    final systemBtn = find.text('System Default');
+    await tester.scrollUntilVisible(systemBtn, 500);
+    await tester.tap(systemBtn);
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setLocale(null)).called(1);
@@ -280,20 +297,25 @@ void main() {
 
   testWidgets('Dashboard customization switches work',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.descendant(
-      of: find.byType(Column),
-      matching: find.text('Show Income & Expense'),
-    ));
+    // Switch to Global for Dashboard
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
+    final incomeSwitch = find.text('Show Income & Expense');
+    await tester.scrollUntilVisible(incomeSwitch, 500);
+    await tester.tap(incomeSwitch);
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.saveDashboardConfig(any())).called(1);
   });
 
   testWidgets('Monthly budget can be updated', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
@@ -312,13 +334,17 @@ void main() {
   });
 
   testWidgets('Profile switching works', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final profile2Tile = find.text('Profile 2');
-    await tester.scrollUntilVisible(profile2Tile, 500);
-    await tester.tap(profile2Tile);
+    // Now uses AppBar switcher
+    final dropdown = find.byType(DropdownButton<String>);
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+
+    final profile2Option = find.text('Profile 2').last;
+    await tester.tap(profile2Option);
     await tester.pumpAndSettle();
 
     verify(() => mockStorage.setActiveProfileId('p2')).called(1);
@@ -326,7 +352,7 @@ void main() {
   });
 
   testWidgets('Currency can be changed', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
@@ -344,7 +370,7 @@ void main() {
   });
 
   testWidgets('Backup threshold can be updated', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
@@ -363,13 +389,17 @@ void main() {
   });
 
   testWidgets('Add New Profile works', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Now under Manage Profiles icon in header
+    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
+    await tester.tap(manageProfilesBtn);
+    await tester.pumpAndSettle();
+
     final addProfileTile = find.text('Add New Profile');
-    await tester.scrollUntilVisible(addProfileTile, 500);
     await tester.tap(addProfileTile);
     await tester.pumpAndSettle();
 
@@ -384,9 +414,13 @@ void main() {
   testWidgets('Logout confirmation dialog shows', (WidgetTester tester) async {
     when(() => mockUser.email).thenReturn('test@example.com');
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Logout
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final logoutTile = find.widgetWithText(ListTile, 'Logout');
@@ -409,10 +443,12 @@ void main() {
 
     when(() => mockRepair.jobs).thenReturn([job]);
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
+
+    // Repair Data is now in Profile Settings, no need to switch modes.
 
     final repairTile = find.text('Repair Data');
     await tester.scrollUntilVisible(repairTile, 500);
@@ -429,9 +465,13 @@ void main() {
   });
 
   testWidgets('App Lock PIN flow', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Security/App Lock
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final appLockTile = find.text('App Lock PIN');
@@ -452,9 +492,13 @@ void main() {
 
   testWidgets('App Lock PIN flow accepts 6-digit PIN',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Security/App Lock
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final appLockTile = find.text('App Lock PIN');
@@ -479,9 +523,13 @@ void main() {
         .thenAnswer((_) async => AuthResponse(status: AuthStatus.success));
     when(() => mockCloudSync.deleteCloudData()).thenAnswer((_) async {});
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Auth/Clear Cloud
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final clearTile = find.textContaining('Clear Cloud Data (Keep Account)');
@@ -503,13 +551,18 @@ void main() {
     when(() => mockCloudSync.deleteCloudData()).thenAnswer((_) async {});
     when(() => mockAuth.deleteAccount()).thenAnswer((_) async {});
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 4000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for Auth/Deactivate
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final deactivateTile = find.textContaining('Deactivate & Wipe Cloud Data');
-    await tester.scrollUntilVisible(deactivateTile, 500);
+    await tester.scrollUntilVisible(
+        deactivateTile, 1500); // Increased scroll delta
     await tester.tap(deactivateTile);
     await tester.pumpAndSettle();
 
@@ -534,8 +587,12 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for GlobalData/Backup
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final backupTile = find.text('Backup Data (ZIP)');
-    await tester.scrollUntilVisible(backupTile, 500);
+    await tester.scrollUntilVisible(backupTile, 800); // Increased scroll limit
     await tester.tap(backupTile);
     await tester.pumpAndSettle();
 
@@ -559,8 +616,12 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for GlobalData/Restore
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final restoreTile = find.text('Restore Data (ZIP)');
-    await tester.scrollUntilVisible(restoreTile, 500);
+    await tester.scrollUntilVisible(restoreTile, 800); // Increased scroll limit
     await tester.tap(restoreTile);
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
@@ -600,8 +661,12 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for GlobalData/Restore
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final restoreTile = find.text('Restore Data (ZIP)');
-    await tester.scrollUntilVisible(restoreTile, 500);
+    await tester.scrollUntilVisible(restoreTile, 800); // Increased scroll limit
     await tester.tap(restoreTile);
     await tester.pumpAndSettle();
 
@@ -635,7 +700,7 @@ void main() {
         passcode: any(named: 'passcode'),
         appPin: any(named: 'appPin'))).thenAnswer((_) async {});
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -674,6 +739,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    // Switch to Global for Cloud/Sync
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     // 3. Trigger Cloud Backup
     final syncTile = find.text('Migrate/Sync Now');
     await tester.scrollUntilVisible(syncTile, 500);
@@ -700,16 +769,18 @@ void main() {
 
   testWidgets('Delete Profile confirmation dialog and execution',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final profile2 = find.text('Profile 2');
-    await tester.scrollUntilVisible(profile2, 500);
+    // Now under Manage Profiles icon in header
+    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
+    await tester.tap(manageProfilesBtn);
     await tester.pumpAndSettle();
 
+    final profile2 = find.text('Profile 2');
     final deleteIcon = find.descendant(
       of: find.ancestor(of: profile2, matching: find.byType(ListTile)),
       matching: find.byIcon(Icons.delete_outline),
@@ -729,16 +800,18 @@ void main() {
 
   testWidgets('Copy Categories dialog shows other profiles',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final profile2 = find.text('Profile 2');
-    await tester.scrollUntilVisible(profile2, 500);
+    // Now under Manage Profiles icon in header
+    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
+    await tester.tap(manageProfilesBtn);
     await tester.pumpAndSettle();
 
+    final profile2 = find.text('Profile 2');
     final copyIcon = find.descendant(
       of: find.ancestor(of: profile2, matching: find.byType(ListTile)),
       matching: find.byIcon(Icons.copy_all),
@@ -749,7 +822,11 @@ void main() {
     expect(find.text('Copy Categories'), findsOneWidget);
 
     // SimpleDialog options are usually found by text directly
-    final profileOption = find.text('Profile 1').last;
+    // Use descendant to avoid finding the profile name in the header dropdown
+    final profileOption = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('Profile 1'),
+    );
     await tester.tap(profileOption);
     await tester.pumpAndSettle();
 
@@ -761,9 +838,13 @@ void main() {
     // Removed 1600px size
     when(() => mockStorage.getAppPin()).thenReturn('hashed_pin');
 
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Security/App Lock
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final appLockTile = find.text('App Lock PIN');
@@ -790,6 +871,10 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for Security/App Lock
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final appLockSwitch = find.byWidgetPredicate((widget) =>
         widget is SwitchListTile &&
         widget.title is Text &&
@@ -814,6 +899,10 @@ void main() {
     when(() => mockUser.email).thenReturn('test@example.com');
 
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Cloud/Sync
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final syncTile = find.text('Migrate/Sync Now');
@@ -854,6 +943,10 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
+    // Switch to Global for Restore
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     final restoreTile = find.text('Restore Data (ZIP)');
     await tester.scrollUntilVisible(restoreTile, 500);
     await tester.tap(restoreTile);
@@ -867,9 +960,13 @@ void main() {
   });
 
   testWidgets('Sections are expanded by default', (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Appearance
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     // Check if 'Theme Mode' is visible (it's inside 'Appearance')
@@ -878,12 +975,16 @@ void main() {
 
   testWidgets('Clicking a section header toggles visibility',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    final appearanceHeader = find.text('APPEARANCE');
+    // Switch to Global for Appearance
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
+    final appearanceHeader = find.text('Appearance');
     await tester.tap(appearanceHeader);
     await tester.pumpAndSettle();
 
@@ -899,9 +1000,13 @@ void main() {
 
   testWidgets('Global expand/collapse button works',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    // Switch to Global for Global Expand
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     await tester.pumpAndSettle();
 
     final globalToggleButton =
@@ -926,11 +1031,15 @@ void main() {
 
   testWidgets('Server Region (Database) displays as static text',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => mockUser.uid).thenReturn('uid123');
     when(() => mockUser.email).thenReturn('t@e.com');
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    // Switch to Global for Region
+    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     // Verify Title and Subtitle
@@ -952,13 +1061,17 @@ void main() {
   testWidgets('Premium section shows active status',
       (WidgetTester tester) async {
     when(() => mockSubscription.isCloudSyncEnabled()).thenReturn(true);
-    await tester.binding.setSurfaceSize(const Size(800, 3000));
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    expect(find.text('PREMIUM FEATURES'), findsOneWidget);
+    // Switch to Global for Premium
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Premium Features'), findsOneWidget);
     expect(find.text('Premium Active'), findsOneWidget);
   });
 

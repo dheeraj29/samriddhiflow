@@ -18,6 +18,7 @@ import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/utils/currency_utils.dart';
 import 'package:samriddhi_flow/widgets/notched_border_painter.dart';
 import 'package:samriddhi_flow/widgets/smart_currency_text.dart';
+import 'salary_structure_form_screen.dart';
 
 const _dateFormatIso8601 = 'yyyy-MM-dd';
 
@@ -57,6 +58,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
   late TextEditingController _salaryNpsEmployerCtrl;
   late TextEditingController _salaryLeaveEncashCtrl;
   late TextEditingController _salaryGratuityCtrl;
+  late TextEditingController _salaryEmployerGiftsCtrl;
 
   // Local mutable lists to avoid "Unsupported operation: add"
   List<HouseProperty> _houseProperties = [];
@@ -119,6 +121,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     bind(_salaryNpsEmployerCtrl, 'salary.nps');
     bind(_salaryLeaveEncashCtrl, 'salary.leave');
     bind(_salaryGratuityCtrl, 'salary.gratuity');
+    bind(_salaryEmployerGiftsCtrl, 'salary.gifts');
   }
 
   void _initLocalLists() {
@@ -150,6 +153,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         npsEmployer: double.tryParse(_salaryNpsEmployerCtrl.text) ?? 0,
         leaveEncashment: double.tryParse(_salaryLeaveEncashCtrl.text) ?? 0,
         gratuity: double.tryParse(_salaryGratuityCtrl.text) ?? 0,
+        employerGifts: double.tryParse(_salaryEmployerGiftsCtrl.text) ?? 0,
         independentAllowances:
             List<CustomAllowance>.from(_independentAllowances),
         independentExemptions:
@@ -189,6 +193,8 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         text: _currentData.salary.leaveEncashment.toString());
     _salaryGratuityCtrl =
         TextEditingController(text: _currentData.salary.gratuity.toString());
+    _salaryEmployerGiftsCtrl = TextEditingController(
+        text: _currentData.salary.employerGifts.toString());
   }
 
   @override
@@ -196,6 +202,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     _salaryNpsEmployerCtrl.dispose();
     _salaryLeaveEncashCtrl.dispose();
     _salaryGratuityCtrl.dispose();
+    _salaryEmployerGiftsCtrl.dispose();
     _otherIncomeNameCtrl.dispose();
     _otherIncomeAmtCtrl.dispose();
 
@@ -211,6 +218,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       npsEmployer: (double.tryParse(_salaryNpsEmployerCtrl.text) ?? 0),
       leaveEncashment: (double.tryParse(_salaryLeaveEncashCtrl.text) ?? 0),
       gratuity: (double.tryParse(_salaryGratuityCtrl.text) ?? 0),
+      employerGifts: (double.tryParse(_salaryEmployerGiftsCtrl.text) ?? 0),
       independentAllowances: List<CustomAllowance>.from(_independentAllowances),
       independentExemptions: List<CustomExemption>.from(_independentExemptions),
       independentDeductions: List<CustomDeduction>.from(_independentDeductions),
@@ -332,6 +340,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     _salaryNpsEmployerCtrl.text = '0';
     _salaryLeaveEncashCtrl.text = '0';
     _salaryGratuityCtrl.text = '0';
+    _salaryEmployerGiftsCtrl.text = '0';
     _independentAllowances = [];
     _independentExemptions = [];
     _independentDeductions = [];
@@ -1010,6 +1019,7 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
         _buildNumberField(
             l10n.leaveEncashmentTitleLabel, _salaryLeaveEncashCtrl),
         _buildNumberField(l10n.gratuityTitleLabel, _salaryGratuityCtrl),
+        _buildNumberField(l10n.employerGiftsLabel, _salaryEmployerGiftsCtrl),
       ],
     );
   }
@@ -4089,32 +4099,87 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
                       child: Column(
                         // coverage:ignore-line
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        // coverage:ignore-start
                         children: [
-                          Text(
-                            'Next Due: ${CurrencyUtils.formatCurrency(nextAmount, ref.watch(currencyProvider))} by ${DateFormat('MMM dd').format(nextDueDate)}',
-                            // coverage:ignore-end
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
+                          // coverage:ignore-line
+                          Wrap(
+                            // coverage:ignore-line
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // coverage:ignore-line
+                              const Text('Next Due: ',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                              SmartCurrencyText(
+                                // coverage:ignore-line
+                                value: nextAmount,
+                                locale: ref.watch(
+                                    currencyProvider), // coverage:ignore-line
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                  // coverage:ignore-line
+                                  ' by ${DateFormat('MMM dd').format(nextDueDate)}', // coverage:ignore-line
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                            ],
                           ),
-                          // coverage:ignore-start
-                          Text(
-                            AppLocalizations.of(context)!
-                                .advanceTaxBreakdownLabel(
-                                    CurrencyUtils.formatCurrency(
-                                        nextBase, ref.watch(currencyProvider)),
-                                    CurrencyUtils.formatCurrency(
-                                        nextCess, ref.watch(currencyProvider)),
-                                    CurrencyUtils.formatCurrency(nextInterest,
-                                        ref.watch(currencyProvider))),
-                            style: TextStyle(
+                          Wrap(
+                            // coverage:ignore-line
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // coverage:ignore-line
+                              const Text('Base: ',
+                                  style: TextStyle(fontSize: 11)),
+                              SmartCurrencyText(
+                                // coverage:ignore-line
+                                value: nextBase,
+                                locale: ref.watch(
+                                    currencyProvider), // coverage:ignore-line
+                                style: TextStyle(
+                                    // coverage:ignore-line
+                                    fontSize: 11,
+                                    // coverage:ignore-start
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
                                 // coverage:ignore-end
-                                fontSize: 11,
-                                // coverage:ignore-start
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
-                            // coverage:ignore-end
+                              ),
+                              const Text(' • Cess: ',
+                                  style: TextStyle(fontSize: 11)),
+                              SmartCurrencyText(
+                                // coverage:ignore-line
+                                value: nextCess,
+                                locale: ref.watch(
+                                    currencyProvider), // coverage:ignore-line
+                                style: TextStyle(
+                                    // coverage:ignore-line
+                                    fontSize: 11,
+                                    // coverage:ignore-start
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                                // coverage:ignore-end
+                              ),
+                              const Text(' • Int: ',
+                                  style: TextStyle(fontSize: 11)),
+                              SmartCurrencyText(
+                                // coverage:ignore-line
+                                value: nextInterest,
+                                locale: ref.watch(
+                                    currencyProvider), // coverage:ignore-line
+                                style: TextStyle(
+                                    // coverage:ignore-line
+                                    fontSize: 11,
+                                    // coverage:ignore-start
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                                // coverage:ignore-end
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -4142,24 +4207,42 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                      AppLocalizations.of(context)!.advanceTaxInstallmentNote(
-                          month,
-                          r.endDay.toString(),
-                          r.requiredPercentage.toStringAsFixed(0),
-                          CurrencyUtils.formatCurrency(
-                              installmentAmount, ref.watch(currencyProvider))),
-                      style: const TextStyle(fontSize: 12)),
-                  Text(
-                    AppLocalizations.of(context)!
-                        .advanceTaxBreakdownLabelNoInterest(
-                            CurrencyUtils.formatCurrency(
-                                base, ref.watch(currencyProvider)),
-                            CurrencyUtils.formatCurrency(
-                                cess, ref.watch(currencyProvider))),
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                          '$month ${r.endDay}: ${r.requiredPercentage.toStringAsFixed(0)}% of Projected Tax (',
+                          style: const TextStyle(fontSize: 12)),
+                      SmartCurrencyText(
+                        value: installmentAmount,
+                        locale: ref.watch(currencyProvider),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const Text(')', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Text('Base: ', style: TextStyle(fontSize: 10)),
+                      SmartCurrencyText(
+                        value: base,
+                        locale: ref.watch(currencyProvider),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                      const Text(' • Cess: ', style: TextStyle(fontSize: 10)),
+                      SmartCurrencyText(
+                        value: cess,
+                        locale: ref.watch(currencyProvider),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -4205,9 +4288,19 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
           child: Icon(entryIcon,
               color: Theme.of(context).colorScheme.primary, size: 20),
         ),
-        title: Text(
-            '${DateFormat('MMM dd, yyyy').format(entry.date)}: ${CurrencyUtils.formatCurrency(entry.amount, ref.watch(currencyProvider))}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        title: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('${DateFormat('MMM dd, yyyy').format(entry.date)}: ',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            SmartCurrencyText(
+              value: entry.amount,
+              locale: ref.watch(currencyProvider),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
         subtitle: isCredit
             ? Text(AppLocalizations.of(context)!.sourceLabel(entry.source))
             : null,
@@ -4936,284 +5029,28 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     }).toList();
   }
 
-  Widget _buildFrequencyRow(
-      String label,
-      ValueNotifier<PayoutFrequency> freqNotifier,
-      ValueNotifier<int?> startMonthNotifier,
-      ValueNotifier<List<int>> customMonthsNotifier,
-      BuildContext context,
-      String selectMonthsText) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ValueListenableBuilder<PayoutFrequency>(
-          valueListenable: freqNotifier,
-          builder: (context, freq, _) {
-            return DropdownButtonFormField<PayoutFrequency>(
-              decoration: InputDecoration(
-                labelText: AppLocalizations.of(context)!.frequencyLabel(label),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                floatingLabelBehavior: FloatingLabelBehavior.always,
-                border: const OutlineInputBorder(),
-              ),
-              key: ValueKey(freq),
-              initialValue: freq,
-              isDense: true,
-              items: PayoutFrequency.values.map((f) {
-                String text = f.toString().split('.').last;
-                text = text[0].toUpperCase() + text.substring(1);
-                if (f == PayoutFrequency.trimester) {
-                  text = 'Trimester (4mo)';
-                }
-                return DropdownMenuItem(value: f, child: Text(text));
-              }).toList(),
-              onChanged: (v) {
-                // coverage:ignore-line
-                if (v != null) {
-                  freqNotifier.value = v; // coverage:ignore-line
-                }
-              },
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        ValueListenableBuilder<PayoutFrequency>(
-          valueListenable: freqNotifier,
-          builder: (context, freq, _) {
-            if (freq == PayoutFrequency.monthly) {
-              return const SizedBox.shrink();
-            }
-            if (freq == PayoutFrequency.custom) {
-              return _buildCustomMonthsButton(
-                  // coverage:ignore-line
-                  customMonthsNotifier,
-                  context,
-                  selectMonthsText);
-            }
-            return _buildStartMonthDropdown(freq, startMonthNotifier);
-          },
-        ),
-      ],
+  void _editSalaryStructure(SalaryStructure? existing) async {
+    final result = await Navigator.push<SalaryStructure>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SalaryStructureFormScreen(existing: existing),
+      ),
     );
-  }
 
-  Widget _buildCustomMonthsButton(
-      ValueNotifier<List<int>> customMonthsNotifier, // coverage:ignore-line
-      BuildContext context,
-      String label) {
-    // coverage:ignore-start
-    return OutlinedButton(
-      onPressed: () async {
-        final selected = await _showMonthMultiSelect(
-            context, customMonthsNotifier.value, label);
-        // coverage:ignore-end
-        if (selected != null) {
-          customMonthsNotifier.value = selected; // coverage:ignore-line
+    if (result != null) {
+      setState(() {
+        if (existing != null) {
+          final idx = _salaryHistory.indexWhere((s) => s.id == existing.id);
+          if (idx != -1) {
+            _salaryHistory[idx] = result;
+          }
+        } else {
+          _salaryHistory.add(result);
         }
-      },
-      child: ValueListenableBuilder<List<int>>(
-        // coverage:ignore-line
-        valueListenable: customMonthsNotifier,
-        // coverage:ignore-start
-        builder: (c, list, _) => Text(list.isEmpty
-            ? AppLocalizations.of(context)!.selectMonthsAction
-            : AppLocalizations.of(context)!
-                .monthsSelectedCountLabel(list.length.toString())),
-        // coverage:ignore-end
-      ),
-    );
-  }
-
-  Widget _buildStartMonthDropdown(
-      PayoutFrequency freq, ValueNotifier<int?> startMonthNotifier) {
-    return ValueListenableBuilder<int?>(
-      valueListenable: startMonthNotifier,
-      builder: (context, startM, _) {
-        return DropdownButtonFormField<int>(
-          decoration: InputDecoration(
-            labelText: freq == PayoutFrequency.annually
-                ? AppLocalizations.of(context)!.payoutMonthLabel
-                : AppLocalizations.of(context)!
-                    .startMonthLabel, // coverage:ignore-line
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            floatingLabelBehavior: FloatingLabelBehavior.always,
-            border: const OutlineInputBorder(),
-          ),
-          key: ValueKey(startM),
-          initialValue: startM,
-          isDense: true,
-          items: [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]
-              .map((m) => DropdownMenuItem(
-                    value: m,
-                    child: Text(DateFormat('MMM').format(DateTime(2023, m, 1))),
-                  ))
-              .toList(),
-          onChanged: (v) =>
-              startMonthNotifier.value = v, // coverage:ignore-line
-        );
-      },
-    );
-  }
-
-  String _getAnnualText(
-      SalaryStructure? existing, double Function(SalaryStructure) selector) {
-    if (existing == null) return '';
-    return (selector(existing) * 12).toStringAsFixed(0);
-  }
-
-  DateTime _getDefaultEffectiveDate(SalaryStructure? existing) {
-    if (existing?.effectiveDate != null) return existing!.effectiveDate;
-    if (_currentData.salary.history.isNotEmpty) return DateTime.now();
-    final rules =
-        ref.read(taxConfigServiceProvider).getRulesForYear(_currentData.year);
-    return DateTime(_currentData.year, rules.financialYearStartMonth, 1);
-  }
-
-  void _editSalaryStructure(SalaryStructure? existing) {
-    final effectiveDateNotifier =
-        ValueNotifier<DateTime>(_getDefaultEffectiveDate(existing));
-    final basicCtrl = TextEditingController(
-        text: _getAnnualText(existing, (s) => s.monthlyBasic));
-    final fixedCtrl = TextEditingController(
-        text: _getAnnualText(existing, (s) => s.monthlyFixedAllowances));
-    final perfCtrl = TextEditingController(
-        text: _getAnnualText(existing, (s) => s.monthlyPerformancePay));
-    final pfCtrl = TextEditingController(
-        text: _getAnnualText(existing, (s) => s.monthlyEmployeePF));
-    final gratuityCtrl = TextEditingController(
-        text: _getAnnualText(existing, (s) => s.monthlyGratuity));
-
-    final variableCtrl = TextEditingController(
-        text: existing != null
-            ? existing.annualVariablePay.toStringAsFixed(0)
-            : '');
-
-    final perfFreqNotifier = ValueNotifier<PayoutFrequency>(
-        existing?.performancePayFrequency ?? PayoutFrequency.monthly);
-    final perfStartMonthNotifier =
-        ValueNotifier<int?>(existing?.performancePayStartMonth);
-    final perfCustomMonthsNotifier =
-        ValueNotifier<List<int>>(existing?.performancePayCustomMonths ?? []);
-    final perfPartialNotifier =
-        ValueNotifier<bool>(existing?.isPerformancePayPartial ?? false);
-    final perfAmountsNotifier = ValueNotifier<Map<int, double>>(
-        Map.from(existing?.performancePayAmounts ?? {}));
-
-    final varFreqNotifier = ValueNotifier<PayoutFrequency>(
-        existing?.variablePayFrequency ?? PayoutFrequency.annually);
-    final varStartMonthNotifier =
-        ValueNotifier<int?>(existing?.variablePayStartMonth ?? 3);
-    final varCustomMonthsNotifier =
-        ValueNotifier<List<int>>(existing?.variablePayCustomMonths ?? []);
-    final varPartialNotifier =
-        ValueNotifier<bool>(existing?.isVariablePayPartial ?? false);
-    final varAmountsNotifier = ValueNotifier<Map<int, double>>(
-        Map.from(existing?.variablePayAmounts ?? {}));
-
-    final customAllowancesNotifier = ValueNotifier<List<CustomAllowance>>(
-        List.from(existing?.customAllowances ?? []));
-    final stoppedMonthsNotifier =
-        ValueNotifier<List<int>>(existing?.stoppedMonths ?? []);
-
-    // Define helper first
-
-    showDialog(
-      context: context,
-      builder: (ctx) => _buildSalaryStructureDialog(
-        ctx: ctx,
-        params: _SalaryStructureFormParams(
-          existing: existing,
-          effectiveDateNotifier: effectiveDateNotifier,
-          basicCtrl: basicCtrl,
-          fixedCtrl: fixedCtrl,
-          perfCtrl: perfCtrl,
-          perfFreqNotifier: perfFreqNotifier,
-          perfStartMonthNotifier: perfStartMonthNotifier,
-          perfCustomMonthsNotifier: perfCustomMonthsNotifier,
-          perfPartialNotifier: perfPartialNotifier,
-          perfAmountsNotifier: perfAmountsNotifier,
-          variableCtrl: variableCtrl,
-          varFreqNotifier: varFreqNotifier,
-          varStartMonthNotifier: varStartMonthNotifier,
-          varCustomMonthsNotifier: varCustomMonthsNotifier,
-          varPartialNotifier: varPartialNotifier,
-          varAmountsNotifier: varAmountsNotifier,
-          customAllowancesNotifier: customAllowancesNotifier,
-          stoppedMonthsNotifier: stoppedMonthsNotifier,
-          pfCtrl: pfCtrl,
-          gratuityCtrl: gratuityCtrl,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSalaryStructureDialog({
-    required BuildContext ctx,
-    required _SalaryStructureFormParams params,
-  }) {
-    final existing = params.existing;
-    return AlertDialog(
-      title: Text(existing == null
-          ? AppLocalizations.of(context)!.addSalaryStructureAction
-          : AppLocalizations.of(context)!.editSalaryStructureAction),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSalaryCoreFields(params.effectiveDateNotifier,
-                params.basicCtrl, params.fixedCtrl),
-            const SizedBox(height: 16),
-            _buildSalaryPaySections(
-              perfCtrl: params.perfCtrl,
-              perfFreqNotifier: params.perfFreqNotifier,
-              perfStartMonthNotifier: params.perfStartMonthNotifier,
-              perfCustomMonthsNotifier: params.perfCustomMonthsNotifier,
-              perfPartialNotifier: params.perfPartialNotifier,
-              perfAmountsNotifier: params.perfAmountsNotifier,
-              variableCtrl: params.variableCtrl,
-              varFreqNotifier: params.varFreqNotifier,
-              varStartMonthNotifier: params.varStartMonthNotifier,
-              varCustomMonthsNotifier: params.varCustomMonthsNotifier,
-              varPartialNotifier: params.varPartialNotifier,
-              varAmountsNotifier: params.varAmountsNotifier,
-              context: context,
-            ),
-            _buildSalaryDeductionSections(params.pfCtrl, params.gratuityCtrl,
-                params.stoppedMonthsNotifier, context),
-            _buildSalaryAllowancesSection(
-                context, params.customAllowancesNotifier),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx), // coverage:ignore-line
-            child: Text(AppLocalizations.of(context)!.cancelButton)),
-        if (existing != null)
-          TextButton(
-              onPressed: () {
-                // coverage:ignore-line
-                // Delete Logic
-                // coverage:ignore-start
-                setState(() {
-                  _salaryHistory.removeWhere((s) => s.id == existing.id);
-                  _hasUnsavedChanges = true;
-                  _updateSummary();
-                  // coverage:ignore-end
-                });
-                Navigator.pop(ctx); // coverage:ignore-line
-              },
-              child: Text(AppLocalizations.of(context)!.deleteButton,
-                  style: const TextStyle(color: Colors.red))),
-        FilledButton(
-          onPressed: () => _onSaveSalaryStructure(
-            ctx: ctx,
-            params: params,
-          ),
-          child: Text(AppLocalizations.of(context)!.saveButton),
-        ),
-      ],
-    );
+        _hasUnsavedChanges = true;
+      });
+      _updateSummary();
+    }
   }
 
   Future<void> _copySalaryFromPreviousYear() async {
@@ -5959,127 +5796,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
     );
   }
 
-  Widget _buildSalaryPartialGrid(
-      // coverage:ignore-line
-      ValueNotifier<Map<int, double>> amountsNotifier,
-      ValueNotifier<PayoutFrequency> freqNotifier,
-      ValueNotifier<int?> startMonthNotifier,
-      ValueNotifier<List<int>> customMonthsNotifier,
-      double defaultAmount) {
-    return ValueListenableBuilder<PayoutFrequency>(
-      // coverage:ignore-line
-      valueListenable: freqNotifier,
-      builder: (context, freq, _) {
-        // coverage:ignore-line
-        return ValueListenableBuilder<int?>(
-          // coverage:ignore-line
-          valueListenable: startMonthNotifier,
-          builder: (context, startMonth, _) {
-            // coverage:ignore-line
-            return ValueListenableBuilder<List<int>>(
-              // coverage:ignore-line
-              valueListenable: customMonthsNotifier,
-              builder: (context, customMonths, _) {
-                // coverage:ignore-line
-                return _buildSalaryPartialGridContent(
-                  // coverage:ignore-line
-                  amountsNotifier: amountsNotifier,
-                  freq: freq,
-                  startMonth: startMonth,
-                  customMonths: customMonths,
-                  defaultAmount: defaultAmount,
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildSalaryPartialGridContent({
-    // coverage:ignore-line
-    required ValueNotifier<Map<int, double>> amountsNotifier,
-    required PayoutFrequency freq,
-    required int? startMonth,
-    required List<int> customMonths,
-    required double defaultAmount,
-  }) {
-    List<int> applicableMonths = _getApplicableMonths(
-        freq, startMonth, customMonths); // coverage:ignore-line
-
-    if (applicableMonths.isEmpty) {
-      // coverage:ignore-line
-      return Text(AppLocalizations.of(context)!
-          .noPayoutMonthsSelectedNote); // coverage:ignore-line
-    }
-
-    // coverage:ignore-start
-    return Column(
-      children: [
-        Text(AppLocalizations.of(context)!.enterAmountsForPayoutMonthsNote,
-            // coverage:ignore-end
-            style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
-        const SizedBox(height: 8),
-        Wrap(
-          // coverage:ignore-line
-          spacing: 8,
-          runSpacing: 8,
-          // coverage:ignore-start
-          children: applicableMonths.map((m) {
-            final currentVal = amountsNotifier.value[m] ?? defaultAmount;
-            return _buildSalaryMonthInput(
-              // coverage:ignore-end
-              month: m,
-              currentVal: currentVal,
-              // coverage:ignore-start
-              onChanged: (val) {
-                final d = double.tryParse(val) ?? 0;
-                final newMap = Map<int, double>.from(amountsNotifier.value);
-                newMap[m] = d;
-                amountsNotifier.value = newMap;
-                // coverage:ignore-end
-              },
-            );
-          }).toList(), // coverage:ignore-line
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalaryMonthInput({
-    // coverage:ignore-line
-    required int month,
-    required double currentVal,
-    required void Function(String) onChanged,
-  }) {
-    final text = currentVal.toStringAsFixed(0); // coverage:ignore-line
-    return SizedBox(
-      // coverage:ignore-line
-      width: 100,
-      // coverage:ignore-start
-      child: TextField(
-        decoration: InputDecoration(
-          labelText: DateFormat('MMM').format(DateTime(2023, month, 1)),
-          // coverage:ignore-end
-          isDense: true,
-          border: const OutlineInputBorder(),
-          contentPadding: const EdgeInsets.all(8),
-        ),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          // coverage:ignore-line
-          FilteringTextInputFormatter.allow(
-              RegexUtils.amountExp) // coverage:ignore-line
-        ],
-        controller: TextEditingController(text: text) // coverage:ignore-line
-          ..selection = TextSelection.collapsed(
-              offset: text.length), // coverage:ignore-line
-        onChanged: onChanged,
-      ),
-    );
-  }
-
   List<int> _getApplicableMonths(
       // coverage:ignore-line
       PayoutFrequency freq,
@@ -6094,355 +5810,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       }
     }
     return applicableMonths;
-  }
-
-  Widget _buildStoppedMonthsSection(
-      ValueNotifier<List<int>> stoppedMonthsNotifier, BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(AppLocalizations.of(context)!.unemploymentNoSalaryTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text(AppLocalizations.of(context)!.unemploymentNoSalarySubtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<List<int>>(
-          valueListenable: stoppedMonthsNotifier,
-          builder: (context, list, _) {
-            return OutlinedButton.icon(
-              // coverage:ignore-start
-              onPressed: () async {
-                final selected = await _showMonthMultiSelect(context, list,
-                    AppLocalizations.of(context)!.selectStoppedMonthsAction);
-                // coverage:ignore-end
-                if (selected != null) {
-                  stoppedMonthsNotifier.value =
-                      selected; // coverage:ignore-line
-                }
-              },
-              icon: const Icon(Icons.block),
-              label: Text(list.isEmpty
-                  ? AppLocalizations.of(context)!.selectStoppedMonthsAction
-                  : AppLocalizations.of(context)! // coverage:ignore-line
-                      .monthsStoppedCountLabel(
-                          list.length.toString())), // coverage:ignore-line
-              style: list.isNotEmpty
-                  ? OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange) // coverage:ignore-line
-                  : null,
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalaryCoreFields(
-    ValueNotifier<DateTime> effectiveDateNotifier,
-    TextEditingController basicCtrl,
-    TextEditingController fixedCtrl,
-  ) {
-    return Column(
-      children: [
-        ValueListenableBuilder<DateTime>(
-          valueListenable: effectiveDateNotifier,
-          builder: (context, date, _) {
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(AppLocalizations.of(context)!.effectiveDateLabel,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              subtitle: Text(DateFormat('MMM d, yyyy').format(date),
-                  style: const TextStyle(fontSize: 16)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                // coverage:ignore-line
-                final picked = await showDatePicker(
-                  // coverage:ignore-line
-                  context: context,
-                  initialDate: date,
-                  firstDate: DateTime(2000), // coverage:ignore-line
-                  lastDate: DateTime(2100), // coverage:ignore-line
-                );
-                if (picked != null) {
-                  effectiveDateNotifier.value = picked; // coverage:ignore-line
-                }
-              },
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: basicCtrl,
-          decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.annualBasicPayLabel,
-              border: const OutlineInputBorder(),
-              floatingLabelBehavior: FloatingLabelBehavior.always),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: fixedCtrl,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.annualFixedAllowancesLabel,
-            border: const OutlineInputBorder(),
-            floatingLabelBehavior: FloatingLabelBehavior.always,
-            helperText:
-                AppLocalizations.of(context)!.annualFixedAllowancesHelperText,
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalaryPaySections({
-    required TextEditingController perfCtrl,
-    required ValueNotifier<PayoutFrequency> perfFreqNotifier,
-    required ValueNotifier<int?> perfStartMonthNotifier,
-    required ValueNotifier<List<int>> perfCustomMonthsNotifier,
-    required ValueNotifier<bool> perfPartialNotifier,
-    required ValueNotifier<Map<int, double>> perfAmountsNotifier,
-    required TextEditingController variableCtrl,
-    required ValueNotifier<PayoutFrequency> varFreqNotifier,
-    required ValueNotifier<int?> varStartMonthNotifier,
-    required ValueNotifier<List<int>> varCustomMonthsNotifier,
-    required ValueNotifier<bool> varPartialNotifier,
-    required ValueNotifier<Map<int, double>> varAmountsNotifier,
-    required BuildContext context,
-  }) {
-    return Column(
-      children: [
-        _buildPayoutSection(
-          context: context,
-          label: AppLocalizations.of(context)!.annualPerformancePayLabel,
-          helperText: AppLocalizations.of(context)!.maxAmountPerYearLabel,
-          controller: perfCtrl,
-          freqNotifier: perfFreqNotifier,
-          startMonthNotifier: perfStartMonthNotifier,
-          customMonthsNotifier: perfCustomMonthsNotifier,
-          partialNotifier: perfPartialNotifier,
-          amountsNotifier: perfAmountsNotifier,
-          divisor: 12,
-        ),
-        const SizedBox(height: 24),
-        _buildPayoutSection(
-          context: context,
-          label: AppLocalizations.of(context)!.annualVariablePayLabel,
-          helperText: AppLocalizations.of(context)!.totalAmountPerYearLabel,
-          controller: variableCtrl,
-          freqNotifier: varFreqNotifier,
-          startMonthNotifier: varStartMonthNotifier,
-          customMonthsNotifier: varCustomMonthsNotifier,
-          partialNotifier: varPartialNotifier,
-          amountsNotifier: varAmountsNotifier,
-          divisor: 1,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPayoutSection({
-    required BuildContext context,
-    required String label,
-    required String helperText,
-    required TextEditingController controller,
-    required ValueNotifier<PayoutFrequency> freqNotifier,
-    required ValueNotifier<int?> startMonthNotifier,
-    required ValueNotifier<List<int>> customMonthsNotifier,
-    required ValueNotifier<bool> partialNotifier,
-    required ValueNotifier<Map<int, double>> amountsNotifier,
-    required double divisor,
-  }) {
-    return Column(
-      children: [
-        _buildNumberField(label, controller, subtitle: helperText),
-        const SizedBox(height: 24),
-        _buildFrequencyRow(
-            AppLocalizations.of(context)!.payoutLabel,
-            freqNotifier,
-            startMonthNotifier,
-            customMonthsNotifier,
-            context,
-            AppLocalizations.of(context)!.selectMonthsAction),
-        ValueListenableBuilder<bool>(
-          valueListenable: partialNotifier,
-          builder: (context, isPartial, _) {
-            return Column(
-              children: [
-                CheckboxListTile(
-                  title: Text(AppLocalizations.of(context)!
-                      .partialPayoutTaxableFactorTitle),
-                  subtitle: isPartial
-                      ? null
-                      : Text(AppLocalizations.of(context)!
-                          .defaultEqualDistributionSubtitle),
-                  value: isPartial,
-                  onChanged: (v) => partialNotifier.value =
-                      v ?? false, // coverage:ignore-line
-                  controlAffinity: ListTileControlAffinity.leading,
-                  dense: true,
-                ),
-                if (isPartial)
-                  _buildSalaryPartialGrid(
-                      // coverage:ignore-line
-                      amountsNotifier,
-                      freqNotifier,
-                      startMonthNotifier,
-                      customMonthsNotifier,
-                      (double.tryParse(controller.text) ?? 0) /
-                          divisor), // coverage:ignore-line
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalaryDeductionSections(
-    TextEditingController pfCtrl,
-    TextEditingController gratuityCtrl,
-    ValueNotifier<List<int>> stoppedMonthsNotifier,
-    BuildContext context,
-  ) {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        TextField(
-          controller: pfCtrl,
-          decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.annualEmployeePFLabel,
-              border: const OutlineInputBorder(),
-              floatingLabelBehavior: FloatingLabelBehavior.always),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: gratuityCtrl,
-          decoration: InputDecoration(
-              labelText:
-                  AppLocalizations.of(context)!.annualGratuityContributionLabel,
-              border: const OutlineInputBorder(),
-              floatingLabelBehavior: FloatingLabelBehavior.always),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegexUtils.amountExp)
-          ],
-        ),
-        const Divider(height: 32),
-        _buildStoppedMonthsSection(stoppedMonthsNotifier, context),
-      ],
-    );
-  }
-
-  Widget _buildSalaryAllowancesSection(BuildContext context,
-      ValueNotifier<List<CustomAllowance>> customAllowancesNotifier) {
-    return Column(
-      children: [
-        const Divider(),
-        _buildAllowanceHeader(context, customAllowancesNotifier),
-        ValueListenableBuilder<List<CustomAllowance>>(
-          valueListenable: customAllowancesNotifier,
-          builder: (context, list, _) {
-            if (list.isEmpty) {
-              return Text(AppLocalizations.of(context)!.noCustomAllowancesNote,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12));
-            }
-            return Column(
-              // coverage:ignore-line
-              children: list
-                  .map((a) => _buildAllowanceTile(
-                      // coverage:ignore-line
-                      context,
-                      a,
-                      list,
-                      customAllowancesNotifier))
-                  .toList(), // coverage:ignore-line
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAllowanceHeader(BuildContext context,
-      ValueNotifier<List<CustomAllowance>> customAllowancesNotifier) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(AppLocalizations.of(context)!.customAllowancesTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          onPressed: () {
-            // coverage:ignore-line
-            _addCustomAllowanceDialog(
-                // coverage:ignore-line
-                context: context,
-                // coverage:ignore-start
-                onAdd: (newAllowance) {
-                  customAllowancesNotifier.value = [
-                    ...customAllowancesNotifier.value,
-                    newAllowance
-                    // coverage:ignore-end
-                  ];
-                });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAllowanceTile(
-      // coverage:ignore-line
-      BuildContext context,
-      CustomAllowance a,
-      List<CustomAllowance> list,
-      ValueNotifier<List<CustomAllowance>> customAllowancesNotifier) {
-    return ListTile(
-      // coverage:ignore-line
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      // coverage:ignore-start
-      title: Text(a.name),
-      subtitle: Text(_formatAllowanceSubtitle(a)),
-      trailing: IconButton(
-        // coverage:ignore-end
-        icon: const Icon(Icons.delete, size: 18),
-        // coverage:ignore-start
-        onPressed: () {
-          final newList = List<CustomAllowance>.from(list)..remove(a);
-          customAllowancesNotifier.value = newList;
-          // coverage:ignore-end
-        },
-      ),
-      onTap: () {
-        // coverage:ignore-line
-        _addCustomAllowanceDialog(
-            // coverage:ignore-line
-            context: context,
-            existing: a,
-            // coverage:ignore-start
-            onAdd: (updatedAllowance) {
-              final newList = List<CustomAllowance>.from(list);
-              int idx = newList.indexOf(a);
-              if (idx != -1) {
-                newList[idx] = updatedAllowance;
-                customAllowancesNotifier.value = newList;
-                // coverage:ignore-end
-              }
-            });
-      },
-    );
   }
 
   String _formatAllowanceSubtitle(CustomAllowance a) {
@@ -6474,56 +5841,6 @@ class _TaxDetailsScreenState extends ConsumerState<TaxDetailsScreen>
       }
     }
     return total;
-  }
-
-  void _onSaveSalaryStructure({
-    required BuildContext ctx,
-    required _SalaryStructureFormParams params,
-  }) {
-    final existing = params.existing;
-    final basic = (double.tryParse(params.basicCtrl.text) ?? 0) / 12;
-    final fixed = (double.tryParse(params.fixedCtrl.text) ?? 0) / 12;
-    final perf = (double.tryParse(params.perfCtrl.text) ?? 0) / 12;
-    final pf = (double.tryParse(params.pfCtrl.text) ?? 0) / 12;
-    final gratuity = (double.tryParse(params.gratuityCtrl.text) ?? 0) / 12;
-    final variable = double.tryParse(params.variableCtrl.text) ?? 0;
-
-    final newStructure = SalaryStructure(
-      id: existing?.id ?? const Uuid().v4(),
-      effectiveDate: params.effectiveDateNotifier.value,
-      monthlyBasic: basic,
-      monthlyFixedAllowances: fixed,
-      monthlyPerformancePay: perf,
-      performancePayFrequency: params.perfFreqNotifier.value,
-      performancePayStartMonth: params.perfStartMonthNotifier.value,
-      performancePayCustomMonths: params.perfCustomMonthsNotifier.value,
-      isPerformancePayPartial: params.perfPartialNotifier.value,
-      performancePayAmounts: params.perfAmountsNotifier.value,
-      annualVariablePay: variable,
-      variablePayFrequency: params.varFreqNotifier.value,
-      variablePayStartMonth: params.varStartMonthNotifier.value,
-      variablePayCustomMonths: params.varCustomMonthsNotifier.value,
-      isVariablePayPartial: params.varPartialNotifier.value,
-      variablePayAmounts: params.varAmountsNotifier.value,
-      customAllowances: params.customAllowancesNotifier.value,
-      stoppedMonths: params.stoppedMonthsNotifier.value,
-      monthlyEmployeePF: pf,
-      monthlyGratuity: gratuity,
-    );
-
-    setState(() {
-      if (existing != null) {
-        final idx = _salaryHistory.indexOf(existing);
-        if (idx != -1) {
-          _salaryHistory[idx] = newStructure;
-        }
-      } else {
-        _salaryHistory.add(newStructure);
-      }
-    });
-
-    _updateSummary();
-    Navigator.pop(ctx);
   }
 
   List<T> _applyStandardFilters<T>(
@@ -6763,50 +6080,4 @@ class _MonthMultiSelectDialogState extends State<_MonthMultiSelectDialog> {
       ],
     );
   }
-}
-
-class _SalaryStructureFormParams {
-  final SalaryStructure? existing;
-  final ValueNotifier<DateTime> effectiveDateNotifier;
-  final TextEditingController basicCtrl;
-  final TextEditingController fixedCtrl;
-  final TextEditingController perfCtrl;
-  final ValueNotifier<PayoutFrequency> perfFreqNotifier;
-  final ValueNotifier<int?> perfStartMonthNotifier;
-  final ValueNotifier<List<int>> perfCustomMonthsNotifier;
-  final ValueNotifier<bool> perfPartialNotifier;
-  final ValueNotifier<Map<int, double>> perfAmountsNotifier;
-  final TextEditingController variableCtrl;
-  final ValueNotifier<PayoutFrequency> varFreqNotifier;
-  final ValueNotifier<int?> varStartMonthNotifier;
-  final ValueNotifier<List<int>> varCustomMonthsNotifier;
-  final ValueNotifier<bool> varPartialNotifier;
-  final ValueNotifier<Map<int, double>> varAmountsNotifier;
-  final ValueNotifier<List<CustomAllowance>> customAllowancesNotifier;
-  final ValueNotifier<List<int>> stoppedMonthsNotifier;
-  final TextEditingController pfCtrl;
-  final TextEditingController gratuityCtrl;
-
-  _SalaryStructureFormParams({
-    required this.existing,
-    required this.effectiveDateNotifier,
-    required this.basicCtrl,
-    required this.fixedCtrl,
-    required this.perfCtrl,
-    required this.perfFreqNotifier,
-    required this.perfStartMonthNotifier,
-    required this.perfCustomMonthsNotifier,
-    required this.perfPartialNotifier,
-    required this.perfAmountsNotifier,
-    required this.variableCtrl,
-    required this.varFreqNotifier,
-    required this.varStartMonthNotifier,
-    required this.varCustomMonthsNotifier,
-    required this.varPartialNotifier,
-    required this.varAmountsNotifier,
-    required this.customAllowancesNotifier,
-    required this.stoppedMonthsNotifier,
-    required this.pfCtrl,
-    required this.gratuityCtrl,
-  });
 }

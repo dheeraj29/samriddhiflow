@@ -248,6 +248,8 @@ class _InvestmentDashboardTab extends ConsumerWidget {
               icon: const Icon(Icons.add),
               label: Text(l10n.addInvestment),
               style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -264,11 +266,13 @@ class _InvestmentDashboardTab extends ConsumerWidget {
           ],
           Text(l10n.mfCategoryLabel, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          _buildBreakdownList(summary.categoryBreakdown, currency, l10n),
+          _buildBreakdownList(
+              context, summary.categoryBreakdown, currency, l10n),
           const SizedBox(height: 24),
           Text(l10n.investmentType, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          _buildTypeBreakdownList(summary.typeBreakdown, currency, l10n),
+          _buildTypeBreakdownList(
+              context, summary.typeBreakdown, currency, l10n),
         ],
       ),
     );
@@ -283,12 +287,7 @@ class _InvestmentDashboardTab extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary
-            ],
-          ),
+          color: Theme.of(context).colorScheme.primary,
         ),
         child: Column(
           children: [
@@ -430,11 +429,18 @@ class _InvestmentDashboardTab extends ConsumerWidget {
         ? Colors.grey
         : Theme.of(context).colorScheme.primary; // coverage:ignore-line
 
-    return Card(
+    return AppListItemCard(
       // coverage:ignore-line
       margin: const EdgeInsets.only(bottom: 8),
+      onTap: () => Navigator.push(
+        // coverage:ignore-line
+        context,
+        MaterialPageRoute(
+            // coverage:ignore-line
+            builder: (_) => AddInvestmentScreen(
+                investmentToEdit: inv)), // coverage:ignore-line
+      ),
       // coverage:ignore-start
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.1),
@@ -525,6 +531,7 @@ class _InvestmentDashboardTab extends ConsumerWidget {
   }
 
   Widget _buildBreakdownList(
+      BuildContext context,
       Map<MutualFundCategory, ({double invested, double current})> data,
       String currency,
       AppLocalizations l10n) {
@@ -538,7 +545,7 @@ class _InvestmentDashboardTab extends ConsumerWidget {
       // coverage:ignore-line
       children: sorted
           // coverage:ignore-start
-          .map((e) => _buildBreakdownRow(e.key.localizedName(l10n),
+          .map((e) => _buildBreakdownRow(context, e.key.localizedName(l10n),
               e.value.invested, e.value.current, currency, l10n))
           .toList(),
       // coverage:ignore-end
@@ -546,6 +553,7 @@ class _InvestmentDashboardTab extends ConsumerWidget {
   }
 
   Widget _buildTypeBreakdownList(
+      BuildContext context,
       Map<InvestmentType, ({double invested, double current})> data,
       String currency,
       AppLocalizations l10n) {
@@ -556,70 +564,77 @@ class _InvestmentDashboardTab extends ConsumerWidget {
 
     return Column(
       children: sorted
-          .map((e) => _buildBreakdownRow(e.key.localizedName(l10n),
+          .map((e) => _buildBreakdownRow(context, e.key.localizedName(l10n),
               e.value.invested, e.value.current, currency, l10n))
           .toList(),
     );
   }
 
-  Widget _buildBreakdownRow(String label, double invested, double current,
-      String currency, AppLocalizations l10n) {
+  Widget _buildBreakdownRow(BuildContext context, String label, double invested,
+      double current, String currency, AppLocalizations l10n) {
     final gain = current - invested;
     final gainPercent = invested > 0 ? (gain / invested) * 100 : 0.0;
     final isProfit = gain >= -0.01;
     final color = isProfit ? Colors.green : Colors.red;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(label,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              SmartCurrencyText(
-                value: current,
-                locale: currency,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Flexible(
-                child: Row(
+    return AppListItemCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(label,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                SmartCurrencyText(
+                  value: current,
+                  locale: currency,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text("${l10n.investedLabel}: ",
                         style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade600)),
-                    Flexible(
-                      child: SmartCurrencyText(
-                        value: invested,
-                        locale: currency,
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade800),
-                      ),
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.7))),
+                    SmartCurrencyText(
+                      value: invested,
+                      locale: currency,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
-              ),
-              const Spacer(),
-              Icon(isProfit ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  color: color, size: 14),
-              Text(
-                "${isProfit ? '+' : ''}${gainPercent.toStringAsFixed(1)}%",
-                style: TextStyle(
-                    fontSize: 11, color: color, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Icon(isProfit ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    color: color, size: 16),
+                Text(
+                  "${isProfit ? '+' : ''}${gainPercent.toStringAsFixed(1)}%",
+                  style: TextStyle(
+                      fontSize: 12, color: color, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -916,14 +931,18 @@ class __InvestmentManagementTabState
   Widget _buildTypeAndLTInfo(Investment inv, AppLocalizations l10n) {
     return Row(
       children: [
-        Text(
-          "${inv.type.localizedName(l10n)} • ${DateFormat.yMMMd().format(inv.acquisitionDate)}",
-          style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6)),
+        Expanded(
+          child: Text(
+            "${inv.type.localizedName(l10n)} • ${DateFormat.yMMMd().format(inv.acquisitionDate)}",
+            style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         if (inv.longTermRemaining != null) ...[
           const SizedBox(width: 8),

@@ -1078,6 +1078,14 @@
   "@settingsTitle": {
     "description": "Screen title"
   },
+  "profileSettingsHeader": "Profile Settings",
+  "@profileSettingsHeader": {
+    "description": "Header for profile-specific settings"
+  },
+  "globalSettingsHeader": "Global App Settings",
+  "@globalSettingsHeader": {
+    "description": "Header for app-wide settings"
+  },
   "appearanceSection": "Appearance",
   "@appearanceSection": {
     "description": "Section header"
@@ -1093,6 +1101,14 @@
   "dataManagementSection": "Data Management",
   "@dataManagementSection": {
     "description": "Section header"
+  },
+  "profileDataSection": "Data Cleanup & Recovery",
+  "@profileDataSection": {
+    "description": "Section header for profile data"
+  },
+  "globalDataSection": "Local Backup & Export",
+  "@globalDataSection": {
+    "description": "Section header for global data"
   },
   "featureManagementSection": "Feature Management",
   "@featureManagementSection": {
@@ -1634,6 +1650,38 @@
   },
   "selectMonthsAction": "Select Payout Months",
   "@selectMonthsAction": {},
+  "coreSalarySection": "Core Salary",
+  "@coreSalarySection": {},
+  "payoutsSection": "Irregular Payouts & Variable Pay",
+  "@payoutsSection": {},
+  "deductionsSection": "Deductions & Unemployment",
+  "@deductionsSection": {},
+  "firstPayoutMonthLabel": "First Payout Month",
+  "@firstPayoutMonthLabel": {},
+  "noMonthsSelectedNote": "No months selected",
+  "@noMonthsSelectedNote": {},
+  "addCustomAllowanceAction": "Add Allowance",
+  "@addCustomAllowanceAction": {},
+  "editAllowanceAction": "Edit Allowance",
+  "@editAllowanceAction": {},
+  "payoutAmountLabel": "Payout Amount",
+  "@payoutAmountLabel": {},
+  "none": "None",
+  "@none": {},
+  "cliffExemptionTitle": "Cliff-based Exemption",
+  "@cliffExemptionTitle": {},
+  "payoutFrequencyLabel": "Payout Frequency",
+  "@payoutFrequencyLabel": {},
+  "allowanceNameLabel": "Allowance Name",
+  "@allowanceNameLabel": {},
+  "exemptionLimitLabel": "Exemption Limit",
+  "@exemptionLimitLabel": {},
+  "exemptionLimitHelperText": "Max annual exempt amount",
+  "@exemptionLimitHelperText": {},
+  "cliffExemptionSubtitle": "Exemption applies only if total is below limit",
+  "@cliffExemptionSubtitle": {},
+  "startMonthLabel": "Start Month",
+  "@startMonthLabel": {},
   "transactionDateLabel": "Transaction Date",
   "@transactionDateLabel": {},
   "addEntryAction": "Add Entry",
@@ -2682,6 +2730,8 @@
   "employerNPSLabel": "Employer NPS Contribution",
   "leaveEncashmentTitleLabel": "Leave Encashment",
   "gratuityTitleLabel": "Gratuity",
+  "employerGiftsLabel": "Employer Gifts",
+  "@employerGiftsLabel": {},
   "customAdHocExemptionsTitle": "Custom Ad-hoc Exemptions",
   "noAdHocExemptionsNote": "No ad-hoc exemptions added.",
   "addAdHocExemptionAction": "Add Ad-hoc Exemption",
@@ -2695,6 +2745,8 @@
   "interestLabel": "Interest",
   "letOutLabel": "Let Out",
   "lessEmployerNPSLabel": "Less: Employer NPS Contribution",
+  "lessEmployerGiftsLabel": "Less: Employer Gifts (Exempt)",
+  "@lessEmployerGiftsLabel": {},
   "taxableBeforeAdHocExemptionsLabel": "Taxable Before Ad-hoc Exemptions",
   "lessCustomAdHocExemptionsLabel": "Less: Custom Ad-hoc Exemptions",
   "editPropertyAction": "Edit Property",

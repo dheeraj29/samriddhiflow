@@ -13,6 +13,7 @@ import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
+import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
 import 'package:samriddhi_flow/utils/billing_helper.dart';
 import 'package:samriddhi_flow/utils/recurrence_utils.dart';
@@ -1880,6 +1881,17 @@ class StorageService {
     if (value is Color) return value.toARGB32();
     if (value is IconData) return value.codePoint;
 
+    if (value is List) {
+      return value
+          .map((e) => _sanitizeSettingValue(e))
+          .toList(); // coverage:ignore-line
+    }
+
+    if (value is Map) {
+      return value.map((k, v) => MapEntry(
+          k.toString(), _sanitizeSettingValue(v))); // coverage:ignore-line
+    }
+
     // Skip complex objects stored here by mistake (should be in own boxes)
     if (_isComplexType(value)) return null;
 
@@ -1914,8 +1926,29 @@ class StorageService {
     return _getByProfile<InsurancePolicy>(boxInsurancePolicies);
   }
 
+  /// Returns Insurance Policies for ALL profiles for backup/restore.
+  List<InsurancePolicy> getInsurancePoliciesGlobal() {
+    // coverage:ignore-line
+    return _hive
+        .box<InsurancePolicy>(boxInsurancePolicies)
+        .values
+        .toList(); // coverage:ignore-line
+  }
+
   Box<InsurancePolicy> getInsurancePoliciesBox() {
     return _hive.box<InsurancePolicy>(boxInsurancePolicies);
+  }
+
+  /// Saves Insurance Policies globally (clears nothing, just puts).
+  Future<void> saveInsurancePoliciesGlobal(
+      // coverage:ignore-line
+      List<InsurancePolicy> policies) async {
+    // coverage:ignore-start
+    final box = _hive.box<InsurancePolicy>(boxInsurancePolicies);
+    for (var p in policies) {
+      await box.put(p.id, p);
+      // coverage:ignore-end
+    }
   }
 
   ValueListenable<Box<InsurancePolicy>> getInsurancePoliciesListenable() {
@@ -1945,83 +1978,63 @@ class StorageService {
     }
   }
 
-  Future<void> clearAllData() async {
+  Future<void> clearAllData({bool fullWipe = false}) async {
+    if (fullWipe) {
+      await _performFullWipe(); // coverage:ignore-line
+      return;
+    }
+
     final profileId = getActiveProfileId();
 
-    // Clear Accounts
-    final accBox = _hive.box<Account>(boxAccounts);
-    final accountsToDelete = accBox
-        .toMap()
-        .values
-        .whereType<Account>()
-        .where((a) => a.profileId == profileId)
-        .toList();
-    for (var a in accountsToDelete) {
-      await accBox.delete(a.id);
-    }
+    final List<Future<void>> clearTasks = [
+      _clearItemsByProfile<Account>(boxAccounts, profileId),
+      _clearItemsByProfile<Transaction>(boxTransactions, profileId),
+      _clearItemsByProfile<Loan>(boxLoans, profileId),
+      _clearItemsByProfile<RecurringTransaction>(boxRecurring, profileId),
+      _clearItemsByProfile<Category>(boxCategories, profileId),
+      _clearItemsByProfile<Investment>(boxInvestments, profileId),
+      _clearItemsByProfile<InsurancePolicy>(boxInsurancePolicies, profileId),
+      _clearItemsByProfile<TaxYearData>(boxTaxData, profileId),
+      _clearItemsByProfile<LendingRecord>(boxLendingRecords, profileId),
+    ];
 
-    // Clear Transactions
-    final txnBox = _hive.box<Transaction>(boxTransactions);
-    final txnsToDelete = txnBox
-        .toMap()
-        .values
-        .whereType<Transaction>()
-        .where((t) => t.profileId == profileId)
-        .toList();
-    for (var t in txnsToDelete) {
-      await txnBox.delete(t.id); // coverage:ignore-line
-    }
-
-    // Clear Loans
-    final loanBox = _hive.box<Loan>(boxLoans);
-    final loansToDelete = loanBox
-        .toMap()
-        .values
-        .whereType<Loan>()
-        .where((l) => l.profileId == profileId)
-        .toList();
-    for (var l in loansToDelete) {
-      await loanBox.delete(l.id); // coverage:ignore-line
-    }
-
-    // Clear Recurring
-    final recBox = _hive.box<RecurringTransaction>(boxRecurring);
-    final recToDelete = recBox
-        .toMap()
-        .values
-        .whereType<RecurringTransaction>()
-        .where((rt) => rt.profileId == profileId)
-        .toList();
-    for (var rt in recToDelete) {
-      await recBox.delete(rt.id); // coverage:ignore-line
-    }
-
-    // Clear Categories
-    final catBox = _hive.box<Category>(boxCategories);
-    final catsToDelete = catBox
-        .toMap()
-        .values
-        .whereType<Category>()
-        .where((c) => c.profileId == profileId)
-        .toList();
-    for (var c in catsToDelete) {
-      await catBox.delete(c.id); // coverage:ignore-line
-    }
-
-    // Clear Investments
-    final invBox = _hive.box<Investment>(boxInvestments);
-    final invToDelete = invBox
-        .toMap()
-        .values
-        .whereType<Investment>()
-        .where((i) => i.profileId == profileId)
-        .toList();
-    for (var i in invToDelete) {
-      await invBox.delete(i.id); // coverage:ignore-line
-    }
-
-    // Reset backup counter
+    await Future.wait(clearTasks);
     await resetTxnsSinceBackup();
+  }
+
+  /// Helper to clear all Hive boxes (Full Wipe).
+  // coverage:ignore-start
+  Future<void> _performFullWipe() async {
+    await _hive.box<Account>(boxAccounts).clear();
+    await _hive.box<Transaction>(boxTransactions).clear();
+    await _hive.box<Loan>(boxLoans).clear();
+    await _hive.box<RecurringTransaction>(boxRecurring).clear();
+    await _hive.box<Category>(boxCategories).clear();
+    await _hive.box<Investment>(boxInvestments).clear();
+    await _hive.box<InsurancePolicy>(boxInsurancePolicies).clear();
+    await _hive.box<TaxYearData>(boxTaxData).clear();
+    await _hive.box<LendingRecord>(boxLendingRecords).clear();
+    await _hive.box<Profile>(boxProfiles).clear();
+    if (_hive.isBoxOpen('tax_rules_v2')) {
+      await _hive.box<TaxRules>('tax_rules_v2').clear();
+      // coverage:ignore-end
+    }
+    await resetTxnsSinceBackup(); // coverage:ignore-line
+  }
+
+  /// Helper to clear data for a specific profile in a given box.
+  Future<void> _clearItemsByProfile<T>(String boxName, String profileId) async {
+    final box = _hive.box<T>(boxName);
+    final toDelete = box
+        .toMap()
+        .entries
+        .where((e) => (e.value as dynamic).profileId == profileId)
+        .map((e) => e.key)
+        .toList();
+
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
   }
 
   Future<int> repairAccountCurrencies(String defaultCurrency) async {
@@ -2149,9 +2162,27 @@ class StorageService {
     await box.put('${profileId}_${data.year}', dataToSave);
   }
 
+  /// Saves Tax Year Data globally without profile filtering (for restore).
+  Future<void> saveTaxYearDataGlobal(TaxYearData data) async {
+    // coverage:ignore-line
+    final box = _hive.box<TaxYearData>(boxTaxData); // coverage:ignore-line
+    // Use whatever profileId is in the object
+    final pId = data.profileId; // coverage:ignore-line
+    await box.put('${pId}_${data.year}', data); // coverage:ignore-line
+  }
+
   List<TaxYearData> getAllTaxYearData() {
     // coverage:ignore-line
     return _getByProfile<TaxYearData>(boxTaxData); // coverage:ignore-line
+  }
+
+  /// Returns Tax Year Data for ALL profiles for backup/restore.
+  List<TaxYearData> getAllTaxYearDataGlobal() {
+    // coverage:ignore-line
+    return _hive
+        .box<TaxYearData>(boxTaxData)
+        .values
+        .toList(); // coverage:ignore-line
   }
 
   Future<void> deleteTaxYearData(int year) async {
@@ -2163,6 +2194,15 @@ class StorageService {
   // --- Lending Record Operations ---
   List<LendingRecord> getLendingRecords() {
     return _getByProfile<LendingRecord>(boxLendingRecords);
+  }
+
+  /// Returns Lending Records for ALL profiles for backup/restore.
+  List<LendingRecord> getLendingRecordsGlobal() {
+    // coverage:ignore-line
+    return _hive
+        .box<LendingRecord>(boxLendingRecords)
+        .values
+        .toList(); // coverage:ignore-line
   }
 
   Future<void> saveLendingRecord(LendingRecord record) async {

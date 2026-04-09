@@ -10,10 +10,25 @@ class FirestoreStorageService implements CloudStorageInterface {
 
   FirestoreStorageService({this.databaseId});
 
-  // Lazy access with Safety Check
+  // Lazy access to $(default) database for global metadata
+  FirebaseFirestore get _globalFirestore {
+    try {
+      if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) {
+        throw Exception("Firebase JS SDK not loaded (Offline/iOS strict mode)");
+      }
+      if (Firebase.apps.isEmpty) {
+        throw Exception("Firestore accessed before Firebase Init (Offline?)");
+      }
+      // Passing databaseId: null (or omitting) always points to (default)
+      return FirebaseFirestore.instanceFor(app: Firebase.app());
+    } catch (e) {
+      throw Exception("Global Firestore Access Failed (Safety): $e");
+    }
+  }
+
+  // Lazy access to Regional database for actual financial data
   FirebaseFirestore get _firestore {
     try {
-      // CRITICAL: Check for JS object first to prevent ReferenceError crash on iOS
       if (kIsWeb && !FirebaseWebSafe.isFirebaseJsAvailable) {
         throw Exception("Firebase JS SDK not loaded (Offline/iOS strict mode)");
       }
@@ -21,10 +36,13 @@ class FirestoreStorageService implements CloudStorageInterface {
       if (Firebase.apps.isEmpty) {
         throw Exception("Firestore accessed before Firebase Init (Offline?)");
       }
+
+      // If databaseId is null, this also falls back to (default),
+      // which is fine for users who haven't been routed yet.
       return FirebaseFirestore.instanceFor(
           app: Firebase.app(), databaseId: databaseId);
     } catch (e) {
-      throw Exception("Firestore Access Failed (Safety): $e");
+      throw Exception("Regional Firestore Access Failed (Safety): $e");
     }
   }
 
@@ -87,7 +105,7 @@ class FirestoreStorageService implements CloudStorageInterface {
   @override
   Future<String?> getActiveSessionId(String uid) async {
     try {
-      final doc = await _firestore
+      final doc = await _globalFirestore
           .collection('users')
           .doc(uid)
           .collection('session')
@@ -106,7 +124,7 @@ class FirestoreStorageService implements CloudStorageInterface {
   @override
   Future<void> setActiveSessionId(String uid, String deviceId) async {
     try {
-      await _firestore
+      await _globalFirestore
           .collection('users')
           .doc(uid)
           .collection('session')
@@ -126,7 +144,7 @@ class FirestoreStorageService implements CloudStorageInterface {
   @override
   Future<void> clearActiveSessionId(String uid) async {
     try {
-      await _firestore
+      await _globalFirestore
           .collection('users')
           .doc(uid)
           .collection('session')
@@ -137,6 +155,35 @@ class FirestoreStorageService implements CloudStorageInterface {
       rethrow;
     } catch (_) {
       throw Exception("Firestore session clear failed");
+    }
+  }
+
+  @override
+  Future<String?> getRegionHint(String uid) async {
+    try {
+      final doc = await _globalFirestore.collection('users').doc(uid).get();
+      if (!doc.exists) return null;
+      return doc.data()?['region'] as String?;
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore region fetch failed");
+    }
+  }
+
+  @override
+  Future<void> setRegionHint(String uid, String region) async {
+    try {
+      await _globalFirestore.collection('users').doc(uid).set({
+        'region': region,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } on FirebaseException catch (e) {
+      if (e.code == permissionDeniedCode) throw Exception(permissionDeniedCode);
+      rethrow;
+    } catch (_) {
+      throw Exception("Firestore region set failed");
     }
   }
 }

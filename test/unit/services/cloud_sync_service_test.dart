@@ -134,11 +134,13 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
 
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
@@ -158,11 +160,13 @@ void main() {
         Profile(id: 'p1', name: 'Profile 1'),
       ]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
 
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
@@ -201,11 +205,13 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
 
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
@@ -246,10 +252,12 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
 
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
@@ -291,7 +299,8 @@ void main() {
           type: LendingType.borrowed,
           date: DateTime(2024, 2, 10));
 
-      when(() => mockStorageService.getLendingRecords()).thenReturn([lr1, lr2]);
+      when(() => mockStorageService.getLendingRecordsGlobal())
+          .thenReturn([lr1, lr2]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
       when(() => mockStorageService.getAllTransactions()).thenReturn([]);
       when(() => mockStorageService.getAllAccounts()).thenReturn([]);
@@ -300,9 +309,11 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
 
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
@@ -338,10 +349,13 @@ void main() {
 
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() =>
+              mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+          .thenAnswer((_) async {});
 
       Map<String, dynamic>? savedSettings;
       when(() => mockStorageService.saveSettings(any()))
@@ -395,16 +409,19 @@ void main() {
 
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() =>
+              mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+          .thenAnswer((_) async {});
       when(() => mockStorageService.saveTransaction(any(), applyImpact: false))
           .thenAnswer((_) async {});
       when(() => mockStorageService.saveLoan(any())).thenAnswer((_) async {});
-      when(() => mockStorageService.saveTaxYearData(any()))
+      when(() => mockStorageService.saveTaxYearDataGlobal(any()))
           .thenAnswer((_) async {});
-      when(() => mockTaxConfigService.restoreAllRules(any()))
+      when(() => mockTaxConfigService.restoreAllRulesGlobal(any()))
           .thenAnswer((_) async {});
 
       await cloudSyncService.restoreFromCloud();
@@ -413,8 +430,8 @@ void main() {
               mockStorageService.saveTransaction(any(), applyImpact: false))
           .called(1);
       verify(() => mockStorageService.saveLoan(any())).called(1);
-      verify(() => mockStorageService.saveTaxYearData(any())).called(1);
-      verify(() => mockTaxConfigService.restoreAllRules(any())).called(1);
+      verify(() => mockStorageService.saveTaxYearDataGlobal(any())).called(1);
+      verify(() => mockTaxConfigService.restoreAllRulesGlobal(any())).called(1);
     });
   });
 
@@ -439,8 +456,11 @@ void main() {
     void stubRestore(Map<String, dynamic> cloudData) {
       when(() => mockCloudStorage.fetchData('user123'))
           .thenAnswer((_) async => cloudData);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() =>
+              mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+          .thenAnswer((_) async {});
       when(() => mockStorageService.saveProfile(any()))
           .thenAnswer((_) async {});
       when(() => mockStorageService.addCategory(any(), isRestore: true))
@@ -456,11 +476,11 @@ void main() {
           .thenAnswer((_) async {});
       when(() => mockStorageService.saveSettings(any()))
           .thenAnswer((_) async {});
-      when(() => mockStorageService.saveInsurancePolicies(any()))
+      when(() => mockStorageService.saveInsurancePoliciesGlobal(any()))
           .thenAnswer((_) async {});
-      when(() => mockStorageService.saveTaxYearData(any()))
+      when(() => mockStorageService.saveTaxYearDataGlobal(any()))
           .thenAnswer((_) async {});
-      when(() => mockTaxConfigService.restoreAllRules(any()))
+      when(() => mockTaxConfigService.restoreAllRulesGlobal(any()))
           .thenAnswer((_) async {});
       when(() => mockStorageService.saveLendingRecord(any()))
           .thenAnswer((_) async {});
@@ -544,7 +564,8 @@ void main() {
 
       await cloudSyncService.restoreFromCloud();
 
-      verify(() => mockStorageService.saveInsurancePolicies(any())).called(1);
+      verify(() => mockStorageService.saveInsurancePoliciesGlobal(any()))
+          .called(1);
     });
 
     test('restores lending records', () async {
@@ -604,16 +625,12 @@ void main() {
       ];
       when(() => mockStorageService.getAllTaxYearData())
           .thenReturn(localTaxData);
-
-      // Cloud has no tax data
+      when(() => mockStorageService.saveTaxYearData(any()))
+          .thenAnswer((_) async {});
       stubRestore({});
-      // Override getAllTaxYearData specifically for this test
       when(() => mockStorageService.getAllTaxYearData())
           .thenReturn(localTaxData);
-
       await cloudSyncService.restoreFromCloud();
-
-      // Local data for year 2025 should be re-saved (not in restored set)
       verify(() => mockStorageService.saveTaxYearData(any())).called(1);
     });
 
@@ -629,6 +646,8 @@ void main() {
                   effectiveDate: DateTime(2025, 4, 1))
             ])),
       ];
+      when(() => mockStorageService.saveTaxYearData(any()))
+          .thenAnswer((_) async {});
       when(() => mockStorageService.getAllTaxYearData())
           .thenReturn(localTaxData);
 
@@ -647,8 +666,9 @@ void main() {
 
       await cloudSyncService.restoreFromCloud();
 
-      // saveTaxYearData should be called: once for restore, once for merge
-      verify(() => mockStorageService.saveTaxYearData(any())).called(2);
+      // saveTaxYearDataGlobal should be called once for restore, saveTaxYearData once for merge
+      verify(() => mockStorageService.saveTaxYearDataGlobal(any())).called(1);
+      verify(() => mockStorageService.saveTaxYearData(any())).called(1);
     });
 
     test('restoreFromCloud throws if no data found', () async {
@@ -666,14 +686,15 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
-      when(() => mockStorageService.getAllTaxYearData()).thenReturn([
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([
         const TaxYearData(year: 2025),
       ]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({
-        2025: TaxRules(),
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({
+        'default_2025': TaxRules(),
       });
 
       when(() => mockCloudStorage.syncData(any(), any()))
@@ -688,7 +709,8 @@ void main() {
 
       // Tax rules and data should be partitioned by year
       expect(captured['tax_rules_v2'], isA<Map>());
-      expect((captured['tax_rules_v2'] as Map).containsKey('2025'), isTrue);
+      expect((captured['tax_rules_v2'] as Map).containsKey('default_2025'),
+          isTrue);
       expect(captured['tax_data_v2'], isA<Map>());
       expect((captured['tax_data_v2'] as Map).containsKey('2025'), isTrue);
     });
@@ -724,8 +746,11 @@ void main() {
           .thenAnswer((_) async => cloudData);
       when(() => mockCloudStorage.getActiveSessionId(any()))
           .thenAnswer((_) async => currentSessionId);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.clearAllData()).thenAnswer((_) async {});
+      when(() =>
+              mockStorageService.clearAllData(fullWipe: any(named: 'fullWipe')))
+          .thenAnswer((_) async {});
       when(() => mockStorageService.saveSettings(any()))
           .thenAnswer((_) async {});
 
@@ -757,11 +782,13 @@ void main() {
       when(() => mockStorageService.getAllCategories()).thenReturn([]);
       when(() => mockStorageService.getProfiles()).thenReturn([]);
       when(() => mockStorageService.getAllSettings()).thenReturn({});
-      when(() => mockStorageService.getInsurancePolicies()).thenReturn([]);
+      when(() => mockStorageService.getInsurancePoliciesGlobal())
+          .thenReturn([]);
+      when(() => mockStorageService.getAllTaxYearDataGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllTaxYearData()).thenReturn([]);
-      when(() => mockStorageService.getLendingRecords()).thenReturn([]);
+      when(() => mockStorageService.getLendingRecordsGlobal()).thenReturn([]);
       when(() => mockStorageService.getAllInvestments()).thenReturn([]);
-      when(() => mockTaxConfigService.getAllRules()).thenReturn({});
+      when(() => mockTaxConfigService.getAllRulesGlobal()).thenReturn({});
       when(() => mockCloudStorage.syncData(any(), any()))
           .thenAnswer((_) async {});
 

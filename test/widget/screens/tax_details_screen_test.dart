@@ -213,10 +213,7 @@ void main() {
     await tester.enterText(
         find.widgetWithText(TextField, 'Annual Fixed Allowances (CTC)'),
         '240000'); // Annual Fixed (20k monthly)
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('Save'),
-    ));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(
@@ -234,10 +231,7 @@ void main() {
     expect(find.text('Edit Salary Structure'), findsOneWidget);
     await tester.enterText(
         find.widgetWithText(TextField, 'Annual Basic Pay (CTC)'), '720000');
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('Save'),
-    ));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Basic:', skipOffstage: false), findsOneWidget);
   });
@@ -334,10 +328,7 @@ void main() {
     await tester.tap(find.text('Add Structure'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), '50000');
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('Save'),
-    ));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     // 2. Try to pop

@@ -160,6 +160,37 @@ void main() {
       expect(salaryIncome, closeTo(503000, 1));
     });
 
+    test('Handles top-level SalaryDetails.employerGifts correctly', () {
+      final data = TaxYearData(
+          year: 2025,
+          salary: SalaryDetails(
+            history: [
+              SalaryStructure(
+                  id: 'test',
+                  monthlyBasic: 1000000 / 12,
+                  effectiveDate: DateTime(2025, 4, 1))
+            ],
+            employerGifts: 8000,
+          ));
+
+      final rules = defaultRules.copyWith(
+          isGiftFromEmployerEnabled: true,
+          giftFromEmployerExemptionLimit: 5000);
+
+      final salaryGross = taxService.calculateSalaryGross(data, rules);
+      // Gross = 1,000,000 + 8,000 = 1,008,000
+      expect(salaryGross, closeTo(1008000, 0.01));
+
+      final salaryExemptions =
+          taxService.calculateSalaryExemptions(data, rules);
+      // Exemption for 8000 is 5000
+      expect(salaryExemptions, 5000);
+
+      final salaryIncome = taxService.calculateSalaryIncome(data, rules);
+      // Taxable = 1,008,000 - 5,000 = 1,003,000
+      expect(salaryIncome, closeTo(1003000, 0.01));
+    });
+
     test('Leaves salary unchanged when employer gifts stay within exemption',
         () {
       final data = TaxYearData(

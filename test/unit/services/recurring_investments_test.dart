@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/models/investment.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
 class MockHiveInterface extends Mock implements HiveInterface {}
 

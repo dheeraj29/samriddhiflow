@@ -760,6 +760,7 @@ class IndianTaxService implements TaxStrategy {
     totalGross += _computeIndependentAllowanceGross(data);
     totalGross += data.salary.leaveEncashment;
     totalGross += data.salary.gratuity;
+    totalGross += data.salary.employerGifts;
     return totalGross;
   }
 
@@ -784,6 +785,7 @@ class IndianTaxService implements TaxStrategy {
         _calculateIndependentExemptions(data.salary.independentExemptions);
     totalExemptions += _calculateIndependentAllowanceExemptions(data);
     totalExemptions += _calculateRetirementExemptions(data, rules);
+    totalExemptions += _calculateEmployerGiftExemption(data, rules);
 
     return totalExemptions;
   }
@@ -803,6 +805,13 @@ class IndianTaxService implements TaxStrategy {
     }
 
     return exemption;
+  }
+
+  double _calculateEmployerGiftExemption(TaxYearData data, TaxRules rules) {
+    if (!rules.isGiftFromEmployerEnabled || data.salary.employerGifts <= 0) {
+      return 0;
+    }
+    return min(data.salary.employerGifts, rules.giftFromEmployerExemptionLimit);
   }
 
   double _calculateStructureExemptions(TaxYearData data, TaxRules rules) {

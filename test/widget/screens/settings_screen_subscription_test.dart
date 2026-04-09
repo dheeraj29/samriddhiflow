@@ -96,10 +96,14 @@ void main() {
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.free));
       await tester.pumpAndSettle();
 
-      expect(
-          find.textContaining('Free Tier', findRichText: true), findsOneWidget);
-      expect(
-          find.textContaining('Upgrade', findRichText: true), findsOneWidget);
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text('Global Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(l10n.freeTierActive, findRichText: true),
+          findsOneWidget);
+      expect(find.widgetWithText(TextButton, l10n.upgradeButtonLabel),
+          findsOneWidget);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();
@@ -111,9 +115,13 @@ void main() {
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.lite));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Lite Active (Ad-Free)', findRichText: true),
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text('Global Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(l10n.liteActive, findRichText: true),
           findsOneWidget);
-      expect(find.textContaining('Upgrade to Premium', findRichText: true),
+      expect(find.widgetWithText(TextButton, l10n.upgradeToPremiumLabel),
           findsOneWidget);
 
       await tester.pumpWidget(Container());
@@ -126,11 +134,16 @@ void main() {
           .pumpWidget(wrap(const SettingsScreen(), SubscriptionTier.premium));
       await tester.pumpAndSettle();
 
-      expect(find.text('Premium Active'), findsOneWidget);
-      expect(find.text('Expires on: Never'), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'Upgrade'), findsNothing);
-      expect(
-          find.widgetWithText(TextButton, 'Upgrade to Premium'), findsNothing);
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text('Global Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.premiumActive), findsOneWidget);
+      expect(find.text(l10n.expiresOnLabel(l10n.expiresNever)), findsOneWidget);
+      expect(find.widgetWithText(TextButton, l10n.upgradeButtonLabel),
+          findsNothing);
+      expect(find.widgetWithText(TextButton, l10n.upgradeToPremiumLabel),
+          findsNothing);
 
       await tester.pumpWidget(Container());
       await tester.pumpAndSettle();

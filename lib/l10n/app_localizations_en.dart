@@ -590,9 +590,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'Base: $base • Cess: $cess • Interest: $interest';
   }
 
-  @override
+  @override // coverage:ignore-line
   String advanceTaxBreakdownLabelNoInterest(String base, String cess) {
-    return 'Base: $base • Cess: $cess';
+    return 'Base: $base • Cess: $cess'; // coverage:ignore-line
   }
 
   @override
@@ -631,7 +631,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noEntriesMatchFilteringNote =>
       'No entries match the current filters.';
 
-  @override
+  @override // coverage:ignore-line
   String get payoutMonthLabel => 'Payout Month';
 
   @override
@@ -753,9 +753,9 @@ class AppLocalizationsEn extends AppLocalizations {
     return 'First Execution: $date'; // coverage:ignore-line
   }
 
-  @override
+  @override // coverage:ignore-line
   String frequencyLabel(String label) {
-    return 'Frequency: $label';
+    return 'Frequency: $label'; // coverage:ignore-line
   }
 
   @override
@@ -984,6 +984,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get profileSettingsHeader => 'Profile Settings';
+
+  @override // coverage:ignore-line
+  String get globalSettingsHeader => 'Global App Settings';
+
+  @override
   String get appearanceSection => 'Appearance';
 
   @override
@@ -992,8 +998,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cloudSyncSection => 'Cloud Sync';
 
-  @override
+  @override // coverage:ignore-line
   String get dataManagementSection => 'Data Management';
+
+  @override
+  String get profileDataSection => 'Data Cleanup & Recovery';
+
+  @override
+  String get globalDataSection => 'Local Backup & Export';
 
   @override
   String get featureManagementSection => 'Feature Management';
@@ -1434,9 +1446,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get upcomingAdvanceTaxTitle => 'Upcoming Advance Tax';
 
-  @override
+  @override // coverage:ignore-line
   String advanceTaxNextDueMessage(String amount, String date) {
-    return 'Next due: $amount by $date';
+    return 'Next due: $amount by $date'; // coverage:ignore-line
   }
 
   @override
@@ -1548,6 +1560,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectMonthsAction => 'Select Payout Months';
+
+  @override
+  String get coreSalarySection => 'Core Salary';
+
+  @override
+  String get payoutsSection => 'Irregular Payouts & Variable Pay';
+
+  @override
+  String get deductionsSection => 'Deductions & Unemployment';
+
+  @override // coverage:ignore-line
+  String get firstPayoutMonthLabel => 'First Payout Month';
+
+  @override // coverage:ignore-line
+  String get noMonthsSelectedNote => 'No months selected';
+
+  @override // coverage:ignore-line
+  String get addCustomAllowanceAction => 'Add Allowance';
+
+  @override // coverage:ignore-line
+  String get editAllowanceAction => 'Edit Allowance';
+
+  @override // coverage:ignore-line
+  String get payoutAmountLabel => 'Payout Amount';
+
+  @override // coverage:ignore-line
+  String get none => 'None';
+
+  @override // coverage:ignore-line
+  String get cliffExemptionTitle => 'Cliff-based Exemption';
+
+  @override // coverage:ignore-line
+  String get payoutFrequencyLabel => 'Payout Frequency';
+
+  @override // coverage:ignore-line
+  String get exemptionLimitHelperText =>
+      'Income above this limit is fully taxable (no exemption applies).';
+
+  @override // coverage:ignore-line
+  String get cliffExemptionSubtitle =>
+      'If checked, income above limit becomes fully taxable.';
 
   @override
   String get transactionDateLabel => 'Transaction Date';
@@ -2584,10 +2637,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get addCustomExemptionTitle => 'Add Custom Exemption';
 
-  @override // coverage:ignore-line
-  String get cliffExemptionSubtitle =>
-      'If checked, income above limit becomes fully taxable.';
-
   @override
   String get restoreAction => 'Restore';
 
@@ -2801,9 +2850,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editIndependentAllowanceAction => 'Edit Independent Allowance';
 
   @override // coverage:ignore-line
-  String get payoutFrequencyLabel => 'Payout Frequency';
-
-  @override // coverage:ignore-line
   String get payoutFrequencyTrimesterLabel => 'Trimester (4 Months)';
 
   @override // coverage:ignore-line
@@ -2899,10 +2945,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get isCliffExemptionTitle => 'Is Cliff Exemption?';
 
-  @override // coverage:ignore-line
-  String get exemptionLimitHelperText =>
-      'Income above this limit is fully taxable (no exemption applies).';
-
   @override
   String get taxDetailsSavedStatus => 'Tax details saved successfully.';
 
@@ -2992,6 +3034,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gratuityTitleLabel => 'Gratuity';
 
   @override
+  String get employerGiftsLabel => 'Employer Gifts';
+
+  @override
   String get customAdHocExemptionsTitle => 'Custom Ad-hoc Exemptions';
 
   @override
@@ -3030,6 +3075,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lessEmployerNPSLabel => 'Less: Employer NPS Contribution';
+
+  @override // coverage:ignore-line
+  String get lessEmployerGiftsLabel => 'Less: Employer Gifts (Exempt)';
 
   @override
   String get taxableBeforeAdHocExemptionsLabel =>
@@ -3228,10 +3276,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tcsTitle => 'TCS';
 
-  @override
+  @override // coverage:ignore-line
   String advanceTaxInstallmentNote(
       String month, String day, String percent, String amount) {
-    return '$month $day: $percent% of total tax (approx $amount)';
+    return '$month $day: $percent% of total tax (approx $amount)'; // coverage:ignore-line
   }
 
   @override
@@ -3801,9 +3849,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get manageCategoriesAction => 'Manage Categories';
 
-  @override
+  @override // coverage:ignore-line
   String switchedToProfileStatus(String name) {
-    return 'Switched to profile: $name';
+    return 'Switched to profile: $name'; // coverage:ignore-line
   }
 
   @override

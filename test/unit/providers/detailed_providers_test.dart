@@ -7,7 +7,7 @@ import 'package:samriddhi_flow/services/storage_service.dart';
 import 'package:samriddhi_flow/models/dashboard_config.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'dart:io';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class MockStorageService extends Mock implements StorageService {}

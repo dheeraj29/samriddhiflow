@@ -41,6 +41,16 @@ class CloudDatabaseRegionNotifier extends Notifier<String> {
     final storage = ref.read(storageServiceProvider);
     await storage.setCloudDatabaseRegion(region);
     // coverage:ignore-end
+
+    // PERSIST GLOBAL HINT: Prevent region-probing attacks by storing hint in (default) db
+    final user = FirebaseAuth.instance.currentUser; // coverage:ignore-line
+    if (user != null) {
+      // Create a dedicated one-off global instance for this write
+      final globalStorage =
+          FirestoreStorageService(databaseId: null); // coverage:ignore-line
+      await globalStorage.setRegionHint(
+          user.uid, region); // coverage:ignore-line
+    }
   }
 }
 

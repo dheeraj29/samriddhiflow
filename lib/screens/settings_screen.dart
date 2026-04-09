@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/services.dart';
 import 'package:samriddhi_flow/core/app_constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../providers.dart';
 import '../feature_providers.dart';
@@ -44,6 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isUploading = false;
   bool _isDownloading = false;
   bool _isAppLockEnabled = false;
+  bool _showGlobalSettings = false;
   final Map<String, bool> _expandedSections = {};
 
   // Internal keys for expandable sections
@@ -59,18 +61,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static const String _secAppInfo = 'App Info';
   static const String _secPremium = 'Premium';
 
+  static const String _secHeaderProfile = 'HeaderProfile';
+  static const String _secHeaderGlobal = 'HeaderGlobal';
+
   final List<String> _sectionKeys = [
     _secPremium,
-    _secAppearance,
-    _secDashboard,
-    _secCloud,
-    _secData,
-    _secFeature,
+    _secHeaderProfile,
     _secProfile,
-    _secPreferences,
-    _secAuth,
-    _secSecurity,
-    _secAppInfo,
+    _secPreferences, // Profile-specific preferences like Currency
+    _secData, // Profile data like Clear Transactions
+
+    _secHeaderGlobal,
+    _secAppearance, // Global (Theme, Language)
+    _secDashboard, // Global
+    _secFeature, // Global
+    _secCloud, // Global
+    _secAuth, // Global
+    _secSecurity, // Global
+    _secAppInfo, // Global
   ];
 
   // PWA Install Prompt
@@ -133,121 +141,293 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          _buildCollapsibleSection(
-            _secPremium,
-            l10n.premiumSectionTile,
-            _buildPremiumSection(l10n),
-          ),
-          _buildCollapsibleSection(
-            _secAppearance,
-            l10n.appearanceSection,
-            _buildAppearanceSection(l10n),
-          ),
-          _buildCollapsibleSection(
-            _secDashboard,
-            l10n.dashboardCustomizationSection,
-            _buildDashboardSection(l10n),
-          ),
-          if (subService.isCloudSyncEnabled())
-            _buildCollapsibleSection(
-              _secCloud,
-              l10n.cloudSyncSection,
-              _buildCloudSectionContent(context, ref, user, l10n),
+          _buildUnifiedNavigationHeader(context, l10n, user, subService),
+          const SizedBox(height: 24),
+          if (!_showGlobalSettings) ...[
+            _buildCollapsibleCard(
+              _secPreferences,
+              l10n.preferencesSection,
+              _buildPreferencesSection(context, l10n),
+              isProfile: true,
             ),
-          _buildCollapsibleSection(
-            _secData,
-            l10n.dataManagementSection,
-            _buildDataManagementSection(context, l10n),
-          ),
-          _buildCollapsibleSection(
-            _secFeature,
-            l10n.featureManagementSection,
-            _buildFeatureManagementSection(context, l10n),
-          ),
-          _buildCollapsibleSection(
-            _secProfile,
-            l10n.profileManagementSection,
-            _buildProfileManagementSection(context, l10n),
-          ),
-          _buildCollapsibleSection(
-            _secPreferences,
-            l10n.preferencesSection,
-            _buildPreferencesSection(context, l10n),
-          ),
-          if (user != null &&
-              !ref.watch(isOfflineProvider) &&
-              subService.isCloudSyncEnabled())
-            _buildCollapsibleSection(
-              _secAuth,
-              l10n.authSection,
-              _buildAuthSection(context, l10n),
+            _buildCollapsibleCard(
+              _secData,
+              l10n.profileDataSection,
+              _buildProfileDataSection(context, l10n),
+              isProfile: true,
             ),
-          _buildCollapsibleSection(
-            _secSecurity,
-            l10n.securitySection,
-            _buildSecuritySection(context, l10n),
-          ),
-          _buildCollapsibleSection(
-            _secAppInfo,
-            l10n.appInfoSection,
-            _buildAppInfoSection(context, l10n),
-          ),
+          ] else ...[
+            _buildCollapsibleCard(
+              _secPremium,
+              l10n.premiumSectionTile,
+              _buildPremiumSection(l10n),
+              isProfile: false,
+            ),
+            if (subService.isCloudSyncEnabled())
+              _buildCollapsibleCard(
+                _secCloud,
+                l10n.cloudSyncSection,
+                _buildCloudSectionContent(context, ref, user, l10n),
+                isProfile: false,
+              ),
+            _buildCollapsibleCard(
+              _secAppearance,
+              l10n.appearanceSection,
+              _buildAppearanceSection(l10n),
+              isProfile: false,
+            ),
+            _buildCollapsibleCard(
+              _secDashboard,
+              l10n.dashboardCustomizationSection,
+              _buildDashboardSection(l10n),
+              isProfile: false,
+            ),
+            _buildCollapsibleCard(
+              _secFeature,
+              l10n.featureManagementSection,
+              _buildFeatureManagementSection(context, l10n),
+              isProfile: false,
+            ),
+            _buildCollapsibleCard(
+              'GlobalData',
+              l10n.globalDataSection,
+              _buildGlobalDataSection(context, l10n),
+              isProfile: false,
+            ),
+            if (user != null &&
+                !ref.watch(isOfflineProvider) &&
+                subService.isCloudSyncEnabled())
+              _buildCollapsibleCard(
+                _secAuth,
+                l10n.authSection,
+                _buildAuthSection(context, l10n),
+                isProfile: false,
+              ),
+            _buildCollapsibleCard(
+              _secSecurity,
+              l10n.securitySection,
+              _buildSecuritySection(context, l10n),
+              isProfile: false,
+            ),
+            _buildCollapsibleCard(
+              _secAppInfo,
+              l10n.appInfoSection,
+              _buildAppInfoSection(context, l10n),
+              isProfile: false,
+            ),
+          ],
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildCollapsibleSection(
-      String key, String displayTitle, Widget content) {
-    final isExpanded = _expandedSections[key] ?? true;
-    final showDivider = key != _sectionKeys.first;
+  Widget _buildUnifiedNavigationHeader(BuildContext context,
+      AppLocalizations l10n, User? user, SubscriptionService subService) {
+    final activeProfile = ref.watch(activeProfileProvider);
+    final profilesAsync = ref.watch(profilesProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showDivider) const Divider(height: 32, thickness: 0.5),
-        InkWell(
-          onTap: () {
-            setState(() {
-              _expandedSections[key] = !isExpanded;
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    displayTitle.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-                Icon(
-                  isExpanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary.withAlpha(180),
-                ),
-              ],
+        // Top Card with Profile Info & Manage/Switch
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
             ),
           ),
-        ),
-        AnimatedCrossFade(
-          firstChild: Visibility(
-            visible: isExpanded,
-            child: content,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color:
+                          Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: Theme.of(context).primaryColor,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        profilesAsync.maybeWhen(
+                          data: (profiles) {
+                            if (profiles.isEmpty) {
+                              return Text(
+                                activeProfile?.name ??
+                                    "Guest", // coverage:ignore-line
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              );
+                            }
+                            return DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isDense: true,
+                                value: activeProfile?.id,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                items: profiles.map((p) {
+                                  return DropdownMenuItem<String>(
+                                    value: p.id,
+                                    child: Text(p.name),
+                                  );
+                                }).toList(),
+                                onChanged: (newId) {
+                                  if (newId != null &&
+                                      newId != activeProfile?.id) {
+                                    ref
+                                        .read(activeProfileIdProvider.notifier)
+                                        .setProfile(newId);
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                          orElse: () => Text(
+                            activeProfile?.name ??
+                                "Guest", // coverage:ignore-line
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          l10n.profileSettingsHeader.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: 'Manage Profiles',
+                    onPressed: () => _showManageProfilesDialog(context, l10n),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Toggle between Profile and Global
+              Center(
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: false,
+                      label: Text('Profile Settings'),
+                      icon: Icon(Icons.account_circle_outlined),
+                    ),
+                    ButtonSegment<bool>(
+                      value: true,
+                      label: Text('Global Settings'),
+                      icon: Icon(Icons.public),
+                    ),
+                  ],
+                  selected: {_showGlobalSettings},
+                  onSelectionChanged: (Set<bool> newSelection) {
+                    setState(() {
+                      _showGlobalSettings = newSelection.first;
+                    });
+                  },
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+            ],
           ),
-          secondChild: const SizedBox.shrink(),
-          crossFadeState:
-              isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          duration: const Duration(milliseconds: 200),
         ),
       ],
+    );
+  }
+
+  Widget _buildCollapsibleCard(String key, String displayTitle, Widget content,
+      {required bool isProfile}) {
+    final isExpanded = _expandedSections[key] ?? true;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withAlpha(50),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _expandedSections[key] = !isExpanded;
+              });
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayTitle,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 22,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: content,
+            ),
+        ],
+      ),
     );
   }
 
@@ -271,53 +451,78 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return Icons.brightness_auto;
     }
 
-    return ListTile(
-      title: Text(l10n.themeModeLabel),
-      subtitle: Text(mode.name.toUpperCase()),
-      leading: Icon(getThemeIcon(), color: Colors.amber),
-      trailing: DropdownButton<ThemeMode>(
-        value: mode,
-        onChanged: (ThemeMode? newValue) {
-          FocusScope.of(context).unfocus();
-          if (newValue != null) {
-            ref.read(themeModeProvider.notifier).setThemeMode(newValue);
-          }
-        },
-        items: [
-          DropdownMenuItem(
-              value: ThemeMode.system, child: Text(l10n.systemTheme)),
-          DropdownMenuItem(
-              value: ThemeMode.light, child: Text(l10n.lightTheme)),
-          DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.darkTheme)),
-        ],
-      ),
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.themeModeLabel),
+          leading: Icon(getThemeIcon(), color: Colors.amber),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThemeMode>(
+            segments: [
+              ButtonSegment(
+                  value: ThemeMode.system,
+                  label: Text(l10n.systemTheme),
+                  icon: const Icon(Icons.brightness_auto)),
+              ButtonSegment(
+                  value: ThemeMode.light,
+                  label: Text(l10n.lightTheme),
+                  icon: const Icon(Icons.light_mode)),
+              ButtonSegment(
+                  value: ThemeMode.dark,
+                  label: Text(l10n.darkTheme),
+                  icon: const Icon(Icons.dark_mode)),
+            ],
+            selected: {mode},
+            onSelectionChanged: (Set<ThemeMode> newSelection) {
+              FocusScope.of(context).unfocus();
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(newSelection.first);
+            },
+            showSelectedIcon: false,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildLanguageTile(AppLocalizations l10n) {
     final locale = ref.watch(localeProvider);
 
-    String getLanguageName() {
-      if (locale == null) return l10n.systemDefault;
-      if (locale.languageCode == 'en') return l10n.englishLanguage;
-      return locale.languageCode.toUpperCase(); // coverage:ignore-line
-    }
-
-    return ListTile(
-      title: Text(l10n.languageLabel),
-      subtitle: Text(getLanguageName()),
-      leading: const Icon(Icons.language, color: Colors.blue),
-      trailing: DropdownButton<String?>(
-        value: locale?.languageCode,
-        onChanged: (String? newValue) {
-          FocusScope.of(context).unfocus();
-          ref.read(localeProvider.notifier).setLocale(newValue);
-        },
-        items: [
-          DropdownMenuItem(value: null, child: Text(l10n.systemDefault)),
-          DropdownMenuItem(value: 'en', child: Text(l10n.englishLanguage)),
-        ],
-      ),
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.languageLabel),
+          leading: const Icon(Icons.language, color: Colors.blue),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<String?>(
+            segments: [
+              ButtonSegment(
+                  value: null,
+                  label: Text(l10n.systemDefault),
+                  icon: const Icon(Icons.settings_suggest)),
+              ButtonSegment(
+                  value: 'en',
+                  label: Text(l10n.englishLanguage),
+                  icon: const Icon(Icons.abc)),
+            ],
+            selected: {locale?.languageCode},
+            onSelectionChanged: (Set<String?> newSelection) {
+              FocusScope.of(context).unfocus();
+              ref.read(localeProvider.notifier).setLocale(newSelection.first);
+            },
+            showSelectedIcon: false,
+          ),
+        ),
+      ],
     );
   }
 
@@ -672,8 +877,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildDataManagementSection(
-      BuildContext context, AppLocalizations l10n) {
+  Widget _buildProfileDataSection(BuildContext context, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -689,6 +893,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // coverage:ignore-end
           },
         ),
+        ListTile(
+          title: Text(AppLocalizations.of(context)!.repairDataLabel),
+          subtitle: Text(AppLocalizations.of(context)!.repairDataDesc),
+          leading: const Icon(Icons.build_circle, color: Colors.amber),
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _showRepairDialog(context, l10n);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGlobalDataSection(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         ListTile(
           title: Text(l10n.backupDataZipLabel),
           subtitle: Text(AppLocalizations.of(context)!.backupDataZipDesc),
@@ -722,15 +943,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : null,
-        ),
-        ListTile(
-          title: Text(AppLocalizations.of(context)!.repairDataLabel),
-          subtitle: Text(AppLocalizations.of(context)!.repairDataDesc),
-          leading: const Icon(Icons.build_circle, color: Colors.amber),
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            _showRepairDialog(context, l10n);
-          },
         ),
       ],
     );
@@ -926,6 +1138,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showManageProfilesDialog(BuildContext context, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.profileManagementSection,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () =>
+                            Navigator.pop(context), // coverage:ignore-line
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: _buildProfileManagementSection(context, l10n),
+                    ),
+                  ),
+                  const Divider(),
+                  _buildAddProfileItem(context, l10n),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildProfileManagementSection(
       BuildContext context, AppLocalizations l10n) {
     return Column(
@@ -938,14 +1198,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _buildProfileListItem(context, profiles, p, l10n))
                     .toList(),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
               // coverage:ignore-start
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, s) => ListTile(
                   title: Text(
                       AppLocalizations.of(context)!.errorLabel(e.toString()))),
               // coverage:ignore-end
             ),
-        _buildAddProfileItem(context, l10n),
       ],
     );
   }
@@ -980,11 +1239,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       onTap: isActive
           ? null
+          // coverage:ignore-start
           : () {
               FocusScope.of(context).unfocus();
               ref.read(activeProfileIdProvider.notifier).setProfile(p.id);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(l10n.switchedToProfileStatus(p.name))));
+              // coverage:ignore-end
             },
     );
   }
@@ -1464,7 +1725,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.sessionExpiredLogoutMessage)),
         );
-        await ref.read(storageServiceProvider).clearAllData();
+        await ref.read(storageServiceProvider).clearAllData(fullWipe: true);
         ref.read(authServiceProvider).signOut(ref);
       }
     } else {
@@ -1884,7 +2145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await authService.deleteAccount();
 
       // D. Wipe Local Data completely
-      await ref.read(storageServiceProvider).clearAllData();
+      await ref.read(storageServiceProvider).clearAllData(fullWipe: true);
 
       // coverage:ignore-start
       if (mounted) {

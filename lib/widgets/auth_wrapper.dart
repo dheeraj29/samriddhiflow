@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../utils/platform_utils.dart' as platform_utils;
 import '../l10n/app_localizations.dart';
 import '../services/subscription_service.dart';
+import '../services/firestore_storage_service.dart';
 import 'region_selection_dialog.dart';
 
 const continueOfflineText = 'Continue Offline';
@@ -315,30 +316,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   void _listenAuthStream(BuildContext context, AsyncValue<void> storageInit) {
     ref.listen(authStreamProvider, (previous, next) async {
-      try {
-        if (!storageInit.hasValue) return;
-
-        final authService = ref.read(authServiceProvider);
-
-        if (next.value != null && _isRedirectingLocal) {
-          setState(() => _isRedirectingLocal = false); // coverage:ignore-line
-        }
-
-        await _claimSessionOnNewSignIn(previous, next);
-
-        if (_shouldSkipAuthProcessing(authService)) return;
-
-        final checkFn = ref.read(connectivityCheckProvider);
-        final isOffline = await checkFn();
-        final isLoggedIn = ref.read(isLoggedInProvider);
-        final user = next.value;
-
-        if (!context.mounted) return;
-        _handleGhostSession(
-            context, next, user, isOffline, isLoggedIn, checkFn);
-      } catch (e) {
-        // Background Listener suppressed error
-      }
+      await _onAuthStreamChangeEvent(context, storageInit, previous, next);
     });
 
     // Separate listener for auto-restore — NOT gated by firebaseInit state.
@@ -350,6 +328,58 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       if (!storageInit.hasValue || !_bootGracePeriodFinished) return;
       _handleAutoRestore(context, next);
     });
+  }
+
+  Future<void> _onAuthStreamChangeEvent(
+      BuildContext context,
+      AsyncValue<void> storageInit,
+      AsyncValue<User?>? previous,
+      AsyncValue<User?> next) async {
+    try {
+      if (!storageInit.hasValue) return;
+
+      final authService = ref.read(authServiceProvider);
+
+      if (next.value != null && _isRedirectingLocal) {
+        setState(() => _isRedirectingLocal = false); // coverage:ignore-line
+      }
+
+      if (next.value != null) {
+        await _resolveRegionHint(next.value!.uid);
+      }
+
+      await _claimSessionOnNewSignIn(previous, next);
+
+      if (_shouldSkipAuthProcessing(authService)) return;
+
+      final checkFn = ref.read(connectivityCheckProvider);
+      final isOffline = await checkFn();
+      final isLoggedIn = ref.read(isLoggedInProvider);
+      final user = next.value;
+
+      if (!context.mounted) return;
+      _handleGhostSession(context, next, user, isOffline, isLoggedIn, checkFn);
+    } catch (e) {
+      // Background Listener suppressed error
+    }
+  }
+
+  Future<void> _resolveRegionHint(String uid) async {
+    final currentRegion = ref.read(cloudDatabaseRegionProvider);
+    if (currentRegion.isNotEmpty) return;
+
+    try {
+      final globalStorage = FirestoreStorageService(databaseId: null);
+      final hint = await globalStorage.getRegionHint(uid);
+      if (hint != null && mounted) {
+        // coverage:ignore-line
+        await ref
+            .read(cloudDatabaseRegionProvider.notifier)
+            .setRegion(hint); // coverage:ignore-line
+      }
+    } catch (e) {
+      DebugLogger().log("Region hint resolution failed: $e");
+    }
   }
 
   /// Claims a new session UUID when the user signs in for the first time.
@@ -400,6 +430,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) async {
+    final region = ref.read(cloudDatabaseRegionProvider);
+    if (region.isEmpty) return; // Skip if region is not yet resolved/selected
+
     final storage = ref.read(storageServiceProvider);
     if (storage.getAccounts().isNotEmpty) return;
 
@@ -696,8 +729,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -705,12 +738,16 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             const CircularProgressIndicator(),
             const SizedBox(height: 20),
             Text(message,
-                style: AppTheme.offlineSafeTextStyle
-                    .copyWith(color: Colors.grey, fontWeight: FontWeight.w500)),
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                    color: theme.textTheme.bodyMedium?.color ?? Colors.grey,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 10),
             Text(AppConstants.appVersion,
-                style: AppTheme.offlineSafeTextStyle
-                    .copyWith(color: Colors.grey[400], fontSize: 10)),
+                style: AppTheme.offlineSafeTextStyle.copyWith(
+                    color: theme.textTheme.bodySmall?.color
+                            ?.withValues(alpha: 0.5) ??
+                        Colors.grey[400], // coverage:ignore-line
+                    fontSize: 10)),
             if (_isSlowConnection && showOfflineBypass) ...[
               const SizedBox(height: 32),
               // coverage:ignore-start
@@ -810,7 +847,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               Text(
                 message,
                 style: AppTheme.offlineSafeTextStyle.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).textTheme.bodySmall?.color ??
+                      Colors.grey[600], // coverage:ignore-line
                 ),
                 textAlign: TextAlign.center,
               ),

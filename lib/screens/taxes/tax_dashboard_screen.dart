@@ -31,6 +31,7 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
   TaxYearData? _taxData;
   List<TaxYearData> _allTaxData = [];
   bool _isServiceInitialized = false;
+  static const String _cessLabel = ' • Cess: ';
 
   @override
   void initState() {
@@ -670,29 +671,67 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Slab Pending - Base: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableBaseSlab'] ?? 0, currencyLocale)} • Cess: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableCessSlab'] ?? 0, currencyLocale)}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  _buildPendingTaxRow(
+                    label: 'Slab Pending - Base: ',
+                    baseValue: taxDetails['netTaxPayableBaseSlab'] ?? 0,
+                    cessValue: taxDetails['netTaxPayableCessSlab'] ?? 0,
+                    currencyLocale: currencyLocale,
                   ),
-                  Text(
-                    'Capital Gains Pending - Base: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableBaseCG'] ?? 0, currencyLocale)} • Cess: ${CurrencyUtils.formatCurrency(taxDetails['netTaxPayableCessCG'] ?? 0, currencyLocale)}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  _buildPendingTaxRow(
+                    label: 'Capital Gains Pending - Base: ',
+                    baseValue: taxDetails['netTaxPayableBaseCG'] ?? 0,
+                    cessValue: taxDetails['netTaxPayableCessCG'] ?? 0,
+                    currencyLocale: currencyLocale,
                   ),
                   if (advanceTaxInterest > 0)
-                    Text(
+                    Wrap(
                       // coverage:ignore-line
-                      'Interest Pending: ${CurrencyUtils.formatCurrency(advanceTaxInterest, currencyLocale)}', // coverage:ignore-line
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.orange),
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // coverage:ignore-line
+                        const Text('Interest Pending: ',
+                            style:
+                                TextStyle(fontSize: 11, color: Colors.orange)),
+                        SmartCurrencyText(
+                          // coverage:ignore-line
+                          value: advanceTaxInterest,
+                          locale: currencyLocale,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.orange),
+                        ),
+                      ],
                     ),
                 ],
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildPendingTaxRow({
+    required String label,
+    required double baseValue,
+    required double cessValue,
+    required String currencyLocale,
+  }) {
+    final style = TextStyle(
+        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(label, style: style),
+        SmartCurrencyText(
+          value: baseValue,
+          locale: currencyLocale,
+          style: style,
+        ),
+        Text(_cessLabel, style: style),
+        SmartCurrencyText(
+          value: cessValue,
+          locale: currencyLocale,
+          style: style,
+        ),
       ],
     );
   }
@@ -867,20 +906,51 @@ class _TaxDashboardScreenState extends ConsumerState<TaxDashboardScreen> {
             color: titleColor,
           ),
         ),
-        Text(
-          AppLocalizations.of(context)!.advanceTaxNextDueMessage(
-              CurrencyUtils.formatCurrency(amount, currencyLocale),
-              DateFormat(TaxConstants.dateFormat).format(dueDate)),
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('Next due: ',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            SmartCurrencyText(
+              value: amount,
+              locale: currencyLocale,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.bold),
+            ),
+            Text(' by ${DateFormat(TaxConstants.dateFormat).format(dueDate)}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+          ],
         ),
-        Text(
-          AppLocalizations.of(context)!.advanceTaxBreakdownLabel(
-              CurrencyUtils.formatCurrency(baseAmount, currencyLocale),
-              CurrencyUtils.formatCurrency(cessAmount, currencyLocale),
-              CurrencyUtils.formatCurrency(intAmount, currencyLocale)),
-          style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Text('Base: ', style: TextStyle(fontSize: 11)),
+            SmartCurrencyText(
+              value: baseAmount,
+              locale: currencyLocale,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const Text(_cessLabel, style: TextStyle(fontSize: 11)),
+            SmartCurrencyText(
+              value: cessAmount,
+              locale: currencyLocale,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const Text(' • Int: ', style: TextStyle(fontSize: 11)),
+            SmartCurrencyText(
+              value: intAmount,
+              locale: currencyLocale,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ],
         ),
       ],
     );

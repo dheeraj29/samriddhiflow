@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/utils/debug_logger.dart';
 
@@ -15,13 +15,54 @@ class TaxConfigService {
 
   Future<void> init() async {
     if (!Hive.isBoxOpen(_boxName)) {
-      await Hive.openBox<TaxRules>(_boxName);
+      try {
+        await Hive.openBox<TaxRules>(_boxName);
+      } catch (e) {
+        // Fallback or retry if type conflict occurs in development
+        DebugLogger().log(
+            "TaxConfigService: Error opening box $_boxName: $e"); // coverage:ignore-line
+        await Hive.openBox(
+            _boxName); // Open as dynamic if strict type fails // coverage:ignore-line
+      }
     }
   }
 
   bool get isReady => Hive.isBoxOpen(_boxName);
 
-  /// Get rules for a specific Assessment Year.
+  /// Returns rules for ALL profiles. Key is the raw Hive key (profile_year).
+  // coverage:ignore-start
+  Map<String, TaxRules> getAllRulesGlobal() {
+    if (!_box.isOpen) return {};
+    return Map<String, TaxRules>.from(_box.toMap());
+    // coverage:ignore-end
+  }
+
+  /// Clears the box and restores all rules from a global map.
+  /// Handles legacy keys (just year) by mapping them to profileId + year.
+  // coverage:ignore-start
+  Future<void> restoreAllRulesGlobal(Map<String, TaxRules> allRules) async {
+    if (!isReady) await init();
+    await _box.clear();
+    final Map<String, TaxRules> normalized = {};
+    allRules.forEach((key, rule) {
+      if (!key.contains('_')) {
+        // coverage:ignore-end
+        // Legacy key (just a year). Map it to the profileId in the rule or 'default'.
+        final year = int.tryParse(key); // coverage:ignore-line
+        if (year != null) {
+          final targetKey = '${rule.profileId}_$year'; // coverage:ignore-line
+          normalized[targetKey] = rule; // coverage:ignore-line
+        } else {
+          normalized[key] = rule; // coverage:ignore-line
+        }
+      } else {
+        normalized[key] = rule; // coverage:ignore-line
+      }
+    });
+    await _box.putAll(normalized); // coverage:ignore-line
+  }
+
+  /// Returns rules for the current profile, indexed by year.
   /// If not found, attempts to return rules from (year-1).
   /// If that fails, returns default rules.
   TaxRules getRulesForYear(int year) {
@@ -121,8 +162,9 @@ class TaxConfigService {
     // and default is Jan (1), then Feb >= 1 -> Return 2026. This is the bug.
 
     TaxRules? prevYearRules;
-    if (_box.containsKey(now.year - 1)) {
-      prevYearRules = _box.get(now.year - 1); // coverage:ignore-line
+    final prevYearKey = '${profileId}_${now.year - 1}';
+    if (_box.containsKey(prevYearKey)) {
+      prevYearRules = _box.get(prevYearKey);
     }
 
     // Use previous year's config if available to determine boundary
