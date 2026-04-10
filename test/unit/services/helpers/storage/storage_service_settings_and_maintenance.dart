@@ -198,6 +198,8 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
 
       await storageService.setSmartCalculatorEnabled(true);
       expect(storageService.isSmartCalculatorEnabled(), true);
+      // Verify correct key in settingsMap
+      expect(settingsMap.containsKey('smartCalculatorEnabled_default'), true);
     });
 
     test('BackupThreshold get/set', () async {
@@ -217,16 +219,14 @@ void registerStorageServiceSettingsAndMaintenanceTests() {
     });
 
     test('AppLock PIN get/set/enabled', () async {
-      const pin1234Hash =
-          '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-      const pin5678Hash =
-          'f8638b979b2f4f793ddb6dbd197e0ee25a7a6ea32b0ae22f5e3c5d119d839e75';
-
       await storageService.setAppPin('1234');
-      expect(storageService.getAppPin(), pin1234Hash);
+      final stored1234 = storageService.getAppPin();
+      expect(stored1234!.contains(':'), isTrue);
 
       await storageService.setAppPin('5678');
-      expect(storageService.getAppPin(), pin5678Hash);
+      final stored5678 = storageService.getAppPin();
+      expect(stored5678!.contains(':'), isTrue);
+      expect(stored5678, isNot(stored1234));
 
       await storageService.setAppLockEnabled(true);
       expect(storageService.isAppLockEnabled(), true);

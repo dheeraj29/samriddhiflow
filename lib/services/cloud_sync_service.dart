@@ -218,8 +218,12 @@ class CloudSyncService {
       lastSync: lastSync,
     );
 
+    final newLastSync = DateTime.now().toIso8601String();
+    data['last_sync'] = newLastSync;
+
     try {
       await _cloudStorage.syncData(user.uid, _sanitizeForSync(data));
+      await _storageService.setLastSync(newLastSync);
     } on FirebaseException catch (e) {
       _handleSyncError(e);
     }
@@ -428,7 +432,6 @@ class CloudSyncService {
       'sId': _storageService.getSessionId(),
       'isLog': _storageService.getAuthFlag(),
       'lLog': _storageService.getLastLogin(),
-      'reg': _storageService.getCloudDatabaseRegion(),
     };
   }
 
@@ -442,7 +445,6 @@ class CloudSyncService {
     if (lLog != null) {
       await _storageService.setLastLogin(lLog);
     }
-    await _storageService.setCloudDatabaseRegion(identity['reg']);
     await _storageService.setActiveProfileId(identity['pId']);
   }
 

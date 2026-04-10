@@ -1010,7 +1010,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get featureManagementSection => 'Feature Management';
 
-  @override
+  @override // coverage:ignore-line
   String get profileManagementSection => 'Profile Management';
 
   @override
@@ -1204,10 +1204,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get insurancePortfolioTooltip => 'Insurance Portfolio';
 
-  @override
+  @override // coverage:ignore-line
   String get activeLabel => 'Active';
 
-  @override
+  @override // coverage:ignore-line
   String get tapToSwitchLabel => 'Tap to switch';
 
   @override

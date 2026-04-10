@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
 import 'theme/app_theme.dart';
 import 'screens/settings_screen.dart';
@@ -12,9 +13,12 @@ import 'widgets/global_overlay.dart';
 import 'feature_providers.dart';
 import 'screens/investments_screen.dart';
 
-void main() {
+void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
 
   // Custom Error Widget (Replaces Red Screen of Death)
   ErrorWidget.builder = (FlutterErrorDetails details) {

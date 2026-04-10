@@ -1072,16 +1072,21 @@ void main() {
     });
 
     test('isSmartCalculatorEnabled returns bool from settings', () {
+      // Stub global fallback
       when(() => mockSettingsBox.get('smartCalculatorEnabled',
           defaultValue: false)).thenReturn(true);
+      // Stub profile-specific override
+      when(() => mockSettingsBox.get('smartCalculatorEnabled_default',
+          defaultValue: true)).thenReturn(true);
+
       expect(storageService.isSmartCalculatorEnabled(), true);
     });
 
     test('setSmartCalculatorEnabled writes to settings', () async {
-      when(() => mockSettingsBox.put('smartCalculatorEnabled', false))
+      when(() => mockSettingsBox.put('smartCalculatorEnabled_default', false))
           .thenAnswer((_) async {});
       await storageService.setSmartCalculatorEnabled(false);
-      verify(() => mockSettingsBox.put('smartCalculatorEnabled', false))
+      verify(() => mockSettingsBox.put('smartCalculatorEnabled_default', false))
           .called(1);
     });
 
@@ -1328,12 +1333,19 @@ void main() {
     });
 
     test('setAppPin writes to settings', () async {
-      const hash =
-          'f8638b979b2f4f793ddb6dbd197e0ee25a7a6ea32b0ae22f5e3c5d119d839e75';
       when(() => mockSettingsBox.put(any(), any()))
           .thenAnswer((_) => Future<void>.value());
+      when(() => mockSettingsBox.delete(any()))
+          .thenAnswer((_) => Future<void>.value());
+
       await storageService.setAppPin('5678');
-      verify(() => mockSettingsBox.put('appPin', hash)).called(1);
+
+      // PIN is now stored as SALT:HASH
+      final captured = verify(() => mockSettingsBox.put('appPin', captureAny()))
+          .captured
+          .single as String;
+      expect(captured.contains(':'), isTrue);
+      expect(captured.split(':').length, 2);
     });
 
     test('getDeletedTransactions returns deleted transactions for profile', () {

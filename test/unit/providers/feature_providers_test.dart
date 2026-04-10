@@ -5,8 +5,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:samriddhi_flow/feature_providers.dart';
 import 'package:samriddhi_flow/providers.dart';
 import 'package:samriddhi_flow/services/storage_service.dart';
+import 'package:samriddhi_flow/models/profile.dart';
 
 class MockStorageService extends Mock implements StorageService {}
+
+class ProfileNotifierMock extends ProfileNotifier {
+  @override
+  String build() => 'default';
+}
 
 void main() {
   late MockStorageService mockStorageService;
@@ -23,6 +29,11 @@ void main() {
       overrides: [
         storageServiceProvider.overrideWithValue(mockStorageService),
         storageInitializerProvider.overrideWith((ref) => const AsyncData(true)),
+        activeProfileIdProvider.overrideWith(() => ProfileNotifierMock()),
+        activeProfileIdHiveStreamProvider
+            .overrideWith((ref) => Stream.value('default')),
+        activeProfileProvider
+            .overrideWithValue(Profile(id: 'default', name: 'Default')),
       ],
     );
   });

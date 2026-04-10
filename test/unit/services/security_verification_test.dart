@@ -50,39 +50,34 @@ void main() {
   });
 
   group('Security Verification - PIN Hashing', () {
-    test('setAppPin correctly hashes plaintext to SHA-256', () async {
+    test('setAppPin correctly hashes with a salt', () async {
       const plaintext = '1234';
-      const expectedHash =
-          '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 
       await storageService.setAppPin(plaintext);
 
-      verify(() => mockSettingsBox.put('appPin', expectedHash)).called(1);
+      final stored = settingsStore['appPin'] as String;
+      expect(stored.contains(':'), isTrue);
+      expect(stored.split(':').length, 2);
     });
 
-    test('saveSettings automatically hashes plaintext appPin during restore',
-        () async {
+    test('saveSettings hashes appPin (Restore Simulation)', () async {
       const plaintext = '5678';
-      const expectedHash =
-          'f8638b979b2f4f793ddb6dbd197e0ee25a7a6ea32b0ae22f5e3c5d119d839e75';
 
       await storageService
           .saveSettings({'appPin': plaintext, 'other': 'value'});
 
-      // Should call setAppPin internally which hashes it
-      verify(() => mockSettingsBox.put('appPin', expectedHash)).called(1);
+      final stored = settingsStore['appPin'] as String;
+      expect(stored.contains(':'), isTrue);
       verify(() => mockSettingsBox.put('other', 'value')).called(1);
     });
 
-    test('saveSettings currently re-hashes hash-like appPin values', () async {
-      const existingHash =
-          '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+    test('saveSettings re-hashes existing values during restore', () async {
+      const someValue = 'something';
 
-      await storageService.saveSettings({'appPin': existingHash});
+      await storageService.saveSettings({'appPin': someValue});
 
       expect(settingsStore['appPin'], isA<String>());
-      expect(settingsStore['appPin'], isNot(existingHash));
-      expect((settingsStore['appPin'] as String).length, 64);
+      expect(settingsStore['appPin'], contains(':'));
     });
   });
 

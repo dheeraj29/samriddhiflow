@@ -158,6 +158,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildProfileDataSection(context, l10n),
               isProfile: true,
             ),
+            _buildCollapsibleCard(
+              _secDashboard,
+              l10n.dashboardCustomizationSection,
+              _buildDashboardSection(l10n),
+              isProfile: true,
+            ),
+            _buildCollapsibleCard(
+              _secFeature,
+              l10n.featureManagementSection,
+              _buildFeatureManagementSection(context, l10n),
+              isProfile: true,
+            ),
           ] else ...[
             _buildCollapsibleCard(
               _secPremium,
@@ -176,18 +188,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _secAppearance,
               l10n.appearanceSection,
               _buildAppearanceSection(l10n),
-              isProfile: false,
-            ),
-            _buildCollapsibleCard(
-              _secDashboard,
-              l10n.dashboardCustomizationSection,
-              _buildDashboardSection(l10n),
-              isProfile: false,
-            ),
-            _buildCollapsibleCard(
-              _secFeature,
-              l10n.featureManagementSection,
-              _buildFeatureManagementSection(context, l10n),
               isProfile: false,
             ),
             _buildCollapsibleCard(
@@ -266,42 +266,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         profilesAsync.maybeWhen(
-                          data: (profiles) {
-                            if (profiles.isEmpty) {
-                              return Text(
-                                activeProfile?.name ??
-                                    "Guest", // coverage:ignore-line
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              );
-                            }
-                            return DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                isDense: true,
-                                value: activeProfile?.id,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                                items: profiles.map((p) {
-                                  return DropdownMenuItem<String>(
-                                    value: p.id,
-                                    child: Text(p.name),
-                                  );
-                                }).toList(),
-                                onChanged: (newId) {
-                                  if (newId != null &&
-                                      newId != activeProfile?.id) {
-                                    ref
-                                        .read(activeProfileIdProvider.notifier)
-                                        .setProfile(newId);
-                                  }
-                                },
-                              ),
-                            );
-                          },
+                          data: (profiles) => _buildProfileDropdownRow(
+                              context, profiles, activeProfile, l10n),
                           orElse: () => Text(
                             activeProfile?.name ??
                                 "Guest", // coverage:ignore-line
@@ -325,11 +291,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined),
-                    tooltip: 'Manage Profiles',
-                    onPressed: () => _showManageProfilesDialog(context, l10n),
                   ),
                 ],
               ),
@@ -363,6 +324,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildProfileDropdownRow(BuildContext context, List<Profile> profiles,
+      Profile? activeProfile, AppLocalizations l10n) {
+    if (profiles.isEmpty) {
+      return Text(
+        activeProfile?.name ?? "Guest", // coverage:ignore-line
+        style: Theme.of(context)
+            .textTheme
+            .headlineSmall
+            ?.copyWith(fontWeight: FontWeight.bold),
+      );
+    }
+    return Row(
+      children: [
+        IconButton(
+          icon: PureIcons.addCircle(color: Colors.blue, size: 24),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          tooltip: l10n.addNewProfileAction,
+          onPressed: () => _handleAddProfile(context, l10n),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              isDense: true,
+              value: activeProfile?.id,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              items: profiles.map((p) {
+                return DropdownMenuItem<String>(
+                  value: p.id,
+                  child: Text(p.name, overflow: TextOverflow.ellipsis),
+                );
+              }).toList(),
+              onChanged: (newId) {
+                if (newId != null && newId != activeProfile?.id) {
+                  ref.read(activeProfileIdProvider.notifier).setProfile(newId);
+                }
+              },
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: PureIcons.copy(),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          tooltip: AppLocalizations.of(context)!.copyCategoriesTooltip,
+          onPressed: () =>
+              _showCopyCategoriesDialog(context, ref, activeProfile?.id ?? ''),
+        ),
+        if (profiles.length > 1 && activeProfile != null) ...[
+          const SizedBox(width: 12),
+          IconButton(
+            icon: PureIcons.deleteOutlined(color: Colors.red),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () =>
+                _showDeleteProfileDialog(context, ref, activeProfile),
+          ),
+        ],
       ],
     );
   }
@@ -651,10 +680,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Icon(Icons.chevron_right, size: 16),
             ],
           ),
-          onTap: () => showDialog(
-            context: context,
-            builder: (_) => const RegionSelectionDialog(),
-          ),
+          onTap: () {
+            final storage = ref.read(storageServiceProvider);
+            final settings = storage.getAllSettings();
+            if (settings['last_sync'] != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Region cannot be changed after data has been synced to the cloud.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            } else {
+              showDialog(
+                context: context,
+                builder: (_) => const RegionSelectionDialog(),
+              );
+            }
+          },
         ),
         const Divider(),
         _buildCloudSection(context, user, l10n),
@@ -1138,141 +1181,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showManageProfilesDialog(BuildContext context, AppLocalizations l10n) {
-    showDialog(
+  void _handleAddProfile(BuildContext context, AppLocalizations l10n) {
+    FocusScope.of(context).unfocus();
+    CommonDialogs.showTextFieldDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.profileManagementSection,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () =>
-                            Navigator.pop(context), // coverage:ignore-line
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: _buildProfileManagementSection(context, l10n),
-                    ),
-                  ),
-                  const Divider(),
-                  _buildAddProfileItem(context, l10n),
-                ],
-              ),
-            ),
-          ),
+      title: AppLocalizations.of(context)!.createProfileTitle,
+      labelText: AppLocalizations.of(context)!.profileNameLabel,
+      hintText: l10n.enterNameHint,
+      initialValue: "",
+      saveLabel: AppLocalizations.of(context)!.createAction,
+      onSave: (val) async {
+        if (val.trim().isEmpty) return;
+        final newProfile = Profile(
+          id: const Uuid().v4(),
+          name: val.trim(),
         );
-      },
-    );
-  }
-
-  Widget _buildProfileManagementSection(
-      BuildContext context, AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ref.watch(profilesProvider).when(
-              data: (profiles) => Column(
-                children: profiles
-                    .map((p) =>
-                        _buildProfileListItem(context, profiles, p, l10n))
-                    .toList(),
-              ),
-              // coverage:ignore-start
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) => ListTile(
-                  title: Text(
-                      AppLocalizations.of(context)!.errorLabel(e.toString()))),
-              // coverage:ignore-end
-            ),
-      ],
-    );
-  }
-
-  Widget _buildProfileListItem(BuildContext context, List<Profile> profiles,
-      Profile p, AppLocalizations l10n) {
-    final isActive = p.id == ref.watch(activeProfileIdProvider);
-    return ListTile(
-      title: Text(p.name),
-      subtitle: Text(isActive
-          ? AppLocalizations.of(context)!.activeLabel
-          : AppLocalizations.of(context)!.tapToSwitchLabel),
-      leading: CircleAvatar(
-        backgroundColor:
-            isActive ? Theme.of(context).primaryColor : Colors.grey[300],
-        child: PureIcons.person(color: isActive ? Colors.white : Colors.grey),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: PureIcons.copy(),
-            tooltip: AppLocalizations.of(context)!.copyCategoriesTooltip,
-            onPressed: () => _showCopyCategoriesDialog(context, ref, p.id),
-          ),
-          if (profiles.length > 1 && !isActive)
-            IconButton(
-              icon: PureIcons.deleteOutlined(color: Colors.red),
-              onPressed: () => _showDeleteProfileDialog(context, ref, p),
-            ),
-        ],
-      ),
-      onTap: isActive
-          ? null
-          // coverage:ignore-start
-          : () {
-              FocusScope.of(context).unfocus();
-              ref.read(activeProfileIdProvider.notifier).setProfile(p.id);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(l10n.switchedToProfileStatus(p.name))));
-              // coverage:ignore-end
-            },
-    );
-  }
-
-  Widget _buildAddProfileItem(BuildContext context, AppLocalizations l10n) {
-    return ListTile(
-      title: Text(l10n.addNewProfileAction),
-      leading: PureIcons.addCircle(color: Colors.blue),
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        CommonDialogs.showTextFieldDialog(
-          context: context,
-          title: AppLocalizations.of(context)!.createProfileTitle,
-          labelText: AppLocalizations.of(context)!.profileNameLabel,
-          hintText: l10n.enterNameHint,
-          initialValue: "",
-          saveLabel: AppLocalizations.of(context)!.createAction,
-          onSave: (val) async {
-            if (val.trim().isEmpty) return;
-            final newProfile = Profile(
-              id: const Uuid().v4(),
-              name: val.trim(),
-            );
-            await ref.read(storageServiceProvider).saveProfile(newProfile);
-            ref.invalidate(profilesProvider);
-          },
-        );
+        await ref.read(storageServiceProvider).saveProfile(newProfile);
+        ref.invalidate(profilesProvider);
       },
     );
   }
@@ -2628,9 +2553,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // If we deleted the active profile, switch to default
               if (ref.read(activeProfileIdProvider) == profile.id) {
                 ref
-                    .read(activeProfileIdProvider
-                        .notifier) // coverage:ignore-line
-                    .setProfile('default'); // coverage:ignore-line
+                    .read(activeProfileIdProvider.notifier)
+                    .setProfile('default');
               }
               if (context.mounted) {
                 Navigator.pop(context);
