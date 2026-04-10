@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:clock/clock.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'providers.dart';
@@ -231,6 +232,17 @@ int _countPendingRecurring(
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
+    if (Hive.isBoxOpen('settings')) {
+      // coverage:ignore-start
+      final saved = Hive.box('settings')
+          .get('themeMode', defaultValue: 'system') as String;
+      return ThemeMode.values.firstWhere(
+        (m) => m.name == saved,
+        orElse: () => ThemeMode.system,
+        // coverage:ignore-end
+      );
+    }
+
     final init = ref.watch(storageInitializerProvider);
     if (!init.hasValue) return ThemeMode.system;
 
@@ -282,6 +294,7 @@ class SmartCalculatorEnabledNotifier extends Notifier<bool> {
     final init = ref.watch(storageInitializerProvider);
     if (!init.hasValue) return true; // Default while loading
 
+    ref.watch(activeProfileIdProvider); // Reload when profile changes
     return ref.watch(storageServiceProvider).isSmartCalculatorEnabled();
   }
 

@@ -238,24 +238,7 @@ class _InvestmentDashboardTab extends ConsumerWidget {
         children: [
           _buildSummaryCard(context, summary, currency, l10n),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
-              ),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addInvestment),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
+          const _AddInvestmentButton(),
           const SizedBox(height: 24),
           _buildUpcomingCommitments(context, ref, currency, l10n),
           const SizedBox(height: 24),
@@ -752,25 +735,7 @@ class __InvestmentManagementTabState
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
-              ),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addInvestment),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                foregroundColor:
-                    Theme.of(context).colorScheme.onPrimaryContainer,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
+          const _AddInvestmentButton(),
           const SizedBox(height: 12),
           TextField(
             controller: _searchController,
@@ -1095,6 +1060,33 @@ class __InvestmentManagementTabState
             child: Text(l10n.deleteAction), // coverage:ignore-line
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddInvestmentButton extends StatelessWidget {
+  const _AddInvestmentButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddInvestmentScreen()),
+        ),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.addInvestment),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }

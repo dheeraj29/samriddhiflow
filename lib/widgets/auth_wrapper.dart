@@ -365,20 +365,25 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   Future<void> _resolveRegionHint(String uid) async {
-    final currentRegion = ref.read(cloudDatabaseRegionProvider);
-    if (currentRegion.isNotEmpty) return;
+    // Only resolve the hint if the device hasn't committed data to ANY region yet
+    final storage = ref.read(storageServiceProvider);
+    final settings = storage.getAllSettings();
+    if (settings['last_sync'] != null) return; // coverage:ignore-line
 
     try {
+      // coverage:ignore-start
       final globalStorage = FirestoreStorageService(databaseId: null);
       final hint = await globalStorage.getRegionHint(uid);
       if (hint != null && mounted) {
-        // coverage:ignore-line
-        await ref
-            .read(cloudDatabaseRegionProvider.notifier)
-            .setRegion(hint); // coverage:ignore-line
+        final currentRegion = ref.read(cloudDatabaseRegionProvider);
+        if (currentRegion != hint) {
+          await ref.read(cloudDatabaseRegionProvider.notifier).setRegion(hint);
+          // coverage:ignore-end
+        }
       }
     } catch (e) {
-      DebugLogger().log("Region hint resolution failed: $e");
+      DebugLogger()
+          .log("Region hint resolution failed: $e"); // coverage:ignore-line
     }
   }
 

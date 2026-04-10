@@ -228,7 +228,7 @@ void main() {
     // Verify unified header elements
     expect(find.text('Profile 1'), findsOneWidget);
     expect(find.text('PROFILE SETTINGS'), findsOneWidget);
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.add_circle_outline), findsWidgets);
 
     // Verify toggle buttons
     expect(find.text('Profile Settings'), findsOneWidget);
@@ -237,6 +237,8 @@ void main() {
     // Profile settings should be visible by default
     expect(find.text('Preferences'), findsOneWidget);
     expect(find.text('Data Cleanup & Recovery'), findsOneWidget);
+    expect(find.text('Dashboard Customization'), findsOneWidget);
+    expect(find.text('Feature Management'), findsOneWidget);
 
     // Global settings should NOT be visible yet
     expect(find.text('Appearance'), findsNothing);
@@ -246,8 +248,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Appearance'), findsOneWidget);
-    expect(find.text('Dashboard Customization'), findsOneWidget);
-    expect(find.text('Feature Management'), findsOneWidget);
+    expect(find.text('Dashboard Customization'), findsNothing);
+    expect(find.text('Feature Management'), findsNothing);
   });
 
   testWidgets('Theme mode can be changed', (WidgetTester tester) async {
@@ -300,10 +302,6 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
-    await tester.pumpAndSettle();
-
-    // Switch to Global for Dashboard
-    await tester.tap(find.text('Global Settings'));
     await tester.pumpAndSettle();
 
     final incomeSwitch = find.text('Show Income & Expense');
@@ -394,13 +392,8 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    // Now under Manage Profiles icon in header
-    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
-    await tester.tap(manageProfilesBtn);
-    await tester.pumpAndSettle();
-
-    final addProfileTile = find.text('Add New Profile');
-    await tester.tap(addProfileTile);
+    final addProfileBtn = find.byIcon(Icons.add_circle_outline).first;
+    await tester.tap(addProfileBtn);
     await tester.pumpAndSettle();
 
     final textField = find.byType(TextField);
@@ -775,27 +768,22 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    // Now under Manage Profiles icon in header
-    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
-    await tester.tap(manageProfilesBtn);
-    await tester.pumpAndSettle();
-
-    final profile2 = find.text('Profile 2');
-    final deleteIcon = find.descendant(
-      of: find.ancestor(of: profile2, matching: find.byType(ListTile)),
-      matching: find.byIcon(Icons.delete_outline),
-    );
+    // In the inline unified header, we need to select profile 2 first to delete it
+    // Wait, the delete button only appears if profiles.length > 1 AND it's not the last profile?
+    // Actually, in our new logic, the delete button appears right beside the dropdown for the ACTIVE profile!
+    // But ONLY if there are multiple profiles. Wait, `if(profiles.length > 1)` then we show delete button.
+    final deleteIcon = find.byIcon(Icons.delete_outline).first;
     await tester.tap(deleteIcon);
     await tester.pumpAndSettle();
 
     expect(find.text('Delete Profile?'), findsOneWidget);
-    expect(find.textContaining("PERMANENTLY delete the profile 'Profile 2'"),
+    expect(find.textContaining("PERMANENTLY delete the profile 'Profile 1'"),
         findsOneWidget);
 
     await tester.tap(find.text('DELETE'));
     await tester.pumpAndSettle();
 
-    verify(() => mockStorage.deleteProfile('p2')).called(1);
+    verify(() => mockStorage.deleteProfile('p1')).called(1);
   });
 
   testWidgets('Copy Categories dialog shows other profiles',
@@ -806,16 +794,8 @@ void main() {
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
-    // Now under Manage Profiles icon in header
-    final manageProfilesBtn = find.byIcon(Icons.settings_outlined);
-    await tester.tap(manageProfilesBtn);
-    await tester.pumpAndSettle();
-
-    final profile2 = find.text('Profile 2');
-    final copyIcon = find.descendant(
-      of: find.ancestor(of: profile2, matching: find.byType(ListTile)),
-      matching: find.byIcon(Icons.copy_all),
-    );
+    // Now in inline header
+    final copyIcon = find.byIcon(Icons.copy_all).first;
     await tester.tap(copyIcon);
     await tester.pumpAndSettle();
 
@@ -825,13 +805,13 @@ void main() {
     // Use descendant to avoid finding the profile name in the header dropdown
     final profileOption = find.descendant(
       of: find.byType(AlertDialog),
-      matching: find.text('Profile 1'),
+      matching: find.text('Profile 2'),
     );
     await tester.tap(profileOption);
     await tester.pumpAndSettle();
 
-    verify(() => mockStorage.copyCategories('p1', 'p2')).called(1);
-    expect(find.text('Categories copied to Profile 2'), findsOneWidget);
+    verify(() => mockStorage.copyCategories('p2', 'p1')).called(1);
+    expect(find.text('Categories copied to Profile 1'), findsOneWidget);
   });
 
   testWidgets('App Lock - Use Existing PIN flow', (WidgetTester tester) async {
@@ -1003,10 +983,6 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
-    // Switch to Global for Global Expand
-    await tester.tap(find.text('Global Settings'));
-    await tester.pumpAndSettle();
-
     await tester.pumpAndSettle();
 
     final globalToggleButton =
@@ -1015,7 +991,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // All should be collapsed
-    expect(find.text('Theme Mode', skipOffstage: true), findsNothing);
+    expect(find.text('Currency', skipOffstage: true), findsNothing);
     expect(
         find.text('Show Income & Expense', skipOffstage: true), findsNothing);
 
@@ -1024,17 +1000,20 @@ void main() {
     await tester.pumpAndSettle();
 
     // All should be expanded
-    expect(find.text('Theme Mode', skipOffstage: true), findsOneWidget);
+    expect(find.text('Currency', skipOffstage: true), findsOneWidget);
     expect(
         find.text('Show Income & Expense', skipOffstage: true), findsOneWidget);
   });
 
-  testWidgets('Server Region (Database) displays as static text',
+  testWidgets(
+      'Server Region selection shows Snackbar when data is already synced',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 5000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => mockUser.uid).thenReturn('uid123');
     when(() => mockUser.email).thenReturn('t@e.com');
+    when(() => mockStorage.getAllSettings())
+        .thenReturn({'last_sync': DateTime.now().toIso8601String()});
     await tester.pumpWidget(createSettingsScreen(user: mockUser));
     await tester.pumpAndSettle();
 
@@ -1052,7 +1031,27 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.indiaLabel), findsOneWidget);
 
-    // Verify it IS a button now (triggering dialog)
+    // Verify it shows a Snackbar when user is logged in
+    await tester.tap(find.text(l10n.indiaLabel));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.textContaining('Region cannot be changed'), findsOneWidget);
+  });
+
+  testWidgets('Server Region selection dialog opens when data is NOT synced',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 5000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    when(() => mockStorage.getAllSettings()).thenReturn({});
+    await tester.pumpWidget(createSettingsScreen(user: mockUser));
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Switch to Global for Region
+    await tester.tap(find.text('Global Settings'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text(l10n.indiaLabel));
     await tester.pumpAndSettle();
     expect(find.text('Select Cloud Region'), findsOneWidget);

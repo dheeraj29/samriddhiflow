@@ -116,6 +116,7 @@ void main() {
     when(() => mockStorageService.setLastLogin(any())).thenAnswer((_) async {});
     when(() => mockStorageService.setCloudDatabaseRegion(any()))
         .thenAnswer((_) async {});
+    when(() => mockStorageService.setLastSync(any())).thenAnswer((_) async {});
     when(() => mockSubscriptionService.isCloudSyncEnabled()).thenReturn(true);
     when(() => mockCloudStorage.setActiveSessionId(any(), any()))
         .thenAnswer((_) async {});

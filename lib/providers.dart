@@ -103,6 +103,7 @@ final localModeProvider =
 class DashboardConfigNotifier extends Notifier<DashboardVisibilityConfig> {
   @override
   DashboardVisibilityConfig build() {
+    ref.watch(activeProfileIdProvider); // Reload when profile changes
     final storage = ref.read(storageServiceProvider);
     return storage.getDashboardConfig();
   }

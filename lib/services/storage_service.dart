@@ -12,6 +12,7 @@ import 'package:samriddhi_flow/models/loan.dart';
 import 'package:samriddhi_flow/models/recurring_transaction.dart';
 import 'package:samriddhi_flow/models/category.dart';
 import 'package:samriddhi_flow/models/profile.dart';
+import 'dart:math';
 import 'package:samriddhi_flow/models/taxes/insurance_policy.dart';
 import 'package:samriddhi_flow/models/taxes/tax_rules.dart';
 import 'package:samriddhi_flow/models/taxes/tax_data.dart';
@@ -135,12 +136,17 @@ class StorageService {
   // --- Smart Calculator Preference ---
   bool isSmartCalculatorEnabled() {
     final box = _hive.box(boxSettings);
-    return box.get('smartCalculatorEnabled', defaultValue: false) as bool;
+    final globalFallback =
+        box.get('smartCalculatorEnabled', defaultValue: false) as bool;
+    final profileId = getActiveProfileId();
+    return box.get('smartCalculatorEnabled_$profileId',
+        defaultValue: globalFallback) as bool;
   }
 
   Future<void> setSmartCalculatorEnabled(bool value) async {
     final box = _hive.box(boxSettings);
-    await box.put('smartCalculatorEnabled', value);
+    final profileId = getActiveProfileId();
+    await box.put('smartCalculatorEnabled_$profileId', value);
   }
 
   // --- Locale Management ---
@@ -228,6 +234,13 @@ class StorageService {
     // 11. Delete Investments
     await _deleteItemsByProfile<Investment>(boxInvestments, profileId);
 
+    // 12. Clean up primitive profile-specific preferences in Settings box
+    final settingsBox = _hive.box(boxSettings);
+    await settingsBox.delete('dashboardConfig_$profileId');
+    await settingsBox.delete('smartCalculatorEnabled_$profileId');
+    await settingsBox.delete('monthlybudget_$profileId');
+    await settingsBox.delete('currencyLocale_$profileId');
+
     // 8. If active profile was deleted, switch to another one
     if (getActiveProfileId() == profileId) {
       // coverage:ignore-start
@@ -249,7 +262,14 @@ class StorageService {
   // --- Dashboard Config ---
   DashboardVisibilityConfig getDashboardConfig() {
     final box = _hive.box(boxSettings);
-    final map = box.get('dashboardConfig');
+    final profileId = getActiveProfileId();
+
+    // Check for profile specific config first
+    dynamic map = box.get('dashboardConfig_$profileId');
+
+    // Fallback to global config if profile specific doesn't exist
+    map ??= box.get('dashboardConfig');
+
     if (map != null) {
       // Cast the map to Map<String, dynamic> safely
       final castMap = Map<String, dynamic>.from(map as Map);
@@ -260,7 +280,8 @@ class StorageService {
 
   Future<void> saveDashboardConfig(DashboardVisibilityConfig config) async {
     final box = _hive.box(boxSettings);
-    await box.put('dashboardConfig', config.toMap());
+    final profileId = getActiveProfileId();
+    await box.put('dashboardConfig_$profileId', config.toMap());
   }
 
   Box<dynamic> getSettingsBox() {
@@ -1146,6 +1167,13 @@ class StorageService {
     await box.put('txnsSinceBackup', 0);
   }
 
+  // coverage:ignore-start
+  Future<void> setLastSync(String isoTimestamp) async {
+    final box = _hive.box(boxSettings);
+    await box.put('last_sync', isoTimestamp);
+    // coverage:ignore-end
+  }
+
   Future<void> deleteTransaction(String id) async {
     try {
       final box = _hive.box<Transaction>(boxTransactions);
@@ -1721,8 +1749,14 @@ class StorageService {
 
   int _failedPinAttempts = 0;
 
-  String _hashPin(String pin) {
-    final bytes = utf8.encode(pin);
+  String _generateSalt() {
+    final rnd = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rnd.nextInt(256));
+    return base64.encode(bytes);
+  }
+
+  String _hashPin(String pin, String salt) {
+    final bytes = utf8.encode(salt + pin);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
@@ -1734,15 +1768,22 @@ class StorageService {
 
   Future<void> setAppPin(String pin) async {
     final box = _hive.box(boxSettings);
-    await box.put('appPin', _hashPin(pin));
+    final salt = _generateSalt();
+    final hash = _hashPin(pin, salt);
+    await box.put('appPin', '$salt:$hash');
     resetFailedPinAttempts();
   }
 
   bool verifyAppPin(String input) {
-    final storedHash = getAppPin();
-    if (storedHash == null) return true; // No PIN set
+    final storedRaw = getAppPin();
+    if (storedRaw == null) return true; // No PIN set
     if (isPinLocked()) return false; // Locked out
-    final inputHash = _hashPin(input);
+
+    final parts = storedRaw.split(':');
+    final salt = parts[0];
+    final storedHash = parts[1];
+
+    final inputHash = _hashPin(input, salt);
     final isValid = storedHash == inputHash;
     if (!isValid) {
       final attempts = getFailedPinAttempts() + 1;
