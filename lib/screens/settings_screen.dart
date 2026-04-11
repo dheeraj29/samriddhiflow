@@ -1434,6 +1434,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // --- ACTIONS ---
 
+  Future<bool> _ensureRegionSelected() async {
+    final region = ref.read(cloudDatabaseRegionProvider);
+    if (region.isNotEmpty) return true;
+
+    // coverage:ignore-start
+    if (!mounted) return false;
+    final picked = await showDialog<bool>(
+      context: context,
+      builder: (_) => const RegionSelectionDialog(isMandatory: false),
+      // coverage:ignore-end
+    );
+    return picked == true && mounted; // coverage:ignore-line
+  }
+
   // coverage:ignore-start
   Future<void> _updateApplication() async {
     if (ref.read(isOfflineProvider)) {
@@ -1586,13 +1600,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _backupToCloud() async {
     final l10n = AppLocalizations.of(context)!;
-    // Check PIN if enabled
-    String? capturedPin;
-    if (_isAppLockEnabled) {
-      capturedPin = await _showVerifyPinDialog(context, // coverage:ignore-line
-          reason: l10n.includePinInCloudBackup); // coverage:ignore-line
-      if (capturedPin == null) return;
-    }
+    if (!await _ensureRegionSelected()) return;
+
+    final capturedPin =
+        await _requirePinIfEnabled(reason: l10n.includePinInCloudBackup);
+    if (capturedPin == null) return;
 
     if (!mounted) return;
     final passcode = await _promptForEncryptionPasscode(
@@ -1888,7 +1900,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // coverage:ignore-line
     if (!await _verifyAppLockIfNeeded()) return; // coverage:ignore-line
 
-    // 1. Safety Dialog
+    // 1. Check if region is selected
+    if (!await _ensureRegionSelected()) return; // coverage:ignore-line
+
+    // 2. Safety Dialog
     if (!mounted) return; // coverage:ignore-line
     final confirmed = await _showRestoreWarningDialog(); // coverage:ignore-line
     if (!confirmed) return;
@@ -1916,6 +1931,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (pin == null) return false;
     }
     return true;
+  }
+
+  Future<String?> _requirePinIfEnabled({String? reason}) async {
+    if (!_isAppLockEnabled) return ""; // Success case (unlocked)
+    if (!mounted) return null; // coverage:ignore-line
+    return await _showVerifyPinDialog(context,
+        reason: reason); // coverage:ignore-line
+  }
+
+  Future<bool> _confirmAccountDeactivation(AppLocalizations l10n) async {
+    if (!mounted) return false;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.red, size: 40),
+        title: Text(l10n.deactivateAccountQuestion),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.deactivateWipeWarning),
+            const SizedBox(height: 16),
+            Text(l10n.localDataSafeNote),
+            const SizedBox(height: 16),
+            Text(l10n.proceedQuestion),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+            child: Text(l10n.cancelActionCap),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(l10n.wipeDeactivateAction),
+          ),
+        ],
+      ),
+    );
+    return confirm == true;
+  }
+
+  Future<bool> _confirmClearCloudData(AppLocalizations l10n) async {
+    if (!mounted) return false;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.cloud_off, color: Colors.orange, size: 40),
+        title: Text(l10n.clearCloudDataQuestion),
+        content: Text(l10n.clearCloudWarning),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
+            child: Text(l10n.cancelActionCap),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text(l10n.clearCloudDataAction),
+          ),
+        ],
+      ),
+    );
+    return confirm == true;
   }
 
   // coverage:ignore-start
@@ -2013,46 +2094,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _deactivateAccountFlow() async {
     final l10n = AppLocalizations.of(context)!;
-    // Check PIN if enabled
-    if (_isAppLockEnabled) {
-      final pin = await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (pin == null) return;
-    }
+    if (!await _ensureRegionSelected()) return;
 
-    // 1. Verify Intent
-    if (!mounted) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded,
-            color: Colors.red, size: 40),
-        title: Text(l10n.deactivateAccountQuestion),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.deactivateWipeWarning),
-            const SizedBox(height: 16),
-            Text(l10n.localDataSafeNote),
-            const SizedBox(height: 16),
-            Text(l10n.proceedQuestion),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
-            child: Text(l10n.cancelActionCap),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.wipeDeactivateAction),
-          ),
-        ],
-      ),
-    );
+    if (await _requirePinIfEnabled() == null) return;
 
-    if (confirm != true) return;
+    if (!await _confirmAccountDeactivation(l10n)) return;
 
     // 2. Perform Deactivate
     setState(() => _isUploading = true); // Use uploading spinner for progress
@@ -2093,47 +2139,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _clearCloudDataFlow() async {
     final l10n = AppLocalizations.of(context)!;
-    // Check PIN if enabled
-    if (_isAppLockEnabled) {
-      final pin = await _showVerifyPinDialog(context); // coverage:ignore-line
-      if (pin == null) return;
-    }
+    if (!await _ensureRegionSelected()) return;
 
-    // 1. Verify Intent
-    if (!mounted) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded,
-            color: Colors.orange, size: 40),
-        title: Text(l10n.clearCloudDataQuestion),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.clearCloudWarning),
-            const SizedBox(height: 8),
-            Text(l10n.localDataSafeLabel),
-            Text(l10n.accountActiveLabel),
-            const SizedBox(height: 16),
-            Text(l10n.proceedQuestion),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false), // coverage:ignore-line
-            child: Text(l10n.cancelActionCap),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: Text(l10n.clearCloudDataAction),
-          ),
-        ],
-      ),
-    );
+    if (await _requirePinIfEnabled() == null) return;
 
-    if (confirm != true) return;
+    if (!await _confirmClearCloudData(l10n)) return;
 
     // 2. Perform Clear
     await _requireFreshAuth(l10n);

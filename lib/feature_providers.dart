@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:clock/clock.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'providers.dart';
+import 'utils/connectivity_platform.dart';
 import 'services/firestore_storage_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/json_data_service.dart';
@@ -30,28 +32,38 @@ class CloudDatabaseRegionNotifier extends Notifier<String> {
   @override
   String build() {
     final init = ref.watch(storageInitializerProvider);
-    if (!init.hasValue) return CloudDatabaseRegion.india;
+    if (!init.hasValue) return '';
 
     final storage = ref.watch(storageServiceProvider);
     return storage.getCloudDatabaseRegion();
   }
 
-  // coverage:ignore-start
   Future<void> setRegion(String region) async {
+    // coverage:ignore-line
+    // 1. Mandatory Cloud Hint Persist (MUST pass before local commit)
+    try {
+      final auth = ref.read(authServiceProvider); // coverage:ignore-line
+      final user = auth.currentUser; // coverage:ignore-line
+      if (user != null) {
+        // Create a dedicated one-off global instance for this write
+        final globalStorage =
+            FirestoreStorageService(databaseId: null); // coverage:ignore-line
+        await globalStorage
+            .setRegionHint(user.uid, region) // coverage:ignore-line
+            .timeout(const Duration(seconds: 15)); // coverage:ignore-line
+      }
+    } catch (e) {
+      // Re-wrap and re-throw to block local change
+      throw Exception(// coverage:ignore-line
+          "Could not sync region choice to cloud. Changes not saved.\n($e)"); // coverage:ignore-line
+    }
+
+    // 2. Local commit (Only if above succeeds or skipped due to no user)
+    // coverage:ignore-start
     state = region;
     final storage = ref.read(storageServiceProvider);
     await storage.setCloudDatabaseRegion(region);
     // coverage:ignore-end
-
-    // PERSIST GLOBAL HINT: Prevent region-probing attacks by storing hint in (default) db
-    final user = FirebaseAuth.instance.currentUser; // coverage:ignore-line
-    if (user != null) {
-      // Create a dedicated one-off global instance for this write
-      final globalStorage =
-          FirestoreStorageService(databaseId: null); // coverage:ignore-line
-      await globalStorage.setRegionHint(
-          user.uid, region); // coverage:ignore-line
-    }
   }
 }
 
@@ -72,11 +84,10 @@ final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   final databaseId = regionDatabaseMapping[region];
   // coverage:ignore-end
 
-  // coverage:ignore-start
-  final firestoreStorage = FirestoreStorageService(databaseId: databaseId);
-  return CloudSyncService(firestoreStorage, storage, taxConfig, subService,
-      firebaseAuth: FirebaseAuth.instance);
-  // coverage:ignore-end
+  final firestoreStorage =
+      FirestoreStorageService(databaseId: databaseId); // coverage:ignore-line
+  return CloudSyncService(
+      firestoreStorage, storage, taxConfig, subService); // coverage:ignore-line
 });
 
 final jsonDataServiceProvider = Provider<JsonDataService>((ref) {
@@ -236,11 +247,13 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
       // coverage:ignore-start
       final saved = Hive.box('settings')
           .get('themeMode', defaultValue: 'system') as String;
-      return ThemeMode.values.firstWhere(
+      final mode = ThemeMode.values.firstWhere(
         (m) => m.name == saved,
         orElse: () => ThemeMode.system,
         // coverage:ignore-end
       );
+      _syncToLocalStorage(mode); // coverage:ignore-line
+      return mode;
     }
 
     final init = ref.watch(storageInitializerProvider);
@@ -248,16 +261,27 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
     final storage = ref.watch(storageServiceProvider);
     final saved = storage.getThemeMode();
-    return ThemeMode.values.firstWhere(
+    final mode = ThemeMode.values.firstWhere(
       (m) => m.name == saved,
       orElse: () => ThemeMode.system, // coverage:ignore-line
     );
+
+    _syncToLocalStorage(mode);
+    return mode;
+  }
+
+  void _syncToLocalStorage(ThemeMode mode) {
+    if (kIsWeb) {
+      ConnectivityPlatform.setLocalStorageItem(
+          'themeMode', mode.name); // coverage:ignore-line
+    }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
     final storage = ref.read(storageServiceProvider);
     await storage.setThemeMode(mode.name);
+    _syncToLocalStorage(mode);
   }
 }
 

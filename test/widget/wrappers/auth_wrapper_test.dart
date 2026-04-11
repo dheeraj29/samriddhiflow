@@ -205,6 +205,8 @@ void main() {
     when(() => mockStorageService.getMaturityWarningDays()).thenReturn(3);
 
     when(() => mockStorageService.getAuthFlag()).thenReturn(false);
+    when(() => mockStorageService.getAllSettings())
+        .thenReturn({'last_sync': '2026-04-11'});
 
     // Auth Service stubs
 
@@ -591,9 +593,8 @@ void main() {
     when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
 
-    await tester.pump();
-
-    await tester.pumpAndSettle();
+    await tester.pump(); // Handle _resolveRegionHint
+    await tester.pumpAndSettle(); // Handle _handleAutoRestore
 
     // Verify restoreFromCloud was called (might be unawaited in background)
 
@@ -638,9 +639,8 @@ void main() {
     when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
 
-    await tester.pump();
-
-    await tester.pumpAndSettle();
+    await tester.pump(); // Handle _resolveRegionHint
+    await tester.pumpAndSettle(); // Handle _handleAutoRestore
 
     // Verify dialog appears
 
@@ -772,7 +772,7 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
     when(() => mockAuthService.currentUser).thenReturn(mockUser);
     streamController.add(mockUser);
-    await tester.pump();
+    await tester.pump(); // Handle _resolveRegionHint
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump(const Duration(seconds: 1));
 

@@ -71,13 +71,28 @@ class _RegionSelectionDialogState extends ConsumerState<RegionSelectionDialog> {
           ElevatedButton(
             onPressed: _selectedRegion == null
                 ? null
-                // coverage:ignore-start
                 : () async {
-                    await ref
-                        .read(cloudDatabaseRegionProvider.notifier)
-                        .setRegion(_selectedRegion!);
-                    if (context.mounted) Navigator.pop(context, true);
-                    // coverage:ignore-end
+                    // coverage:ignore-line
+                    try {
+                      // coverage:ignore-start
+                      await ref
+                          .read(cloudDatabaseRegionProvider.notifier)
+                          .setRegion(_selectedRegion!);
+                      if (context.mounted) Navigator.pop(context, true);
+                      // coverage:ignore-end
+                    } catch (e) {
+                      // coverage:ignore-start
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                e.toString().replaceAll('Exception: ', '')),
+                            // coverage:ignore-end
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
             child: Text(l10n.confirmButton),
           ),

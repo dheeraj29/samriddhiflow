@@ -40,6 +40,12 @@
       background-color: #FFFFFF;
       margin: 0;
       padding: 0;
+      transition: background-color 0.3s ease;
+    }
+
+    body.dark-mode {
+      background-color: #1E1E2C;
+      color: #FFFFFF;
     }
 
     .loading-container {
@@ -48,11 +54,31 @@
       align-items: center;
       height: 100vh;
       color: #6C63FF;
-      /* Keep text/brand color matching the logo roughly, or just black/grey */
+      /* Brand color */
       font-family: sans-serif;
       flex-direction: column;
     }
+
+    body.dark-mode .loading-container {
+      color: #9C95FF;
+      /* Slightly lighter brand color for dark backdrop */
+    }
   </style>
+
+  <script>
+    // Immediate theme recovery before first paint
+    (function () {
+      try {
+        const savedTheme = localStorage.getItem('themeMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark)) {
+          document.body.classList.add('dark-mode');
+        }
+      } catch (e) {
+        console.error('Theme recovery failed', e);
+      }
+    })();
+  </script>
 
   <div id="loading_indicator" class="loading-container">
     <h1>Samriddhi Flow</h1>

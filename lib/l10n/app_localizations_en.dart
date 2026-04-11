@@ -1303,7 +1303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override // coverage:ignore-line
   String get clearButton => 'CLEAR';
 
-  @override // coverage:ignore-line
+  @override
   String get includePinInCloudBackup =>
       'Enter PIN to include it in your secure cloud backup.';
 
@@ -3527,10 +3527,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearCloudWarning =>
       'This will PERMANENTLY DELETE all your data from the cloud server.';
 
-  @override
+  @override // coverage:ignore-line
   String get localDataSafeLabel => 'Your Local Data will be SAFE.';
 
-  @override
+  @override // coverage:ignore-line
   String get accountActiveLabel => 'Your Account will remain ACTIVE.';
 
   @override
