@@ -47,7 +47,7 @@ dependencies:
   hive_ce: ^2.19.3
   hive_ce_flutter: ^2.3.4
   cloud_firestore: ^6.2.0
-  connectivity_plus: ^7.1.0
+  connectivity_plus: ^7.1.1
   cupertino_icons: ^1.0.9
   encrypt: ^5.0.3
   crypto: ^3.0.7
