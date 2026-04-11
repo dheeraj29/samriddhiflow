@@ -56,6 +56,14 @@ class ConnectivityPlatform {
     web.window.sessionStorage.removeItem(key);
   }
 
+  static String? getLocalStorageItem(String key) {
+    return web.window.localStorage.getItem(key);
+  }
+
+  static void setLocalStorageItem(String key, String value) {
+    web.window.localStorage.setItem(key, value);
+  }
+
   static String getCurrentUrl() {
     return web.window.location.href;
   }

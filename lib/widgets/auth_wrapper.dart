@@ -319,15 +319,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       await _onAuthStreamChangeEvent(context, storageInit, previous, next);
     });
 
-    // Separate listener for auto-restore — NOT gated by firebaseInit state.
-    // On first login, the auth event fires while firebaseInitializerProvider
-    // is still loading. The main listener's _shouldSkipAuthProcessing guard
-    // blocks that event. By giving auto-restore its own listener, we ensure
-    // the passcode dialog appears immediately on first login.
-    ref.listen(authStreamProvider, (previous, next) {
-      if (!storageInit.hasValue || !_bootGracePeriodFinished) return;
-      _handleAutoRestore(context, next);
-    });
+    // auto-restore is now synchronized in _onAuthStreamChangeEvent
+    // and handled after _resolveRegionHint completes to prevent race conditions.
   }
 
   Future<void> _onAuthStreamChangeEvent(
@@ -346,6 +339,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
       if (next.value != null) {
         await _resolveRegionHint(next.value!.uid);
+        if (context.mounted) {
+          _handleAutoRestore(context, next);
+        }
       }
 
       await _claimSessionOnNewSignIn(previous, next);
@@ -368,7 +364,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // Only resolve the hint if the device hasn't committed data to ANY region yet
     final storage = ref.read(storageServiceProvider);
     final settings = storage.getAllSettings();
-    if (settings['last_sync'] != null) return; // coverage:ignore-line
+    if (settings['last_sync'] != null) return;
 
     try {
       // coverage:ignore-start
@@ -436,7 +432,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   void _handleAutoRestore(BuildContext context, AsyncValue<User?> next) async {
     final region = ref.read(cloudDatabaseRegionProvider);
-    if (region.isEmpty) return; // Skip if region is not yet resolved/selected
+    if (region.isEmpty) {
+      return; // Skip restore until region is resolved/selected
+    }
 
     final storage = ref.read(storageServiceProvider);
     if (storage.getAccounts().isNotEmpty) return;
@@ -736,15 +734,18 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget _buildLoadingScreen(String message, {bool showOfflineBypass = false}) {
     final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+            ),
             const SizedBox(height: 20),
             Text(message,
                 style: AppTheme.offlineSafeTextStyle.copyWith(
-                    color: theme.textTheme.bodyMedium?.color ?? Colors.grey,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w500)),
             const SizedBox(height: 10),
             Text(AppConstants.appVersion,
@@ -965,9 +966,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
   // coverage:ignore-start
   Widget _buildPWAInstallationBlocker(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // coverage:ignore-end
+
     return Scaffold(
+      // coverage:ignore-line
       body: Container(
-        // coverage:ignore-end
+        // coverage:ignore-line
         width: double.infinity,
         decoration: BoxDecoration(
           // coverage:ignore-line
@@ -975,11 +981,19 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             // coverage:ignore-line
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              // coverage:ignore-line
-              AppTheme.primary,
-              AppTheme.primary.withValues(alpha: 0.8), // coverage:ignore-line
-            ],
+            colors: isDark
+                // coverage:ignore-start
+                ? [
+                    theme.scaffoldBackgroundColor,
+                    theme.colorScheme.surface.withValues(alpha: 0.9)
+                    // coverage:ignore-end
+                  ]
+                : [
+                    // coverage:ignore-line
+                    AppTheme.primary,
+                    AppTheme.primary
+                        .withValues(alpha: 0.8), // coverage:ignore-line
+                  ],
           ),
         ),
         child: SafeArea(
@@ -995,12 +1009,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   // coverage:ignore-line
-                  color: Colors.white,
+                  color: isDark
+                      ? theme.colorScheme.surface
+                      : Colors.white, // coverage:ignore-line
                   shape: BoxShape.circle,
                   // coverage:ignore-start
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
                       // coverage:ignore-end
                       blurRadius: 20,
                       spreadRadius: 5,
@@ -1015,11 +1031,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                     'assets/images/logo.png',
                     width: 100,
                     height: 100,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+                    errorBuilder: (context, error, stackTrace) => Icon(
                         // coverage:ignore-line
                         Icons.account_balance_wallet,
                         size: 100,
-                        color: AppTheme.primary),
+                        color:
+                            theme.colorScheme.primary), // coverage:ignore-line
                   ),
                 ),
               ),
@@ -1057,13 +1074,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
                   // coverage:ignore-line
-                  color: Colors.white,
+                  color: theme.colorScheme.surface, // coverage:ignore-line
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(32)),
                   // coverage:ignore-start
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.2),
                       // coverage:ignore-end
                       blurRadius: 40,
                     ),
@@ -1095,9 +1112,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                     ElevatedButton(
                       onPressed: () => platform_utils.reloadApp(),
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         // coverage:ignore-end
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 56),
                         shape: RoundedRectangleBorder(
                           // coverage:ignore-line
@@ -1122,6 +1139,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       required String title,
       required String subtitle}) {
     // coverage:ignore-start
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
@@ -1129,12 +1147,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           padding: const EdgeInsets.all(12),
           // coverage:ignore-start
           decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             // coverage:ignore-end
           ),
           child: Icon(icon,
-              color: AppTheme.primary, size: 32), // coverage:ignore-line
+              color: theme.colorScheme.primary,
+              size: 32), // coverage:ignore-line
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -1158,7 +1177,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
                 subtitle,
                 style: AppTheme.offlineSafeTextStyle.copyWith(
                   // coverage:ignore-line
-                  color: Colors.grey[600], // coverage:ignore-line
+                  color:
+                      theme.textTheme.bodySmall?.color, // coverage:ignore-line
                   fontSize: 14,
                 ),
               ),
@@ -1174,23 +1194,28 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (isAndroid) {
       return _buildInstructionRow(
         // coverage:ignore-line
+        context,
         icon: Icons.more_vert_rounded,
         text: "Tap the three dots in your browser and select 'Install App'",
       );
     } else {
       return _buildInstructionRow(
         // coverage:ignore-line
+        context,
         icon: Icons.ios_share_rounded,
         text: "Tap the share button and select 'Add to Home Screen'",
       );
     }
   }
 
-  // coverage:ignore-start
-  Widget _buildInstructionRow({required IconData icon, required String text}) {
+  Widget _buildInstructionRow(BuildContext context, // coverage:ignore-line
+      {required IconData icon,
+      required String text}) {
+    // coverage:ignore-start
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, color: Colors.grey[700], size: 24),
+        Icon(icon, color: theme.colorScheme.onSurfaceVariant, size: 24),
         // coverage:ignore-end
         const SizedBox(width: 16),
         Expanded(
@@ -1200,7 +1225,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             text,
             style: AppTheme.offlineSafeTextStyle.copyWith(
               // coverage:ignore-line
-              color: Colors.black87,
+              color: theme.colorScheme.onSurface, // coverage:ignore-line
               fontSize: 15,
             ),
           ),

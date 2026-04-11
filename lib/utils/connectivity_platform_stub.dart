@@ -21,6 +21,8 @@ class ConnectivityPlatform {
   static String? getSessionStorageItem(String key) => null;
   static void setSessionStorageItem(String key, String value) {}
   static void removeSessionStorageItem(String key) {}
+  static String? getLocalStorageItem(String key) => null;
+  static void setLocalStorageItem(String key, String value) {}
   static String getCurrentUrl() => '';
 
   static Future<String> saveFileWeb(String fileName, List<int> bytes) async =>

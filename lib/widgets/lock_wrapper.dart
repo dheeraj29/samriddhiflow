@@ -95,8 +95,14 @@ class _LockWrapperState extends ConsumerState<LockWrapper>
     });
 
     return storageInit.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor:
+                AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+          ),
+        ),
       ),
       error: (e, s) => _buildErrorView(e), // coverage:ignore-line
       data: (_) => _buildDataView(context),

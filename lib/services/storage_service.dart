@@ -171,7 +171,7 @@ class StorageService {
   // coverage:ignore-start
   String getCloudDatabaseRegion() {
     final box = _hive.box(boxSettings);
-    return box.get('cloudDatabaseRegion', defaultValue: 'India');
+    return box.get('cloudDatabaseRegion', defaultValue: '');
     // coverage:ignore-end
   }
 
