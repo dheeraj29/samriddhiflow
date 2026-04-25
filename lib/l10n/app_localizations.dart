@@ -7994,7 +7994,7 @@ class _AppLocalizationsDelegate
   bool isSupported(Locale locale) =>
       <String>['en'].contains(locale.languageCode);
 
-  @override
+  @override // coverage:ignore-line
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
@@ -8005,7 +8005,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEn();
   }
 
-  throw FlutterError(
+  throw FlutterError(// coverage:ignore-line
       'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
       'an issue with the localizations generation tool. Please file an issue '
       'on GitHub with a reproducible sample app and the gen-l10n configuration '

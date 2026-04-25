@@ -228,19 +228,20 @@ void main() {
 
       // Verify Logic
       // Initial Balance: -1000.
-      // Spend: 500. (Expense). Adds to Debt.
-      // TransferOut: 150. (Outgoing Transfer). Adds to Debt.
-      // Income: 50. (Income). Subtracts from Debt.
-      // Payment: 200. (Ignored by rollover loop - counts as Credit in Waterfall).
-      // New Balance = -1000 + (500 + 150 - 50 - 200) = -1000 + 400 = -600.
+      // Spend: 500. (Expense). Deferred, realized during rollover.
+      // TransferOut: 150. (Outgoing Transfer). Hit balance immediately. NOT re-counted.
+      // Income: 50. (Income). Hit balance immediately. NOT re-counted.
+      // Payment: 200. (Incoming Transfer). Hit balance immediately. NOT re-counted.
+      // Only deferred expenses are realized during rollover.
 
       final capturedAcc = verify(() => mockAccountBox.put('c1', captureAny()))
           .captured
           .first as Account;
-      // Initial: -1000. Billed Spend (s1: 500, t1: 150) = 650.
-      // Income (i1) and Payments (p1) hit balance immediately so they are NOT in billedSpend.
-      // New Balance = -1000 + 650 = -350.0
-      expect(capturedAcc.balance, -350.0);
+      // Initial: -1000. Billed Spend (s1: 500) = 500.
+      // TransferOut (t1), Income (i1), and Payments (p1) hit balance immediately
+      // so they are NOT in billedSpend.
+      // New Balance = -1000 + 500 = -500.0
+      expect(capturedAcc.balance, -500.0);
     });
 
     test('Scenario 1: Update on March 23, Day 22 -> Day 1 triggers on April 2',
