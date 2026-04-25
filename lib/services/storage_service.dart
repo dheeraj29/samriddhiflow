@@ -2277,6 +2277,7 @@ class StorageService {
       endPointer,
       skipTransfers: !includeIncome,
       includeIncome: includeIncome,
+      skipOutgoingTransfers: true,
     );
 
     if (spends.abs() > 0.01) {

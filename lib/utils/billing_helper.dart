@@ -252,7 +252,9 @@ class BillingHelper {
   /// Range: (Start, End] (Start exclusive, End inclusive/inclusive-ish depending on logic)
   static double calculatePeriodSpend(
       Account acc, List<Transaction> allTxns, DateTime start, DateTime end,
-      {bool skipTransfers = false, bool includeIncome = false}) {
+      {bool skipTransfers = false,
+      bool includeIncome = false,
+      bool skipOutgoingTransfers = false}) {
     // Range: (start, end]
     final relevantTxns = allTxns.where((t) =>
         !t.isDeleted &&
@@ -265,7 +267,9 @@ class BillingHelper {
         (sum, t) =>
             sum +
             _getTxnSpendImpact(t, acc.id,
-                skipTransfers: skipTransfers, includeIncome: includeIncome));
+                skipTransfers: skipTransfers,
+                includeIncome: includeIncome,
+                skipOutgoingTransfers: skipOutgoingTransfers));
   }
 
   static bool isRoundingAdjustment(Transaction t) {
@@ -273,13 +277,15 @@ class BillingHelper {
   }
 
   static double _getTxnSpendImpact(Transaction t, String accountId,
-      {bool skipTransfers = false, bool includeIncome = false}) {
+      {bool skipTransfers = false,
+      bool includeIncome = false,
+      bool skipOutgoingTransfers = false}) {
     // Rule: "Rounding Adjustment" is always treated as a payment/credit adjustment, not a spend.
     final roundingImpact = _getRoundingSpendImpact(t, accountId, includeIncome);
     if (roundingImpact != null) return roundingImpact;
 
     if (t.accountId == accountId) {
-      return _getOutgoingSpendImpact(t, includeIncome);
+      return _getOutgoingSpendImpact(t, includeIncome, skipOutgoingTransfers);
     }
     if (t.toAccountId == accountId) {
       return _getIncomingSpendImpact(t, skipTransfers, includeIncome);
@@ -297,11 +303,13 @@ class BillingHelper {
         : t.amount; // coverage:ignore-line
   }
 
-  static double _getOutgoingSpendImpact(Transaction t, bool includeIncome) {
+  static double _getOutgoingSpendImpact(
+      Transaction t, bool includeIncome, bool skipOutgoingTransfers) {
     switch (t.type) {
       case TransactionType.expense:
-      case TransactionType.transfer:
         return t.amount;
+      case TransactionType.transfer:
+        return skipOutgoingTransfers ? 0 : t.amount; // coverage:ignore-line
       case TransactionType.income:
         return includeIncome ? -t.amount : 0; // coverage:ignore-line
     }

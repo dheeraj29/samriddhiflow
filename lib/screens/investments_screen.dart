@@ -77,10 +77,8 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen>
     final investments = ref.read(investmentsProvider);
     final Map<String, double> exportData = {};
     for (var inv in investments) {
-      final key = (inv.codeName != null && inv.codeName!.isNotEmpty)
-          ? inv.codeName!
-          : inv.name;
-      exportData[key] = inv.currentPrice;
+      if (inv.codeName == null || inv.codeName!.isEmpty) continue;
+      exportData[inv.codeName!] = inv.currentPrice;
       // coverage:ignore-end
     }
 
